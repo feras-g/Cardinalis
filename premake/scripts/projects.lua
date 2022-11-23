@@ -2,57 +2,68 @@
 
 projects = 
 {
-	"SampleProject"
+	"SampleApp"
 }
 
 -- Generate projects 
 
 for i, name in ipairs(projects) do
 	project(name) 
-		user_lib_dir = engine_root .. "src/lib/"
+		lib_dir = engine_root .. "src/thirdparty/"
+		core_dir = engine_root .. "src/core/"
 		project_dir  = engine_root .. "src/projects/" .. name .. "/"
 		
 		location (project_dir)
 		kind "ConsoleApp"
 		language "C++"
 		cppdialect "C++20"
+		targetdir	(engine_root .. "build/bin/" .. outputdir )
+		objdir		(engine_root .. "build/obj/" .. outputdir )
+		libdirs		(lib_dir)
 
+		libs = 
+		{
+		}
+		
 		files 
 		{ 
-			project_dir .. "main.cpp"
+			project_dir .. "main.cpp",
+			project_dir .. name ..".hpp",
 		}
 
-		includedirs
-		{
-			user_lib_dir .. "renderlib",
-			engine_root .. "thirdparty/glm"
+
+		includedirs {
+			core_dir,
+			project_dir,
+			lib_dir .. "glm",
+			lib_dir .. "stb",
+			lib_dir .. "optick/include",
+			lib_dir .. "spdlog",
+			os.getenv("VULKAN_SDK") .. "/Include"
 		}
 
 		links
 		{
-			"renderlib"
+			"CoreLib",
+			"OptickCore"
 		}
-
-		defines
-		{
-		}
-		
-		targetdir	(engine_root .. "build/bin/" .. outputdir )
-		objdir		(engine_root .. "build/obj/" .. outputdir )
 
 		filter "system:windows"
 			systemversion "latest"
+			linkoptions { "/ENTRY:mainCRTStartup" } -- Allows using main() instead of WinMain(...) as the entry point
 
-		filter "configurations:Debug"
+		filter "configurations:Debug(Validation)"
 			runtime "Debug"
 			symbols "on"
 			buildoptions {"/Od"}
-			defines { "DEBUG_BUILD" }
-
+			defines { "DEBUG", "ENABLE_VALIDATION_LAYERS" }
+			libdirs { os.getenv("VULKAN_SDK") .. "/Lib", lib_dir .. "optick/lib/x64/debug/" }
+		
 		filter "configurations:Release"
 			runtime "Release"
 			optimize "on"
-			defines { "RELEASE_BUILD" }
+			defines { "RELEASE" }
+			libdirs { os.getenv("VULKAN_SDK") .. "/Lib", lib_dir .. "optick/lib/x64/release/" }
 end
 
 ------------------------------------------------------------------------------
