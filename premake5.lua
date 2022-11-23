@@ -1,17 +1,16 @@
 -- https://premake.github.io/docs/Tokens/
 
 workspace "Cardinalis"
-	configurations { "Debug", "Release" }
+	configurations { "Debug", "Release", "Debug(Validation)" }
 	architecture "x64"
 	engine_root = _WORKING_DIR .. "/"
 	premake_dir = "premake/scripts/"
 	outputdir = "%{cfg.buildcfg}-%{prj.name}-%{cfg.system}-%{cfg.architecture}" -- ex: Debug-Windows-x64
 
-
 -- When creating a premake script, add it to the list 
 	scripts = 
 	{
-		"renderlib.lua",
+		"core.lua",
 		"projects.lua"
 	}
 
