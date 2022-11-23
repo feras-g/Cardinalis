@@ -90,10 +90,10 @@ void Application::PostRender()
 	};
 	
 	VkResult result = vkQueuePresentKHR(context.queue, &presentInfo);
-	context.frameNumber++;
+	context.frameCount++;
 
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
 	{
-		swapchain.Reinitialize(swapchain.metadata.format, swapchain.metadata.colorSpace);
+		swapchain.Reinitialize(swapchain.info.format, swapchain.info.colorSpace);
 	}
 }

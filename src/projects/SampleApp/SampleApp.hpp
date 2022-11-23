@@ -46,7 +46,7 @@ void SampleApp::Render()
 		.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 		.renderPass = renderPass,
 		.framebuffer = swapchain.framebuffers[context.currentBackBuffer],
-		.renderArea {.extent = swapchain.metadata.extent },
+		.renderArea {.extent = swapchain.info.extent },
 		.clearValueCount = 1,
 		.pClearValues = &clearColor
 	};

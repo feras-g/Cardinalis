@@ -4,13 +4,16 @@
 
 #include "VulkanRenderInterface.h"
 
-VulkanSwapchain::VulkanSwapchain(VkSurfaceKHR surface, VkInstance instance, VkDevice device, VkPhysicalDevice physicalDevice)
-    : hSurface(surface), hVkInstance(instance), hDevice(device), hPhysicalDevice(physicalDevice)
+VulkanSwapchain::VulkanSwapchain(VkSurfaceKHR surface, VkPhysicalDevice physDevice)
+    : hSurface(surface), hPhysicalDevice(physDevice)
 {
 }
 
 void VulkanSwapchain::Initialize(VkFormat format, VkColorSpaceKHR colorSpace)
 {
+    const VkInstance& hVkInstance = context.instance;
+    const VkDevice& hDevice = context.device;
+
 	// Initialize function pointers
     GET_INSTANCE_PROC_ADDR(hVkInstance, GetPhysicalDeviceSurfaceSupportKHR);
     GET_INSTANCE_PROC_ADDR(hVkInstance, GetPhysicalDeviceSurfaceCapabilitiesKHR);
@@ -33,7 +36,7 @@ void VulkanSwapchain::Initialize(VkFormat format, VkColorSpaceKHR colorSpace)
     
 
     assert(caps.maxImageCount >= 1);
-    metadata.extent = caps.currentExtent;
+    info.extent = caps.currentExtent;
 
     // Set present mode
     uint32_t presentModeCount = 0;
@@ -43,10 +46,10 @@ void VulkanSwapchain::Initialize(VkFormat format, VkColorSpaceKHR colorSpace)
     std::vector<VkPresentModeKHR> presentModes(presentModeCount);
     VK_CHECK(fpGetPhysicalDeviceSurfacePresentModesKHR(hPhysicalDevice, hSurface, &presentModeCount, presentModes.data()));
 
-    metadata.presentMode = VK_PRESENT_MODE_FIFO_KHR; // This is required
-    metadata.imageCount = min(caps.minImageCount + 1, caps.maxImageCount);
-    metadata.format = format;
-    metadata.colorSpace = colorSpace;
+    info.presentMode = VK_PRESENT_MODE_FIFO_KHR; // This is required
+    info.imageCount  = min(NUM_FRAMES, caps.maxImageCount);
+    info.format = format;
+    info.colorSpace = colorSpace;
 
     // Create swapchain
     VkSwapchainCreateInfoKHR swapchainCreateInfo =
@@ -54,10 +57,10 @@ void VulkanSwapchain::Initialize(VkFormat format, VkColorSpaceKHR colorSpace)
             .sType= VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
             .flags=NULL,
             .surface=hSurface,
-            .minImageCount= metadata.imageCount,
-            .imageFormat= metadata.format,
-            .imageColorSpace= metadata.colorSpace,
-            .imageExtent= metadata.extent,
+            .minImageCount= info.imageCount,
+            .imageFormat= info.format,
+            .imageColorSpace= info.colorSpace,
+            .imageExtent= info.extent,
             .imageArrayLayers=1,
             .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
             .imageSharingMode= VK_SHARING_MODE_EXCLUSIVE,
@@ -65,7 +68,7 @@ void VulkanSwapchain::Initialize(VkFormat format, VkColorSpaceKHR colorSpace)
             .pQueueFamilyIndices={0},
             .preTransform   = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
             .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-            .presentMode= metadata.presentMode,
+            .presentMode= info.presentMode,
             .clipped=VK_TRUE,
             .oldSwapchain = VK_NULL_HANDLE
     };
@@ -75,11 +78,11 @@ void VulkanSwapchain::Initialize(VkFormat format, VkColorSpaceKHR colorSpace)
     LOG_INFO("vkCreateSwapchainKHR() success.");
     
     // Get swapchain images
-    std::vector<VkImage> tmp(metadata.imageCount);
+    std::vector<VkImage> tmp(info.imageCount);
 
-    images.resize(metadata.imageCount);
-    framebuffers.resize(metadata.imageCount);
-    VK_CHECK(fpGetSwapchainImagesKHR(hDevice, swapchain, &metadata.imageCount, tmp.data()));
+    images.resize(info.imageCount);
+    framebuffers.resize(info.imageCount);
+    VK_CHECK(fpGetSwapchainImagesKHR(hDevice, swapchain, &info.imageCount, tmp.data()));
     
     LOG_INFO("GetSwapchainImagesKHR() success.");
     
@@ -100,20 +103,20 @@ void VulkanSwapchain::Reinitialize(VkFormat format, VkColorSpaceKHR colorSpace)
 
 void VulkanSwapchain::Destroy()
 {
-    metadata = {};
+    info = {};
 
-    for (int i = 0; i < metadata.imageCount; i++)
+    for (int i = 0; i < info.imageCount; i++)
     {
-        images[i].Destroy(hDevice);
+        images[i].Destroy(context.device);
         vkDestroyFramebuffer(context.device, framebuffers[i], nullptr);
     }
 
-    vkDestroySwapchainKHR(hDevice, swapchain, nullptr);
+    vkDestroySwapchainKHR(context.device, swapchain, nullptr);
 }
 
 void VulkanSwapchain::AcquireNextImage(VkSemaphore presentCompleteSemaphore, uint32_t* pBackbufferIndex) const
 {
-    VK_CHECK(fpAcquireNextImageKHR(hDevice, swapchain, OneSecondInNanoSeconds, presentCompleteSemaphore, VK_NULL_HANDLE, pBackbufferIndex));
+    VK_CHECK(fpAcquireNextImageKHR(context.device, swapchain, OneSecondInNanoSeconds, presentCompleteSemaphore, VK_NULL_HANDLE, pBackbufferIndex));
 }
 
 void VulkanSwapchain::Present(VkCommandBuffer cmdBuffer, VkQueue queue, uint32_t imageIndices)

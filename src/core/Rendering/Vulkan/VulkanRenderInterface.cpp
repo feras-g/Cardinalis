@@ -4,14 +4,8 @@
 
 #include <vector>
 
-#define PROJECT_APP_NAME "BeamEngine"
-#define PROJECT_ENGINE_NAME "BeamEngine"
-#define MAJ_VER 1
-#define MIN_VER 2
-#define PAT_VER 196 
-
-#define ENGINE_SWAPCHAIN_FORMAT		 VK_FORMAT_B8G8R8A8_SRGB  
-#define ENGINE_SWAPCHAIN_COLOR_SPACE VK_COLOR_SPACE_SRGB_NONLINEAR_KHR 
+constexpr VkFormat ENGINE_SWAPCHAIN_FORMAT = VK_FORMAT_B8G8R8A8_SRGB;
+constexpr VkColorSpaceKHR ENGINE_SWAPCHAIN_COLOR_SPACE = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 
 VulkanContext context;
 
@@ -40,7 +34,7 @@ void VulkanRenderInterface::Initialize()
 
 void VulkanRenderInterface::Terminate()
 {
-	swapchain->Destroy();
+	context.swapchain->Destroy();
 
 	vkDestroySurfaceKHR(context.instance, m_Surface, nullptr);
 	vkDestroyInstance(context.instance, nullptr);
@@ -219,8 +213,8 @@ void VulkanRenderInterface::CreateSurface(Window* window)
 
 void VulkanRenderInterface::CreateSwapchain()
 {
-	swapchain.reset(new VulkanSwapchain(m_Surface, context.instance, context.device, vkPhysicalDevices[0]));
-	swapchain->Initialize(ENGINE_SWAPCHAIN_FORMAT, ENGINE_SWAPCHAIN_COLOR_SPACE);
+	context.swapchain.reset(new VulkanSwapchain(m_Surface, vkPhysicalDevices[0]));
+	context.swapchain->Initialize(ENGINE_SWAPCHAIN_FORMAT, ENGINE_SWAPCHAIN_COLOR_SPACE);
 }
 
 VkRenderPass VulkanRenderInterface::CreateExampleRenderPass()
@@ -230,7 +224,7 @@ VkRenderPass VulkanRenderInterface::CreateExampleRenderPass()
 	// Describe the attachments that will be used in the subpasses
 	VkAttachmentDescription colorAttachment =
 	{
-		.format = swapchain->metadata.format,
+		.format = context.swapchain->info.format,
 		.samples = VK_SAMPLE_COUNT_1_BIT,		 // No multisampling
 		.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,  // Clear attachment when render pass begins
 		.storeOp = VK_ATTACHMENT_STORE_OP_STORE, // Attachment content is not discarded when the render pass ends
@@ -275,13 +269,13 @@ void VulkanRenderInterface::CreateFramebuffers(VkRenderPass renderPass, VulkanSw
 		.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
 		.renderPass = renderPass,
 		.attachmentCount = 1,
-		.width  = swapchain.metadata.extent.width,
-		.height = swapchain.metadata.extent.height,
+		.width  = swapchain.info.extent.width,
+		.height = swapchain.info.extent.height,
 		.layers = 1
 	};
 
 	// 1 framebuffer per swapchain image view
-	for (int i = 0; i < swapchain.metadata.imageCount; i++)
+	for (int i = 0; i < swapchain.info.imageCount; i++)
 	{
 		fbInfo.pAttachments = &swapchain.images[i].view;
 		VK_CHECK(vkCreateFramebuffer(context.device, &fbInfo, nullptr, &swapchain.framebuffers[i]));
@@ -290,12 +284,37 @@ void VulkanRenderInterface::CreateFramebuffers(VkRenderPass renderPass, VulkanSw
 
 void VulkanRenderInterface::CreateFramebuffers(VkRenderPass renderPass)
 {
-	CreateFramebuffers(renderPass, *swapchain.get());
+	CreateFramebuffers(renderPass, *context.swapchain.get());
+}
+
+bool CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkBuffer& out_Buffer, VkDeviceMemory out_BufferMemory)
+{
+	VkBufferCreateInfo info =
+	{
+		.sType=VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		.flags=0,
+		.size=size,
+		.usage=usage,
+		.sharingMode=VK_SHARING_MODE_EXCLUSIVE,
+		.queueFamilyIndexCount=0,
+		.pQueueFamilyIndices=nullptr
+	};
+
+	VK_CHECK(vkCreateBuffer(context.device, &info, nullptr, &out_Buffer));
+
+	vkBindBufferMemory(context.device, out_Buffer, out_BufferMemory, 0);
+
+	return true;
+}
+
+bool CreateUniformBuffer(VkDeviceSize size, VkBuffer& out_Buffer, VkDeviceMemory out_BufferMemory)
+{
+	return CreateBuffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, out_Buffer, out_BufferMemory);
 }
 
 VulkanFrame& VulkanRenderInterface::GetCurrentFrame()
 {
-	return context.frames[context.frameNumber % NUM_FRAMES];
+	return context.frames[context.frameCount % NUM_FRAMES];
 }
 
 void BeginRecording(VkCommandBuffer cmdBuffer)

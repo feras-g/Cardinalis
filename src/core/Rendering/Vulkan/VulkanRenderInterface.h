@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "Core/EngineLogger.h"
-#include "Rendering/RenderInterface.h"
 #include "Rendering/Vulkan/VulkanSwapchain.h"
 #include "Rendering/Vulkan/VulkanTexture.h"
 #include "Rendering/Vulkan/VulkanTools.h"
@@ -22,12 +21,13 @@ constexpr uint32_t NUM_FRAMES = 2;
 struct VulkanContext
 {
 	VkInstance instance			= VK_NULL_HANDLE;
-	VkDevice device				= VK_NULL_HANDLE;
-	VkQueue queue				= VK_NULL_HANDLE;
+	VkDevice   device			= VK_NULL_HANDLE;
+	VkQueue	   queue			= VK_NULL_HANDLE;
 	VkCommandPool mainCmdPool	= VK_NULL_HANDLE;
 	VkCommandBuffer mainCmdBuffer = VK_NULL_HANDLE;
+	std::unique_ptr<VulkanSwapchain> swapchain;
 
-	uint32_t frameNumber = 0;
+	uint32_t frameCount= 0;
 	uint32_t currentBackBuffer = 0; // From vkAcquireNextImageKHR
 	VulkanFrame frames[NUM_FRAMES];
 	uint32_t gfxQueueFamily		= 0;
@@ -51,6 +51,7 @@ public:
 	void CreateDevices();
 	void CreateSurface(Window* window);
 	void CreateSwapchain();
+
 	VkRenderPass CreateExampleRenderPass();
 	void CreateFramebuffers(VkRenderPass renderPass);
 
@@ -58,7 +59,7 @@ public:
 	void CreateSyncStructures();
 
 	VulkanFrame& GetCurrentFrame();
-	inline VulkanSwapchain* GetSwapchain() { return swapchain.get(); }
+	inline VulkanSwapchain* GetSwapchain() { return context.swapchain.get(); }
 private:
 
 
@@ -70,12 +71,14 @@ private:
 	std::vector<const char*> instanceLayers;
 
 	VkSurfaceKHR m_Surface;
-	std::unique_ptr<VulkanSwapchain> swapchain;
 	void CreateFramebuffers(VkRenderPass renderPass, VulkanSwapchain& swapchain);
 	
 	const char* m_Name;
 	int minVer, majVer, patchVer;
 };
 #endif // !VULKAN_RENDER_INTERFACE
+
+bool CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkBuffer& out_Buffer, VkDeviceMemory out_BufferMemory);
+bool CreateUniformBuffer(VkDeviceSize size, VkBuffer& out_Buffer, VkDeviceMemory out_BufferMemory);
 
 

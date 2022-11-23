@@ -23,7 +23,7 @@ VkImage CreateTexture2D(VkDevice device, VkExtent3D extent3D, VkFormat format, u
         .usage= VK_IMAGE_USAGE_SAMPLED_BIT,
         .sharingMode=VK_SHARING_MODE_EXCLUSIVE,
         .queueFamilyIndexCount=0,
-        .pQueueFamilyIndices= NULL,
+        .pQueueFamilyIndices= nullptr,
         .initialLayout= VK_IMAGE_LAYOUT_UNDEFINED,
     };
 

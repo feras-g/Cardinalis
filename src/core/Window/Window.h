@@ -2,7 +2,7 @@
 #define ENGINE_WINDOW_H
 
 #include <memory>
-class WindowData;
+struct WindowData;
 
 class IWindow
 {

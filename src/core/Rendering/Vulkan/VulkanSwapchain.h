@@ -7,9 +7,10 @@
 
 #include <vector>
 #include <vulkan/vulkan.h>
-class VulkanTexture;
 
-struct VulkanSwapchainMetadata
+struct VulkanTexture;
+
+struct VulkanSwapchainInfo
 {
 	uint32_t imageCount;
 	VkFormat format;
@@ -22,7 +23,7 @@ class VulkanSwapchain
 {
 public:
 	VulkanSwapchain() = default;
-	VulkanSwapchain(VkSurfaceKHR surface, VkInstance instance, VkDevice device, VkPhysicalDevice physicalDevice);
+	VulkanSwapchain(VkSurfaceKHR surface, VkPhysicalDevice physDevice);
 	void Initialize(VkFormat format, VkColorSpaceKHR colorSpace);
 	void Reinitialize(VkFormat format, VkColorSpaceKHR colorSpace);
 
@@ -33,6 +34,15 @@ public:
 
 	inline VkSwapchainKHR Get() const;
 
+	VkPhysicalDevice hPhysicalDevice;
+	VkSurfaceKHR hSurface;
+	VkSwapchainKHR swapchain;
+	VulkanSwapchainInfo info;
+
+	// Data
+	std::vector<VulkanTexture> images;
+	std::vector<VkFramebuffer> framebuffers;
+private:
 	// Function pointers
 	PFN_vkGetPhysicalDeviceSurfaceSupportKHR		fpGetPhysicalDeviceSurfaceSupportKHR;
 	PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR	fpGetPhysicalDeviceSurfaceCapabilitiesKHR;
@@ -44,20 +54,6 @@ public:
 	PFN_vkGetSwapchainImagesKHR fpGetSwapchainImagesKHR;
 	PFN_vkAcquireNextImageKHR	fpAcquireNextImageKHR;
 	PFN_vkQueuePresentKHR		fpQueuePresentKHR;
-
-	VkSwapchainKHR swapchain;
-	VulkanSwapchainMetadata metadata;
-
-	// Data
-	std::vector<VulkanTexture> images;
-	std::vector<VkFramebuffer> framebuffers;
-
-protected:
-	// Vulkans context handles 
-	VkSurfaceKHR hSurface;
-	VkInstance hVkInstance;
-	VkDevice hDevice;
-	VkPhysicalDevice hPhysicalDevice;
 };
 
 #endif // !VULKAN_SWAPCHAIN_H

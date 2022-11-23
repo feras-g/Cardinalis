@@ -6,7 +6,7 @@
 VkImage		CreateTexture2D(VkDevice device, VkExtent3D extent3D, VkFormat format, uint32_t mipLevels);
 VkImageView	CreateTexture2DView(VkDevice device, VkImage image, VkFormat viewFormat, uint32_t mipLevels);
 
-struct TextureMetadata
+struct TextureInfo
 {
 	VkFormat format = VK_FORMAT_UNDEFINED;
 	VkImageType type = VK_IMAGE_TYPE_2D;
@@ -19,7 +19,7 @@ struct VulkanTexture
 {
 	VkImage image;
 	VkImageView view;
-	TextureMetadata info;
+	TextureInfo info;
 
 	// Records an image transition command for a single image.
 	void Transition(VkCommandBuffer cmdBuffer, VkImageLayout newLayout);
