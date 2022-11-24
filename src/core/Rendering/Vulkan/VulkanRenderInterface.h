@@ -22,6 +22,7 @@ struct VulkanContext
 {
 	VkInstance instance			= VK_NULL_HANDLE;
 	VkDevice   device			= VK_NULL_HANDLE;
+	VkPhysicalDevice physicalDevice	= VK_NULL_HANDLE;
 	VkQueue	   queue			= VK_NULL_HANDLE;
 	VkCommandPool mainCmdPool	= VK_NULL_HANDLE;
 	VkCommandBuffer mainCmdBuffer = VK_NULL_HANDLE;
@@ -76,9 +77,19 @@ private:
 	const char* m_Name;
 	int minVer, majVer, patchVer;
 };
-#endif // !VULKAN_RENDER_INTERFACE
+
+struct RenderPassInitInfo
+{
+	// Clear attachments on initialization
+	bool clearColor;
+	bool clearDepth;
+	// Is it the final pass ? 
+	bool bIsFirtPass;
+	bool bIsFinalPass;
+};
 
 bool CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkBuffer& out_Buffer, VkDeviceMemory out_BufferMemory);
 bool CreateUniformBuffer(VkDeviceSize size, VkBuffer& out_Buffer, VkDeviceMemory out_BufferMemory);
+bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi);
 
-
+#endif // !VULKAN_RENDER_INTERFACE
