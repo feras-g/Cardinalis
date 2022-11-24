@@ -1,26 +1,26 @@
 #include "VulkanTexture.h"
 
-#include "cassert"
+#include "Rendering/Vulkan/VulkanTools.h"
 
 static VkAccessFlags GetAccessMask(VkImageLayout layout);
 
 // Returns a handle to the newly create image
-VkImage CreateTexture2D(VkDevice device, VkExtent3D extent3D, VkFormat format, uint32_t mipLevels)
+bool VulkanTexture::CreateTexture2D(VkDevice device, const TextureInfo& info)
 {
-    VkImage image;
+    this->info = info;
 
     VkImageCreateInfo createInfo =
     {
-        .sType= VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .flags= NULL,
-        .imageType=VK_IMAGE_TYPE_2D,
-        .format= format,
-        .extent= extent3D,
-        .mipLevels= mipLevels,
-        .arrayLayers= 1,
-        .samples= VK_SAMPLE_COUNT_1_BIT, // No multisampling
-        .tiling=VK_IMAGE_TILING_OPTIMAL,
-        .usage= VK_IMAGE_USAGE_SAMPLED_BIT,
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .flags = NULL,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .format = info.format,
+        .extent = info.dimensions,
+        .mipLevels = info.mipLevels,
+        .arrayLayers = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT, // No multisampling
+        .tiling = VK_IMAGE_TILING_OPTIMAL,
+        .usage = info.usage, //VK_IMAGE_USAGE_SAMPLED_BIT,
         .sharingMode=VK_SHARING_MODE_EXCLUSIVE,
         .queueFamilyIndexCount=0,
         .pQueueFamilyIndices= nullptr,
@@ -30,12 +30,26 @@ VkImage CreateTexture2D(VkDevice device, VkExtent3D extent3D, VkFormat format, u
     VkResult result = vkCreateImage(device, &createInfo, nullptr, &image);
     assert(result == VK_SUCCESS);
 
-    return image;
+
+    VkMemoryRequirements imageMemReq;
+    vkGetImageMemoryRequirements(device, image, &imageMemReq);
+
+    VkMemoryAllocateInfo allocInfo =
+    {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = imageMemReq.size,
+        .memoryTypeIndex = FindMemoryType(context.physicalDevice, imageMemReq.memoryTypeBits, info.memoryProperties)
+    };
+    
+    VK_CHECK(vkAllocateMemory(device, &allocInfo, nullptr, &memory));
+    VK_CHECK(vkBindImageMemory(device, image, memory, 0));
+
+    return true;
 }
 
-VkImageView CreateTexture2DView(VkDevice device, VkImage image, VkFormat viewFormat, uint32_t mipLevels)
+bool VulkanTexture::CreateTexture2DView(VkDevice device, const TextureViewInfo& info)
 {
-    VkImageView view = VK_NULL_HANDLE;
+    this->viewInfo = info;
 
     VkImageViewCreateInfo createInfo =
     {
@@ -43,7 +57,7 @@ VkImageView CreateTexture2DView(VkDevice device, VkImage image, VkFormat viewFor
         //.flags = ,
         .image = image,
         .viewType = VK_IMAGE_VIEW_TYPE_2D,
-        .format   = viewFormat,
+        .format   = info.viewFormat,
         .components = 
         {
             .r = VK_COMPONENT_SWIZZLE_R,
@@ -53,9 +67,9 @@ VkImageView CreateTexture2DView(VkDevice device, VkImage image, VkFormat viewFor
         },
         .subresourceRange =
         {
-            .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
+            .aspectMask     = info.aspectFlags,
             .baseMipLevel   = 0,
-            .levelCount     = mipLevels,
+            .levelCount     = info.mipLevels,
             .baseArrayLayer = 0,
             .layerCount     = 1
         }
@@ -64,7 +78,7 @@ VkImageView CreateTexture2DView(VkDevice device, VkImage image, VkFormat viewFor
     VkResult result = vkCreateImageView(device, &createInfo, nullptr, &view);
     assert(result == VK_SUCCESS);
 
-    return view;
+    return true;
 }
 
 void VulkanTexture::Destroy(VkDevice device)
@@ -73,7 +87,6 @@ void VulkanTexture::Destroy(VkDevice device)
 
     vkDestroyImageView(device, view, nullptr);
     vkDestroyImage(device, image, nullptr);
-
 }
 
 // Helper to transition images and remember the current layout
@@ -93,9 +106,9 @@ void VulkanTexture::Transition(VkCommandBuffer cmdBuffer, VkImageLayout newLayou
             .image = image,
             .subresourceRange =
             {
-                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .aspectMask = viewInfo.aspectFlags,
                 .baseMipLevel = 0,
-                .levelCount = info.mipLevels, // Transition all mip levels by default
+                .levelCount = viewInfo.mipLevels, // Transition all mip levels by default
                 .baseArrayLayer = 0,
                 .layerCount = 1,
             }
