@@ -44,5 +44,5 @@ protected:
 	std::unique_ptr<VulkanRenderInterface> m_RHI;
 };
 
-#endif // !ENGINE_H
+#endif // !APPLICATION_H
 

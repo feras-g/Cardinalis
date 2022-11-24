@@ -94,6 +94,6 @@ void Application::PostRender()
 
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
 	{
-		swapchain.Reinitialize(swapchain.info.format, swapchain.info.colorSpace);
+		swapchain.Reinitialize(swapchain.info.colorFormat, swapchain.info.colorSpace);
 	}
 }
