@@ -18,7 +18,7 @@ struct TextureInfo
 
 struct TextureViewInfo
 {
-	VkFormat viewFormat;
+	VkFormat format;
 	VkImageAspectFlags aspectFlags;
 	uint32_t mipLevels = 1;
 };

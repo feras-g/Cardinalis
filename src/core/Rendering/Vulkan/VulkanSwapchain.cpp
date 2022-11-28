@@ -36,7 +36,7 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
     assert(caps.maxImageCount >= 1);
     info.extent = caps.currentExtent;
 
-    // Set present mode
+    // Present mode
     uint32_t presentModeCount = 0;
     VK_CHECK(fpGetPhysicalDeviceSurfacePresentModesKHR(hPhysicalDevice, hSurface, &presentModeCount, nullptr));
     assert(presentModeCount >= 1);
@@ -50,9 +50,8 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
     info.colorSpace = colorSpace;
     info.depthStencilFormat = depthStencilFormat;// VK_FORMAT_D32_SFLOAT;
 
-    // Depth Stencil 
+    // Depth-Stencil 
     VkExtent3D depthExtent = { info.extent.width, info.extent.height, 1 };
-    depthImages.resize(info.imageCount);
 
     // Create swapchain
     VkSwapchainCreateInfoKHR swapchainCreateInfo =
@@ -79,18 +78,18 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
     VK_CHECK(vkCreateSwapchainKHR(hDevice, &swapchainCreateInfo, nullptr, &swapchain));
     LOG_INFO("vkCreateSwapchainKHR() success.");
     
-    std::vector<VkImage> tmp(info.imageCount);
+    depthImages.resize(info.imageCount);
     images.resize(info.imageCount);
     framebuffers.resize(info.imageCount);
+    std::vector<VkImage> tmp(info.imageCount);
     VK_CHECK(fpGetSwapchainImagesKHR(hDevice, swapchain, &info.imageCount, tmp.data()));
     LOG_INFO("GetSwapchainImagesKHR() success.");
 
     // Swapchain images creation
-    // Color and depth
     BeginRecording(context.mainCmdBuffer);
     for (int i = 0; i < info.imageCount; i++)
     {
-        // Color
+        // COLOR
         images[i].image = tmp[i];
         images[i].info =
         {
@@ -101,29 +100,27 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
             .memoryProperties = 0,
         };
         images[i].CreateTexture2DView(context.device, 
-            {
-                .viewFormat = colorFormat,
-                .aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT,
-                .mipLevels = 1
-            });
+        {
+            .format      = colorFormat,
+            .aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT,
+            .mipLevels   = 1
+        });
         images[i].Transition(context.mainCmdBuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
-        // Depth
+        // DEPTH
         depthImages[i].CreateTexture2D(context.device,
-            {
-                .format = depthStencilFormat,
-                .dimensions = depthExtent,
-                .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-                .mipLevels = 1,
-                .memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            });
-
-        depthImages[i].CreateTexture2DView(context.device, { .viewFormat = depthStencilFormat, .aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT, .mipLevels = 1 });
+        {
+            .format     = depthStencilFormat,
+            .dimensions = depthExtent,
+            .usage      = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+            .mipLevels  = 1,
+            .memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        });
+        depthImages[i].CreateTexture2DView(context.device, { .format = depthStencilFormat, .aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT, .mipLevels = 1 });
         depthImages[i].Transition(context.mainCmdBuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     }
 
     EndRecording(context.mainCmdBuffer);
-
 }
 
 void VulkanSwapchain::Reinitialize(VkFormat format, VkColorSpaceKHR colorSpace)

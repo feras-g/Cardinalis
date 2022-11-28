@@ -57,7 +57,7 @@ bool VulkanTexture::CreateTexture2DView(VkDevice device, const TextureViewInfo& 
         //.flags = ,
         .image = image,
         .viewType = VK_IMAGE_VIEW_TYPE_2D,
-        .format   = info.viewFormat,
+        .format   = info.format,
         .components = 
         {
             .r = VK_COMPONENT_SWIZZLE_R,
