@@ -7,14 +7,13 @@ workspace "Cardinalis"
 	premake_dir = "premake/scripts/"
 	outputdir = "%{cfg.buildcfg}-%{prj.name}-%{cfg.system}-%{cfg.architecture}" -- ex: Debug-Windows-x64
 
--- When creating a premake script, add it to the list 
+-- Generate projects based on a list of scripts
 	scripts = 
 	{
 		"core.lua",
 		"projects.lua"
 	}
 
--- Generate all projects
 	for i, script in ipairs(scripts) do
 		include(premake_dir .. script)
 	end
