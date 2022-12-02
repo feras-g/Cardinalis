@@ -3,11 +3,13 @@
 
 #include "Rendering/Vulkan/VulkanRendererBase.h"
 
-class VulkanClearColorRenderer : public VulkanRendererBase
+class VulkanClearColorRenderer final : public VulkanRendererBase
 {
 public:
-	VulkanClearColorRenderer(const VulkanContext& vkContext);
+	VulkanClearColorRenderer() = default;
+	VulkanClearColorRenderer(const VulkanContext& vkContext, bool useDepth);
 	void Initialize();
+	void PopulateCommandBuffer(VkCommandBuffer cmdBuffer) const override;
 
 
 	~VulkanClearColorRenderer() final;
