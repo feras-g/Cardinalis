@@ -24,19 +24,30 @@ VulkanRendererBase::~VulkanRendererBase()
 	vkDestroyPipeline(context.device, m_GraphicsPipeline, nullptr);
 }
 
-void VulkanRendererBase::BeginRenderPass(VkCommandBuffer cmdBuffer)
+bool VulkanRendererBase::CreateColorDepthFramebuffers(VkRenderPass renderPass, VulkanSwapchain& swapchain)
 {
-	VkRenderPassBeginInfo renderPassBegin =
+	VkFramebufferCreateInfo fbInfo =
 	{
-		.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-		.renderPass = m_RenderPass,
-		.framebuffer = context.swapchain->framebuffers[context.currentBackBuffer],
-		.renderArea = {.offset = { 0, 0 }, .extent = m_FramebufferExtent }
+		.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+		.renderPass = renderPass,
+		.attachmentCount = 2,
+		.layers = 1,
 	};
 
-	vkCmdBeginRenderPass(cmdBuffer, &renderPassBegin, VK_SUBPASS_CONTENTS_INLINE);
-	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline);
-	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_PipelineLayout, 0, 1, &m_DescriptorSets[context.currentBackBuffer], 0, nullptr);
+	// One framebuffer per swapchain image
+	for (int i = 0; i < swapchain.info.imageCount; i++)
+	{
+		// 2 attachments per framebuffer : COLOR + DEPTH
+		VkImageView attachments[2] = { swapchain.images[i].view, swapchain.depthImages[i].view };
+
+		// COLOR attachment
+		fbInfo.pAttachments = attachments;
+		fbInfo.width = swapchain.images[i].info.dimensions.width;
+		fbInfo.height = swapchain.images[i].info.dimensions.height;
+		VK_CHECK(vkCreateFramebuffer(context.device, &fbInfo, nullptr, &swapchain.framebuffers[i]));
+	}
+
+	return true;
 }
 
 bool VulkanRendererBase::CreateUniformBuffers(size_t uniformDataSize)

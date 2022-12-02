@@ -9,10 +9,14 @@ class VulkanRendererBase
 {
 public:
 	VulkanRendererBase(const VulkanContext& vkContext);
+
 	virtual ~VulkanRendererBase();
 
+	virtual void PopulateCommandBuffer(VkCommandBuffer cmdBuffer) const = 0; // Write render commands here
+
+
 protected:
-	void BeginRenderPass(VkCommandBuffer cmdBuffer);
+	bool CreateColorDepthFramebuffers(VkRenderPass renderPass, VulkanSwapchain& swapchain);
 	bool CreateUniformBuffers(size_t uniformDataSize);
 
 	VkExtent2D m_FramebufferExtent;
