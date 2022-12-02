@@ -25,9 +25,9 @@ struct TextureViewInfo
 
 struct VulkanTexture
 {
-	VkImage image;
-	VkImageView view;
-	VkDeviceMemory memory;
+	VkImage image			= VK_NULL_HANDLE;
+	VkImageView view		= VK_NULL_HANDLE;
+	VkDeviceMemory memory	= VK_NULL_HANDLE;
 
 	TextureInfo info;
 	TextureViewInfo viewInfo;
