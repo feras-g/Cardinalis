@@ -4,26 +4,37 @@
 #include "Core/Application.h"
 #include "Rendering/Vulkan/VulkanRenderInterface.h"
 #include "Rendering/Vulkan/VulkanShader.h"
+#include "Rendering/Vulkan/Renderers/VulkanClearColorRenderer.h"
+#include "Rendering/Vulkan/Renderers/VulkanPresentRenderer.h"
 
-class SampleApp : public Application
+class SampleApp final : public Application
 {
 public:
-	SampleApp() : Application("SampleApp", 1280, 720) {}
+	SampleApp() : Application("SampleApp", 1280, 720), bUseDepth(true) {}
 	~SampleApp();
-	void Initialize()	override final;
-	void Update()		override final;
-	void Render()		override final;
-	void Terminate()	override final;
+	void Initialize()	override;
+	void Update()		override;
+	void Render()		override;
+	void Terminate()	override;
+
+	// List of renderers
+	std::unique_ptr<VulkanClearColorRenderer> clear;
+	std::unique_ptr<VulkanPresentRenderer> present;
+
 protected:
-	VkRenderPass renderPass;
+	bool bUseDepth;
 };
 
 void SampleApp::Initialize()
 {
-	renderPass = m_RHI->CreateExampleRenderPass();
-	m_RHI->CreateFramebuffers(renderPass);
-
+	// Shaders
 	VulkanShader exampleShader("ExampleShader.vert.spv", "ExampleShader.frag.spv");
+
+	// Renderers
+	clear   = std::make_unique<VulkanClearColorRenderer>(context, bUseDepth);
+	clear->Initialize();
+	present = std::make_unique<VulkanPresentRenderer>(context, bUseDepth);
+	present->Initialize();
 }
 
 void SampleApp::Update()
@@ -35,28 +46,16 @@ void SampleApp::Render()
 {
 	const VulkanFrame& currentFrame  = m_RHI->GetCurrentFrame();
 	const VulkanSwapchain& swapchain = *m_RHI->GetSwapchain();
+	
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	VkCommandBufferBeginInfo cmdBufferBeginInfo = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-
 	VK_CHECK(vkResetCommandBuffer(currentFrame.cmdBuffer, 0));
 	VK_CHECK(vkBeginCommandBuffer(currentFrame.cmdBuffer, &cmdBufferBeginInfo));
+	
+	clear->PopulateCommandBuffer(currentFrame.cmdBuffer);
+	present->PopulateCommandBuffer(currentFrame.cmdBuffer);
 
-	VkClearValue clearColor = { .color = { 0.1f, 0.0f, 0.1f, 1.0f } };	// Clear renderPass attachments
-	VkRenderPassBeginInfo beginRenderPassInfo =
-	{
-		.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-		.renderPass = renderPass,
-		.framebuffer = swapchain.framebuffers[context.currentBackBuffer],
-		.renderArea {.extent = swapchain.info.extent },
-		.clearValueCount = 1,
-		.pClearValues = &clearColor
-	};
-
-	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// APPLICATION SPECIFIC RENDER
-	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	vkCmdBeginRenderPass(currentFrame.cmdBuffer, &beginRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-	vkCmdEndRenderPass(currentFrame.cmdBuffer);
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	VK_CHECK(vkEndCommandBuffer(currentFrame.cmdBuffer));
@@ -64,11 +63,11 @@ void SampleApp::Render()
 
 inline void SampleApp::Terminate()
 {
+	
 }
 
 inline SampleApp::~SampleApp()
 {
-	vkDestroyRenderPass(context.device, renderPass, nullptr);
 }
 
 #endif // !SAMPLE_APP_H
