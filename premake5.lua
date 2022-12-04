@@ -7,6 +7,8 @@ workspace "Cardinalis"
 	premake_dir = "premake/scripts/"
 	outputdir = "%{cfg.buildcfg}-%{prj.name}-%{cfg.system}-%{cfg.architecture}" -- ex: Debug-Windows-x64
 
+	include("src/thirdparty/imgui/imgui/examples/premake5-lib.lua") -- ImGui
+
 -- Generate projects based on a list of scripts
 	scripts = 
 	{

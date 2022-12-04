@@ -32,11 +32,12 @@ project("CoreLib")
 		lib_dir .. "stb",
 		lib_dir .. "optick/include",
 		lib_dir .. "spdlog",
+		lib_dir .. "imgui",
 		os.getenv("VULKAN_SDK") .. "/Include"
 	}
 	
 	libdirs {  }
-	links	{ "vulkan-1" }
+	links	{ "vulkan-1", "imgui" }
 	
 	targetdir	(engine_root .. "build/bin/" .. outputdir )
 	objdir		(engine_root .. "build/obj/" .. outputdir )
