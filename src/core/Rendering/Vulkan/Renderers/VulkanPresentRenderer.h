@@ -14,6 +14,6 @@ public:
 
 	~VulkanPresentRenderer() final;
 private:
-	bool bClearDepth;
+	bool bUseDepth;
 };
 #endif // !VULKAN_CLEAR_COLOR_RENDERER_H

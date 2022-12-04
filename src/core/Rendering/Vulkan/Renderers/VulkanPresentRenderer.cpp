@@ -2,7 +2,7 @@
 #include "Rendering/Vulkan/VulkanRenderDebugMarker.h"
 
 VulkanPresentRenderer::VulkanPresentRenderer(const VulkanContext& vkContext, bool useDepth) 
-	: VulkanRendererBase(vkContext), bClearDepth(useDepth)
+	: VulkanRendererBase(vkContext), bUseDepth(useDepth)
 {
 }
 
