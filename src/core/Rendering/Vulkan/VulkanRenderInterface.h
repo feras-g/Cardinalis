@@ -36,8 +36,8 @@ struct VulkanContext
 
 extern VulkanContext context;
 
-void BeginRecording(VkCommandBuffer cmdBuffer);
-void EndRecording(VkCommandBuffer cmdBuffer);
+void BeginCommandBuffer(VkCommandBuffer cmdBuffer);
+void EndCommandBuffer(VkCommandBuffer cmdBuffer);
 
 class VulkanRenderInterface
 {
@@ -53,16 +53,12 @@ public:
 	void CreateSurface(Window* window);
 	void CreateSwapchain();
 
-	VkRenderPass CreateExampleRenderPass();
-	void CreateFramebuffers(VkRenderPass renderPass);
-
 	void CreateCommandStructures();
 	void CreateSyncStructures();
 
 	VulkanFrame& GetCurrentFrame();
 	inline VulkanSwapchain* GetSwapchain() { return context.swapchain.get(); }
 private:
-
 
 private:
 	std::vector<VkPhysicalDevice> vkPhysicalDevices;
@@ -78,18 +74,32 @@ private:
 	int minVer, majVer, patchVer;
 };
 
+// Render pass description
+
+enum RenderPassFlags
+{
+	NONE			 = 0,
+	RENDERPASS_FIRST = 1 << 1,
+	RENDERPASS_LAST  = 1 << 2
+};
+
 struct RenderPassInitInfo
 {
 	// Clear attachments on initialization
 	bool clearColor;
 	bool clearDepth;
 	// Is it the final pass ? 
-	bool bIsFirtPass;
-	bool bIsFinalPass;
+	RenderPassFlags flags;
 };
 
-bool CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkBuffer& out_Buffer, VkDeviceMemory out_BufferMemory);
-bool CreateUniformBuffer(VkDeviceSize size, VkBuffer& out_Buffer, VkDeviceMemory out_BufferMemory);
-bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi);
+bool CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProperties, VkBuffer& out_Buffer, VkDeviceMemory& out_BufferMemory);
+bool UploadBufferData(const VkDeviceMemory bufferMemory, VkDeviceSize offsetInBytes, const void* data, const size_t dataSizeInBytes);
+bool CreateUniformBuffer(VkDeviceSize size, VkBuffer& out_Buffer, VkDeviceMemory& out_BufferMemory);
+// Create a simple render pass with color and/or depth and a single subpass
+bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, bool useDepth, VkRenderPass* out_renderPass);	
+bool CreateDescriptorPool(uint32_t numStorageBuffers, uint32_t numUniformBuffers, uint32_t numCombinedSamplers, VkDescriptorPool* out_DescriptorPool);
+
+VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, const VkDescriptorBufferInfo* bufferInfo, VkDescriptorType descriptorType);
+VkWriteDescriptorSet ImageWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, const VkDescriptorImageInfo* imageInfo);
 
 #endif // !VULKAN_RENDER_INTERFACE

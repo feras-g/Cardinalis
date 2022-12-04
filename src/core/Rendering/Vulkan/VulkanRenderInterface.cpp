@@ -37,13 +37,13 @@ void VulkanRenderInterface::Terminate()
 {
 	context.swapchain->Destroy();
 
-	vkDestroySurfaceKHR(context.instance, m_Surface, nullptr);
-	vkDestroyInstance(context.instance, nullptr);
-
 	for (uint32_t i = 0; i < NUM_FRAMES; i++)
 	{
 		context.frames[i].Destroy(context.device);
 	}
+
+	vkDestroySurfaceKHR(context.instance, m_Surface, nullptr);
+	vkDestroyInstance(context.instance, nullptr);
 }
 
 void VulkanRenderInterface::CreateInstance()
@@ -117,7 +117,7 @@ void VulkanRenderInterface::CreateDevices()
 		.pQueuePriorities = queuePriorities
 	};
 
-	deviceExtensions = { "VK_KHR_swapchain" };
+	deviceExtensions = { "VK_KHR_swapchain", "VK_EXT_debug_marker" };
 	VkDeviceCreateInfo deviceInfo = 
 	{
 		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -221,83 +221,12 @@ void VulkanRenderInterface::CreateSwapchain()
 	context.swapchain->Initialize(ENGINE_SWAPCHAIN_COLOR_FORMAT, ENGINE_SWAPCHAIN_COLOR_SPACE, ENGINE_SWAPCHAIN_DS_FORMAT);
 }
 
-VkRenderPass VulkanRenderInterface::CreateExampleRenderPass()
-{
-	VkRenderPass defaultRenderPass = VK_NULL_HANDLE;
-
-	// Describe the attachments that will be used in the subpasses
-	VkAttachmentDescription colorAttachment =
-	{
-		.format = context.swapchain->info.colorFormat,
-		.samples = VK_SAMPLE_COUNT_1_BIT,		 // No multisampling
-		.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,  // Clear attachment when render pass begins
-		.storeOp = VK_ATTACHMENT_STORE_OP_STORE, // Attachment content is not discarded when the render pass ends
-		.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, // Attachment content may be discarded when the render pass ends
-		.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-		.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-	};
-
-	// Link an Id to a specific attachment
-	VkAttachmentReference colorAttachmentRef = { .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-
-	// Create subpasses : minimum is 1.
-	VkSubpassDescription subpass = 
-	{ 
-		.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS, 
-		.colorAttachmentCount = 1, 
-		.pColorAttachments = &colorAttachmentRef 
-	};
-
-	// Finally, create a renderpass incorporating all the subpasses
-	VkRenderPassCreateInfo renderPassInfo =
-	{
-		.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-		.attachmentCount = 1,
-		.pAttachments = &colorAttachment,
-		.subpassCount = 1,
-		.pSubpasses = &subpass
-	};
-
-	VK_CHECK(vkCreateRenderPass(context.device, &renderPassInfo, nullptr, &defaultRenderPass));
-	
-
-	return defaultRenderPass;
-}
-
-
-void VulkanRenderInterface::CreateFramebuffers(VkRenderPass renderPass, VulkanSwapchain& swapchain)
-{
-		VkFramebufferCreateInfo fbInfo =
-		{
-			.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-			.renderPass = renderPass,
-			.attachmentCount = 1,
-			.layers = 1,
-		};
-
-		// 1 framebuffer per swapchain image view
-		for (int i = 0; i < swapchain.info.imageCount; i++)
-		{
-			fbInfo.pAttachments = &swapchain.images[i].view;
-			fbInfo.width = swapchain.images[i].info.dimensions.width;
-			fbInfo.height = swapchain.images[i].info.dimensions.height;
-			VK_CHECK(vkCreateFramebuffer(context.device, &fbInfo, nullptr, &swapchain.framebuffers[i]));
-		}
-
-}
-
-void VulkanRenderInterface::CreateFramebuffers(VkRenderPass renderPass)
-{
-	CreateFramebuffers(renderPass, *context.swapchain.get());
-}
-
 VulkanFrame& VulkanRenderInterface::GetCurrentFrame()
 {
 	return context.frames[context.frameCount % NUM_FRAMES];
 }
 
-void BeginRecording(VkCommandBuffer cmdBuffer)
+void BeginCommandBuffer(VkCommandBuffer cmdBuffer)
 {
 	VkCommandBufferBeginInfo beginInfo =
 	{
@@ -310,7 +239,7 @@ void BeginRecording(VkCommandBuffer cmdBuffer)
 	VK_CHECK(vkBeginCommandBuffer(cmdBuffer, &beginInfo));
 }
 
-void EndRecording(VkCommandBuffer cmdBuffer)
+void EndCommandBuffer(VkCommandBuffer cmdBuffer)
 {
 	VK_CHECK(vkEndCommandBuffer(cmdBuffer));
 }
@@ -322,14 +251,13 @@ void GetInstanceExtensionNames(std::vector<const char*>& extensions)
 
 	std::vector<VkExtensionProperties> instanceExtensions{ extensionCount };
 	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, instanceExtensions.data());
+	LOG_INFO("Found {0} vulkan extensions :", extensionCount);
 
-	// Swapchain 
+	// Swapchain extension
 	extensions.push_back("VK_KHR_surface");
 #ifdef _WIN32
 	extensions.push_back("VK_KHR_win32_surface");
 #endif // _WIN32
-
-	LOG_INFO("Found {0} vulkan extensions :", extensionCount);
 
 	for (const auto& e : instanceExtensions)
 	{
@@ -338,6 +266,12 @@ void GetInstanceExtensionNames(std::vector<const char*>& extensions)
 		if (strcmp(e.extensionName, "VK_EXT_debug_utils") == 0)
 		{
 			extensions.push_back("VK_EXT_debug_utils");
+		}
+		
+		// Debug markers
+		if (strcmp(e.extensionName, "VK_EXT_debug_report") == 0)
+		{
+			extensions.push_back("VK_EXT_debug_report");
 		}
 	}
 }
@@ -368,7 +302,7 @@ void GetInstanceLayerNames(std::vector<const char*>& layers)
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkBuffer& out_Buffer, VkDeviceMemory out_BufferMemory)
+bool CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProperties,VkBuffer& out_Buffer, VkDeviceMemory& out_BufferMemory)
 {
 	VkBufferCreateInfo info =
 	{
@@ -383,19 +317,41 @@ bool CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkBuffer& out_Buf
 
 	VK_CHECK(vkCreateBuffer(context.device, &info, nullptr, &out_Buffer));
 
-	vkBindBufferMemory(context.device, out_Buffer, out_BufferMemory, 0);
+	VkMemoryRequirements memRequirements;
+	vkGetBufferMemoryRequirements(context.device, out_Buffer, &memRequirements);
+
+	VkMemoryAllocateInfo allocInfo =
+	{
+		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+		.allocationSize = size,
+		.memoryTypeIndex = FindMemoryType(context.physicalDevice, memRequirements.memoryTypeBits, memProperties)
+	};
+	VK_CHECK(vkAllocateMemory(context.device, &allocInfo, nullptr, &out_BufferMemory));
+
+	VK_CHECK(vkBindBufferMemory(context.device, out_Buffer, out_BufferMemory, 0));
+
+	return true;
+}
+bool UploadBufferData(const VkDeviceMemory bufferMemory, VkDeviceSize offsetInBytes, const void* data, const size_t dataSizeInBytes)
+{
+	void* pMappedData = nullptr;
+	VK_CHECK(vkMapMemory(context.device, bufferMemory, offsetInBytes, dataSizeInBytes, 0, &pMappedData));
+	memcpy(pMappedData, data, dataSizeInBytes);
+	vkUnmapMemory(context.device, bufferMemory);
 
 	return true;
 }
 
-bool CreateUniformBuffer(VkDeviceSize size, VkBuffer& out_Buffer, VkDeviceMemory out_BufferMemory)
+bool CreateUniformBuffer(VkDeviceSize size, VkBuffer& out_Buffer, VkDeviceMemory& out_BufferMemory)
 {
-	return CreateBuffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, out_Buffer, out_BufferMemory);
+	//return CreateBuffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, out_Buffer, out_BufferMemory);
+
+	return false;
 }
 
-bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi)
+bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, bool useDepth, VkRenderPass* out_renderPass)
 {
-	// ATTACHMENTS
+	// Attachments
 	// COLOR
 	VkAttachmentDescription colorAttachment =
 	{
@@ -405,11 +361,11 @@ bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi)
 		.storeOp		= VK_ATTACHMENT_STORE_OP_STORE,													// Discard content when render pass ends ?
 		.stencilLoadOp	= VK_ATTACHMENT_LOAD_OP_DONT_CARE, 
 		.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-		.initialLayout	= rpi.bIsFirtPass  ? VK_IMAGE_LAYOUT_UNDEFINED		: VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-		.finalLayout	= rpi.bIsFinalPass ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+		.initialLayout	= (rpi.flags & RENDERPASS_FIRST) == RENDERPASS_FIRST ? 
+						VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		.finalLayout	= (rpi.flags & RENDERPASS_LAST) == RENDERPASS_LAST ? 
+						VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
 	};
-
-	VkAttachmentReference colorAttachmentRef = { .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 
 	// DEPTH
 	VkAttachmentDescription depthAttachment =
@@ -420,12 +376,125 @@ bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi)
 		.storeOp = VK_ATTACHMENT_STORE_OP_STORE,													// Discard content when render pass ends ?
 		.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 		.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-		.initialLayout = rpi.bIsFirtPass  ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-		.finalLayout   = rpi.bIsFinalPass ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+		.initialLayout = (rpi.flags & RENDERPASS_FIRST) == RENDERPASS_FIRST ?
+						VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+		.finalLayout = (rpi.flags & RENDERPASS_LAST) == RENDERPASS_LAST ?
+						VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
 	};
 
-	VkAttachmentReference depthAttachmentRef = { .attachment = 0, .layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL };
+	VkAttachmentReference colorAttachmentRef = { .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+	VkAttachmentReference depthAttachmentRef = { .attachment = 1, .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
+	VkAttachmentDescription attachments[2] =  { colorAttachment, depthAttachment };
+
+	// Subpass dependencies
+	std::vector<VkSubpassDependency> dependencies =
+	{
+		// 0th subpass
+		{
+			.srcSubpass = VK_SUBPASS_EXTERNAL,
+			.dstSubpass = 0,
+			.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			.srcAccessMask = 0,
+			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+			.dependencyFlags = 0
+		}
+	};
+
+	// Subpass
+	VkSubpassDescription subpass =
+	{
+		.flags=0,
+		.pipelineBindPoint=VK_PIPELINE_BIND_POINT_GRAPHICS,
+		.inputAttachmentCount=0,
+		.pInputAttachments= nullptr,
+		.colorAttachmentCount=1,
+		.pColorAttachments=&colorAttachmentRef,
+		.pResolveAttachments=nullptr,
+		.pDepthStencilAttachment= &depthAttachmentRef,
+		.preserveAttachmentCount=0,
+		.pPreserveAttachments=nullptr,
+	};
+	
+	// Renderpass
+	VkRenderPassCreateInfo renderPassInfo =
+	{
+		.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+		.flags = 0,
+		.attachmentCount = (uint32_t)(useDepth ? 2 : 1),
+		.pAttachments = attachments,
+		.subpassCount = 1,
+		.pSubpasses   = &subpass,
+		.dependencyCount = (uint32_t)dependencies.size(),
+		.pDependencies   = dependencies.data()
+	};
+
+	return (vkCreateRenderPass(context.device, &renderPassInfo, nullptr, out_renderPass) == VK_SUCCESS);
+}
+
+bool CreateDescriptorPool(uint32_t numStorageBuffers, uint32_t numUniformBuffers, uint32_t numCombinedSamplers, VkDescriptorPool* out_DescriptorPool)
+{
+	std::vector<VkDescriptorPoolSize> poolSizes;
+
+	if (numStorageBuffers)	 
+	{ 
+		poolSizes.push_back( VkDescriptorPoolSize{.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = NUM_FRAMES * numStorageBuffers   }); 
+	}
+	if (numUniformBuffers)	 
+	{ 
+		poolSizes.push_back( VkDescriptorPoolSize{.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = NUM_FRAMES* numUniformBuffers   }); 
+	}
+	if (numCombinedSamplers) 
+	{ 
+		poolSizes.push_back( VkDescriptorPoolSize{.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = NUM_FRAMES * numCombinedSamplers }); 
+	}
+
+	VkDescriptorPoolCreateInfo poolInfo =
+	{
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+		.flags = 0,
+		.maxSets = NUM_FRAMES,
+		.poolSizeCount = (uint32_t)(poolSizes.size()),
+		.pPoolSizes = poolSizes.data()
+	};
+
+	VK_CHECK(vkCreateDescriptorPool(context.device, &poolInfo, nullptr, out_DescriptorPool));
 
 	return true;
+}
+
+
+VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, const VkDescriptorBufferInfo* bufferInfo, VkDescriptorType descriptorType)
+{
+	return VkWriteDescriptorSet
+	{
+		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+		.pNext = nullptr,
+		.dstSet = descriptorSet,
+		.dstBinding = bindingIndex,
+		.dstArrayElement = 0,
+		.descriptorCount = 1,
+		.descriptorType = descriptorType,
+		.pImageInfo = nullptr,
+		.pBufferInfo = bufferInfo,
+		.pTexelBufferView = nullptr,
+	};
+}
+
+VkWriteDescriptorSet ImageWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, const VkDescriptorImageInfo* imageInfo)
+{
+	return VkWriteDescriptorSet
+	{
+		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+		.pNext = nullptr,
+		.dstSet = descriptorSet,
+		.dstBinding = bindingIndex,
+		.dstArrayElement = 0,
+		.descriptorCount = 1,
+		.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+		.pImageInfo = imageInfo,
+		.pBufferInfo = nullptr,
+		.pTexelBufferView = nullptr,
+	};
 }
