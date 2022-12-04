@@ -4,19 +4,23 @@
 #include <vulkan/vulkan.h>
 
 
-struct TextureInfo
+struct ImageInfo
 {
-	VkFormat	format;
-	VkExtent3D	dimensions;
-	VkImageUsageFlags usage;
-	uint32_t mipLevels;
-	VkMemoryPropertyFlags memoryProperties;
+	unsigned int width;
+	unsigned int height;
+	VkFormat format;
+	uint32_t layerCount = 1;
+	VkImageUsageFlags usage		  = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	VkImageAspectFlags aspectFlag = VK_IMAGE_ASPECT_COLOR_BIT;
+	uint32_t mipLevels = 1;
+	VkMemoryPropertyFlags memoryProperties = 0;
 
 	VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 	VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
+	VkImageCreateFlagBits flags;
 };
 
-struct TextureViewInfo
+struct ImageViewInfo
 {
 	VkFormat format;
 	VkImageAspectFlags aspectFlags;
@@ -29,11 +33,14 @@ struct VulkanTexture
 	VkImageView view		= VK_NULL_HANDLE;
 	VkDeviceMemory memory	= VK_NULL_HANDLE;
 
-	TextureInfo info;
-	TextureViewInfo viewInfo;
+	ImageInfo info;
+	ImageViewInfo viewInfo;
 
-	bool CreateTexture2D(VkDevice device, const TextureInfo& info);
-	bool CreateTexture2DView(VkDevice device, const TextureViewInfo& info);
+	bool CreateImage(VkDevice device, const ImageInfo& info);
+	bool CreateImageFromData(VkCommandBuffer cmdBuffer, VkDevice device, const ImageInfo& info, void* data);
+	bool UpdateImageTextureData(VkCommandBuffer cmdBuffer, VkDevice device, void* data);
+	bool CopyBufferToImage(VkCommandBuffer cmdBuffer, VkBuffer buffer);
+	bool CreateImageView(VkDevice device, const ImageViewInfo& info);
 
 	// Records an image transition command for a single image.
 	void Transition(VkCommandBuffer cmdBuffer, VkImageLayout newLayout);
