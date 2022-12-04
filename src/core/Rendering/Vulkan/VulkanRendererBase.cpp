@@ -42,8 +42,8 @@ bool VulkanRendererBase::CreateColorDepthFramebuffers(VkRenderPass renderPass, V
 
 		// COLOR attachment
 		fbInfo.pAttachments = attachments;
-		fbInfo.width = swapchain.images[i].info.dimensions.width;
-		fbInfo.height = swapchain.images[i].info.dimensions.height;
+		fbInfo.width = swapchain.images[i].info.width;
+		fbInfo.height = swapchain.images[i].info.height;
 		VK_CHECK(vkCreateFramebuffer(context.device, &fbInfo, nullptr, &swapchain.framebuffers[i]));
 	}
 
