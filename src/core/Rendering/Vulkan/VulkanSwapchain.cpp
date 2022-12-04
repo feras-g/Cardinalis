@@ -50,9 +50,6 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
     info.colorSpace = colorSpace;
     info.depthStencilFormat = depthStencilFormat;// VK_FORMAT_D32_SFLOAT;
 
-    // Depth-Stencil 
-    VkExtent3D depthExtent = { info.extent.width, info.extent.height, 1 };
-
     // Create swapchain
     VkSwapchainCreateInfoKHR swapchainCreateInfo =
     {
@@ -64,7 +61,7 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
             .imageColorSpace= info.colorSpace,
             .imageExtent= info.extent,
             .imageArrayLayers=1,
-            .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+            .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
             .imageSharingMode= VK_SHARING_MODE_EXCLUSIVE,
             .queueFamilyIndexCount=1,
             .pQueueFamilyIndices={0},
@@ -86,20 +83,25 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
     LOG_INFO("GetSwapchainImagesKHR() success.");
 
     // Swapchain images creation
-    BeginRecording(context.mainCmdBuffer);
+    BeginCommandBuffer(context.mainCmdBuffer);
+
+    // Depth-Stencil 
+
     for (int i = 0; i < info.imageCount; i++)
     {
         // COLOR
         images[i].image = tmp[i];
         images[i].info =
         {
+            .width  = info.extent.width,
+            .height = info.extent.height,
             .format = colorFormat,
-            .dimensions = { info.extent.width, info.extent.height, 4 },
             .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+            .aspectFlag = VK_IMAGE_ASPECT_COLOR_BIT,
             .mipLevels = 1,
             .memoryProperties = 0,
         };
-        images[i].CreateTexture2DView(context.device, 
+        images[i].CreateImageView(context.device, 
         {
             .format      = colorFormat,
             .aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -108,19 +110,21 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
         images[i].Transition(context.mainCmdBuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
         // DEPTH
-        depthImages[i].CreateTexture2D(context.device,
+        depthImages[i].CreateImage(context.device,
         {
+            .width      = info.extent.width,
+            .height     = info.extent.height,
             .format     = depthStencilFormat,
-            .dimensions = depthExtent,
             .usage      = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+            .aspectFlag = VK_IMAGE_ASPECT_DEPTH_BIT,
             .mipLevels  = 1,
             .memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         });
-        depthImages[i].CreateTexture2DView(context.device, { .format = depthStencilFormat, .aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT, .mipLevels = 1 });
+        depthImages[i].CreateImageView(context.device, { .format = depthStencilFormat, .aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT, .mipLevels = 1 });
         depthImages[i].Transition(context.mainCmdBuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     }
 
-    EndRecording(context.mainCmdBuffer);
+    EndCommandBuffer(context.mainCmdBuffer);
 }
 
 void VulkanSwapchain::Reinitialize(VkFormat format, VkColorSpaceKHR colorSpace)
