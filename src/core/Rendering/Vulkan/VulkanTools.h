@@ -25,7 +25,7 @@ if(x != VK_SUCCESS) { LOG_ERROR("Assert on VkResult : {0}", string_VkResult(x));
     EXIT_ON_ERROR("vkGetDeviceProcAddr failed to find vk" #entry);  \
 }
 
-static uint32_t FindMemoryType(VkPhysicalDevice physDevice, uint32_t memoryTypeBits, VkMemoryPropertyFlags reqMemoryProperties)
+static uint32_t FindMemoryType(VkPhysicalDevice physDevice, uint32_t memoryTypeBits, VkMemoryPropertyFlags memoryProperties)
 {
     // Query available types of memory
     VkPhysicalDeviceMemoryProperties deviceMemProperties;
@@ -34,11 +34,13 @@ static uint32_t FindMemoryType(VkPhysicalDevice physDevice, uint32_t memoryTypeB
     // Find the most suitable memory type 
     for (uint32_t i = 0; i < deviceMemProperties.memoryTypeCount; i++)
     {
-        if ((memoryTypeBits & (1 << i) && (deviceMemProperties.memoryTypes[i].propertyFlags & reqMemoryProperties) == reqMemoryProperties))
+        if ((memoryTypeBits & (1 << i) && (deviceMemProperties.memoryTypes[i].propertyFlags & memoryProperties) == memoryProperties))
         {
             return i;
         }
     }
+
+    return 0;
 }
 
 #endif // !VULKAN_TOOLS_H
