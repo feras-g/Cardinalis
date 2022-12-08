@@ -29,7 +29,8 @@ public:
 	virtual void Update(/* float delta */) = 0;
 	void PreRender();
 	void PostRender();
-	virtual void Render() = 0;
+	virtual void Render(size_t currentImageIdx) = 0;
+	virtual void RenderGUI(size_t currentImageIdx) = 0;
 	virtual void Terminate() = 0;
 
 public:

@@ -28,13 +28,14 @@ Application::~Application()
 void Application::Run()
 {
 	Initialize();
-
+	
 	while (!m_Window->IsClosed())
 	{
 		m_Window->HandleEvents();
 		Update();
 		PreRender();	
-		Render();
+		RenderGUI(context.currentBackBuffer);
+		Render(context.currentBackBuffer);
 		PostRender();
 	}
 
