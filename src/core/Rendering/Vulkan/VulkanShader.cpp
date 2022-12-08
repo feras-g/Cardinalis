@@ -5,22 +5,28 @@
 
 #define SPIRV_FOURCC 0x07230203
 
-static const char* ShaderStageToString(ShaderStage stage);
 static std::string baseSpirvFolder("../../../data/shaders/vulkan/spirv/");
 VulkanShader::VulkanShader(const char* vertexShader, const char* fragShader)
 {
-	LoadModule(ShaderStage::VERTEX_STAGE, vertexShader);
-	LoadModule(ShaderStage::FRAGMENT_STAGE, fragShader);
+	LoadModule(VK_SHADER_STAGE_VERTEX_BIT, vertexShader);
+	LoadModule(VK_SHADER_STAGE_FRAGMENT_BIT, fragShader);
 }
-void VulkanShader::LoadModule(ShaderStage stage, const char* filename)
+
+bool VulkanShader::LoadModule(const VkShaderStageFlagBits stage, const char* filename)
 {
+	if (stage != VK_SHADER_STAGE_FRAGMENT_BIT && stage != VK_SHADER_STAGE_VERTEX_BIT)
+	{
+		LOG_ERROR("Shader stage not implemented.");
+		return false;
+	}
+
 	FILE* fp;
 	errno_t fopenresult = fopen_s(&fp, (baseSpirvFolder + filename).c_str(), "rb");
 	
 	if (fp == nullptr)
 	{
 		LOG_ERROR("Cannot open shader file {0} : {1}.", filename, strerror(fopenresult));
-		return;
+		return false;
 	}
 
 	uint32_t fourcc;
@@ -28,7 +34,7 @@ void VulkanShader::LoadModule(ShaderStage stage, const char* filename)
 	if (fourcc != SPIRV_FOURCC)
 	{
 		LOG_ERROR("SPIR-V FourCC for {0} file is {1} -- should be {2}.", filename, fourcc, SPIRV_FOURCC);
-		return;
+		return false;
 	}
 
 	// Get file size in bytes
@@ -45,7 +51,7 @@ void VulkanShader::LoadModule(ShaderStage stage, const char* filename)
 	if (!bytecode)
 	{
 		LOG_ERROR("Cannot read SPIR-V bytecode.", filename);
-		return;
+		return false;
 	}
 
 	VkShaderModuleCreateInfo mci =
@@ -56,26 +62,16 @@ void VulkanShader::LoadModule(ShaderStage stage, const char* filename)
 		.pCode = bytecode,
 	};
 
-	VK_CHECK(vkCreateShaderModule(context.device, &mci, nullptr,
-		stage == ShaderStage::VERTEX_STAGE   ? &fsModule :
-		stage == ShaderStage::FRAGMENT_STAGE ? &vsModule : VK_NULL_HANDLE));
+	VkShaderModule* module = stage == VK_SHADER_STAGE_VERTEX_BIT	? &fsModule :
+							 stage == VK_SHADER_STAGE_FRAGMENT_BIT  ? &vsModule : VK_NULL_HANDLE;
 
-	LOG_INFO("{1} : Created {0} module successfully.", ShaderStageToString(stage), filename);
+	VK_CHECK(vkCreateShaderModule(context.device, &mci, nullptr, module));
+
+	pipelineStages.push_back(PipelineShaderStageCreateInfo(*module, stage, "main"));
+
+	LOG_INFO("{1} : Created {0} module successfully.", string_VkShaderStageFlagBits(stage), filename);
 
 	delete [] bytecode;
-}
 
-const char* ShaderStageToString(ShaderStage stage)
-{
-	switch (stage)
-	{
-	case ShaderStage::VERTEX_STAGE:
-		return "vertex stage";
-		break;
-	case ShaderStage::FRAGMENT_STAGE:
-		return "fragment stage";
-		break;
-	default:
-		break;
-	}
+	return true;
 }
