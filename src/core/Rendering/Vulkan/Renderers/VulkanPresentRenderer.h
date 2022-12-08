@@ -9,7 +9,7 @@ public:
 	VulkanPresentRenderer() = default;
 	VulkanPresentRenderer(const VulkanContext& vkContext, bool useDepth);
 	void Initialize();
-	void PopulateCommandBuffer(VkCommandBuffer cmdBuffer) const override;
+	void PopulateCommandBuffer(size_t currentImageIdx, VkCommandBuffer cmdBuffer) const override;
 
 
 	~VulkanPresentRenderer() final;

@@ -9,7 +9,7 @@ public:
 	VulkanClearColorRenderer() = default;
 	VulkanClearColorRenderer(const VulkanContext& vkContext, bool useDepth);
 	void Initialize();
-	void PopulateCommandBuffer(VkCommandBuffer cmdBuffer) const override;
+	void PopulateCommandBuffer(size_t currentImageIdx, VkCommandBuffer cmdBuffer) const override;
 
 
 	~VulkanClearColorRenderer() final;
