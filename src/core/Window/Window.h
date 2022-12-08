@@ -13,7 +13,9 @@ public:
 	virtual ~IWindow();
 
 	virtual void Initialize() = 0;
-	virtual bool IsClosed() const = 0;
+	virtual void UpdateGUI()   const = 0;
+	virtual void ShutdownGUI() const = 0;
+	virtual bool IsClosed()   const = 0;
 	virtual void OnClose() = 0;
 	virtual void OnResize() = 0;
 	virtual int GetHeight() const = 0;
@@ -50,6 +52,8 @@ public:
 	inline bool IsClosed()   const override;
 	inline int  GetHeight()  const override;
 	inline int  GetWidth()	 const override;
+	inline void UpdateGUI()  const override;
+	inline void ShutdownGUI()  const override;
 	inline const WindowData* GetData() const override;
 	void HandleEvents();
 

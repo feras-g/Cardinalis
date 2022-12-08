@@ -5,6 +5,9 @@
 #if defined(_WIN32)	
 
 #include <Windows.h>
+#include "backends/imgui_impl_win32.h"
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 /////////////////////////////////////////////////////////////////////////
 struct WindowData
 {
@@ -22,6 +25,8 @@ public:
 	void Show();
 	static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
+	inline void UpdateGUI()  const;
+	inline void ShutdownGUI()  const;
 	inline bool IsClosed()  const;
 	inline int  GetHeight() const;
 	inline int  GetWidth()	const;
@@ -88,6 +93,16 @@ void Window::Impl::Create()
 	m_WinInfo.aspect = (float)w / h;
 	
 	CreateWindowA(title, title, style, left, top, w, h, nullptr, nullptr, m_Data.hInstance, this);
+
+	// Initialize ImGui
+	ImGui::CreateContext();
+	ImGui::StyleColorsClassic();
+
+	if (!ImGui_ImplWin32_Init(m_Data.hWnd))
+	{
+		assert(false);
+	}
+
 }
 
 void Window::Impl::Show()
@@ -116,6 +131,9 @@ LRESULT CALLBACK Window::Impl::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 	{
 		self = reinterpret_cast<Window::Impl*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 	}
+
+	// Handle msgs for ImGui
+	ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam);
 
 	// Handle messages
 	if (self)
@@ -163,6 +181,19 @@ void Window::Impl::OnResize()
 	printf("%dx%d aspect=%f\n", m_WinInfo.width, m_WinInfo.height, m_WinInfo.aspect);
 }
 
+inline void Window::Impl::UpdateGUI() const
+{
+	ImGuiIO& io = ImGui::GetIO();
+	io.DisplaySize = ImVec2((float)m_WinInfo.width, (float)m_WinInfo.height);
+
+	ImGui_ImplWin32_NewFrame();
+}
+
+inline void Window::Impl::ShutdownGUI() const
+{
+	ImGui_ImplWin32_Shutdown();
+}
+
 /////////////////////////////////////////////////////////////////////////
 bool Window::Impl::IsClosed()  const { return m_WinState.bIsClosed; }
 int  Window::Impl::GetHeight() const { return m_WinInfo.height; }
@@ -207,6 +238,8 @@ void Window::Initialize()
 inline bool Window::IsClosed() const { return pImpl->IsClosed(); }
 inline int Window::GetHeight() const { return pImpl->GetHeight(); }
 inline int Window::GetWidth()  const { return pImpl->GetWidth(); }
+inline void Window::UpdateGUI() const { return pImpl->UpdateGUI(); }
+inline void Window::ShutdownGUI() const { pImpl->ShutdownGUI(); }
 inline const WindowData* Window::GetData() const { return pImpl->GetData(); }
 void Window::HandleEvents() { return pImpl->HandleEvents(); }
 void Window::OnClose()  { return pImpl->OnClose(); }
