@@ -12,11 +12,10 @@ public:
 
 	virtual ~VulkanRendererBase();
 
-	virtual void PopulateCommandBuffer(VkCommandBuffer cmdBuffer) const = 0; // Write render commands here
+	virtual void PopulateCommandBuffer(size_t currentImageIdx, VkCommandBuffer cmdBuffer) const = 0; // Write render commands here
 
 
 protected:
-	bool CreateColorDepthFramebuffers(VkRenderPass renderPass, VulkanSwapchain& swapchain);
 	bool CreateUniformBuffers(size_t uniformDataSize);
 
 	VkExtent2D m_FramebufferExtent;
@@ -29,9 +28,10 @@ protected:
 	
 	// Render-Pass / Pipeline state
 	VulkanTexture		m_DepthTexture;
-	VkRenderPass		m_RenderPass		= VK_NULL_HANDLE;
-	VkPipelineLayout	m_PipelineLayout	= VK_NULL_HANDLE;
-	VkPipeline			m_GraphicsPipeline	= VK_NULL_HANDLE;
+	VkRenderPass		m_RenderPass				= VK_NULL_HANDLE;
+	VkFramebuffer		m_Framebuffers[NUM_FRAMES]	= { VK_NULL_HANDLE };
+	VkPipelineLayout	m_PipelineLayout			= VK_NULL_HANDLE;
+	VkPipeline			m_GraphicsPipeline			= VK_NULL_HANDLE;
 	
 	// Uniform buffers
 	VkBuffer		m_UniformBuffers[NUM_FRAMES]		= { VK_NULL_HANDLE };

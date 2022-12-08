@@ -24,32 +24,6 @@ VulkanRendererBase::~VulkanRendererBase()
 	vkDestroyPipeline(context.device, m_GraphicsPipeline, nullptr);
 }
 
-bool VulkanRendererBase::CreateColorDepthFramebuffers(VkRenderPass renderPass, VulkanSwapchain& swapchain)
-{
-	VkFramebufferCreateInfo fbInfo =
-	{
-		.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-		.renderPass = renderPass,
-		.attachmentCount = 2,
-		.layers = 1,
-	};
-
-	// One framebuffer per swapchain image
-	for (int i = 0; i < swapchain.info.imageCount; i++)
-	{
-		// 2 attachments per framebuffer : COLOR + DEPTH
-		VkImageView attachments[2] = { swapchain.images[i].view, swapchain.depthImages[i].view };
-
-		// COLOR attachment
-		fbInfo.pAttachments = attachments;
-		fbInfo.width = swapchain.images[i].info.width;
-		fbInfo.height = swapchain.images[i].info.height;
-		VK_CHECK(vkCreateFramebuffer(context.device, &fbInfo, nullptr, &swapchain.framebuffers[i]));
-	}
-
-	return true;
-}
-
 bool VulkanRendererBase::CreateUniformBuffers(size_t uniformDataSize)
 {
 	for (size_t i = 0; i < NUM_FRAMES; i++)
