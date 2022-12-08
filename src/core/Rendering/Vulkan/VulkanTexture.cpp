@@ -72,11 +72,24 @@ bool VulkanTexture::UpdateImageTextureData(VkCommandBuffer cmdBuffer, VkDevice d
     UploadBufferData(stagingBufferMem, 0, data, imageSizeInBytes);
 
     // Copy content to image memory on GPU
-    BeginCommandBuffer(context.mainCmdBuffer);
+    BeginCommandBuffer(cmdBuffer);
     Transition(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     CopyBufferToImage(cmdBuffer, stagingBuffer);
     Transition(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    EndCommandBuffer(context.mainCmdBuffer);
+    EndCommandBuffer(cmdBuffer);
+
+    VkSubmitInfo submit =
+    {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .commandBufferCount=1,
+        .pCommandBuffers = &cmdBuffer
+    };
+    VkFence submitFence = VK_NULL_HANDLE;
+
+    VkFenceCreateInfo fenceInfo = { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+    vkCreateFence(context.device, &fenceInfo, nullptr, &submitFence);
+    vkQueueSubmit(context.queue, 1, &submit, submitFence);
+    vkWaitForFences(context.device, 1, &submitFence, VK_TRUE, OneSecondInNanoSeconds);
 
     // Cleanup
     vkDestroyBuffer(device, stagingBuffer, nullptr);
