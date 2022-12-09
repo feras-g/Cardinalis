@@ -9,11 +9,5 @@ layout(location = 0) out vec4 outColor;
 
 void main()
 {
-//	outColor = /*vec4(uv, vv, 1.0);*/ color * texture(texSampler, uv); // vec4( uv, vv/*0.0*//*cc*/, 1.0 );
-//	outColor = vec4( uv, 0, 1.0 ); //color; // /*vec4(1,0,0,1); // */vec4( uv, 0, 1.0 );
-
-//	float vv = texture(texSampler, uv).x;
-//	outColor = vec4(uv, vv, 0.5);
-//	outColor = color * texture(texSampler, vec2(uv.x, 1.0 - uv.y)); // .wxyz;
 	outColor = color * texture(texFont, uv);
 }
