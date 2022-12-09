@@ -43,8 +43,9 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
 
     std::vector<VkPresentModeKHR> presentModes(presentModeCount);
     VK_CHECK(fpGetPhysicalDeviceSurfacePresentModesKHR(hPhysicalDevice, hSurface, &presentModeCount, presentModes.data()));
+    info.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR; 
+    LOG_WARN("Current present mode : {0}", string_VkPresentModeKHR(info.presentMode));
 
-    info.presentMode = VK_PRESENT_MODE_FIFO_KHR; // This is required
     info.imageCount  = min(NUM_FRAMES, caps.maxImageCount);
     info.colorFormat = colorFormat;
     info.colorSpace = colorSpace;
