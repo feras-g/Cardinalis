@@ -8,21 +8,22 @@ VulkanRendererBase::VulkanRendererBase(const VulkanContext& vkContext, bool useD
 
 VulkanRendererBase::~VulkanRendererBase()
 {
-	//for (size_t i = 0; i < NUM_FRAMES; i++)
-	//{
-	//	vkDestroyBuffer(context.device, m_UniformBuffers[i], nullptr);
-	//}
+	vkDeviceWaitIdle(context.device);
+	for (size_t i = 0; i < NUM_FRAMES; i++)
+	{
+		vkDestroyBuffer(context.device, m_UniformBuffers[i], nullptr);
+	}
 
-	//for (size_t i = 0; i < NUM_FRAMES; i++)
-	//{
-	//	vkFreeMemory(context.device, m_UniformBuffersMemory[i], nullptr);
-	//}
+	for (size_t i = 0; i < NUM_FRAMES; i++)
+	{
+		vkFreeMemory(context.device, m_UniformBuffersMemory[i], nullptr);
+	}
 
-	//vkDestroyDescriptorSetLayout(context.device, m_DescriptorSetLayout, nullptr);
-	//vkDestroyDescriptorPool(context.device, m_DescriptorPool, nullptr);
-	//vkDestroyRenderPass(context.device, m_RenderPass, nullptr);
-	//vkDestroyPipelineLayout(context.device, m_PipelineLayout, nullptr);
-	//vkDestroyPipeline(context.device, m_GraphicsPipeline, nullptr);
+	vkDestroyDescriptorSetLayout(context.device, m_DescriptorSetLayout, nullptr);
+	vkDestroyDescriptorPool(context.device, m_DescriptorPool, nullptr);
+	vkDestroyRenderPass(context.device, m_RenderPass, nullptr);
+	vkDestroyPipelineLayout(context.device, m_PipelineLayout, nullptr);
+	vkDestroyPipeline(context.device, m_GraphicsPipeline, nullptr);
 }
 
 bool VulkanRendererBase::RecreateFramebuffersRenderPass()
