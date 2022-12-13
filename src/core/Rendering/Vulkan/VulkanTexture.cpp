@@ -160,6 +160,7 @@ void VulkanTexture::Destroy(VkDevice device)
 
     vkDestroyImageView(device, view, nullptr);
     vkDestroyImage(device, image, nullptr);
+    vkFreeMemory(context.device, memory, nullptr);
 }
 
 // Helper to transition images and remember the current layout

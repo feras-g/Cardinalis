@@ -37,6 +37,9 @@ private:
 	bool CreateDescriptorSets(VkDevice device, VkDescriptorSet* out_DescriptorSets, VkDescriptorSetLayout* out_DescLayouts);
 	bool CreatePipelineLayout(VkDevice device, VkDescriptorSetLayout descSetLayout, VkPipelineLayout* out_PipelineLayout);
 	bool CreateUniformBuffers(size_t dataSizeInBytes);
+
+	virtual bool CreateRenderPass() override;
+	virtual bool CreateFramebuffers() override;
 	
 	VkRenderPass myRenderPass;
 };

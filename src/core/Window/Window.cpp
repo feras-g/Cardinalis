@@ -5,6 +5,7 @@
 #if defined(_WIN32)	
 
 #include <Windows.h>
+#include "Core/Application.h"
 #include "backends/imgui_impl_win32.h"
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -19,7 +20,7 @@ struct WindowData
 class Window::Impl
 {
 public:
-	Impl(const WindowInfo& info);
+	Impl(const WindowInfo& info, Application* hApp);
 	~Impl();
 	void Create();
 	void Show();
@@ -40,12 +41,14 @@ public:
 	WindowState m_WinState;
 	WindowData m_Data;
 
+	Application* hApplication;
+
 	HWND hWnd;
 	HINSTANCE hInstance;
 };
 
 /////////////////////////////////////////////////////////////////////////
-Window::Impl::Impl(const WindowInfo& info) : m_WinInfo(info), m_WinState({}), hWnd(NULL), hInstance(NULL) 
+Window::Impl::Impl(const WindowInfo& info, Application* hApp) : m_WinInfo(info), m_WinState({}), hWnd(NULL), hInstance(NULL) , hApplication(hApp)
 {
 }
 
@@ -58,9 +61,9 @@ void Window::Impl::Create()
 {
 	int h = m_WinInfo.height;
 	int w = m_WinInfo.width;
-
+	
 	const char* title = m_WinInfo.title;
-
+	
 	// Registration
 	WNDCLASSA wca
 	{
@@ -184,7 +187,6 @@ void Window::Impl::OnResize()
 inline void Window::Impl::UpdateGUI() const
 {
 	ImGuiIO& io = ImGui::GetIO();
-	io.DisplaySize = ImVec2((float)m_WinInfo.width, (float)m_WinInfo.height);
 
 	ImGui_ImplWin32_NewFrame();
 }
@@ -216,8 +218,8 @@ void Window::Impl::HandleEvents()
 #endif
 
 /////////////////////////////////////////////////////////////////////////
-Window::Window(const WindowInfo& info)
-	: pImpl(new Window::Impl(info))
+Window::Window(const WindowInfo& info, Application* hApp)
+	: pImpl(new Window::Impl(info, hApp))
 {
 	Initialize();
 }

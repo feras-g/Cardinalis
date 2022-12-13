@@ -35,15 +35,15 @@ void VulkanRenderInterface::Initialize()
 
 void VulkanRenderInterface::Terminate()
 {
-	context.swapchain->Destroy();
+	//context.swapchain->Destroy();
 
-	for (uint32_t i = 0; i < NUM_FRAMES; i++)
-	{
-		context.frames[i].Destroy(context.device);
-	}
+	//for (uint32_t i = 0; i < NUM_FRAMES; i++)
+	//{
+	//	context.frames[i].Destroy(context.device);
+	//}
 
-	vkDestroySurfaceKHR(context.instance, m_Surface, nullptr);
-	vkDestroyInstance(context.instance, nullptr);
+	//vkDestroySurfaceKHR(context.instance, m_Surface, nullptr);
+	//vkDestroyInstance(context.instance, nullptr);
 }
 
 void VulkanRenderInterface::CreateInstance()
@@ -578,12 +578,12 @@ bool CreateGraphicsPipeline(const VulkanShader& shader, bool useBlending, bool u
 		.blendConstants = { 0.0f, 0.0f, 0.0f, 0.0f }
 	};
 
-	VkDynamicState dynamicStateElt = VK_DYNAMIC_STATE_SCISSOR;
+	VkDynamicState dynamicStateElt[2] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 	dynamicState =
 	{
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-		.dynamicStateCount = 1,
-		.pDynamicStates = &dynamicStateElt
+		.dynamicStateCount = 2,
+		.pDynamicStates = dynamicStateElt
 	};
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////

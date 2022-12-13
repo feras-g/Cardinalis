@@ -2,9 +2,11 @@
 #define APPLICATION_H
 
 #include <memory>
+#include <vector>
 
 class Window;
 class VulkanRenderInterface;
+class VulkanRendererBase;
 
 /// <summary>
 /// Skeleton of an application to derive in client code.
@@ -32,6 +34,7 @@ public:
 	virtual void Render(size_t currentImageIdx) = 0;
 	virtual void RenderGUI(size_t currentImageIdx) = 0;
 	virtual void Terminate() = 0;
+	void OnWindowResize();
 
 public:
 	Application() = delete;
@@ -43,6 +46,7 @@ public:
 protected:
 	std::unique_ptr<Window> m_Window;
 	std::unique_ptr<VulkanRenderInterface> m_RHI;
+	std::vector<std::unique_ptr<VulkanRendererBase>> renderers;
 };
 
 #endif // !APPLICATION_H

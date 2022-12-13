@@ -38,6 +38,7 @@ struct WindowState
 	bool bIsMinimized = false;
 };
 
+class Application;
 
 class Window : public IWindow
 {
@@ -45,7 +46,7 @@ class Window : public IWindow
 	std::unique_ptr<Impl> pImpl;
 
 public:
-	Window(const WindowInfo& info);
+	Window(const WindowInfo& info, Application* hApp);
 	~Window() override;
 
 	void Initialize() override;

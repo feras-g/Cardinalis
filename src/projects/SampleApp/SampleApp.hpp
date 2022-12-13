@@ -12,7 +12,10 @@
 class SampleApp final : public Application
 {
 public:
-	SampleApp() : Application("SampleApp", 1280, 720), bUseDepth(true) {}
+	SampleApp() : Application("SampleApp", 1280, 720), bUseDepth(true) 
+	{
+
+	}
 	~SampleApp();
 	void Initialize()	override;
 	void Update()		override;
@@ -21,9 +24,8 @@ public:
 	void Terminate()	override;
 
 	// List of renderers
-	std::unique_ptr<VulkanClearColorRenderer> clear;
-	std::unique_ptr<VulkanPresentRenderer> present;
-	std::unique_ptr<VulkanImGuiRenderer> imgui;
+	enum ERenderer { CLEAR=0, PRESENT=1, IMGUI=2, NUM_RENDERERS };
+	inline VulkanRendererBase* GetRenderer(ERenderer name) { return renderers[name].get(); }
 
 protected:
 	bool bUseDepth;
@@ -31,17 +33,9 @@ protected:
 
 void SampleApp::Initialize()
 {
-	// Shaders
-	VulkanShader exampleShader("ExampleShader.vert.spv", "ExampleShader.frag.spv");
-
-	// Renderers
-	clear   = std::make_unique<VulkanClearColorRenderer>(context, bUseDepth);
-	clear->Initialize();
-	present = std::make_unique<VulkanPresentRenderer>(context, bUseDepth);
-	present->Initialize();
-	imgui = std::make_unique<VulkanImGuiRenderer>(context);
-	imgui->Initialize();
-
+	renderers.push_back(std::make_unique<VulkanClearColorRenderer>(context, bUseDepth));
+	renderers.push_back(std::make_unique<VulkanPresentRenderer>(context, bUseDepth));
+	renderers.push_back(std::make_unique<VulkanImGuiRenderer>(context));
 }
 
 void SampleApp::Update()
@@ -61,9 +55,9 @@ void SampleApp::Render(size_t currentImageIdx)
 	VK_CHECK(vkResetCommandPool(context.device, currentFrame.cmdPool, 0));
 	VK_CHECK(vkBeginCommandBuffer(currentFrame.cmdBuffer, &cmdBufferBeginInfo));
 	
-	clear->PopulateCommandBuffer(currentImageIdx, currentFrame.cmdBuffer);
-	imgui->PopulateCommandBuffer(currentImageIdx, currentFrame.cmdBuffer);
-	present->PopulateCommandBuffer(currentImageIdx, currentFrame.cmdBuffer);
+	GetRenderer(CLEAR)->PopulateCommandBuffer(currentImageIdx, currentFrame.cmdBuffer);
+	GetRenderer(IMGUI)->PopulateCommandBuffer(currentImageIdx, currentFrame.cmdBuffer);
+	GetRenderer(PRESENT)->PopulateCommandBuffer(currentImageIdx, currentFrame.cmdBuffer);
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -76,12 +70,14 @@ inline void SampleApp::RenderGUI(size_t currentImageIdx)
 	m_Window->UpdateGUI();
 
 	ImGui::NewFrame();
+	ImGui::DockSpaceOverViewport();
+	ImGui::ShowMetricsWindow();
+
 	bool show_demo_window;
-	ImGui::ShowDemoWindow(&show_demo_window);
 	ImGui::Render();
 
 	ImDrawData* draw_data = ImGui::GetDrawData();
-	imgui->UpdateBuffers(currentImageIdx, draw_data);
+	((VulkanImGuiRenderer*)GetRenderer(IMGUI))->UpdateBuffers(currentImageIdx, draw_data);
 }
 
 inline void SampleApp::Terminate()

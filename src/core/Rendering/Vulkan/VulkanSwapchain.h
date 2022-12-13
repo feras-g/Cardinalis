@@ -26,15 +26,15 @@ public:
 	VulkanSwapchain() = default;
 	VulkanSwapchain(VkSurfaceKHR surface, VkPhysicalDevice physDevice);
 	void Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkFormat depthStencilFormat);
-	void Reinitialize(VkFormat format, VkColorSpaceKHR colorSpace);
+	void Reinitialize();
 
 	// Reset metadata and destroy images and framebuffers
 	void Destroy();
-	void AcquireNextImage(VkSemaphore presentCompleteSemaphore, uint32_t* pImageIndex) const;
+	VkResult AcquireNextImage(VkSemaphore presentCompleteSemaphore, uint32_t* pImageIndex) const;
 	void Present(VkCommandBuffer cmdBuffer, VkQueue queue, uint32_t imageIndices);
 
 	inline VkSwapchainKHR Get() const;
-
+	
 	VkPhysicalDevice hPhysicalDevice;
 	VkSurfaceKHR hSurface;
 	VkSwapchainKHR swapchain;

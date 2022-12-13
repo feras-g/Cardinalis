@@ -8,12 +8,11 @@ class VulkanClearColorRenderer final : public VulkanRendererBase
 public:
 	VulkanClearColorRenderer() = default;
 	VulkanClearColorRenderer(const VulkanContext& vkContext, bool useDepth);
-	void Initialize();
 	void PopulateCommandBuffer(size_t currentImageIdx, VkCommandBuffer cmdBuffer) const override;
 
+	virtual bool CreateRenderPass()   override;
+	virtual bool CreateFramebuffers() override;
 
 	~VulkanClearColorRenderer() final;
-private:
-	bool bClearDepth;
 };
 #endif // !VULKAN_CLEAR_COLOR_RENDERER_H

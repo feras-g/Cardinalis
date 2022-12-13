@@ -3,9 +3,11 @@
 
 #include "Core/EngineLogger.h"
 #include "Rendering/Vulkan/VulkanRenderInterface.h"
+#include "Rendering/Vulkan/VulkanRendererBase.h"
+
 Application::Application(const char* title, uint32_t width, uint32_t height)
 {
-	m_Window.reset(new Window({ .title = title, .width = width, .height = height }));
+	m_Window.reset(new Window({ .title = title, .width = width, .height = height }, this));
 	Logger::Init("EnginerLogger");
 
 	m_RHI.reset(new VulkanRenderInterface(title, 1, 3, 283));
@@ -53,7 +55,12 @@ void Application::PreRender()
 	VK_CHECK(vkWaitForFences(context.device, 1, &currentFrame.renderFence, true, OneSecondInNanoSeconds));
 	VK_CHECK(vkResetFences(context.device, 1, &currentFrame.renderFence));
 
-	swapchain.AcquireNextImage(currentFrame.imageAcquiredSemaphore, &context.currentBackBuffer);
+	VkResult result = swapchain.AcquireNextImage(currentFrame.imageAcquiredSemaphore, &context.currentBackBuffer);
+
+	if ( result == VK_ERROR_OUT_OF_DATE_KHR)
+	{ 
+		OnWindowResize(); 
+	}
 }
 
 void Application::PostRender()
@@ -91,10 +98,22 @@ void Application::PostRender()
 	};
 	
 	VkResult result = vkQueuePresentKHR(context.queue, &presentInfo);
-	context.frameCount++;
 
-	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+	if (result == VK_SUBOPTIMAL_KHR) 
+	{ 
+		OnWindowResize(); 
+	}
+
+	context.frameCount++;
+}
+
+void Application::OnWindowResize()
+{
+	context.swapchain->info.extent = {  (unsigned int)m_Window->GetWidth(), (unsigned int)m_Window->GetHeight() };
+	context.swapchain->Reinitialize();
+
+	for (int i = 0; i < renderers.size(); i++)
 	{
-		swapchain.Reinitialize(swapchain.info.colorFormat, swapchain.info.colorSpace);
+		renderers[i]->RecreateFramebuffersRenderPass();
 	}
 }

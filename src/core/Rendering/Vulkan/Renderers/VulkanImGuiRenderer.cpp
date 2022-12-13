@@ -7,8 +7,9 @@
 
 
 VulkanImGuiRenderer::VulkanImGuiRenderer(const VulkanContext& vkContext) 
-	: VulkanRendererBase(vkContext)
+	: VulkanRendererBase(vkContext, false)
 {
+	Initialize();
 }
 
 constexpr uint32_t ImGuiVtxBufferSize = 64 * 1024 * sizeof(ImDrawVert);
@@ -45,9 +46,11 @@ static void ConvertColorPacked_sRGBToLinearRGB(uint32_t& color)
 void VulkanImGuiRenderer::Initialize()
 {
 	ImGuiIO& io = ImGui::GetIO();
-
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+	
 	// Textures
-	CreateFontTexture(&io, "../../../data/fonts/ProggyClean.ttf", m_FontTexture);
+	CreateFontTexture(&io, "../../../data/fonts/SSTLight.ttf", m_FontTexture);
 	m_FontTexture.CreateImageView(context.device, { .format = VK_FORMAT_R8G8B8A8_UNORM, .aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevels = 1 });
 	CreateTextureSampler(context.device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, m_FontSampler);
 
@@ -88,6 +91,13 @@ void VulkanImGuiRenderer::PopulateCommandBuffer(size_t currentImageIdx, VkComman
 		.pClearValues = nullptr
 	};
 	vkCmdBeginRenderPass(cmdBuffer, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+	// Set viewport/scissor dynamically
+	VkViewport viewport = { 0,0, (float)context.swapchain->info.extent.width, (float)context.swapchain->info.extent.height, 0.0f, 1.0f };
+	vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
+	const VkRect2D scissor = { 0,0, context.swapchain->info.extent };
+	vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
+
 	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline);
 	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_PipelineLayout, 0, 1, &m_DescriptorSets[currentImageIdx], 0, nullptr);
 
@@ -241,10 +251,21 @@ bool VulkanImGuiRenderer::CreateTextureSampler(VkDevice device, VkFilter minFilt
 	return (vkCreateSampler(context.device, &samplerInfo, nullptr, &out_Sampler) == VK_SUCCESS);
 }
 
+bool VulkanImGuiRenderer::CreateRenderPass()
+{
+	m_RenderPassInitInfo = { false, false, NONE };
+	return CreateColorDepthRenderPass(m_RenderPassInitInfo, false, &m_RenderPass);
+}
+
+bool VulkanImGuiRenderer::CreateFramebuffers()
+{
+	return CreateColorDepthFramebuffers(m_RenderPass, context.swapchain.get(), m_Framebuffers.data(), bUseDepth);
+}
+
 bool VulkanImGuiRenderer::CreatePipeline(VkDevice device)
 {
-	if (!CreateColorDepthRenderPass({ false, false, NONE }, false, &m_RenderPass)) return false;
-	if (!CreateColorDepthFramebuffers(m_RenderPass,  context.swapchain.get(), m_Framebuffers, false)) return false;
+	if (!CreateRenderPass())   return false;
+	if (!CreateFramebuffers()) return false;
 	if (!CreateUniformBuffers(sizeof(glm::mat4x4))) return false;
 	if (!CreateDescriptorPool(numStorageBuffers, numUniformBuffers, numCombinedSamplers, &m_DescriptorPool)) return false;
 	if (!CreateDescriptorSets(context.device, m_DescriptorSets, &m_DescriptorSetLayout)) return false;
