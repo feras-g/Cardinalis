@@ -2,3 +2,5 @@
 *.sln
 *.vcxproj*
 build
+/premake/scripts/bin
+/premake/scripts/obj
