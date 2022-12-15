@@ -10,7 +10,7 @@ VulkanPresentRenderer::VulkanPresentRenderer(const VulkanContext& vkContext, boo
 
 void VulkanPresentRenderer::PopulateCommandBuffer(size_t currentImageIdx, VkCommandBuffer cmdBuffer) const
 {
-	//VULKAN_RENDER_DEBUG_MARKER(cmdBuffer, "Pass: Present");
+	VULKAN_RENDER_DEBUG_MARKER(cmdBuffer, "Present");
 
 	VkRect2D	 screenRect		= { .offset = {0, 0}, .extent = context.swapchain->info.extent };
 

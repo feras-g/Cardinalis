@@ -41,10 +41,10 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
     VkSurfaceCapabilitiesKHR caps;
     VK_CHECK(fpGetPhysicalDeviceSurfaceCapabilitiesKHR(hPhysicalDevice, hSurface, &caps));
 
-    LOG_INFO("Surface capabilities : maxImageCount={0}, currentImageExtent={1}x{2}, maxImageExtent={3}x{1}\n",
-        caps.maxImageCount, caps.currentExtent.width, caps.currentExtent.height,
-        caps.maxImageExtent.width, caps.maxImageExtent.height);
-
+    //LOG_INFO("Surface capabilities : maxImageCount={0}, currentImageExtent={1}x{2}, maxImageExtent={3}x{1}\n",
+    //    caps.maxImageCount, caps.currentExtent.width, caps.currentExtent.height,
+    //    caps.maxImageExtent.width, caps.maxImageExtent.height);
+   
     assert(caps.maxImageCount >= 1);
     info.extent = caps.currentExtent;
     info.imageCount = min(NUM_FRAMES, caps.maxImageCount);
@@ -76,7 +76,6 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
     };
 
     VK_CHECK(vkCreateSwapchainKHR(hDevice, &swapchainCreateInfo, nullptr, &swapchain));
-    LOG_INFO("vkCreateSwapchainKHR() success.");
     
     depthImages.resize(info.imageCount);
     images.resize(info.imageCount);
@@ -84,7 +83,6 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
 
     std::vector<VkImage> tmp(info.imageCount);
     VK_CHECK(fpGetSwapchainImagesKHR(hDevice, swapchain, &info.imageCount, tmp.data()));
-    LOG_INFO("GetSwapchainImagesKHR() success.");
 
     // Swapchain images creation
     VkCommandBuffer& cmdBuffer = context.frames[context.currentBackBuffer].cmdBuffer;
@@ -129,7 +127,6 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
     }
 
     EndCommandBuffer(cmdBuffer);
-    
 }
 
 void VulkanSwapchain::Reinitialize()

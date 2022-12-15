@@ -53,9 +53,9 @@ void Application::PreRender()
 {
 	static double start = m_Window->GetTimestampSeconds();
 	double now = m_Window->GetTimestampSeconds();
-	double deltaSeconds = now - start;
+	m_DeltaSeconds = now - start;
 	start = now;
-	m_FramePerfCounter->Tick(deltaSeconds);
+	m_FramePerfCounter->Tick(m_DeltaSeconds);
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// PRE-RENDER

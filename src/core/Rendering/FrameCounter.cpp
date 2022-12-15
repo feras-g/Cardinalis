@@ -17,11 +17,7 @@ bool FrameCounter::Tick(float deltaSeconds, bool frameRendered)
 
     m_CurrentFps = (float)m_NumFrames / m_AccumulatedTime;
 
-    return true;
-}   
-
-void FrameCounter::Reinitialize()
-{
     m_NumFrames = 0;
     m_AccumulatedTime = 0.0f;
-}
+    return true;
+}   

@@ -10,7 +10,7 @@ VulkanClearColorRenderer::VulkanClearColorRenderer(const VulkanContext& vkContex
 
 void VulkanClearColorRenderer::PopulateCommandBuffer(size_t currentImageIdx, VkCommandBuffer cmdBuffer) const
 {
-	//VULKAN_RENDER_DEBUG_MARKER(cmdBuffer, "Pass: ClearColor");
+	VULKAN_RENDER_DEBUG_MARKER(cmdBuffer, "Clear Color");
 
 	// Clear color/depth
 	VkClearValue clearValues[2] = { {.color = {0.01f, 0.01f, 1.0f, 1.0f}}, {.depthStencil = {1.0f, 1}} };

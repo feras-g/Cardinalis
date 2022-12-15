@@ -6,24 +6,21 @@ VulkanRenderDebugMarker::VulkanRenderDebugMarker(VkCommandBuffer cmdBuffer, cons
 {
 	this->cmdBuffer = cmdBuffer;
 
-	if (!initialized)
+	//if (!initialized)
 	{
-		GET_DEVICE_PROC_ADDR(context.device, DebugMarkerSetObjectNameEXT);
-		GET_DEVICE_PROC_ADDR(context.device, CmdDebugMarkerBeginEXT);
-		GET_DEVICE_PROC_ADDR(context.device, CmdDebugMarkerEndEXT);
+		fpCmdInsertDebugUtilsLabelEXT = (PFN_vkCmdInsertDebugUtilsLabelEXT)vkGetInstanceProcAddr(context.instance, "vkCmdInsertDebugUtilsLabelEXT");
+		fpCmdBeginDebugUtilsLabelEXT  = (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetInstanceProcAddr(context.instance, "vkCmdBeginDebugUtilsLabelEXT");
+		fpCmdEndDebugUtilsLabelEXT    = (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetInstanceProcAddr(context.instance, "vkCmdEndDebugUtilsLabelEXT");
 
-		VulkanRenderDebugMarker::initialized = true;
+		initialized = true;
 	}
 
-	VkDebugMarkerObjectNameInfoEXT objectInfo = { .sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT, .pObjectName = markerName };
-	fpDebugMarkerSetObjectNameEXT(context.device, &objectInfo);
-
-	VkDebugMarkerMarkerInfoEXT info = { VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT, nullptr, markerName, {1.0f,0.0f,0.0f,1.0f} };
-	fpCmdDebugMarkerBeginEXT(cmdBuffer, &info);
+	VkDebugUtilsLabelEXT  info = { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT, nullptr, markerName, {0.55f, 0.33f,0.33f,1.0f} };
+	fpCmdBeginDebugUtilsLabelEXT(cmdBuffer, &info);
 };
 
 
 VulkanRenderDebugMarker::~VulkanRenderDebugMarker()
 {
-	fpCmdDebugMarkerEndEXT(cmdBuffer);
+	fpCmdEndDebugUtilsLabelEXT(cmdBuffer);
 };

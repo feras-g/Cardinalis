@@ -117,7 +117,7 @@ void VulkanRenderInterface::CreateDevices()
 		.pQueuePriorities = queuePriorities
 	};
 
-	deviceExtensions = { "VK_KHR_swapchain", "VK_EXT_debug_marker", "VK_KHR_shader_draw_parameters" };
+	deviceExtensions = { "VK_KHR_swapchain", "VK_KHR_shader_draw_parameters" };
 	VkDeviceCreateInfo deviceInfo = 
 	{
 		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -251,7 +251,7 @@ void GetInstanceExtensionNames(std::vector<const char*>& extensions)
 
 	std::vector<VkExtensionProperties> instanceExtensions{ extensionCount };
 	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, instanceExtensions.data());
-	LOG_INFO("Found {0} vulkan extensions :", extensionCount);
+	LOG_INFO("Found {0} Vulkan instance extensions :", extensionCount);
 
 	// Swapchain extension
 	extensions.push_back("VK_KHR_surface");

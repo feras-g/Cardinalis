@@ -8,6 +8,7 @@
 #include "Rendering/Vulkan/Renderers/VulkanClearColorRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanPresentRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanImGuiRenderer.h"
+#include "Rendering/FrameCounter.h"
 
 class SampleApp final : public Application
 {
@@ -75,7 +76,10 @@ inline void SampleApp::RenderGUI(size_t currentImageIdx)
 	ImGui::DockSpaceOverViewport();
 
 	// Overlay
-	ImGuiWindowFlags overlayFlags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+	ImGuiWindowFlags overlayFlags = 
+		ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | 
+		ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | 
+		ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 	const float PAD = 10.0f;
 	
 	const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -89,10 +93,9 @@ inline void SampleApp::RenderGUI(size_t currentImageIdx)
 	if (ImGui::Begin("Overlay", 0, overlayFlags))
 	{
 		ImGui::Text(m_DebugName);
+		ImGui::Text("%f ms (%d fps)", Application::m_DeltaSeconds, (int)m_FramePerfCounter->GetFps());
 	}
 	ImGui::End();
-	
-
 
 	bool show_demo_window;
 	ImGui::Render();

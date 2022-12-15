@@ -76,7 +76,7 @@ void VulkanImGuiRenderer::Initialize()
 
 void VulkanImGuiRenderer::PopulateCommandBuffer(size_t currentImageIdx, VkCommandBuffer cmdBuffer) const
 {
-	//VULKAN_RENDER_DEBUG_MARKER(cmdBuffer, "Pass: ImGui");
+	VULKAN_RENDER_DEBUG_MARKER(cmdBuffer, "ImGui");
 
 	int32_t width  = (int32_t)context.swapchain->info.extent.width;
 	int32_t height = (int32_t)context.swapchain->info.extent.height;
@@ -93,6 +93,7 @@ void VulkanImGuiRenderer::PopulateCommandBuffer(size_t currentImageIdx, VkComman
 	vkCmdBeginRenderPass(cmdBuffer, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 	// Set viewport/scissor dynamically
+	
 	VkViewport viewport = { 0,0, (float)context.swapchain->info.extent.width, (float)context.swapchain->info.extent.height, 0.0f, 1.0f };
 	vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
 	const VkRect2D scissor = { 0,0, context.swapchain->info.extent };
