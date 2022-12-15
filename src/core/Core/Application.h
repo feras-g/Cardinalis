@@ -36,6 +36,8 @@ public:
 	virtual void Terminate() = 0;
 	void OnWindowResize();
 
+	bool bInitSuccess;
+
 public:
 	Application() = delete;
 	Application(const Application&) = delete;
@@ -44,6 +46,7 @@ public:
 	Application& operator=(const Application&&) = delete;
 
 protected:
+	const char* m_DebugName;
 	std::unique_ptr<Window> m_Window;
 	std::unique_ptr<VulkanRenderInterface> m_RHI;
 	std::vector<std::unique_ptr<VulkanRendererBase>> renderers;

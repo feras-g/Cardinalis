@@ -35,7 +35,7 @@ public:
 	void HandleEvents();
 
 	void OnClose();
-	void OnResize();
+	void OnResize(unsigned int width, unsigned int height);
 
 	WindowInfo m_WinInfo;
 	WindowState m_WinState;
@@ -105,12 +105,11 @@ void Window::Impl::Create()
 	{
 		assert(false);
 	}
-
 }
 
 void Window::Impl::Show()
 {
-	ShowWindow(m_Data.hWnd, SW_SHOW);
+	ShowWindow(m_Data.hWnd, SW_SHOWDEFAULT);
 	SetForegroundWindow(m_Data.hWnd);
 	SetFocus(m_Data.hWnd);
 }
@@ -146,9 +145,26 @@ LRESULT CALLBACK Window::Impl::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 		case WM_CLOSE:
 			self->OnClose();
 			return 0;
-		case WM_SIZING:
-			self->OnResize();
+		case WM_SIZE:
+		{
+			// Don't change window size on minimization
+			if (wParam != SIZE_MINIMIZED)
+			{
+				UINT width  = LOWORD(lParam);
+				UINT height = HIWORD(lParam);
+
+				// Size doesn't change when restoring a minimized window in my implementation
+				// but it is still recognized as a WM_SIZE event, so don't handle that case
+				if (self->m_WinInfo.width != width || self->m_WinInfo.height != height)
+				{
+					self->m_WinInfo.width  = width;
+					self->m_WinInfo.height = height;
+
+					self->OnResize(width, height);
+				}
+			}
 			break;
+		}
 		case WM_PAINT:
 		{
 			PAINTSTRUCT ps;
@@ -172,14 +188,12 @@ void Window::Impl::OnClose()
 }
 
 /////////////////////////////////////////////////////////////////////////
-void Window::Impl::OnResize()
+void Window::Impl::OnResize(unsigned int width, unsigned int height)
 {
-	RECT rect;
-	GetWindowRect(m_Data.hWnd, &rect);
-
-	m_WinInfo.width  = rect.right - rect.left;
-	m_WinInfo.height = rect.bottom - rect.top;
-	m_WinInfo.aspect = (float)m_WinInfo.width / m_WinInfo.height;
+	if (hApplication->bInitSuccess)
+	{
+		hApplication->OnWindowResize();
+	}
 
 	printf("%dx%d aspect=%f\n", m_WinInfo.width, m_WinInfo.height, m_WinInfo.aspect);
 }
@@ -245,7 +259,7 @@ inline void Window::ShutdownGUI() const { pImpl->ShutdownGUI(); }
 inline const WindowData* Window::GetData() const { return pImpl->GetData(); }
 void Window::HandleEvents() { return pImpl->HandleEvents(); }
 void Window::OnClose()  { return pImpl->OnClose(); }
-void Window::OnResize() { return pImpl->OnResize(); }
+void Window::OnResize(unsigned int width, unsigned int height) { return pImpl->OnResize(width, height); }
 
 IWindow::IWindow()
 {

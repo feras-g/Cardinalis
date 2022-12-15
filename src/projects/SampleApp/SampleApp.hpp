@@ -70,8 +70,29 @@ inline void SampleApp::RenderGUI(size_t currentImageIdx)
 	m_Window->UpdateGUI();
 
 	ImGui::NewFrame();
+
+	// Viewport
 	ImGui::DockSpaceOverViewport();
-	ImGui::ShowMetricsWindow();
+
+	// Overlay
+	ImGuiWindowFlags overlayFlags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+	const float PAD = 10.0f;
+	
+	const ImGuiViewport* viewport = ImGui::GetMainViewport();
+	ImVec2 work_pos = viewport->WorkPos;
+	ImVec2 window_pos, window_pos_pivot;
+	window_pos.x = (work_pos.x + PAD);
+	window_pos.y = (work_pos.y + PAD);
+
+	ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always);
+	ImGui::SetNextWindowBgAlpha(0.33f); // Transparent background
+	if (ImGui::Begin("Overlay", 0, overlayFlags))
+	{
+		ImGui::Text(m_DebugName);
+	}
+	ImGui::End();
+	
+
 
 	bool show_demo_window;
 	ImGui::Render();

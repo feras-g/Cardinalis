@@ -50,7 +50,7 @@ void VulkanImGuiRenderer::Initialize()
 	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 	
 	// Textures
-	CreateFontTexture(&io, "../../../data/fonts/SSTLight.ttf", m_FontTexture);
+	CreateFontTexture(&io, "../../../data/fonts/ProggyClean.ttf", m_FontTexture);
 	m_FontTexture.CreateImageView(context.device, { .format = VK_FORMAT_R8G8B8A8_UNORM, .aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevels = 1 });
 	CreateTextureSampler(context.device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, m_FontSampler);
 
@@ -201,13 +201,10 @@ bool VulkanImGuiRenderer::CreateFontTexture(ImGuiIO* io, const char* fontPath, V
 {
 	ImFontConfig cfg = ImFontConfig();
 	cfg.FontDataOwnedByAtlas = false;
-	cfg.RasterizerMultiply = 1.5f;
-	cfg.SizePixels = 768.0f / 32.0f;
-	cfg.PixelSnapH = true;
-	cfg.OversampleH = 4;
-	cfg.OversampleV = 4;
+	cfg.SizePixels = 13.0f;
+	
 	ImFont* Font = io->Fonts->AddFontFromFileTTF(fontPath, cfg.SizePixels, &cfg);
-
+	
 	unsigned char* pixels = nullptr;
 	int texWidth = 1, texHeight = 1;
 	io->Fonts->GetTexDataAsRGBA32(&pixels, &texWidth, &texHeight);

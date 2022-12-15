@@ -87,7 +87,8 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
     LOG_INFO("GetSwapchainImagesKHR() success.");
 
     // Swapchain images creation
-    BeginCommandBuffer(context.mainCmdBuffer);
+    VkCommandBuffer& cmdBuffer = context.frames[context.currentBackBuffer].cmdBuffer;
+    BeginCommandBuffer(cmdBuffer);
 
     // Depth-Stencil 
     for (int i = 0; i < info.imageCount; i++)
@@ -110,7 +111,7 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
             .aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT,
             .mipLevels   = 1
         });
-        images[i].Transition(context.mainCmdBuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        images[i].Transition(cmdBuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
         // DEPTH
         depthImages[i].CreateImage(context.device,
@@ -124,10 +125,11 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
             .memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         });
         depthImages[i].CreateImageView(context.device, { .format = depthStencilFormat, .aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT, .mipLevels = 1 });
-        depthImages[i].Transition(context.mainCmdBuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        depthImages[i].Transition(cmdBuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     }
 
-    EndCommandBuffer(context.mainCmdBuffer);
+    EndCommandBuffer(cmdBuffer);
+    
 }
 
 void VulkanSwapchain::Reinitialize()

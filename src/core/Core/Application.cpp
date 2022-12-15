@@ -5,7 +5,7 @@
 #include "Rendering/Vulkan/VulkanRenderInterface.h"
 #include "Rendering/Vulkan/VulkanRendererBase.h"
 
-Application::Application(const char* title, uint32_t width, uint32_t height)
+Application::Application(const char* title, uint32_t width, uint32_t height) : bInitSuccess(false), m_DebugName(title)
 {
 	m_Window.reset(new Window({ .title = title, .width = width, .height = height }, this));
 	Logger::Init("EnginerLogger");
@@ -18,6 +18,8 @@ Application::Application(const char* title, uint32_t width, uint32_t height)
 #else
 	assert(false);
 #endif // _WIN32
+
+	bInitSuccess = true;
 }
 
 Application::~Application()
@@ -56,11 +58,6 @@ void Application::PreRender()
 	VK_CHECK(vkResetFences(context.device, 1, &currentFrame.renderFence));
 
 	VkResult result = swapchain.AcquireNextImage(currentFrame.imageAcquiredSemaphore, &context.currentBackBuffer);
-
-	if ( result == VK_ERROR_OUT_OF_DATE_KHR)
-	{ 
-		OnWindowResize(); 
-	}
 }
 
 void Application::PostRender()
@@ -99,17 +96,11 @@ void Application::PostRender()
 	
 	VkResult result = vkQueuePresentKHR(context.queue, &presentInfo);
 
-	if (result == VK_SUBOPTIMAL_KHR) 
-	{ 
-		OnWindowResize(); 
-	}
-
 	context.frameCount++;
 }
 
 void Application::OnWindowResize()
 {
-	context.swapchain->info.extent = {  (unsigned int)m_Window->GetWidth(), (unsigned int)m_Window->GetHeight() };
 	context.swapchain->Reinitialize();
 
 	for (int i = 0; i < renderers.size(); i++)

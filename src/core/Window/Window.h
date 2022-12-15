@@ -17,7 +17,7 @@ public:
 	virtual void ShutdownGUI() const = 0;
 	virtual bool IsClosed()   const = 0;
 	virtual void OnClose() = 0;
-	virtual void OnResize() = 0;
+	virtual void OnResize(unsigned int width, unsigned int height) = 0;
 	virtual int GetHeight() const = 0;
 	virtual int GetWidth()  const = 0;
 	virtual const WindowData* GetData() const = 0;
@@ -59,7 +59,7 @@ public:
 	void HandleEvents();
 
 	void OnClose() override;
-	void OnResize() override;
+	void OnResize(unsigned int width, unsigned int height) override;
 };
 
 #endif // !WINDOW_H
