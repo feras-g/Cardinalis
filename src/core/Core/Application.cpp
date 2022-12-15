@@ -4,11 +4,14 @@
 #include "Core/EngineLogger.h"
 #include "Rendering/Vulkan/VulkanRenderInterface.h"
 #include "Rendering/Vulkan/VulkanRendererBase.h"
+#include "Rendering/FrameCounter.h"
 
 Application::Application(const char* title, uint32_t width, uint32_t height) : bInitSuccess(false), m_DebugName(title)
 {
 	m_Window.reset(new Window({ .title = title, .width = width, .height = height }, this));
 	Logger::Init("EnginerLogger");
+
+	m_FramePerfCounter.reset(new FrameCounter());
 
 	m_RHI.reset(new VulkanRenderInterface(title, 1, 3, 283));
 	m_RHI->Initialize();
@@ -32,7 +35,7 @@ Application::~Application()
 void Application::Run()
 {
 	Initialize();
-	
+
 	while (!m_Window->IsClosed())
 	{
 		m_Window->HandleEvents();
@@ -48,6 +51,12 @@ void Application::Run()
 
 void Application::PreRender()
 {
+	static double start = m_Window->GetTimestampSeconds();
+	double now = m_Window->GetTimestampSeconds();
+	double deltaSeconds = now - start;
+	start = now;
+	m_FramePerfCounter->Tick(deltaSeconds);
+
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// PRE-RENDER
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

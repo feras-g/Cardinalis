@@ -7,6 +7,7 @@
 class Window;
 class VulkanRenderInterface;
 class VulkanRendererBase;
+class FrameCounter;
 
 /// <summary>
 /// Skeleton of an application to derive in client code.
@@ -37,7 +38,7 @@ public:
 	void OnWindowResize();
 
 	bool bInitSuccess;
-
+	
 public:
 	Application() = delete;
 	Application(const Application&) = delete;
@@ -47,6 +48,8 @@ public:
 
 protected:
 	const char* m_DebugName;
+	std::unique_ptr<FrameCounter> m_FramePerfCounter;
+
 	std::unique_ptr<Window> m_Window;
 	std::unique_ptr<VulkanRenderInterface> m_RHI;
 	std::vector<std::unique_ptr<VulkanRendererBase>> renderers;
