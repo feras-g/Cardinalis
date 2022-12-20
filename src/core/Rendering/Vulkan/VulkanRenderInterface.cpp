@@ -617,6 +617,44 @@ bool CreateGraphicsPipeline(const VulkanShader& shader, bool useBlending, bool u
 	return true;
 }
 
+size_t CreateIndexVertexBuffer(const void* vtxData, size_t vtxBufferSizeInBytes, const void* idxData, size_t idxBufferSizeInBytes, VkBuffer out_StorageBuffer, VkDeviceMemory out_StorageBufferMem)
+{
+	size_t totalSizeInBytes = vtxBufferSizeInBytes + idxBufferSizeInBytes;
+
+	// Staging buffer
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMem;
+
+	CreateBuffer(totalSizeInBytes, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		stagingBuffer, stagingBufferMem);
+
+	// Copy vertex + index data to staging buffer
+	void* pData;
+	vkMapMemory(context.device, stagingBufferMem, 0, totalSizeInBytes, 0, &pData);
+	memcpy(pData, vtxData, idxBufferSizeInBytes);
+	memcpy((unsigned char*)pData + vtxBufferSizeInBytes, idxData, idxBufferSizeInBytes);
+	vkUnmapMemory(context.device, stagingBufferMem);
+
+	// Create storage buffer containing non-interleaved vertex + index data 
+	CopyBuffer(stagingBuffer, out_StorageBuffer, totalSizeInBytes);
+
+	return totalSizeInBytes;
+}
+
+void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize bufferSizeInBytes)
+{
+	BeginCommandBuffer(context.mainCmdBuffer);
+
+	VkBufferCopy bufferRegion =
+	{
+		.srcOffset = 0, .dstOffset = 0, .size = bufferSizeInBytes
+	};
+
+	vkCmdCopyBuffer(context.mainCmdBuffer, srcBuffer, dstBuffer, 1, &bufferRegion);
+
+	EndCommandBuffer(context.mainCmdBuffer);
+}
+
 VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, const VkDescriptorBufferInfo* bufferInfo, VkDescriptorType descriptorType)
 {
 	return VkWriteDescriptorSet
