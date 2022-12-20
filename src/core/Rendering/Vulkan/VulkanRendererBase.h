@@ -8,6 +8,7 @@
 class VulkanRendererBase
 {
 public:
+	VulkanRendererBase() = default;
 	VulkanRendererBase(const VulkanContext& vkContext, bool useDepth);
 
 	virtual ~VulkanRendererBase();
