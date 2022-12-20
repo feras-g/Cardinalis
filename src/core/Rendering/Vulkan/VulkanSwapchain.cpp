@@ -89,7 +89,7 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
     BeginCommandBuffer(cmdBuffer);
 
     // Depth-Stencil 
-    for (int i = 0; i < info.imageCount; i++)
+    for (uint32_t i = 0; i < info.imageCount; i++)
     {
         // COLOR
         images[i].image = std::move(tmp[i]);
