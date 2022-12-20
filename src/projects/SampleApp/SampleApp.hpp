@@ -41,7 +41,8 @@ void SampleApp::Initialize()
 
 void SampleApp::Update()
 {
-
+	// Update keyboard, mouse interaction
+	m_Window->UpdateGUI();
 }
 
 void SampleApp::Render(size_t currentImageIdx)
@@ -67,13 +68,19 @@ void SampleApp::Render(size_t currentImageIdx)
 
 inline void SampleApp::RenderGUI(size_t currentImageIdx)
 {
-	// Update keyboard, mouse interaction
-	m_Window->UpdateGUI();
-
 	ImGui::NewFrame();
+	ImGui::StyleColorsDark();
 
 	// Viewport
 	ImGui::DockSpaceOverViewport();
+
+	// Scene view
+	if (ImGui::Begin("Scene", 0, 0))
+	{
+		ImGui::BeginTabBar("Scene");
+		ImGui::EndTabBar();
+	}
+	ImGui::End();
 
 	// Overlay
 	ImGuiWindowFlags overlayFlags = 
@@ -93,11 +100,10 @@ inline void SampleApp::RenderGUI(size_t currentImageIdx)
 	if (ImGui::Begin("Overlay", 0, overlayFlags))
 	{
 		ImGui::Text(m_DebugName);
-		ImGui::Text("%f ms (%d fps)", Application::m_DeltaSeconds, (int)m_FramePerfCounter->GetFps());
+		ImGui::Text("CPU : %.1f ms (%d fps)", Application::m_DeltaSeconds * 1000.0f, (int)m_FramePerfCounter->GetFps());
 	}
 	ImGui::End();
 
-	bool show_demo_window;
 	ImGui::Render();
 
 	ImDrawData* draw_data = ImGui::GetDrawData();
