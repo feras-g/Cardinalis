@@ -7,7 +7,7 @@
 
 struct ImDrawData;
 struct ImGuiIO;
-struct VulkanShader;
+class VulkanShader;
 
 class VulkanImGuiRenderer final : public VulkanRendererBase
 {

@@ -47,7 +47,7 @@ public:
 	Application& operator=(const Application&&) = delete;
 
 protected:
-	float m_DeltaSeconds;
+	double m_LastTime = 0.0f, m_DeltaSeconds = 0.0f;
 	const char* m_DebugName;
 	std::unique_ptr<FrameCounter> m_FramePerfCounter;
 

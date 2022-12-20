@@ -34,7 +34,7 @@ public:
 	inline const WindowData*  GetData()	const;
 	void HandleEvents();
 
-	double GetTimestampSeconds();
+	double GetTimeSeconds();
 
 	void OnClose();
 	void OnResize(unsigned int width, unsigned int height);
@@ -229,20 +229,14 @@ void Window::Impl::HandleEvents()
 	}
 }
 
-double Window::Impl::GetTimestampSeconds()
+double Window::Impl::GetTimeSeconds()
 {
 	static LARGE_INTEGER s_frequency;
-	static BOOL s_use_qpc = QueryPerformanceFrequency(&s_frequency);
-	if (s_use_qpc) 
-	{
-		LARGE_INTEGER now;
-		QueryPerformanceCounter(&now);
-		return now.QuadPart / s_frequency.QuadPart;
-	}
-	else 
-	{
-		return GetTickCount();
-	}
+	QueryPerformanceFrequency(&s_frequency);
+
+	LARGE_INTEGER now;
+	QueryPerformanceCounter(&now);
+	return (double)now.QuadPart / s_frequency.QuadPart;
 }
 
 #else
@@ -276,7 +270,7 @@ inline void Window::UpdateGUI() const { return pImpl->UpdateGUI(); }
 inline void Window::ShutdownGUI() const { pImpl->ShutdownGUI(); }
 inline const WindowData* Window::GetData() const { return pImpl->GetData(); }
 void Window::HandleEvents() { return pImpl->HandleEvents(); }
-inline double Window::GetTimestampSeconds() { return pImpl->GetTimestampSeconds(); }
+inline double Window::GetTimeSeconds() { return pImpl->GetTimeSeconds(); }
 void Window::OnClose()  { return pImpl->OnClose(); }
 void Window::OnResize(unsigned int width, unsigned int height) { return pImpl->OnResize(width, height); }
 

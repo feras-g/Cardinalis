@@ -38,6 +38,11 @@ void Application::Run()
 
 	while (!m_Window->IsClosed())
 	{
+		double now = m_Window->GetTimeSeconds();
+		m_DeltaSeconds = now - m_LastTime;
+		m_FramePerfCounter->Tick((float)m_DeltaSeconds);
+		m_LastTime = now;
+
 		m_Window->HandleEvents();
 		Update();
 		PreRender();	
@@ -51,12 +56,6 @@ void Application::Run()
 
 void Application::PreRender()
 {
-	static double start = m_Window->GetTimestampSeconds();
-	double now = m_Window->GetTimestampSeconds();
-	m_DeltaSeconds = now - start;
-	start = now;
-	m_FramePerfCounter->Tick(m_DeltaSeconds);
-
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// PRE-RENDER
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

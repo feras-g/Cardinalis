@@ -9,7 +9,7 @@ bool FrameCounter::Tick(float deltaSeconds, bool frameRendered)
     }
 
     m_AccumulatedTime += deltaSeconds;
-
+    
     if (m_AccumulatedTime < m_AvgIntervalSeconds)
     {
         return false;

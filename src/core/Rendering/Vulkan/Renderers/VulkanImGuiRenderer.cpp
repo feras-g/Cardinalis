@@ -24,7 +24,6 @@ static void ConvertColorPacked_sRGBToLinearRGB(uint32_t& color)
 {
 	// Unpack
 	float s = 1.0f / 255.0f;
-	float gamma = 2.2;
 
 	float r = ((color >> 0)  & 0xFF) * s;
 	float g = ((color >> 8)  & 0xFF) * s;
@@ -32,6 +31,7 @@ static void ConvertColorPacked_sRGBToLinearRGB(uint32_t& color)
 	float a = ((color >> 24) & 0xFF) * s;
 
 	// Convert to linear space
+	float gamma = 2.2f;
 	r = pow(r, gamma);
 	g = pow(g, gamma);
 	b = pow(b, gamma);
