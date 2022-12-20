@@ -1,5 +1,5 @@
-#ifndef VULKAN_RENDER_DEBUG_MARKER
-#define VULKAN_RENDER_DEBUG_MARKER
+#ifndef VULKAN_RENDER_DEBUG_MARKER_H
+#define VULKAN_RENDER_DEBUG_MARKER_H
 
 #define VULKAN_RENDER_DEBUG_MARKER(...) VulkanRenderDebugMarker a = VulkanRenderDebugMarker(__VA_ARGS__);
 
@@ -26,4 +26,4 @@ private:
 	VkCommandBuffer cmdBuffer = VK_NULL_HANDLE;
 };
 
-#endif // !VULKAN_RENDER_DEBUG_MARKER
+#endif // !VULKAN_RENDER_DEBUG_MARKER_H

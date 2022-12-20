@@ -1,5 +1,5 @@
-#ifndef VULKAN_RENDER_INTERFACE
-#define VULKAN_RENDER_INTERFACE
+#ifndef VULKAN_RENDER_INTERFACE_H
+#define VULKAN_RENDER_INTERFACE_H
 
 #include <memory>
 #include <vector>
@@ -13,6 +13,9 @@
 
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
+
+#include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
 
 class Window;
 
@@ -88,26 +91,33 @@ enum RenderPassFlags
 
 struct RenderPassInitInfo
 {
-	// Clear attachments on initialization
+	// Clear attachments on initialization ?
 	bool clearColor;
 	bool clearDepth;
+
 	// Is it the final pass ? 
-	RenderPassFlags flags;
+	RenderPassFlags flags; 
 };
 
-bool CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProperties, VkBuffer& out_Buffer, VkDeviceMemory& out_BufferMemory);
+bool CreateBuffer(VkDeviceSize sizeInBytes, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProperties, VkBuffer& out_Buffer, VkDeviceMemory& out_BufferMemory);
 bool UploadBufferData(const VkDeviceMemory bufferMemory, VkDeviceSize offsetInBytes, const void* data, const size_t dataSizeInBytes);
 bool CreateUniformBuffer(VkDeviceSize size, VkBuffer& out_Buffer, VkDeviceMemory& out_BufferMemory);
 // Create a simple render pass with color and/or depth and a single subpass
 bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, bool useDepth, VkRenderPass* out_renderPass);
 bool CreateColorDepthFramebuffers(VkRenderPass renderPass, VulkanSwapchain* swapchain, VkFramebuffer* out_Framebuffers, bool useDepth);
 
-//bool CreateColorDepthFramebuffers(VkRenderPass renderPass, VulkanSwapchain* swapchain, bool useDepth);
 bool CreateDescriptorPool(uint32_t numStorageBuffers, uint32_t numUniformBuffers, uint32_t numCombinedSamplers, VkDescriptorPool* out_DescriptorPool);
 bool CreateGraphicsPipeline(const VulkanShader& shader, bool useBlending, bool useDepth, VkPrimitiveTopology topology, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPipeline* out_GraphicsPipeline, float customViewportWidth=0, float customViewportHeight=0);
+
+// Create a storage buffer containing non-interleaved vertex and index data
+// Return the created buffer's size 
+size_t CreateIndexVertexBuffer(const void* vtxData, size_t vtxBufferSizeInBytes, const void* idxData, size_t idxBufferSizeInBytes, VkBuffer out_StorageBuffer, VkDeviceMemory out_StorageBufferMem);
+
+// Create and execute a buffer copy command 
+void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize bufferSizeInBytes);
 
 VkPipelineShaderStageCreateInfo PipelineShaderStageCreateInfo(VkShaderModule shaderModule, VkShaderStageFlagBits shaderStage, const char* entryPoint);
 VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, const VkDescriptorBufferInfo* bufferInfo, VkDescriptorType descriptorType);
 VkWriteDescriptorSet ImageWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, const VkDescriptorImageInfo* imageInfo);
 
-#endif // !VULKAN_RENDER_INTERFACE
+#endif // !VULKAN_RENDER_INTERFACE_H
