@@ -16,6 +16,10 @@
 
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
+#include <glm/mat4x4.hpp>
+#include <glm/ext.hpp>
+
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
 class Window;
 
@@ -96,7 +100,7 @@ struct RenderPassInitInfo
 	bool clearDepth;
 
 	// Is it the final pass ? 
-	RenderPassFlags flags; 
+	RenderPassFlags flags = NONE; 
 };
 
 bool CreateBuffer(VkDeviceSize sizeInBytes, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProperties, VkBuffer& out_Buffer, VkDeviceMemory& out_BufferMemory);
@@ -111,13 +115,24 @@ bool CreateGraphicsPipeline(const VulkanShader& shader, bool useBlending, bool u
 
 // Create a storage buffer containing non-interleaved vertex and index data
 // Return the created buffer's size 
-size_t CreateIndexVertexBuffer(const void* vtxData, size_t vtxBufferSizeInBytes, const void* idxData, size_t idxBufferSizeInBytes, VkBuffer out_StorageBuffer, VkDeviceMemory out_StorageBufferMem);
+size_t CreateIndexVertexBuffer(const void* vtxData, size_t vtxBufferSizeInBytes, const void* idxData, size_t idxBufferSizeInBytes, VkBuffer& out_StorageBuffer, VkDeviceMemory& out_StorageBufferMem);
 
 // Create and execute a buffer copy command 
-void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize bufferSizeInBytes);
+void CopyBuffer(VkBuffer srcBuffer, VkBuffer& dstBuffer, VkDeviceSize bufferSizeInBytes);
 
 VkPipelineShaderStageCreateInfo PipelineShaderStageCreateInfo(VkShaderModule shaderModule, VkShaderStageFlagBits shaderStage, const char* entryPoint);
 VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, const VkDescriptorBufferInfo* bufferInfo, VkDescriptorType descriptorType);
 VkWriteDescriptorSet ImageWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, const VkDescriptorImageInfo* imageInfo);
+
+bool CreateTextureSampler(VkDevice device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode, VkSampler& out_Sampler);
+void BeginRenderpass(VkCommandBuffer cmdBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer, VkRect2D renderArea = { 0, 0, context.swapchain->info.extent });
+void EndRenderPass(VkCommandBuffer cmdBuffer);
+void SetViewportScissor(VkCommandBuffer cmdBuffer, 
+	VkViewport viewport = { 0,0, (float)context.swapchain->info.extent.width, (float)context.swapchain->info.extent.height, 0.0f, 1.0f } ,VkRect2D scissor = { 0,0, context.swapchain->info.extent });
+bool CreatePipelineLayout(VkDevice device, VkDescriptorSetLayout descSetLayout, VkPipelineLayout* out_PipelineLayout);
+
+void StartInstantUseCmdBuffer();
+void EndInstantUseCmdBuffer();
+
 
 #endif // !VULKAN_RENDER_INTERFACE_H

@@ -244,6 +244,52 @@ void EndCommandBuffer(VkCommandBuffer cmdBuffer)
 	VK_CHECK(vkEndCommandBuffer(cmdBuffer));
 }
 
+void StartInstantUseCmdBuffer()
+{
+	VkCommandBuffer& commandBuffer = context.mainCmdBuffer;
+
+	const VkCommandBufferAllocateInfo allocInfo = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+		.pNext = nullptr,
+		.commandPool = context.mainCmdPool,
+		.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+		.commandBufferCount = 1
+	};
+
+	vkAllocateCommandBuffers(context.device, &allocInfo, &commandBuffer);
+
+	const VkCommandBufferBeginInfo beginInfo = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.pNext = nullptr,
+		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+		.pInheritanceInfo = nullptr
+	};
+
+	vkBeginCommandBuffer(commandBuffer, &beginInfo);
+}
+
+void EndInstantUseCmdBuffer()
+{
+	vkEndCommandBuffer(context.mainCmdBuffer);
+
+	const VkSubmitInfo submitInfo = {
+		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+		.pNext = nullptr,
+		.waitSemaphoreCount = 0,
+		.pWaitSemaphores = nullptr,
+		.pWaitDstStageMask = nullptr,
+		.commandBufferCount = 1,
+		.pCommandBuffers = &context.mainCmdBuffer,
+		.signalSemaphoreCount = 0,
+		.pSignalSemaphores = nullptr
+	};
+
+	vkQueueSubmit(context.queue, 1, &submitInfo, VK_NULL_HANDLE);
+	vkQueueWaitIdle(context.queue);
+
+	vkFreeCommandBuffers(context.device, context.mainCmdPool, 1, &context.mainCmdBuffer);
+}
+
 void GetInstanceExtensionNames(std::vector<const char*>& extensions)
 {
 	uint32_t extensionCount = 0;
@@ -617,7 +663,9 @@ bool CreateGraphicsPipeline(const VulkanShader& shader, bool useBlending, bool u
 	return true;
 }
 
-size_t CreateIndexVertexBuffer(const void* vtxData, size_t vtxBufferSizeInBytes, const void* idxData, size_t idxBufferSizeInBytes, VkBuffer out_StorageBuffer, VkDeviceMemory out_StorageBufferMem)
+struct VertexData { glm::vec3 pos; glm::vec2 uv; };
+
+size_t CreateIndexVertexBuffer(const void* vtxData, size_t vtxBufferSizeInBytes, const void* idxData, size_t idxBufferSizeInBytes, VkBuffer& out_StorageBuffer, VkDeviceMemory& out_StorageBufferMem)
 {
 	size_t totalSizeInBytes = vtxBufferSizeInBytes + idxBufferSizeInBytes;
 
@@ -625,34 +673,36 @@ size_t CreateIndexVertexBuffer(const void* vtxData, size_t vtxBufferSizeInBytes,
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMem;
 
-	CreateBuffer(totalSizeInBytes, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+	CreateBuffer(totalSizeInBytes, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
 		stagingBuffer, stagingBufferMem);
 
 	// Copy vertex + index data to staging buffer
 	void* pData;
 	vkMapMemory(context.device, stagingBufferMem, 0, totalSizeInBytes, 0, &pData);
-	memcpy(pData, vtxData, idxBufferSizeInBytes);
+	memcpy(pData, vtxData, vtxBufferSizeInBytes);
 	memcpy((unsigned char*)pData + vtxBufferSizeInBytes, idxData, idxBufferSizeInBytes);
 	vkUnmapMemory(context.device, stagingBufferMem);
 
 	// Create storage buffer containing non-interleaved vertex + index data 
+	CreateBuffer(totalSizeInBytes, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, out_StorageBuffer, out_StorageBufferMem);
 	CopyBuffer(stagingBuffer, out_StorageBuffer, totalSizeInBytes);
+
+	vkDestroyBuffer(context.device, stagingBuffer, nullptr);
+	vkFreeMemory(context.device, stagingBufferMem, nullptr);
 
 	return totalSizeInBytes;
 }
 
-void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize bufferSizeInBytes)
+void CopyBuffer(VkBuffer srcBuffer, VkBuffer& dstBuffer, VkDeviceSize bufferSizeInBytes)
 {
-	BeginCommandBuffer(context.mainCmdBuffer);
-
+	StartInstantUseCmdBuffer();
 	VkBufferCopy bufferRegion =
 	{
 		.srcOffset = 0, .dstOffset = 0, .size = bufferSizeInBytes
 	};
 
 	vkCmdCopyBuffer(context.mainCmdBuffer, srcBuffer, dstBuffer, 1, &bufferRegion);
-
-	EndCommandBuffer(context.mainCmdBuffer);
+	EndInstantUseCmdBuffer();
 }
 
 VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, const VkDescriptorBufferInfo* bufferInfo, VkDescriptorType descriptorType)
@@ -701,4 +751,74 @@ VkPipelineShaderStageCreateInfo PipelineShaderStageCreateInfo(VkShaderModule sha
 		.pName = entryPoint,
 		.pSpecializationInfo = nullptr
 	};
+}
+
+bool CreateTextureSampler(VkDevice device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode, VkSampler& out_Sampler)
+{
+	VkSamplerCreateInfo samplerInfo =
+	{
+		.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+		.flags = 0,
+		.magFilter = magFilter,	// VK_FILTER_LINEAR, VK_FILTER_NEAREST
+		.minFilter = minFilter, // VK_FILTER_LINEAR, VK_FILTER_NEAREST
+		.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR, // VK_SAMPLER_MIPMAP_MODE_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST
+		.addressModeU = addressMode, // VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
+		.addressModeV = addressMode,
+		.addressModeW = addressMode,
+		.mipLodBias = 0.0f,
+		.anisotropyEnable = VK_FALSE,
+		.maxAnisotropy = 1,
+		.compareEnable = VK_FALSE,
+		.compareOp = VK_COMPARE_OP_ALWAYS,
+		.minLod = 0.0f,
+		.maxLod = 0.0f,
+		.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
+		.unnormalizedCoordinates = VK_FALSE
+	};
+
+	return (vkCreateSampler(context.device, &samplerInfo, nullptr, &out_Sampler) == VK_SUCCESS);
+}
+
+void BeginRenderpass(VkCommandBuffer cmdBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer, VkRect2D renderArea)
+{
+	VkRenderPassBeginInfo beginInfo =
+	{
+		.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+		.renderPass = renderPass,
+		.framebuffer = framebuffer,
+		.renderArea = renderArea,
+		.clearValueCount = 0,
+		.pClearValues = nullptr
+	};
+
+	vkCmdBeginRenderPass(cmdBuffer, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
+}
+
+void EndRenderPass(VkCommandBuffer cmdBuffer)
+{
+	vkCmdEndRenderPass(cmdBuffer);
+}
+
+void SetViewportScissor(VkCommandBuffer cmdBuffer, VkViewport viewport, VkRect2D scissor)
+{
+	vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
+	vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
+}
+
+bool CreatePipelineLayout(VkDevice device, VkDescriptorSetLayout descSetLayout, VkPipelineLayout* out_PipelineLayout)
+{
+	const VkPipelineLayoutCreateInfo pipelineLayoutInfo =
+	{
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.setLayoutCount = 1,
+		.pSetLayouts = &descSetLayout,
+		.pushConstantRangeCount = 0,
+		.pPushConstantRanges = nullptr
+	};
+
+	VK_CHECK(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, out_PipelineLayout));
+
+	return true;
 }
