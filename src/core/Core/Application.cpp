@@ -46,7 +46,7 @@ void Application::Run()
 		m_Window->HandleEvents();
 		Update();
 		PreRender();	
-		RenderGUI(context.currentBackBuffer);
+		UpdateRenderersData(context.currentBackBuffer);
 		Render(context.currentBackBuffer);
 		PostRender();
 	}

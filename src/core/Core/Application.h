@@ -33,7 +33,8 @@ public:
 	void PreRender();
 	void PostRender();
 	virtual void Render(size_t currentImageIdx) = 0;
-	virtual void RenderGUI(size_t currentImageIdx) = 0;
+	virtual void UpdateGuiData(size_t currentImageIdx) = 0;
+	virtual void UpdateRenderersData(size_t currentImageIdx) = 0;
 	virtual void Terminate() = 0;
 	void OnWindowResize();
 
