@@ -6,6 +6,8 @@
 #include "Core/EngineLogger.h"
 #include "Rendering/Vulkan/VulkanRenderInterface.h"
 
+#include "stb_image.h"
+
 static constexpr uint64_t OneSecondInNanoSeconds = 1000000000;
 
 #define VK_CHECK(x)													                                \
@@ -41,6 +43,19 @@ static uint32_t FindMemoryType(VkPhysicalDevice physDevice, uint32_t memoryTypeB
     }
 
     return 0;
+}
+
+using Image = std::unique_ptr<stbi_uc, decltype(&stbi_image_free)>;
+
+static Image LoadImageFromFile(const char* filename, ImageInfo& info)
+{
+    int w, h, n;
+    stbi_uc* data = stbi_load(filename, &w, &h, &n, 0);
+
+    info.width  = (uint32_t)w;
+    info.height = (uint32_t)h;
+
+    return Image(data, stbi_image_free);
 }
 
 #endif // !VULKAN_TOOLS_H
