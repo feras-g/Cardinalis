@@ -8,7 +8,7 @@ VulkanPresentRenderer::VulkanPresentRenderer(const VulkanContext& vkContext, boo
 	CreateFramebuffers();
 }
 
-void VulkanPresentRenderer::PopulateCommandBuffer(size_t currentImageIdx, VkCommandBuffer cmdBuffer) const
+void VulkanPresentRenderer::PopulateCommandBuffer(size_t currentImageIdx, VkCommandBuffer cmdBuffer) 
 {
 	VULKAN_RENDER_DEBUG_MARKER(cmdBuffer, "Present");
 
@@ -26,6 +26,11 @@ void VulkanPresentRenderer::PopulateCommandBuffer(size_t currentImageIdx, VkComm
 
 	vkCmdBeginRenderPass(cmdBuffer, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
 	vkCmdEndRenderPass(cmdBuffer);
+}
+
+bool VulkanPresentRenderer::CreateDescriptorSets(VkDevice device, VkDescriptorSet* out_DescriptorSets, VkDescriptorSetLayout* out_DescLayouts)
+{
+	return false;
 }
 
 bool VulkanPresentRenderer::CreateRenderPass()

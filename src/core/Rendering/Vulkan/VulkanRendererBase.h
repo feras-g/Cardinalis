@@ -12,15 +12,17 @@ public:
 	VulkanRendererBase(const VulkanContext& vkContext, bool useDepth);
 
 	virtual ~VulkanRendererBase();
-	virtual void PopulateCommandBuffer(size_t currentImageIdx, VkCommandBuffer cmdBuffer) const = 0; // Write render commands here
+	virtual void PopulateCommandBuffer(size_t currentImageIdx, VkCommandBuffer cmdBuffer) = 0; // Write render commands here
 	bool RecreateFramebuffersRenderPass();
 
 protected:
 	bool bUseDepth;
+	virtual bool CreateDescriptorSets(VkDevice device, VkDescriptorSet* out_DescriptorSets, VkDescriptorSetLayout* out_DescLayouts);
+	virtual bool UpdateDescriptorSets(VkDevice device);
 	virtual bool CreateRenderPass() = 0;
 	virtual bool CreateFramebuffers() = 0;
 	bool CreateUniformBuffers(size_t uniformDataSize);
-
+	
 	RenderPassInitInfo m_RenderPassInitInfo;
 	VkExtent2D m_FramebufferExtent;
 
@@ -39,6 +41,13 @@ protected:
 	// Uniform buffers
 	VkBuffer		m_UniformBuffers[NUM_FRAMES]		= { VK_NULL_HANDLE };
 	VkDeviceMemory	m_UniformBuffersMemory[NUM_FRAMES]	= { VK_NULL_HANDLE };
+
+	// Samplers
+	static void CreateSamplers();
+
+	static VkSampler s_SamplerRepeatLinear;
+	static VkSampler s_SamplerClampLinear;
+	static VkSampler s_SamplerClampNearest;
 };
 
 #endif // !RENDERER_BASE_H

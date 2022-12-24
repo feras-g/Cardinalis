@@ -8,8 +8,9 @@ class VulkanPresentRenderer final : public VulkanRendererBase
 public:
 	VulkanPresentRenderer() = default;
 	VulkanPresentRenderer(const VulkanContext& vkContext, bool useDepth);
-	void PopulateCommandBuffer(size_t currentImageIdx, VkCommandBuffer cmdBuffer) const override;
+	void PopulateCommandBuffer(size_t currentImageIdx, VkCommandBuffer cmdBuffer)  override;
 
+	virtual bool CreateDescriptorSets(VkDevice device, VkDescriptorSet* out_DescriptorSets, VkDescriptorSetLayout* out_DescLayouts) override;
 	virtual bool CreateRenderPass()   override;
 	virtual bool CreateFramebuffers() override;
 

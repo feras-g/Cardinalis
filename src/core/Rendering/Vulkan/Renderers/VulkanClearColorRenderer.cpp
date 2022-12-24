@@ -8,7 +8,7 @@ VulkanClearColorRenderer::VulkanClearColorRenderer(const VulkanContext& vkContex
 	CreateFramebuffers();
 }
 
-void VulkanClearColorRenderer::PopulateCommandBuffer(size_t currentImageIdx, VkCommandBuffer cmdBuffer) const
+void VulkanClearColorRenderer::PopulateCommandBuffer(size_t currentImageIdx, VkCommandBuffer cmdBuffer)
 {
 	VULKAN_RENDER_DEBUG_MARKER(cmdBuffer, "Clear Color");
 
@@ -28,6 +28,11 @@ void VulkanClearColorRenderer::PopulateCommandBuffer(size_t currentImageIdx, VkC
 
 	vkCmdBeginRenderPass(cmdBuffer, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
 	vkCmdEndRenderPass(cmdBuffer);
+}
+
+bool VulkanClearColorRenderer::CreateDescriptorSets(VkDevice device, VkDescriptorSet* out_DescriptorSets, VkDescriptorSetLayout* out_DescLayouts)
+{
+	return false;
 }
 
 bool VulkanClearColorRenderer::CreateRenderPass()
