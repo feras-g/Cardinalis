@@ -3,6 +3,7 @@
 
 bool FrameCounter::Tick(float deltaSeconds, bool frameRendered)
 {
+    m_CpuDeltaSeconds = deltaSeconds;
     if (frameRendered) 
     {
         m_NumFrames++;
@@ -15,7 +16,7 @@ bool FrameCounter::Tick(float deltaSeconds, bool frameRendered)
         return false;
     }
 
-    m_CurrentFps = (float)m_NumFrames / m_AccumulatedTime;
+    m_CurrentFps = m_NumFrames / (float)m_AccumulatedTime;
 
     m_NumFrames = 0;
     m_AccumulatedTime = 0.0f;

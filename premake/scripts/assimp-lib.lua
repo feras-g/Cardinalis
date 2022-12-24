@@ -2,8 +2,13 @@ project "assimp"
     assimp_dir = engine_root .. "src/thirdparty/assimp/code/" 
 
     kind "StaticLib"
+	runtime "Debug"
+	symbols "on"
     warnings 'Off'
     optimize 'Speed'
+
+	targetdir	(engine_root .. "build/bin/" .. outputdir)
+	objdir		(engine_root .. "build/obj/" .. outputdir)
 
 	-- Importers
 	defines {
@@ -23,7 +28,7 @@ project "assimp"
 		'ASSIMP_BUILD_NO_CSM_IMPORTER',
 		'ASSIMP_BUILD_NO_DXF_IMPORTER',
 		-- 'ASSIMP_BUILD_NO_FBX_IMPORTER',
-		-- 'ASSIMP_BUILD_NO_GLTF_IMPORTER',
+		'ASSIMP_BUILD_NO_GLTF_IMPORTER',
 		'ASSIMP_BUILD_NO_HMP_IMPORTER',
 		'ASSIMP_BUILD_NO_IFC_IMPORTER',
 		'ASSIMP_BUILD_NO_IRR_IMPORTER',
@@ -55,7 +60,8 @@ project "assimp"
 		'ASSIMP_BUILD_NO_TERRAGEN_IMPORTER',
 		'ASSIMP_BUILD_NO_X_IMPORTER',
 		'ASSIMP_BUILD_NO_X3D_IMPORTER',
-		'ASSIMP_BUILD_NO_XGL_IMPORTER'
+		'ASSIMP_BUILD_NO_XGL_IMPORTER',
+		'ASSIMP_BUILD_NO_IQM_IMPORTER'
 	}
 	-- Exporters
 	defines {
@@ -104,8 +110,8 @@ project "assimp"
 		assimp_dir .. 'AssetLib/Obj/**',
 		-- 'assimp/code/Blender/**', 'assimp/contrib/poly2tri/poly2tri/**',
 		assimp_dir .. 'AssetLib/FBX/**',
-		--assimp_dir .. 'AssetLib/glTF2/**',
-		--assimp_dir .. 'AssetLib/glTF/**',
+		assimp_dir .. 'AssetLib/glTF2/**',
+		assimp_dir .. 'AssetLib/glTF/**',
 		assimp_dir .. 'AssetLib/Assbin/**' -- For caching
     }
 

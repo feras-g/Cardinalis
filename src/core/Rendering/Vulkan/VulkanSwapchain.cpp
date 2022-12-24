@@ -28,7 +28,7 @@ VulkanSwapchain::VulkanSwapchain(VkSurfaceKHR surface, VkPhysicalDevice physDevi
 
     std::vector<VkPresentModeKHR> presentModes(presentModeCount);
     VK_CHECK(fpGetPhysicalDeviceSurfacePresentModesKHR(hPhysicalDevice, hSurface, &presentModeCount, presentModes.data()));
-    info.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+    info.presentMode = VK_PRESENT_MODE_FIFO_KHR;
     LOG_WARN("Current present mode : {0}", string_VkPresentModeKHR(info.presentMode));
 }
 
@@ -47,7 +47,7 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
    
     assert(caps.maxImageCount >= 1);
     info.extent = caps.currentExtent;
-    info.imageCount = min(NUM_FRAMES, caps.maxImageCount);
+    info.imageCount = std::min(NUM_FRAMES, caps.maxImageCount);
 
     info.colorFormat = colorFormat;
     info.colorSpace = colorSpace;

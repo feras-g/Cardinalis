@@ -43,7 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "ScenePrivate.h"
 #include <assimp/scene.h>
-#if 0
+
 #include <assimp/version.h>
 
 #include "revision.h"
@@ -56,6 +56,11 @@ static const char *LEGAL_INFORMATION =
         "(c) 2006-2022, Assimp team\n"
         "License under the terms and conditions of the 3-clause BSD license\n"
         "https://www.assimp.org\n";
+
+#define VER_MINOR 0
+#define VER_MAJOR 0
+#define VER_PATCH 0
+#define GitVersion 0
 
 // ------------------------------------------------------------------------------------------------
 // Get legal string
@@ -118,7 +123,7 @@ ASSIMP_API unsigned int aiGetVersionRevision() {
 ASSIMP_API const char *aiGetBranchName() {
     return GitBranch;
 }
-#endif
+
 // ------------------------------------------------------------------------------------------------
 ASSIMP_API aiScene::aiScene() :
         mFlags(0),

@@ -33,11 +33,12 @@ project("CoreLib")
 		lib_dir .. "optick/include",
 		lib_dir .. "spdlog",
 		lib_dir .. "imgui",
+		lib_dir .. "assimp/include",
 		os.getenv("VULKAN_SDK") .. "/Include"
 	}
 	
 	libdirs {  }
-	links	{ "vulkan-1", "imgui" }
+	links	{ "vulkan-1", "imgui", "assimp" }
 	
 	targetdir	(engine_root .. "build/bin/" .. outputdir )
 	objdir		(engine_root .. "build/obj/" .. outputdir )
@@ -58,11 +59,9 @@ project("CoreLib")
 		buildoptions {"/Od"}
 		defines { "DEBUG", "ENABLE_VALIDATION_LAYERS" }
 		libdirs { lib_list, lib_dir .. "optick/lib/x64/debug/" }
-
 		
 	filter "configurations:Release"
 		runtime "Release"
 		optimize "on"
 		defines { "RELEASE" }
 		libdirs { lib_list, lib_dir .. "optick/lib/x64/release/" }
-
