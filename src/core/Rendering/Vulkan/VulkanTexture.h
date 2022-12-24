@@ -3,11 +3,10 @@
 
 #include <vulkan/vulkan.h>
 
-
 struct ImageInfo
 {
-	unsigned int width;
-	unsigned int height;
+	uint32_t width;
+	uint32_t height;
 	VkFormat format;
 	uint32_t layerCount = 1;
 	VkImageUsageFlags usage		  = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
@@ -36,9 +35,10 @@ struct VulkanTexture
 	ImageInfo info;
 	ImageViewInfo viewInfo;
 
+	bool CreateFromFile(const char* filename, VkFormat format, VkImageAspectFlags imageAspect);
 	bool CreateImage(VkDevice device, const ImageInfo& info);
-	bool CreateImageFromData(VkCommandBuffer cmdBuffer, VkDevice device, const ImageInfo& info, void* data);
-	bool UpdateImageTextureData(VkCommandBuffer cmdBuffer, VkDevice device, void* data);
+	bool CreateImageFromData(VkDevice device, const ImageInfo& info, void* data);
+	bool UpdateImageTextureData(VkDevice device, void* data);
 	bool CopyBufferToImage(VkCommandBuffer cmdBuffer, VkBuffer buffer);
 	bool CreateImageView(VkDevice device, const ImageViewInfo& info);
 

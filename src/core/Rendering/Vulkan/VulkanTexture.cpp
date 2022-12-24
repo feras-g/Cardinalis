@@ -6,6 +6,14 @@ static VkAccessFlags GetAccessMask(VkImageLayout layout);
 static uint32_t GetBytesPerPixelFromFormat(VkFormat format);
 static void GetSrcDstPipelineStage(VkImageLayout oldLayout, VkImageLayout newLayout, VkPipelineStageFlags& out_srcStageMask, VkPipelineStageFlags& out_dstStageMask);
 
+bool VulkanTexture::CreateFromFile(const char* filename, VkFormat format, VkImageAspectFlags imageAspect)
+{
+    info.format = format;
+    info.aspectFlag = imageAspect;
+    Image texture = LoadImageFromFile(filename, info);
+    return CreateImageFromData(context.device, info, texture.get());
+}
+
 bool VulkanTexture::CreateImage(VkDevice device, const ImageInfo& info)
 {
     this->info = info;
@@ -50,15 +58,15 @@ bool VulkanTexture::CreateImage(VkDevice device, const ImageInfo& info)
     return true;
 }
 
-bool VulkanTexture::CreateImageFromData(VkCommandBuffer cmdBuffer, VkDevice device, const ImageInfo& info, void* data)
+bool VulkanTexture::CreateImageFromData(VkDevice device, const ImageInfo& info, void* data)
 {
     CreateImage(device, info);
-    UpdateImageTextureData(cmdBuffer, device, data);
+    UpdateImageTextureData(device, data);
 
     return true;
 }
 
-bool VulkanTexture::UpdateImageTextureData(VkCommandBuffer cmdBuffer, VkDevice device, void* data)
+bool VulkanTexture::UpdateImageTextureData(VkDevice device, void* data)
 {
     uint32_t bpp = GetBytesPerPixelFromFormat(info.format);
 
@@ -72,24 +80,11 @@ bool VulkanTexture::UpdateImageTextureData(VkCommandBuffer cmdBuffer, VkDevice d
     UploadBufferData(stagingBufferMem, 0, data, imageSizeInBytes);
 
     // Copy content to image memory on GPU
-    BeginCommandBuffer(cmdBuffer);
-    Transition(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    CopyBufferToImage(cmdBuffer, stagingBuffer);
-    Transition(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    EndCommandBuffer(cmdBuffer);
-
-    VkSubmitInfo submit =
-    {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .commandBufferCount=1,
-        .pCommandBuffers = &cmdBuffer
-    };
-    VkFence submitFence = VK_NULL_HANDLE;
-
-    VkFenceCreateInfo fenceInfo = { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-    vkCreateFence(context.device, &fenceInfo, nullptr, &submitFence);
-    vkQueueSubmit(context.queue, 1, &submit, submitFence);
-    vkWaitForFences(context.device, 1, &submitFence, VK_TRUE, OneSecondInNanoSeconds);
+    StartInstantUseCmdBuffer();
+    Transition(context.mainCmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    CopyBufferToImage(context.mainCmdBuffer, stagingBuffer);
+    Transition(context.mainCmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    EndInstantUseCmdBuffer();
 
     // Cleanup
     vkDestroyBuffer(device, stagingBuffer, nullptr);
@@ -148,7 +143,7 @@ bool VulkanTexture::CreateImageView(VkDevice device, const ImageViewInfo& info)
         }
     };
 
-    VkResult result = vkCreateImageView(device, &createInfo, nullptr, &view);
+    VkResult result = vkCreateImageView(context.device, &createInfo, nullptr, &view);
     assert(result == VK_SUCCESS);
 
     return true;
