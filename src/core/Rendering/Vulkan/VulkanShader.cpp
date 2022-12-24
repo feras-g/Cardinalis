@@ -26,7 +26,7 @@ bool VulkanShader::LoadModule(const VkShaderStageFlagBits stage, const char* fil
 	if (fp == nullptr)
 	{
 		LOG_ERROR("Cannot open shader file {0} : {1}.", filename, strerror(fopenresult));
-		return false;
+		assert(false);
 	}
 
 	uint32_t fourcc;
@@ -34,7 +34,7 @@ bool VulkanShader::LoadModule(const VkShaderStageFlagBits stage, const char* fil
 	if (fourcc != SPIRV_FOURCC)
 	{
 		LOG_ERROR("SPIR-V FourCC for {0} file is {1} -- should be {2}.", filename, fourcc, SPIRV_FOURCC);
-		return false;
+		assert(false);
 	}
 
 	// Get file size in bytes
