@@ -19,11 +19,19 @@ public:
 	virtual bool CreateRenderPass()   override;
 	virtual bool CreateFramebuffers() override;
 
+	// Use offscreen buffer to render into
+	std::vector<VulkanTexture> m_ColorAttachments;
+	std::vector<VulkanTexture> m_DepthStencilAttachments;
 
 	~VulkanModelRenderer() final;
 private:
 	VulkanModel m_Model;
 	std::unique_ptr<VulkanShader> m_Shader;
+
+
+
+	VkFormat m_ColorFormat        = VK_FORMAT_R8G8B8A8_SRGB;
+	VkFormat m_DepthStencilFormat = VK_FORMAT_D32_SFLOAT;
 
 	VkSampler m_TextureSampler;
 	VulkanTexture m_Texture;

@@ -36,6 +36,7 @@ bool VulkanModel::CreateFromFile(const char* filename)
 
 		vertices.push_back({ .pos = {pos.x, pos.y, pos.z}, .uv = { uv.x,  1.0f - uv.y } });
 	}
+	m_NumVertices = vertices.size();
 
 	// Load indices
 	std::vector<unsigned int> indices;
@@ -48,6 +49,7 @@ bool VulkanModel::CreateFromFile(const char* filename)
 			indices.push_back(f.mIndices[vertexIdx]); 
 		};
 	}
+	m_NumIndices = indices.size();
 
 	aiReleaseImport(scene);
 

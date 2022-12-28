@@ -3,6 +3,9 @@
 
 #include <glm/mat4x4.hpp>
 
+const uint32_t attachmentWidth  = 800;
+const uint32_t attachmentHeight = 800;
+
 struct UniformData
 {
 	glm::mat4 model;
@@ -26,16 +29,22 @@ VulkanModelRenderer::VulkanModelRenderer(const char* modelFilename, const char* 
 	CreatePipeline();
 }
 
-void VulkanModelRenderer::PopulateCommandBuffer(size_t currentImageIdx, VkCommandBuffer cmdBuffer) 
+void VulkanModelRenderer::PopulateCommandBuffer(size_t currentImageIdx, VkCommandBuffer cmdBuffer)
 {
 	VULKAN_RENDER_DEBUG_MARKER(cmdBuffer, "Forward Pass");
 
-	BeginRenderpass(cmdBuffer, m_RenderPass, m_Framebuffers[currentImageIdx]);
-	SetViewportScissor(cmdBuffer);
+	const uint32_t width   = m_ColorAttachments[0].info.width;
+	const uint32_t height = m_ColorAttachments[0].info.height;
+	
+	SetViewportScissor(cmdBuffer, { 0,0, (float)width, (float)height }, {0,0, width, height });
+
+	VkClearValue clearValues[2] = { {.color = {0.01f, 0.01f, 1.0f, 1.0f}}, {.depthStencil = {1.0f, 1}} };
+
+	BeginRenderpass(cmdBuffer, m_RenderPass, m_Framebuffers[currentImageIdx], {0, 0, width, height}, clearValues, 2);
 	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline);
 	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_PipelineLayout, 0, 1, &m_DescriptorSets[currentImageIdx], 0, nullptr);
 
-	vkCmdDraw(cmdBuffer, m_Model.m_IdxBufferSizeInBytes / sizeof(unsigned int), 1, 0, 0);
+	vkCmdDraw(cmdBuffer, m_Model.m_NumVertices, 1, 0, 0);
 	EndRenderPass(cmdBuffer);
 }
 
@@ -64,6 +73,7 @@ bool VulkanModelRenderer::UpdateBuffers(size_t currentImage, glm::mat4 model, gl
 	return true;
 }
 
+
 bool VulkanModelRenderer::UpdateDescriptorSets(VkDevice device)
 {
 	// Mesh data is not modified between 2 frames
@@ -91,13 +101,31 @@ bool VulkanModelRenderer::UpdateDescriptorSets(VkDevice device)
 
 bool VulkanModelRenderer::CreateRenderPass()
 {
-	m_RenderPassInitInfo = { .clearColor = false, .clearDepth = false };
+	m_RenderPassInitInfo = { true, true, m_ColorFormat, m_DepthStencilFormat, RENDERPASS_INTERMEDIATE_OFFSCREEN };
+
 	return CreateColorDepthRenderPass(m_RenderPassInitInfo, true, &m_RenderPass);
 }
 
 bool VulkanModelRenderer::CreateFramebuffers()
 {
-	return CreateColorDepthFramebuffers(m_RenderPass, context.swapchain.get(), m_Framebuffers.data(), bUseDepth);
+	// Create offscreen framebuffers 
+	// Used to integrate them in a UI viewport
+	StartInstantUseCmdBuffer();
+	m_ColorAttachments.resize(NUM_FRAMES);
+	m_DepthStencilAttachments.resize(NUM_FRAMES);
+	for (int i = 0; i < NUM_FRAMES; i++)
+	{
+		m_ColorAttachments[i].CreateImage(context.device, { .width = attachmentWidth, .height = attachmentHeight, .format = m_ColorFormat, .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT });
+		m_ColorAttachments[i].CreateImageView(context.device, { .format = m_ColorFormat, .aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT });
+		m_ColorAttachments[i].Transition(context.mainCmdBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+		
+		m_DepthStencilAttachments[i].CreateImage(context.device, { .width = attachmentWidth, .height = attachmentHeight, .format = m_DepthStencilFormat, .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT });
+		m_DepthStencilAttachments[i].CreateImageView(context.device, { .format = m_DepthStencilFormat, .aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT });
+		m_DepthStencilAttachments[i].Transition(context.mainCmdBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+	}
+	EndInstantUseCmdBuffer();
+
+	return CreateColorDepthFramebuffers(m_RenderPass, m_ColorAttachments.data(), m_DepthStencilAttachments.data(), m_Framebuffers.data(), bUseDepth);
 }
 
 VulkanModelRenderer::~VulkanModelRenderer()

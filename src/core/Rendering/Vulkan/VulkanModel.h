@@ -13,6 +13,8 @@ public:
 
 	size_t m_VtxBufferSizeInBytes;
 	size_t m_IdxBufferSizeInBytes;
+	size_t m_NumVertices;
+	size_t m_NumIndices;
 
 	VkBuffer m_StorageBuffer = VK_NULL_HANDLE;
 
