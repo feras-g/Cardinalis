@@ -37,7 +37,7 @@ bool VulkanClearColorRenderer::CreateDescriptorSets(VkDevice device, VkDescripto
 
 bool VulkanClearColorRenderer::CreateRenderPass()
 {
-	m_RenderPassInitInfo = { true, bUseDepth, RENDERPASS_FIRST };
+	m_RenderPassInitInfo = { true, bUseDepth, context.swapchain->info.colorFormat, context.swapchain->info.depthStencilFormat,  RENDERPASS_FIRST };
 
 	if (!CreateColorDepthRenderPass(m_RenderPassInitInfo, true, &m_RenderPass))
 	{

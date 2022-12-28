@@ -35,7 +35,8 @@ bool VulkanPresentRenderer::CreateDescriptorSets(VkDevice device, VkDescriptorSe
 
 bool VulkanPresentRenderer::CreateRenderPass()
 {
-	m_RenderPassInitInfo = { false, false, RENDERPASS_LAST };
+	m_RenderPassInitInfo = { false, false, context.swapchain->info.colorFormat, context.swapchain->info.depthStencilFormat, RENDERPASS_LAST };
+
 	if (!CreateColorDepthRenderPass(m_RenderPassInitInfo, true, &m_RenderPass))
 	{
 		LOG_ERROR("Failed to create renderpass.");
