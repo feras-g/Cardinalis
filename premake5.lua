@@ -1,7 +1,7 @@
 -- https://premake.github.io/docs/Tokens/
 
 workspace "Cardinalis"
-	configurations { "Debug", "Release", "Debug(Validation)" }
+	configurations { "Debug", "Release" }
 	architecture "x64"
 	engine_root = _WORKING_DIR .. "/"
 	premake_dir = "premake/scripts/"
