@@ -21,8 +21,9 @@ for i, name in ipairs(projects) do
 		objdir		(engine_root .. "build/obj/" .. outputdir )
 		libdirs		(lib_dir)
 
-		libs = 
+		libdirs 
 		{
+			os.getenv("VULKAN_SDK") .. "/Lib"
 		}
 		
 		files 
@@ -44,26 +45,23 @@ for i, name in ipairs(projects) do
 
 		links
 		{
-			"CoreLib",
-			"OptickCore"
+			"CoreLib"
 		}
 
 		filter "system:windows"
 			systemversion "latest"
 			linkoptions { "/ENTRY:mainCRTStartup" } -- Allows using main() instead of WinMain(...) as the entry point
 
-		filter "configurations:Debug(Validation)"
+		filter "configurations:Debug"
 			runtime "Debug"
 			symbols "on"
 			buildoptions {"/Od"}
 			defines { "DEBUG", "ENABLE_VALIDATION_LAYERS" }
-			libdirs { os.getenv("VULKAN_SDK") .. "/Lib", lib_dir .. "optick/lib/x64/debug/" }
 		
 		filter "configurations:Release"
 			runtime "Release"
 			optimize "on"
 			defines { "RELEASE" }
-			libdirs { os.getenv("VULKAN_SDK") .. "/Lib", lib_dir .. "optick/lib/x64/release/" }
 end
 
 ------------------------------------------------------------------------------
