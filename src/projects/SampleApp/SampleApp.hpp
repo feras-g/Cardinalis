@@ -26,20 +26,17 @@ public:
 	void UpdateRenderersData(size_t currentImageIdx) override;
 	void Terminate()	override;
 
-	// List of renderers
-	enum ERenderer { CLEAR=0, PRESENT=1, IMGUI=2, MODEL=3, NUM_RENDERERS };
-	inline VulkanRendererBase* GetRenderer(ERenderer name) { return renderers[name].get(); }
-
 protected:
 	bool bUseDepth;
 };
 
 void SampleApp::Initialize()
 {
-	renderers.push_back(std::make_unique<VulkanClearColorRenderer>(context, bUseDepth));
-	renderers.push_back(std::make_unique<VulkanPresentRenderer>(context, bUseDepth));
-	renderers.push_back(std::make_unique<VulkanImGuiRenderer>(context));
-	renderers.push_back(std::make_unique<VulkanModelRenderer>("../../../data/models/cube.obj", "../../../data/textures/default.png"));
+	m_ClearRenderer.reset(new VulkanClearColorRenderer(context, bUseDepth));
+	m_PresentRenderer.reset(new VulkanPresentRenderer(context, bUseDepth));
+	m_ModelRenderer.reset(new VulkanModelRenderer ("../../../data/models/cow.obj", "../../../data/textures/default.png"));
+	m_ImGuiRenderer.reset(new VulkanImGuiRenderer(context));
+	m_ImGuiRenderer->Initialize(m_ModelRenderer->m_ColorAttachments);
 }
 
 void SampleApp::Update()
@@ -60,10 +57,10 @@ void SampleApp::Render(size_t currentImageIdx)
 	VK_CHECK(vkResetCommandPool(context.device, currentFrame.cmdPool, 0));
 	VK_CHECK(vkBeginCommandBuffer(currentFrame.cmdBuffer, &cmdBufferBeginInfo));
 	
-	GetRenderer(CLEAR)->PopulateCommandBuffer(currentImageIdx, currentFrame.cmdBuffer);
-	GetRenderer(IMGUI)->PopulateCommandBuffer(currentImageIdx, currentFrame.cmdBuffer);
-	GetRenderer(MODEL)->PopulateCommandBuffer(currentImageIdx, currentFrame.cmdBuffer);
-	GetRenderer(PRESENT)->PopulateCommandBuffer(currentImageIdx, currentFrame.cmdBuffer);
+	m_ClearRenderer->PopulateCommandBuffer(currentImageIdx, currentFrame.cmdBuffer);
+	m_ModelRenderer->PopulateCommandBuffer(currentImageIdx, currentFrame.cmdBuffer);
+	m_ImGuiRenderer->PopulateCommandBuffer(currentImageIdx, currentFrame.cmdBuffer);
+	m_PresentRenderer->PopulateCommandBuffer(currentImageIdx, currentFrame.cmdBuffer);
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -72,19 +69,41 @@ void SampleApp::Render(size_t currentImageIdx)
 
 inline void SampleApp::UpdateGuiData(size_t currentImageIdx)
 {
+	ImGuiViewport* viewport = ImGui::GetMainViewport();
+
 	ImGui::NewFrame();
 	ImGui::StyleColorsDark();
 
 	// Viewport
-	ImGui::DockSpaceOverViewport();
+	ImGui::DockSpaceOverViewport(0, ImGuiDockNodeFlags_PassthruCentralNode);
 
 	// Scene view
 	if (ImGui::Begin("Scene", 0, 0))
 	{
-		ImGui::BeginTabBar("Scene");
-		ImGui::EndTabBar();
+		ImVec2 sceneViewPanelSize = ImGui::GetContentRegionAvail();
+
+		m_ImGuiRenderer->m_SceneViewAspectRatio = sceneViewPanelSize.x / sceneViewPanelSize.y;
+		ImGui::Image((ImTextureID)1, sceneViewPanelSize);
 	}
 	ImGui::End();
+	
+	// Hierachy panel
+	if (ImGui::Begin("Hierarchy", 0, 0))
+	{
+
+	}
+	ImGui::End();
+
+	// Toolbar
+	// TODO
+
+	// Inspector panel
+	if (ImGui::Begin("Inspector", 0, 0))
+	{
+
+	}
+	ImGui::End();
+
 
 	// Overlay
 	ImGuiWindowFlags overlayFlags = 
@@ -93,17 +112,21 @@ inline void SampleApp::UpdateGuiData(size_t currentImageIdx)
 		ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 	const float PAD = 10.0f;
 	
-	const ImGuiViewport* viewport = ImGui::GetMainViewport();
-	ImVec2 work_pos = viewport->WorkPos;
+	ImVec2 work_pos  = viewport->WorkPos;
+	ImVec2 work_size = viewport->WorkSize;
 	ImVec2 window_pos, window_pos_pivot;
 	window_pos.x = (work_pos.x + PAD);
-	window_pos.y = (work_pos.y + PAD);
+	window_pos.y = (work_pos.y + work_size.y - PAD);
 
-	ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always);
+	window_pos_pivot.x = 0.0f;
+	window_pos_pivot.y = 1.0f;
+
+	ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
 	ImGui::SetNextWindowBgAlpha(0.33f); // Transparent background
 	if (ImGui::Begin("Overlay", 0, overlayFlags))
 	{
 		ImGui::Text(m_DebugName);
+		ImGui::AlignTextToFramePadding();
 		ImGui::Text("CPU : %.2f ms (%d fps)", Application::m_DeltaSeconds * 1000.0f, (int)m_FramePerfCounter->GetFps());
 	}
 	ImGui::End();
@@ -115,12 +138,14 @@ inline void SampleApp::UpdateRenderersData(size_t currentImageIdx)
 {
 	// Update ImGUI buffers
 	UpdateGuiData(context.currentBackBuffer);
+
 	// Other renderers data
 	{
-		glm::mat4 m = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 1.0f)) * glm::rotate(glm::mat4(1.0f), (float)m_Window->GetTimeSeconds(), glm::vec3(0, 1.0f, 0));
-		glm::mat4 v = glm::lookAt(glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));
-		glm::mat4 p = glm::perspective(45.0f, m_Window->GetWidth() / (float)m_Window->GetHeight(), 0.1f, 1000.0f);
-		((VulkanModelRenderer*)GetRenderer(MODEL))->UpdateBuffers(currentImageIdx, m, v, p);
+		glm::mat4 m = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+		glm::mat4 v = glm::lookAt(glm::vec3(0.0f, 0.0f, -5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::mat4 p = glm::perspective(45.0f, m_ImGuiRenderer->m_SceneViewAspectRatio, 0.1f, 1000.0f);
+
+		m_ModelRenderer->UpdateBuffers(currentImageIdx, m, v, p);
 	}
 }
 
