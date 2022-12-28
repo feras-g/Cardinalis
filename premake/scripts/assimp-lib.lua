@@ -1,11 +1,10 @@
 project "assimp"
+	location (engine_root .. "src/thirdparty/assimp")
     assimp_dir = engine_root .. "src/thirdparty/assimp/code/" 
-
+	
     kind "StaticLib"
-	runtime "Debug"
-	symbols "on"
+
     warnings 'Off'
-    optimize 'Speed'
 
 	targetdir	(engine_root .. "build/bin/" .. outputdir)
 	objdir		(engine_root .. "build/obj/" .. outputdir)
@@ -61,10 +60,8 @@ project "assimp"
 		'ASSIMP_BUILD_NO_X_IMPORTER',
 		'ASSIMP_BUILD_NO_X3D_IMPORTER',
 		'ASSIMP_BUILD_NO_XGL_IMPORTER',
-		'ASSIMP_BUILD_NO_IQM_IMPORTER'
-	}
-	-- Exporters
-	defines {
+		'ASSIMP_BUILD_NO_IQM_IMPORTER',
+	
 		'ASSIMP_BUILD_NO_COLLADA_EXPORTER',
 		'ASSIMP_BUILD_NO_X_EXPORTER',
 		'ASSIMP_BUILD_NO_STEP_EXPORTER',
@@ -110,9 +107,18 @@ project "assimp"
 		assimp_dir .. 'AssetLib/Obj/**',
 		-- 'assimp/code/Blender/**', 'assimp/contrib/poly2tri/poly2tri/**',
 		assimp_dir .. 'AssetLib/FBX/**',
-		assimp_dir .. 'AssetLib/glTF2/**',
-		assimp_dir .. 'AssetLib/glTF/**',
+		--assimp_dir .. 'AssetLib/glTF2/**',
+		--assimp_dir .. 'AssetLib/glTF/**',
 		assimp_dir .. 'AssetLib/Assbin/**' -- For caching
     }
+
+
+	filter "configurations:Debug"
+	runtime "Debug"
+	symbols "on"
+
+	filter "configurations:Release"
+	runtime "Release"
+    optimize 'Speed'
 
  
