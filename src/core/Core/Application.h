@@ -6,8 +6,14 @@
 
 class Window;
 class VulkanRenderInterface;
-class VulkanRendererBase;
 class FrameCounter;
+
+// Renderers forward decls
+class VulkanRendererBase;
+class VulkanClearColorRenderer;
+class VulkanImGuiRenderer;
+class VulkanModelRenderer;
+class VulkanPresentRenderer;
 
 /// <summary>
 /// Skeleton of an application to derive in client code.
@@ -54,7 +60,12 @@ protected:
 
 	std::unique_ptr<Window> m_Window;
 	std::unique_ptr<VulkanRenderInterface> m_RHI;
-	std::vector<std::unique_ptr<VulkanRendererBase>> renderers;
+
+	// Renderers
+	std::unique_ptr<VulkanClearColorRenderer>	m_ClearRenderer;
+	std::unique_ptr<VulkanImGuiRenderer>		m_ImGuiRenderer;
+	std::unique_ptr<VulkanModelRenderer>		m_ModelRenderer;
+	std::unique_ptr<VulkanPresentRenderer>		m_PresentRenderer;
 };
 
 #endif // !APPLICATION_H

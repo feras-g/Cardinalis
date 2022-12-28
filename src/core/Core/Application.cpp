@@ -4,6 +4,10 @@
 #include "Core/EngineLogger.h"
 #include "Rendering/Vulkan/VulkanRenderInterface.h"
 #include "Rendering/Vulkan/VulkanRendererBase.h"
+#include "Rendering/Vulkan/Renderers/VulkanClearColorRenderer.h"
+#include "Rendering/Vulkan/Renderers/VulkanPresentRenderer.h"
+#include "Rendering/Vulkan/Renderers/VulkanImGuiRenderer.h"
+#include "Rendering/Vulkan/Renderers/VulkanModelRenderer.h"
 #include "Rendering/FrameCounter.h"
 
 Application::Application(const char* title, uint32_t width, uint32_t height) : bInitSuccess(false), m_DebugName(title)
@@ -111,8 +115,8 @@ void Application::OnWindowResize()
 {
 	context.swapchain->Reinitialize();
 
-	for (int i = 0; i < renderers.size(); i++)
-	{
-		renderers[i]->RecreateFramebuffersRenderPass();
-	}
+	((VulkanRendererBase*)m_ClearRenderer.get())->RecreateFramebuffersRenderPass();
+	((VulkanRendererBase*)m_PresentRenderer.get())->RecreateFramebuffersRenderPass();
+	((VulkanRendererBase*)m_ModelRenderer.get())->RecreateFramebuffersRenderPass();
+	//((VulkanRendererBase*)m_ImGuiRenderer)->RecreateFramebuffersRenderPass();
 }
