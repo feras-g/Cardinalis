@@ -1,15 +1,15 @@
 #include "VulkanImGuiRenderer.h"
 #include "Rendering/Vulkan/VulkanRenderDebugMarker.h"
+#include "Rendering/Vulkan/VulkanRenderInterface.h"
 #include "Rendering/Vulkan/VulkanShader.h"
 #include "glm/mat4x4.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
-
 VulkanImGuiRenderer::VulkanImGuiRenderer(const VulkanContext& vkContext) 
 	: VulkanRendererBase(vkContext, false)
 {
-	Initialize();
+	
 }
 
 constexpr uint32_t ImGuiVtxBufferSize = 64 * 1024 * sizeof(ImDrawVert);
@@ -43,15 +43,24 @@ static void ConvertColorPacked_sRGBToLinearRGB(uint32_t& color)
 			 (uint8_t)(a * 255.0f) << 24);
 }
 
-void VulkanImGuiRenderer::Initialize()
+void VulkanImGuiRenderer::Initialize(const std::vector<VulkanTexture>& textures)
 {
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+	//io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 	
-	// Textures
-	CreateFontTexture(&io, "../../../data/fonts/ProggyClean.ttf", m_FontTexture);
-	m_FontTexture.CreateImageView(context.device, { .format = VK_FORMAT_R8G8B8A8_UNORM, .aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevels = 1 });
+	// Create font texture
+	size_t id = m_Textures.size();
+	m_Textures.push_back(VulkanTexture());
+	CreateFontTexture(&io, "../../../data/fonts/SSTRg.ttf", m_Textures.back());
+	m_Textures.back().CreateImageView(context.device, { .format = VK_FORMAT_R8G8B8A8_UNORM, .aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevels = 1 });
+	io.Fonts->TexID = (ImTextureID)id;
+
+	// Then add other textures
+	for (size_t i = 0; i < textures.size(); i++)
+	{
+		m_Textures.push_back(textures[i]);
+	}
 
 	// Shaders
 	m_Shader.reset(new VulkanShader("ImGui.vert.spv", "ImGui.frag.spv"));
@@ -83,13 +92,13 @@ void VulkanImGuiRenderer::PopulateCommandBuffer(size_t currentImageIdx, VkComman
 	int32_t width = (int32_t)context.swapchain->info.extent.width;
 	int32_t height = (int32_t)context.swapchain->info.extent.height;
 
-	BeginRenderpass(cmdBuffer, m_RenderPass, m_Framebuffers[currentImageIdx], { width, height });
+	BeginRenderpass(cmdBuffer, m_RenderPass, m_Framebuffers[currentImageIdx], { width, height }, nullptr, 0);
 	// Set viewport/scissor dynamically
 	SetViewportScissor(cmdBuffer);
 
 	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline);
 	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_PipelineLayout, 0, 1, &m_DescriptorSets[currentImageIdx], 0, nullptr);
-
+	
 	ImVec2 clipOff = m_pDrawData->DisplayPos;         // (0,0) unless using multi-viewports
 	ImVec2 clipScale = m_pDrawData->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
 
@@ -125,6 +134,13 @@ void VulkanImGuiRenderer::PopulateCommandBuffer(size_t currentImageIdx, VkComman
 					.extent = {.width = (uint32_t)(clipRect.z - clipRect.x), .height = (uint32_t)(clipRect.w - clipRect.y) }
 				};
 				vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
+
+				// Texture ID push constant
+				if (m_Textures.size() > 0)
+				{
+					uint32_t texture = (uint32_t)(intptr_t)pcmd->TextureId;
+					vkCmdPushConstants(cmdBuffer, m_PipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(uint32_t), &pcmd->TextureId);
+				}
 
 				vkCmdDraw(cmdBuffer, pcmd->ElemCount, 1, pcmd->IdxOffset + idxOffset, pcmd->VtxOffset + vtxOffset);
 			}
@@ -172,14 +188,24 @@ void VulkanImGuiRenderer::UpdateBuffers(size_t currentImage, ImDrawData* pDrawDa
 	{
 		const ImDrawList* cmdList = m_pDrawData->CmdLists[n];
 		const uint16_t* src = (const uint16_t*)cmdList->IdxBuffer.Data;
-
+		
 		for (int j = 0; j < cmdList->IdxBuffer.Size; j++)
 		{
 			*idx++ = (uint32_t)*src++;
 		}
+
 	}
 
 	vkUnmapMemory(context.device, m_StorageBufferMems[currentImage]);
+}
+
+void VulkanImGuiRenderer::LoadSceneViewTextures(VulkanTexture* modelRendererColor, VulkanTexture* modelRendererDepth)
+{
+	for (int i = 0; i < NUM_FRAMES; i++)
+	{
+		m_ModelRendererColorTextureId[i] = ImGui_ImplVulkan_AddTexture(s_SamplerClampLinear, modelRendererColor[i].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		m_ModelRendererDepthTextureId[i] = ImGui_ImplVulkan_AddTexture(s_SamplerClampNearest, modelRendererDepth[i].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	}
 }
 
 VulkanImGuiRenderer::~VulkanImGuiRenderer()
@@ -190,7 +216,7 @@ bool VulkanImGuiRenderer::CreateFontTexture(ImGuiIO* io, const char* fontPath, V
 {
 	ImFontConfig cfg = ImFontConfig();
 	cfg.FontDataOwnedByAtlas = false;
-	cfg.SizePixels = 13.0f;
+	cfg.SizePixels = 16.0f;
 	
 	ImFont* Font = io->Fonts->AddFontFromFileTTF(fontPath, cfg.SizePixels, &cfg);
 	
@@ -204,7 +230,6 @@ bool VulkanImGuiRenderer::CreateFontTexture(ImGuiIO* io, const char* fontPath, V
 		return false;
 	}
 	
-	io->Fonts->TexID = (ImTextureID)0;
 	io->FontDefault = Font;
 	io->DisplayFramebufferScale = ImVec2(1, 1);
 
@@ -213,7 +238,8 @@ bool VulkanImGuiRenderer::CreateFontTexture(ImGuiIO* io, const char* fontPath, V
 
 bool VulkanImGuiRenderer::CreateRenderPass()
 {
-	m_RenderPassInitInfo = { false, false, NONE };
+	m_RenderPassInitInfo = { false, false, context.swapchain->info.colorFormat, context.swapchain->info.depthStencilFormat, NONE };
+
 	return CreateColorDepthRenderPass(m_RenderPassInitInfo, false, &m_RenderPass);
 }
 
@@ -227,30 +253,64 @@ bool VulkanImGuiRenderer::CreatePipeline(VkDevice device)
 	if (!CreateRenderPass())   return false;
 	if (!CreateFramebuffers()) return false;
 	if (!CreateUniformBuffers(sizeof(glm::mat4x4))) return false;
-	if (!CreateDescriptorPool(numStorageBuffers, numUniformBuffers, numCombinedSamplers, &m_DescriptorPool)) return false;
+	if (!CreateDescriptorPool(numStorageBuffers, numUniformBuffers, m_Textures.size(), &m_DescriptorPool)) return false;
 	if (!CreateDescriptorSets(device, m_DescriptorSets, &m_DescriptorSetLayout)) return false;
 	if (!UpdateDescriptorSets(device)) return false;
-	if (!CreatePipelineLayout(device, m_DescriptorSetLayout, &m_PipelineLayout)) return false;
-	if (!CreateGraphicsPipeline(*m_Shader.get(), false, true, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, m_RenderPass, m_PipelineLayout, &m_GraphicsPipeline)) return false;
 	
+	size_t fragConstRangeSizeInBytes = sizeof(uint32_t); // Size of 1 Push constant holding the texture ID passed from ImGui::Image
+	if (!CreatePipelineLayout(device, m_DescriptorSetLayout, &m_PipelineLayout, 0, fragConstRangeSizeInBytes)) return false;
+	if (!CreateGraphicsPipeline(*m_Shader.get(), false, true, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, m_RenderPass, m_PipelineLayout, &m_GraphicsPipeline)) return false;
+
 	return true;
 }
 
+bool VulkanImGuiRenderer::CreateDescriptorSets(VkDevice device, VkDescriptorSet* out_DescriptorSets, VkDescriptorSetLayout* out_DescLayouts)
+{
+	// Specify layouts
+	std::vector<VkDescriptorSetLayoutBinding> bindings =
+	{
+		{.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_VERTEX_BIT },
+		{.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_VERTEX_BIT },
+		{.binding = 2, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_VERTEX_BIT },
+		{.binding = 3, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = (uint32_t)(m_Textures.size()), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT}
+	};
+
+	return VulkanRendererBase::CreateDescriptorSets(device, bindings, out_DescriptorSets, out_DescLayouts);
+}
+
+
 bool VulkanImGuiRenderer::UpdateDescriptorSets(VkDevice device)
 {
+	// Create descriptors for each texture used in ImGui 
+	for (size_t i = 0; i < m_Textures.size(); i++)
+	{
+		m_TextureDescriptors.push_back
+		(
+			{ .sampler = s_SamplerRepeatLinear, .imageView = m_Textures[i].view, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
+		);
+	}
+
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
 		VkDescriptorBufferInfo uboInfo0   = { .buffer = m_UniformBuffers[i], .offset = 0, .range = sizeof(glm::mat4)  };
 		VkDescriptorBufferInfo sboInfo0   = { .buffer = m_StorageBuffers[i], .offset = 0, .range = ImGuiVtxBufferSize };
 		VkDescriptorBufferInfo sboInfo1   = { .buffer = m_StorageBuffers[i], .offset = ImGuiVtxBufferSize, .range = ImGuiIdxBufferSize };
-		VkDescriptorImageInfo imageInfo0  = { .sampler = s_SamplerRepeatLinear, .imageView = m_FontTexture.view, .imageLayout = m_FontTexture.info.layout };
 
 		std::array<VkWriteDescriptorSet, 4> descriptorWrites =
 		{
 			BufferWriteDescriptorSet(m_DescriptorSets[i], 0, &uboInfo0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER),
 			BufferWriteDescriptorSet(m_DescriptorSets[i], 1, &sboInfo0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER),
 			BufferWriteDescriptorSet(m_DescriptorSets[i], 2, &sboInfo1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER),
-			ImageWriteDescriptorSet (m_DescriptorSets[i], 3,  &imageInfo0)
+			// Descriptor array
+			VkWriteDescriptorSet {
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = m_DescriptorSets[i],
+				.dstBinding = 3,
+				.dstArrayElement = 0,
+				.descriptorCount = static_cast<uint32_t>(m_Textures.size()),
+				.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.pImageInfo = m_TextureDescriptors.data()
+			},
 		};
 
 		vkUpdateDescriptorSets(device, (uint32_t)(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
