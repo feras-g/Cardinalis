@@ -258,6 +258,7 @@ uint32_t GetBytesPerPixelFromFormat(VkFormat format)
 
 void GetSrcDstPipelineStage(VkImageLayout oldLayout, VkImageLayout newLayout, VkPipelineStageFlags& out_srcStageMask, VkPipelineStageFlags& out_dstStageMask)
 {
+    // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkAccessFlagBits.html
     if (newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
     {
         if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED)
@@ -301,6 +302,24 @@ void GetSrcDstPipelineStage(VkImageLayout oldLayout, VkImageLayout newLayout, Vk
         {
             out_srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
             out_dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        }
+    }
+
+    else if (newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+    {
+        if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED)
+        {
+            out_srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            out_dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        }
+    }
+
+    else if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+    {
+        if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED)
+        {
+            out_srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            out_dstStageMask = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
         }
     }
 }
