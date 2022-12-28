@@ -117,11 +117,23 @@ void VulkanRenderInterface::CreateDevices()
 		.pQueuePriorities = queuePriorities
 	};
 
-	deviceExtensions = { "VK_KHR_swapchain", "VK_KHR_shader_draw_parameters" };
+	deviceExtensions = { "VK_KHR_swapchain", "VK_KHR_shader_draw_parameters", "VK_EXT_descriptor_indexing" };
+
+
+	// Enable runtime descriptor indexing
+	VkPhysicalDeviceDescriptorIndexingFeaturesEXT indexingFeatures
+	{
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT,
+		.pNext = nullptr,
+		.shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
+		.descriptorBindingPartiallyBound = VK_TRUE,
+		.runtimeDescriptorArray = VK_TRUE
+	};
+
 	VkDeviceCreateInfo deviceInfo = 
 	{
 		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-		.pNext = NULL,
+		.pNext = &indexingFeatures,
 		.flags = NULL,
 		.queueCreateInfoCount = 1,
 		.pQueueCreateInfos = &queueInfo,
@@ -399,31 +411,41 @@ bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, bool useDepth, Vk
 	// COLOR
 	VkAttachmentDescription colorAttachment =
 	{
-		.format			= context.swapchain->info.colorFormat,
+		.format			= rpi.colorFormat,
 		.samples		= VK_SAMPLE_COUNT_1_BIT,														// No multisampling
 		.loadOp			= rpi.clearColor ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,	// Clear when render pass begins ?
 		.storeOp		= VK_ATTACHMENT_STORE_OP_STORE,													// Discard content when render pass ends ?
 		.stencilLoadOp	= VK_ATTACHMENT_LOAD_OP_DONT_CARE, 
 		.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-		.initialLayout	= (rpi.flags & RENDERPASS_FIRST) == RENDERPASS_FIRST ? 
+		.initialLayout	= (rpi.flags & RENDERPASS_FIRST) ? 
 						VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 		.finalLayout	= (rpi.flags & RENDERPASS_LAST) == RENDERPASS_LAST ? 
 						VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
 	};
 
+	if (rpi.flags & RENDERPASS_INTERMEDIATE_OFFSCREEN)
+	{
+		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	}
+
 	// DEPTH
 	VkAttachmentDescription depthAttachment =
 	{
-		.format = context.swapchain->info.depthStencilFormat,
+		.format = rpi.depthStencilFormat,
 		.samples = VK_SAMPLE_COUNT_1_BIT,														// No multisampling
 		.loadOp  = rpi.clearDepth ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,	// Clear when render pass begins ?
 		.storeOp = VK_ATTACHMENT_STORE_OP_STORE,													// Discard content when render pass ends ?
 		.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 		.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-		.initialLayout  = (rpi.flags & RENDERPASS_FIRST) == RENDERPASS_FIRST ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+		.initialLayout  = (rpi.flags & RENDERPASS_FIRST) ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 		.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
 		//(rpi.flags & RENDERPASS_LAST) == RENDERPASS_LAST ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
 	};
+
+	if (rpi.flags & RENDERPASS_INTERMEDIATE_OFFSCREEN)
+	{
+		depthAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	}
 
 	VkAttachmentReference colorAttachmentRef = { .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 	VkAttachmentReference depthAttachmentRef = { .attachment = 1, .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
@@ -477,7 +499,12 @@ bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, bool useDepth, Vk
 	return (vkCreateRenderPass(context.device, &renderPassInfo, nullptr, out_renderPass) == VK_SUCCESS);
 }
 
-bool CreateColorDepthFramebuffers(VkRenderPass renderPass, VulkanSwapchain* swapchain, VkFramebuffer* out_Framebuffers, bool useDepth)
+bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const VulkanSwapchain* swapchain, VkFramebuffer* out_Framebuffers, bool useDepth)
+{
+	return CreateColorDepthFramebuffers(renderPass, swapchain->images.data(), swapchain->depthImages.data(), out_Framebuffers, useDepth);
+}
+
+bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const VulkanTexture* colorAttachments, const VulkanTexture* depthAttachments, VkFramebuffer* out_Framebuffers, bool useDepth)
 {
 	VkFramebufferCreateInfo fbInfo =
 	{
@@ -491,11 +518,11 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, VulkanSwapchain* swap
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
 		// 2 attachments per framebuffer : COLOR + DEPTH
-		VkImageView attachments[2] = { swapchain->images[i].view, useDepth ? swapchain->depthImages[i].view : VK_NULL_HANDLE };
+		VkImageView attachments[2] = { colorAttachments[i].view, depthAttachments ? depthAttachments[i].view : VK_NULL_HANDLE};
 
 		fbInfo.pAttachments = attachments;
-		fbInfo.width = swapchain->images[i].info.width;
-		fbInfo.height = swapchain->images[i].info.height;
+		fbInfo.width  = colorAttachments[i].info.width;
+		fbInfo.height = colorAttachments[i].info.height;
 
 		VK_CHECK(vkCreateFramebuffer(context.device, &fbInfo, nullptr, &out_Framebuffers[i]));
 	}
@@ -779,7 +806,7 @@ bool CreateTextureSampler(VkDevice device, VkFilter minFilter, VkFilter magFilte
 	return (vkCreateSampler(context.device, &samplerInfo, nullptr, &out_Sampler) == VK_SUCCESS);
 }
 
-void BeginRenderpass(VkCommandBuffer cmdBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer, VkRect2D renderArea)
+void BeginRenderpass(VkCommandBuffer cmdBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer, VkRect2D renderArea, const VkClearValue* clearValues, uint32_t clearValueCount)
 {
 	VkRenderPassBeginInfo beginInfo =
 	{
@@ -787,8 +814,8 @@ void BeginRenderpass(VkCommandBuffer cmdBuffer, VkRenderPass renderPass, VkFrame
 		.renderPass = renderPass,
 		.framebuffer = framebuffer,
 		.renderArea = renderArea,
-		.clearValueCount = 0,
-		.pClearValues = nullptr
+		.clearValueCount = clearValueCount,
+		.pClearValues = clearValues
 	};
 
 	vkCmdBeginRenderPass(cmdBuffer, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -807,6 +834,27 @@ void SetViewportScissor(VkCommandBuffer cmdBuffer, VkViewport viewport, VkRect2D
 
 bool CreatePipelineLayout(VkDevice device, VkDescriptorSetLayout descSetLayout, VkPipelineLayout* out_PipelineLayout)
 {
+	return CreatePipelineLayout(device, descSetLayout, out_PipelineLayout, 0, 0);
+}
+
+bool CreatePipelineLayout(VkDevice device, VkDescriptorSetLayout descSetLayout, VkPipelineLayout* out_PipelineLayout, uint32_t vtxConstRangeSizeInBytes, uint32_t fragConstRangeSizeInBytes)
+{
+	VkPushConstantRange pushConstantRanges[2] =
+	{
+		{
+			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+			.offset = 0,
+			.size   = vtxConstRangeSizeInBytes
+		},
+		{
+			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+			.offset = vtxConstRangeSizeInBytes,
+			.size   = fragConstRangeSizeInBytes
+		}
+	};
+	
+	uint32_t pushConstantRangeCount = (vtxConstRangeSizeInBytes > 0) + (fragConstRangeSizeInBytes > 0);
+
 	const VkPipelineLayoutCreateInfo pipelineLayoutInfo =
 	{
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
@@ -814,8 +862,8 @@ bool CreatePipelineLayout(VkDevice device, VkDescriptorSetLayout descSetLayout, 
 		.flags = 0,
 		.setLayoutCount = 1,
 		.pSetLayouts = &descSetLayout,
-		.pushConstantRangeCount = 0,
-		.pPushConstantRanges = nullptr
+		.pushConstantRangeCount = pushConstantRangeCount,
+		.pPushConstantRanges = pushConstantRangeCount == 0 ? nullptr : (vtxConstRangeSizeInBytes > 0 ? pushConstantRanges : &pushConstantRanges[1])
 	};
 
 	VK_CHECK(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, out_PipelineLayout));

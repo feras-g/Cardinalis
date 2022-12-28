@@ -88,9 +88,10 @@ private:
 
 enum RenderPassFlags
 {
-	NONE			 = 0,
-	RENDERPASS_FIRST = 1 << 1,
-	RENDERPASS_LAST  = 1 << 2
+	NONE								= 0,
+	RENDERPASS_FIRST					= 1 << 1,
+	RENDERPASS_INTERMEDIATE_OFFSCREEN	= 1 << 2, // Output of the render pass will be used as a read-only input for a future render pass
+	RENDERPASS_LAST						= 1 << 3
 };
 
 struct RenderPassInitInfo
@@ -98,6 +99,9 @@ struct RenderPassInitInfo
 	// Clear attachments on initialization ?
 	bool clearColor;
 	bool clearDepth;
+
+	VkFormat colorFormat;
+	VkFormat depthStencilFormat;
 
 	// Is it the final pass ? 
 	RenderPassFlags flags = NONE; 
@@ -108,7 +112,8 @@ bool UploadBufferData(const VkDeviceMemory bufferMemory, VkDeviceSize offsetInBy
 bool CreateUniformBuffer(VkDeviceSize size, VkBuffer& out_Buffer, VkDeviceMemory& out_BufferMemory);
 // Create a simple render pass with color and/or depth and a single subpass
 bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, bool useDepth, VkRenderPass* out_renderPass);
-bool CreateColorDepthFramebuffers(VkRenderPass renderPass, VulkanSwapchain* swapchain, VkFramebuffer* out_Framebuffers, bool useDepth);
+bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const VulkanSwapchain* swapchain, VkFramebuffer* out_Framebuffers, bool useDepth);
+bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const VulkanTexture* colorAttachments, const VulkanTexture* depthAttachments, VkFramebuffer* out_Framebuffers, bool useDepth);
 
 bool CreateDescriptorPool(uint32_t numStorageBuffers, uint32_t numUniformBuffers, uint32_t numCombinedSamplers, VkDescriptorPool* out_DescriptorPool);
 bool CreateGraphicsPipeline(const VulkanShader& shader, bool useBlending, bool useDepth, VkPrimitiveTopology topology, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPipeline* out_GraphicsPipeline, float customViewportWidth=0, float customViewportHeight=0);
@@ -125,11 +130,13 @@ VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptorSet, uin
 VkWriteDescriptorSet ImageWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, const VkDescriptorImageInfo* imageInfo);
 
 bool CreateTextureSampler(VkDevice device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode, VkSampler& out_Sampler);
-void BeginRenderpass(VkCommandBuffer cmdBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer, VkRect2D renderArea = { 0, 0, context.swapchain->info.extent });
+void BeginRenderpass(VkCommandBuffer cmdBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer, VkRect2D renderArea, const VkClearValue* clearValues, uint32_t clearValueCount);
+
 void EndRenderPass(VkCommandBuffer cmdBuffer);
 void SetViewportScissor(VkCommandBuffer cmdBuffer, 
-	VkViewport viewport = { 0,0, (float)context.swapchain->info.extent.width, (float)context.swapchain->info.extent.height, 0.0f, 1.0f } ,VkRect2D scissor = { 0,0, context.swapchain->info.extent });
+	VkViewport viewport = { 0,0, (float)context.swapchain->info.extent.width, (float)context.swapchain->info.extent.height, 0.0f, 1.0f}, VkRect2D scissor = {0,0, context.swapchain->info.extent});
 bool CreatePipelineLayout(VkDevice device, VkDescriptorSetLayout descSetLayout, VkPipelineLayout* out_PipelineLayout);
+bool CreatePipelineLayout(VkDevice device, VkDescriptorSetLayout descSetLayout, VkPipelineLayout* out_PipelineLayout, uint32_t vtxConstRangeSizeInBytes, uint32_t fragConstRangeSizeInBytes);
 
 void StartInstantUseCmdBuffer();
 void EndInstantUseCmdBuffer();
