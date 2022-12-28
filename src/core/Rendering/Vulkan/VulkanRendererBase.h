@@ -14,6 +14,8 @@ public:
 	virtual ~VulkanRendererBase();
 	virtual void PopulateCommandBuffer(size_t currentImageIdx, VkCommandBuffer cmdBuffer) = 0; // Write render commands here
 	bool RecreateFramebuffersRenderPass();
+	bool CreateDescriptorSets(VkDevice device, const std::vector<VkDescriptorSetLayoutBinding>& bindings,
+		VkDescriptorSet* out_DescriptorSets, VkDescriptorSetLayout* out_DescLayouts);
 
 protected:
 	bool bUseDepth;
@@ -22,7 +24,7 @@ protected:
 	virtual bool CreateRenderPass() = 0;
 	virtual bool CreateFramebuffers() = 0;
 	bool CreateUniformBuffers(size_t uniformDataSize);
-	
+
 	RenderPassInitInfo m_RenderPassInitInfo;
 	VkExtent2D m_FramebufferExtent;
 

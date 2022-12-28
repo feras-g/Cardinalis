@@ -44,27 +44,15 @@ bool VulkanRendererBase::RecreateFramebuffersRenderPass()
 	return true;
 }
 
-bool VulkanRendererBase::CreateDescriptorSets(VkDevice device, VkDescriptorSet* out_DescriptorSets, VkDescriptorSetLayout* out_DescLayouts)
+bool VulkanRendererBase::CreateDescriptorSets(VkDevice device, const std::vector<VkDescriptorSetLayoutBinding>& bindings,
+	VkDescriptorSet* out_DescriptorSets, VkDescriptorSetLayout* out_DescLayouts)
 {
-	// By default, this creates a descriptor set for swapchain buffer containing 4 descriptors 
-	// 1 Uniform buffer, 2 for Storage buffers, 1 combined image sampler
-
-	// Specify layouts
-	constexpr uint32_t bindingCount = 4;
-	VkDescriptorSetLayoutBinding bindings[bindingCount] =
-	{
-		{.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_VERTEX_BIT },
-		{.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_VERTEX_BIT },
-		{.binding = 2, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_VERTEX_BIT },
-		{.binding = 3, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT },
-	};
-
 	VkDescriptorSetLayoutCreateInfo layoutInfo =
 	{
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 		.flags = 0,
-		.bindingCount = bindingCount,
-		.pBindings = bindings
+		.bindingCount = (uint32_t)bindings.size(),
+		.pBindings	  = bindings.data()
 	};
 
 	VK_CHECK(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &m_DescriptorSetLayout));
@@ -81,6 +69,20 @@ bool VulkanRendererBase::CreateDescriptorSets(VkDevice device, VkDescriptorSet* 
 	};
 
 	return (vkAllocateDescriptorSets(device, &allocInfo, m_DescriptorSets) == VK_SUCCESS);
+}
+
+bool VulkanRendererBase::CreateDescriptorSets(VkDevice device, VkDescriptorSet* out_DescriptorSets, VkDescriptorSetLayout* out_DescLayouts)
+{
+	// Specify layouts
+	std::vector<VkDescriptorSetLayoutBinding> bindings =
+	{
+		{.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_VERTEX_BIT },
+		{.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_VERTEX_BIT },
+		{.binding = 2, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_VERTEX_BIT },
+		{.binding = 3, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT },
+	};
+
+	return CreateDescriptorSets(device, bindings, out_DescriptorSets, out_DescLayouts);
 }
 
 bool VulkanRendererBase::UpdateDescriptorSets(VkDevice device)
