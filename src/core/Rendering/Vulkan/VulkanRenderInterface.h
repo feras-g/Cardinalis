@@ -116,7 +116,7 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const VulkanSwapchain
 bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const VulkanTexture* colorAttachments, const VulkanTexture* depthAttachments, VkFramebuffer* out_Framebuffers, bool useDepth);
 
 bool CreateDescriptorPool(uint32_t numStorageBuffers, uint32_t numUniformBuffers, uint32_t numCombinedSamplers, VkDescriptorPool* out_DescriptorPool);
-bool CreateGraphicsPipeline(const VulkanShader& shader, bool useBlending, bool useDepth, VkPrimitiveTopology topology, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPipeline* out_GraphicsPipeline, float customViewportWidth=0, float customViewportHeight=0);
+bool CreateGraphicsPipeline(const VulkanShader& shader, bool useBlending, bool useDepth, VkPrimitiveTopology topology, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPipeline* out_GraphicsPipeline, float customViewportWidth, float customViewportHeight, VkCullModeFlags cullMode, VkFrontFace frontFace);
 
 // Create a storage buffer containing non-interleaved vertex and index data
 // Return the created buffer's size 
@@ -133,8 +133,7 @@ bool CreateTextureSampler(VkDevice device, VkFilter minFilter, VkFilter magFilte
 void BeginRenderpass(VkCommandBuffer cmdBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer, VkRect2D renderArea, const VkClearValue* clearValues, uint32_t clearValueCount);
 
 void EndRenderPass(VkCommandBuffer cmdBuffer);
-void SetViewportScissor(VkCommandBuffer cmdBuffer, 
-	VkViewport viewport = { 0,0, (float)context.swapchain->info.extent.width, (float)context.swapchain->info.extent.height, 0.0f, 1.0f}, VkRect2D scissor = {0,0, context.swapchain->info.extent});
+void SetViewportScissor(VkCommandBuffer cmdBuffer, uint32_t width, uint32_t height, bool invertViewportY = false);
 bool CreatePipelineLayout(VkDevice device, VkDescriptorSetLayout descSetLayout, VkPipelineLayout* out_PipelineLayout);
 bool CreatePipelineLayout(VkDevice device, VkDescriptorSetLayout descSetLayout, VkPipelineLayout* out_PipelineLayout, uint32_t vtxConstRangeSizeInBytes, uint32_t fragConstRangeSizeInBytes);
 

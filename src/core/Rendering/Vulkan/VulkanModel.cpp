@@ -15,6 +15,7 @@
 struct VertexData
 {
 	glm::vec3 pos;
+	glm::vec3 normal;
 	glm::vec2 uv;
 };
 
@@ -30,11 +31,12 @@ bool VulkanModel::CreateFromFile(const char* filename)
 	std::vector<VertexData> vertices;
 	for (size_t i=0; i < mesh->mNumVertices; i++)
 	{
-		const aiVector3D& pos = mesh->mVertices[i];
+		const aiVector3D& p = mesh->mVertices[i];
+		const aiVector3D& n = mesh->mNormals[i];
 		
 		const aiVector3D& uv  = mesh->mTextureCoords[0][i]; // Select first uv channel by default
 
-		vertices.push_back({ .pos = {pos.x, pos.y, pos.z}, .uv = { uv.x,  1.0f - uv.y } });
+		vertices.push_back({ .pos = {p.x, p.y, p.z}, .normal = {n.x, n.y, n.z}, .uv = {uv.x,  1.0f - uv.y}});
 	}
 	m_NumVertices = vertices.size();
 

@@ -563,7 +563,8 @@ bool CreateDescriptorPool(uint32_t numStorageBuffers, uint32_t numUniformBuffers
 	return true;
 }
 
-bool CreateGraphicsPipeline(const VulkanShader& shader, bool useBlending, bool useDepth, VkPrimitiveTopology topology, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPipeline* out_GraphicsPipeline, float customViewportWidth, float customViewportHeight)
+bool CreateGraphicsPipeline(const VulkanShader& shader, bool useBlending, bool useDepth, VkPrimitiveTopology topology, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPipeline* out_GraphicsPipeline, float customViewportWidth, float customViewportHeight, 
+	VkCullModeFlags cullMode, VkFrontFace frontFace)
 {
 	// Pipeline stages
 	// Vertex Input -> Input Assembly -> Viewport -> Rasterization -> Depth-Stencil -> Color Blending
@@ -609,8 +610,8 @@ bool CreateGraphicsPipeline(const VulkanShader& shader, bool useBlending, bool u
 	{
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
 		.polygonMode = VK_POLYGON_MODE_FILL,
-		.cullMode = VK_CULL_MODE_NONE,
-		.frontFace = VK_FRONT_FACE_CLOCKWISE,
+		.cullMode = cullMode,
+		.frontFace = frontFace,
 		.lineWidth = 1.0f
 	};
 
@@ -691,8 +692,6 @@ bool CreateGraphicsPipeline(const VulkanShader& shader, bool useBlending, bool u
 
 	return true;
 }
-
-struct VertexData { glm::vec3 pos; glm::vec2 uv; };
 
 size_t CreateIndexVertexBuffer(const void* vtxData, size_t vtxBufferSizeInBytes, const void* idxData, size_t idxBufferSizeInBytes, VkBuffer& out_StorageBuffer, VkDeviceMemory& out_StorageBufferMem)
 {
@@ -828,8 +827,27 @@ void EndRenderPass(VkCommandBuffer cmdBuffer)
 	vkCmdEndRenderPass(cmdBuffer);
 }
 
-void SetViewportScissor(VkCommandBuffer cmdBuffer, VkViewport viewport, VkRect2D scissor)
+void SetViewportScissor(VkCommandBuffer cmdBuffer, uint32_t width, uint32_t height, bool invertViewportY)
 {
+	
+	VkViewport viewport =
+	{
+		.x = 0.0f,
+		.y = 0.0f,
+		.width = (float)width,
+		.height = (float)height,	// Flip viewport origin to bottom left corner 
+		.minDepth = 0.0f,
+		.maxDepth = 1.0f
+	};
+
+	if (invertViewportY)
+	{
+		viewport.y = height;
+		viewport.height *= -1;	// Flip viewport origin to bottom left corner 
+	}
+
+	VkRect2D scissor = { .offset = {0, 0} , .extent = { width, height} };
+
 	vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
 	vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
 }

@@ -1,10 +1,12 @@
 #version 460
 
 layout(location = 0) out vec2 uv;
+layout(location = 1) out vec3 normal;
 
 struct Vertex
 {
-    float x,y,z; // Important to keep as float, not vec* or vertex pulling won't work
+    float px,py,pz; // Important to keep as float, not vec* or vertex pulling won't work
+    float nx,ny,nz;
     float u, v;
 };
 
@@ -23,5 +25,7 @@ void main()
     uint index = ibo.data[gl_VertexIndex];
     Vertex v = vbo.data[index];
     uv = vec2(v.u, v.v);
-    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(v.x, v.y, v.z, 1.0f);
+    normal = vec3(v.nx, v.ny, v.nz);
+    
+    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(v.px, v.py, v.pz, 1.0f);
 }

@@ -3,8 +3,8 @@
 
 #include <glm/mat4x4.hpp>
 
-const uint32_t attachmentWidth  = 2000;
-const uint32_t attachmentHeight = 2000;
+const uint32_t attachmentWidth  = 800;
+const uint32_t attachmentHeight = 600;
 
 struct UniformData
 {
@@ -33,10 +33,10 @@ void VulkanModelRenderer::PopulateCommandBuffer(size_t currentImageIdx, VkComman
 {
 	VULKAN_RENDER_DEBUG_MARKER(cmdBuffer, "Forward Pass");
 
-	const uint32_t width   = m_ColorAttachments[0].info.width;
+	const uint32_t width  = m_ColorAttachments[0].info.width;
 	const uint32_t height = m_ColorAttachments[0].info.height;
 	
-	SetViewportScissor(cmdBuffer, { 0,0, (float)width, (float)height }, {0,0, width, height });
+	SetViewportScissor(cmdBuffer, width, height, true);	
 
 	VkClearValue clearValues[2] = { {.color = {0.01f, 0.01f, 1.0f, 1.0f}}, {.depthStencil = {1.0f, 1}} };
 
@@ -57,7 +57,8 @@ bool VulkanModelRenderer::CreatePipeline()
 	if (!CreateDescriptorSets(context.device, m_DescriptorSets, &m_DescriptorSetLayout)) return false;
 	if (!UpdateDescriptorSets(context.device)) return false;
 	if (!CreatePipelineLayout(context.device, m_DescriptorSetLayout, &m_PipelineLayout)) return false;
-	if (!CreateGraphicsPipeline(*m_Shader.get(), false, true, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, m_RenderPass, m_PipelineLayout, &m_GraphicsPipeline)) return false;
+	if (!CreateGraphicsPipeline(*m_Shader.get(), false, true, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, m_RenderPass, m_PipelineLayout, &m_GraphicsPipeline, 
+0.0f, 0.0f, VK_CULL_MODE_NONE, VK_FRONT_FACE_COUNTER_CLOCKWISE)) return false;
 
 	return true;
 }

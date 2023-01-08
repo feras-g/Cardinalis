@@ -34,7 +34,7 @@ void SampleApp::Initialize()
 {
 	m_ClearRenderer.reset(new VulkanClearColorRenderer(context, bUseDepth));
 	m_PresentRenderer.reset(new VulkanPresentRenderer(context, bUseDepth));
-	m_ModelRenderer.reset(new VulkanModelRenderer ("../../../data/models/cow.obj", "../../../data/textures/default.png"));
+	m_ModelRenderer.reset(new VulkanModelRenderer ("../../../data/models/suzanne.obj", "../../../data/textures/default.png"));
 	m_ImGuiRenderer.reset(new VulkanImGuiRenderer(context));
 	m_ImGuiRenderer->Initialize(m_ModelRenderer->m_ColorAttachments);
 }
@@ -56,7 +56,7 @@ void SampleApp::Render(size_t currentImageIdx)
 	//VK_CHECK(vkResetCommandBuffer(currentFrame.cmdBuffer, 0));
 	VK_CHECK(vkResetCommandPool(context.device, currentFrame.cmdPool, 0));
 	VK_CHECK(vkBeginCommandBuffer(currentFrame.cmdBuffer, &cmdBufferBeginInfo));
-	
+
 	m_ClearRenderer->PopulateCommandBuffer(currentImageIdx, currentFrame.cmdBuffer);
 	m_ModelRenderer->PopulateCommandBuffer(currentImageIdx, currentFrame.cmdBuffer);
 	m_ImGuiRenderer->PopulateCommandBuffer(currentImageIdx, currentFrame.cmdBuffer);
@@ -141,7 +141,11 @@ inline void SampleApp::UpdateRenderersData(size_t currentImageIdx)
 
 	// Other renderers data
 	{
-		glm::mat4 m = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+		static float angle = 0.0F;
+		angle += 0.00021 / Application::m_DeltaSeconds;
+		glm::mat4 m = 
+			glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f)) * 
+			glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0.0f, 1.0f, 0.0f));
 		glm::mat4 v = glm::lookAt(glm::vec3(0.0f, 0.0f, -5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		glm::mat4 p = glm::perspective(45.0f, m_ImGuiRenderer->m_SceneViewAspectRatio, 0.1f, 1000.0f);
 
