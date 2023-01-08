@@ -425,7 +425,8 @@ bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, bool useDepth, Vk
 
 	if (rpi.flags & RENDERPASS_INTERMEDIATE_OFFSCREEN)
 	{
-		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		colorAttachment.finalLayout   = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	}
 
 	// DEPTH
@@ -444,7 +445,8 @@ bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, bool useDepth, Vk
 
 	if (rpi.flags & RENDERPASS_INTERMEDIATE_OFFSCREEN)
 	{
-		depthAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		depthAttachment.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		depthAttachment.finalLayout   = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	}
 
 	VkAttachmentReference colorAttachmentRef = { .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
@@ -471,7 +473,7 @@ bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, bool useDepth, Vk
 		.flags=0,
 		.pipelineBindPoint=VK_PIPELINE_BIND_POINT_GRAPHICS,
 		.inputAttachmentCount=0,
-		.pInputAttachments= nullptr,
+		.pInputAttachments=nullptr,
 		.colorAttachmentCount=1,
 		.pColorAttachments=&colorAttachmentRef,
 		.pResolveAttachments=nullptr,

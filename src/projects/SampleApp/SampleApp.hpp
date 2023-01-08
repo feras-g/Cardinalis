@@ -83,7 +83,7 @@ inline void SampleApp::UpdateGuiData(size_t currentImageIdx)
 		ImVec2 sceneViewPanelSize = ImGui::GetContentRegionAvail();
 
 		m_ImGuiRenderer->m_SceneViewAspectRatio = sceneViewPanelSize.x / sceneViewPanelSize.y;
-		ImGui::Image((ImTextureID)1, sceneViewPanelSize);
+		ImGui::Image((ImTextureID)m_ImGuiRenderer->m_ModelRendererColorTextureId[currentImageIdx], sceneViewPanelSize);
 	}
 	ImGui::End();
 	

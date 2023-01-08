@@ -3,8 +3,8 @@
 
 #include <glm/mat4x4.hpp>
 
-const uint32_t attachmentWidth  = 800;
-const uint32_t attachmentHeight = 800;
+const uint32_t attachmentWidth  = 2000;
+const uint32_t attachmentHeight = 2000;
 
 struct UniformData
 {
@@ -117,11 +117,11 @@ bool VulkanModelRenderer::CreateFramebuffers()
 	{
 		m_ColorAttachments[i].CreateImage(context.device, { .width = attachmentWidth, .height = attachmentHeight, .format = m_ColorFormat, .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT });
 		m_ColorAttachments[i].CreateImageView(context.device, { .format = m_ColorFormat, .aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT });
-		m_ColorAttachments[i].Transition(context.mainCmdBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+		m_ColorAttachments[i].Transition(context.mainCmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		
 		m_DepthStencilAttachments[i].CreateImage(context.device, { .width = attachmentWidth, .height = attachmentHeight, .format = m_DepthStencilFormat, .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT });
 		m_DepthStencilAttachments[i].CreateImageView(context.device, { .format = m_DepthStencilFormat, .aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT });
-		m_DepthStencilAttachments[i].Transition(context.mainCmdBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+		m_DepthStencilAttachments[i].Transition(context.mainCmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
 	EndInstantUseCmdBuffer();
 

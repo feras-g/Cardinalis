@@ -22,8 +22,8 @@ public:
 	void LoadSceneViewTextures(VulkanTexture* modelRendererColor, VulkanTexture* modelRendererDepth);
 
 	// Texture Ids
-	VkDescriptorSet m_ModelRendererColorTextureId[NUM_FRAMES];
-	VkDescriptorSet m_ModelRendererDepthTextureId[NUM_FRAMES];
+	uint32_t m_ModelRendererColorTextureId[NUM_FRAMES];
+	uint32_t m_ModelRendererDepthTextureId[NUM_FRAMES];
 
 	float m_SceneViewAspectRatio = 1.0;
 	bool CreateDescriptorSets(VkDevice device, VkDescriptorSet* out_DescriptorSets, VkDescriptorSetLayout* out_DescLayouts) override;

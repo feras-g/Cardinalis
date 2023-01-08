@@ -284,6 +284,13 @@ void GetSrcDstPipelineStage(VkImageLayout oldLayout, VkImageLayout newLayout, Vk
 
     else if (newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) // X -> Shader read-only
     {
+        if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED)
+        {
+            out_srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            out_dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        }
+
+
         if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
         {
             out_srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;

@@ -6,6 +6,8 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
+const size_t FONT_TEXTURE_INDEX = 0;
+
 VulkanImGuiRenderer::VulkanImGuiRenderer(const VulkanContext& vkContext) 
 	: VulkanRendererBase(vkContext, false)
 {
@@ -48,15 +50,26 @@ void VulkanImGuiRenderer::Initialize(const std::vector<VulkanTexture>& textures)
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	//io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-	
+
 	// Create font texture
-	size_t id = m_Textures.size();
 	m_Textures.push_back(VulkanTexture());
-	CreateFontTexture(&io, "../../../data/fonts/SSTRg.ttf", m_Textures.back());
-	m_Textures.back().CreateImageView(context.device, { .format = VK_FORMAT_R8G8B8A8_UNORM, .aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevels = 1 });
-	io.Fonts->TexID = (ImTextureID)id;
+
+	CreateFontTexture(&io, "../../../data/fonts/SSTRg.ttf", m_Textures[FONT_TEXTURE_INDEX]);
+	m_Textures[FONT_TEXTURE_INDEX].CreateImageView(context.device, { .format = VK_FORMAT_R8G8B8A8_UNORM, .aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevels = 1 });
+	io.Fonts->TexID = (ImTextureID)FONT_TEXTURE_INDEX;
 
 	// Then add other textures
+	// BY DEFAULT : 
+	// [0] : ImGui Font texture
+	// [1] [2] : Color output of model's renderer for each swapchain image (double buffered)
+	// [3] [4] : Depth output of model's renderer for each swapchain image (double buffered)
+
+	m_ModelRendererColorTextureId[0] = 1;
+	m_ModelRendererColorTextureId[1] = 2;
+
+	m_ModelRendererDepthTextureId[0] = 3;
+	m_ModelRendererDepthTextureId[1] = 4;
+	
 	for (size_t i = 0; i < textures.size(); i++)
 	{
 		m_Textures.push_back(textures[i]);
@@ -201,11 +214,7 @@ void VulkanImGuiRenderer::UpdateBuffers(size_t currentImage, ImDrawData* pDrawDa
 
 void VulkanImGuiRenderer::LoadSceneViewTextures(VulkanTexture* modelRendererColor, VulkanTexture* modelRendererDepth)
 {
-	for (int i = 0; i < NUM_FRAMES; i++)
-	{
-		m_ModelRendererColorTextureId[i] = ImGui_ImplVulkan_AddTexture(s_SamplerClampLinear, modelRendererColor[i].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		m_ModelRendererDepthTextureId[i] = ImGui_ImplVulkan_AddTexture(s_SamplerClampNearest, modelRendererDepth[i].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-	}
+
 }
 
 VulkanImGuiRenderer::~VulkanImGuiRenderer()
@@ -286,7 +295,7 @@ bool VulkanImGuiRenderer::UpdateDescriptorSets(VkDevice device)
 	{
 		m_TextureDescriptors.push_back
 		(
-			{ .sampler = s_SamplerRepeatLinear, .imageView = m_Textures[i].view, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
+			{ .sampler = s_SamplerClampNearest, .imageView = m_Textures[i].view, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
 		);
 	}
 
