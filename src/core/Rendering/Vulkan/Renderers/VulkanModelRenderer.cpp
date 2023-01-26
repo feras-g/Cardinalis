@@ -3,8 +3,9 @@
 
 #include <glm/mat4x4.hpp>
 
-const uint32_t attachmentWidth  = 800;
-const uint32_t attachmentHeight = 600;
+/** Size in pixels of the offscreen buffers */
+const uint32_t attachmentWidth  = 1024;
+const uint32_t attachmentHeight = 1024;
 
 struct UniformData
 {
@@ -43,7 +44,7 @@ void VulkanModelRenderer::PopulateCommandBuffer(size_t currentImageIdx, VkComman
 	BeginRenderpass(cmdBuffer, m_RenderPass, m_Framebuffers[currentImageIdx], {0, 0, width, height}, clearValues, 2);
 	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline);
 	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_PipelineLayout, 0, 1, &m_DescriptorSets[currentImageIdx], 0, nullptr);
-
+	
 	vkCmdDraw(cmdBuffer, m_Model.m_NumVertices, 1, 0, 0);
 	EndRenderPass(cmdBuffer);
 }
@@ -104,7 +105,7 @@ bool VulkanModelRenderer::CreateRenderPass()
 {
 	m_RenderPassInitInfo = { true, true, m_ColorFormat, m_DepthStencilFormat, RENDERPASS_INTERMEDIATE_OFFSCREEN };
 
-	return CreateColorDepthRenderPass(m_RenderPassInitInfo, true, &m_RenderPass);
+	return CreateColorDepthRenderPass({ true, true, m_ColorFormat, m_DepthStencilFormat, RENDERPASS_INTERMEDIATE_OFFSCREEN }, &m_RenderPass);
 }
 
 bool VulkanModelRenderer::CreateFramebuffers()
@@ -126,7 +127,7 @@ bool VulkanModelRenderer::CreateFramebuffers()
 	}
 	EndInstantUseCmdBuffer();
 
-	return CreateColorDepthFramebuffers(m_RenderPass, m_ColorAttachments.data(), m_DepthStencilAttachments.data(), m_Framebuffers.data(), bUseDepth);
+	return CreateColorDepthFramebuffers(m_RenderPass, m_ColorAttachments.data(), m_DepthStencilAttachments.data(), m_Framebuffers.data(), true);
 }
 
 VulkanModelRenderer::~VulkanModelRenderer()

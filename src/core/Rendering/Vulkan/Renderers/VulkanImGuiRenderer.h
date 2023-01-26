@@ -20,6 +20,7 @@ public:
 	void PopulateCommandBuffer(size_t currentImageIdx, VkCommandBuffer cmdBuffer) override;
 	void UpdateBuffers(size_t currentImage, ImDrawData* pDrawData);
 	void LoadSceneViewTextures(VulkanTexture* modelRendererColor, VulkanTexture* modelRendererDepth);
+	bool RecreateFramebuffersRenderPass();
 
 	// Texture Ids
 	uint32_t m_ModelRendererColorTextureId[NUM_FRAMES];

@@ -22,29 +22,6 @@ constexpr uint32_t numStorageBuffers   = NUM_FRAMES;
 constexpr uint32_t numUniformBuffers   = 1;
 constexpr uint32_t numCombinedSamplers = 1;
 
-static void ConvertColorPacked_sRGBToLinearRGB(uint32_t& color)
-{
-	// Unpack
-	float s = 1.0f / 255.0f;
-
-	float r = ((color >> 0)  & 0xFF) * s;
-	float g = ((color >> 8)  & 0xFF) * s;
-	float b = ((color >> 16) & 0xFF) * s;
-	float a = ((color >> 24) & 0xFF) * s;
-
-	// Convert to linear space
-	float gamma = 2.2f;
-	r = pow(r, gamma);
-	g = pow(g, gamma);
-	b = pow(b, gamma);
-
-	// Pack
-	color = ((uint8_t)(r * 255.0f) << 0  |
-			 (uint8_t)(g * 255.0f) << 8  |
-			 (uint8_t)(b * 255.0f) << 16 |
-			 (uint8_t)(a * 255.0f) << 24);
-}
-
 void VulkanImGuiRenderer::Initialize(const std::vector<VulkanTexture>& textures)
 {
 	ImGuiIO& io = ImGui::GetIO();
@@ -54,7 +31,7 @@ void VulkanImGuiRenderer::Initialize(const std::vector<VulkanTexture>& textures)
 	// Create font texture
 	m_Textures.push_back(VulkanTexture());
 
-	CreateFontTexture(&io, "../../../data/fonts/SSTRg.ttf", m_Textures[FONT_TEXTURE_INDEX]);
+	CreateFontTexture(&io, "../../../data/fonts/SegoeUI.ttf", m_Textures[FONT_TEXTURE_INDEX]);
 	m_Textures[FONT_TEXTURE_INDEX].CreateImageView(context.device, { .format = VK_FORMAT_R8G8B8A8_UNORM, .aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevels = 1 });
 	io.Fonts->TexID = (ImTextureID)FONT_TEXTURE_INDEX;
 
@@ -187,11 +164,6 @@ void VulkanImGuiRenderer::UpdateBuffers(size_t currentImage, ImDrawData* pDrawDa
 	{
 		ImDrawList* cmdList = m_pDrawData->CmdLists[n];
 		
-		for (int i = 0; i < cmdList->VtxBuffer.Size; i++)
-		{
-			ConvertColorPacked_sRGBToLinearRGB(cmdList->VtxBuffer[i].col);
-		}
-
 		memcpy(vtx, cmdList->VtxBuffer.Data, cmdList->VtxBuffer.Size * sizeof(ImDrawVert));
 		vtx += cmdList->VtxBuffer.Size;
 	}
@@ -217,6 +189,20 @@ void VulkanImGuiRenderer::LoadSceneViewTextures(VulkanTexture* modelRendererColo
 
 }
 
+bool VulkanImGuiRenderer::RecreateFramebuffersRenderPass()
+{
+	for (int i = 0; i < m_Framebuffers.size(); i++)
+	{
+		vkDestroyFramebuffer(context.device, m_Framebuffers[i], nullptr);
+	}
+
+	vkDestroyRenderPass(context.device, m_RenderPass, nullptr);
+	CreateRenderPass();
+	CreateFramebuffers();
+
+	return true;
+}
+
 VulkanImGuiRenderer::~VulkanImGuiRenderer()
 {
 }
@@ -240,21 +226,21 @@ bool VulkanImGuiRenderer::CreateFontTexture(ImGuiIO* io, const char* fontPath, V
 	}
 	
 	io->FontDefault = Font;
-	io->DisplayFramebufferScale = ImVec2(1, 1);
+	//io->DisplayFramebufferScale = ImVec2(1, 1);
 
 	return true;
 }
 
 bool VulkanImGuiRenderer::CreateRenderPass()
 {
-	m_RenderPassInitInfo = { false, false, context.swapchain->info.colorFormat, context.swapchain->info.depthStencilFormat, NONE };
+	m_RenderPassInitInfo = { false, false, context.swapchain->info.colorFormat, VK_FORMAT_UNDEFINED };
 
-	return CreateColorDepthRenderPass(m_RenderPassInitInfo, false, &m_RenderPass);
+	return CreateColorDepthRenderPass(m_RenderPassInitInfo, &m_RenderPass);
 }
 
 bool VulkanImGuiRenderer::CreateFramebuffers()
 {
-	return CreateColorDepthFramebuffers(m_RenderPass, context.swapchain.get(), m_Framebuffers.data(), bUseDepth);
+	return CreateColorDepthFramebuffers(m_RenderPass, context.swapchain.get(), m_Framebuffers.data(), false);
 }
 
 bool VulkanImGuiRenderer::CreatePipeline(VkDevice device)

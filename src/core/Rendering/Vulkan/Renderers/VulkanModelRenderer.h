@@ -28,9 +28,7 @@ private:
 	VulkanModel m_Model;
 	std::unique_ptr<VulkanShader> m_Shader;
 
-
-
-	VkFormat m_ColorFormat        = VK_FORMAT_R8G8B8A8_SRGB;
+	VkFormat m_ColorFormat        = VK_FORMAT_B8G8R8A8_SRGB;
 	VkFormat m_DepthStencilFormat = VK_FORMAT_D32_SFLOAT;
 
 	VkSampler m_TextureSampler;

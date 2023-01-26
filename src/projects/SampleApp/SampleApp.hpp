@@ -43,28 +43,69 @@ void SampleApp::Update()
 {
 	// Update keyboard, mouse interaction
 	m_Window->UpdateGUI();
+	UpdateRenderersData(context.currentBackBuffer);
 }
 
 void SampleApp::Render(size_t currentImageIdx)
 {
-	const VulkanFrame& currentFrame  = m_RHI->GetCurrentFrame();
-	const VulkanSwapchain& swapchain = *m_RHI->GetSwapchain();
-	
+	const VulkanFrame& currentFrame = m_RHI->GetCurrentFrame();
+	VulkanSwapchain& swapchain = *m_RHI->GetSwapchain();
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// PRE-RENDER
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	VkCommandBufferBeginInfo cmdBufferBeginInfo = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-	//VK_CHECK(vkResetCommandBuffer(currentFrame.cmdBuffer, 0));
-	VK_CHECK(vkResetCommandPool(context.device, currentFrame.cmdPool, 0));
-	VK_CHECK(vkBeginCommandBuffer(currentFrame.cmdBuffer, &cmdBufferBeginInfo));
 
-	m_ClearRenderer->PopulateCommandBuffer(currentImageIdx, currentFrame.cmdBuffer);
-	m_ModelRenderer->PopulateCommandBuffer(currentImageIdx, currentFrame.cmdBuffer);
-	m_ImGuiRenderer->PopulateCommandBuffer(currentImageIdx, currentFrame.cmdBuffer);
-	m_PresentRenderer->PopulateCommandBuffer(currentImageIdx, currentFrame.cmdBuffer);
+	VK_CHECK(vkWaitForFences(context.device, 1, &currentFrame.renderFence, true, OneSecondInNanoSeconds));
+	VK_CHECK(vkResetFences(context.device, 1, &currentFrame.renderFence));
 
-	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	VK_CHECK(vkEndCommandBuffer(currentFrame.cmdBuffer));
+	VkResult result = swapchain.AcquireNextImage(currentFrame.imageAcquiredSemaphore, &context.currentBackBuffer);
+
+	// Populate command buffers
+	{
+		VkCommandBufferBeginInfo cmdBufferBeginInfo = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+		VK_CHECK(vkResetCommandBuffer(currentFrame.cmdBuffer, 0));
+		VK_CHECK(vkBeginCommandBuffer(currentFrame.cmdBuffer, &cmdBufferBeginInfo));
+
+		m_ClearRenderer->PopulateCommandBuffer(context.currentBackBuffer, currentFrame.cmdBuffer);
+		m_ModelRenderer->PopulateCommandBuffer(context.currentBackBuffer, currentFrame.cmdBuffer);
+		m_ImGuiRenderer->PopulateCommandBuffer(context.currentBackBuffer, currentFrame.cmdBuffer);
+		m_PresentRenderer->PopulateCommandBuffer(context.currentBackBuffer, currentFrame.cmdBuffer);
+
+		VK_CHECK(vkEndCommandBuffer(currentFrame.cmdBuffer));
+	}
+
+	// Submit commands for the GPU to work on the current backbuffer
+	// Has to wait for the swapchain image to be acquired before beginning, we wait on imageAcquired semaphore.
+	// Signals a renderComplete semaphore to let the next operation know that it finished
+
+	VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	VkSubmitInfo submitInfo =
+	{
+		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+		.waitSemaphoreCount = 1,
+		.pWaitSemaphores = &currentFrame.imageAcquiredSemaphore,
+		.pWaitDstStageMask = &waitDstStageMask,
+		.commandBufferCount = 1,
+		.pCommandBuffers = &currentFrame.cmdBuffer,
+		.signalSemaphoreCount = 1,
+		.pSignalSemaphores = &currentFrame.renderCompleteSemaphore
+	};
+	vkQueueSubmit(context.queue, 1, &submitInfo, currentFrame.renderFence);
+
+	// Present work
+	// Waits for the GPU queue to finish execution before presenting, we wait on renderComplete semaphore
+	VkPresentInfoKHR presentInfo =
+	{
+		.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+		.waitSemaphoreCount = 1,
+		.pWaitSemaphores = &currentFrame.renderCompleteSemaphore,
+		.swapchainCount = 1,
+		.pSwapchains = &swapchain.swapchain,
+		.pImageIndices = &context.currentBackBuffer
+	};
+
+	vkQueuePresentKHR(context.queue, &presentInfo);
+
+	context.frameCount++;
 }
 
 inline void SampleApp::UpdateGuiData(size_t currentImageIdx)
@@ -78,6 +119,7 @@ inline void SampleApp::UpdateGuiData(size_t currentImageIdx)
 	ImGui::DockSpaceOverViewport(0, ImGuiDockNodeFlags_PassthruCentralNode);
 
 	// Scene view
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {0.0f, 0.0f});
 	if (ImGui::Begin("Scene", 0, 0))
 	{
 		ImVec2 sceneViewPanelSize = ImGui::GetContentRegionAvail();
@@ -86,6 +128,7 @@ inline void SampleApp::UpdateGuiData(size_t currentImageIdx)
 		ImGui::Image((ImTextureID)m_ImGuiRenderer->m_ModelRendererColorTextureId[currentImageIdx], sceneViewPanelSize);
 	}
 	ImGui::End();
+	ImGui::PopStyleVar();
 	
 	// Hierachy panel
 	if (ImGui::Begin("Hierarchy", 0, 0))
@@ -143,9 +186,7 @@ inline void SampleApp::UpdateRenderersData(size_t currentImageIdx)
 	{
 		static float angle = 0.0F;
 		angle += 0.00021 / Application::m_DeltaSeconds;
-		glm::mat4 m = 
-			glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f)) * 
-			glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::mat4 m = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0.0f, 1.0f, 0.0f));
 		glm::mat4 v = glm::lookAt(glm::vec3(0.0f, 0.0f, -5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		glm::mat4 p = glm::perspective(45.0f, m_ImGuiRenderer->m_SceneViewAspectRatio, 0.1f, 1000.0f);
 

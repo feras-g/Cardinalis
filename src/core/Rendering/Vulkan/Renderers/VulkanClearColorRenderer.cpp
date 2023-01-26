@@ -22,7 +22,7 @@ void VulkanClearColorRenderer::PopulateCommandBuffer(size_t currentImageIdx, VkC
 		.renderPass  = m_RenderPass,
 		.framebuffer = m_Framebuffers[currentImageIdx],
 		.renderArea  = screenRect,
-		.clearValueCount = bUseDepth ? 2u : 1u,
+		.clearValueCount = 2u,
 		.pClearValues = clearValues
 	};
 
@@ -39,7 +39,7 @@ bool VulkanClearColorRenderer::CreateRenderPass()
 {
 	m_RenderPassInitInfo = { true, bUseDepth, context.swapchain->info.colorFormat, context.swapchain->info.depthStencilFormat,  RENDERPASS_FIRST };
 
-	if (!CreateColorDepthRenderPass(m_RenderPassInitInfo, true, &m_RenderPass))
+	if (!CreateColorDepthRenderPass(m_RenderPassInitInfo, &m_RenderPass))
 	{
 		LOG_ERROR("Failed to create renderpass.");
 		assert(false);
@@ -50,7 +50,7 @@ bool VulkanClearColorRenderer::CreateRenderPass()
 
 bool VulkanClearColorRenderer::CreateFramebuffers()
 {
-	if (!CreateColorDepthFramebuffers(m_RenderPass, context.swapchain.get(), m_Framebuffers.data(), bUseDepth))
+	if (!CreateColorDepthFramebuffers(m_RenderPass, context.swapchain.get(), m_Framebuffers.data(), true))
 	{
 		LOG_ERROR("Failed to create framebuffers.");
 		assert(false);
