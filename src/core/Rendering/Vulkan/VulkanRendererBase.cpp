@@ -38,7 +38,7 @@ bool VulkanRendererBase::RecreateFramebuffersRenderPass()
 	}
 	
 	vkDestroyRenderPass(context.device, m_RenderPass, nullptr);
-	CreateColorDepthRenderPass(m_RenderPassInitInfo, bUseDepth, &m_RenderPass);
+	CreateColorDepthRenderPass(m_RenderPassInitInfo, &m_RenderPass);
 	CreateColorDepthFramebuffers(m_RenderPass, context.swapchain.get(), m_Framebuffers.data(), bUseDepth);
 	
 	return true;

@@ -37,7 +37,7 @@ bool VulkanPresentRenderer::CreateRenderPass()
 {
 	m_RenderPassInitInfo = { false, false, context.swapchain->info.colorFormat, context.swapchain->info.depthStencilFormat, RENDERPASS_LAST };
 
-	if (!CreateColorDepthRenderPass(m_RenderPassInitInfo, true, &m_RenderPass))
+	if (!CreateColorDepthRenderPass(m_RenderPassInitInfo, &m_RenderPass))
 	{
 		LOG_ERROR("Failed to create renderpass.");
 		assert(false);
@@ -48,7 +48,7 @@ bool VulkanPresentRenderer::CreateRenderPass()
 
 bool VulkanPresentRenderer::CreateFramebuffers()
 {
-	if (!CreateColorDepthFramebuffers(m_RenderPass, context.swapchain.get(), m_Framebuffers.data(), bUseDepth))
+	if (!CreateColorDepthFramebuffers(m_RenderPass, context.swapchain.get(), m_Framebuffers.data(), true))
 	{
 		LOG_ERROR("Failed to create framebuffers.");
 		assert(false);

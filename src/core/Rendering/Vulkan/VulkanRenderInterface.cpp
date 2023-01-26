@@ -405,11 +405,13 @@ bool CreateUniformBuffer(VkDeviceSize size, VkBuffer& out_Buffer, VkDeviceMemory
 	return CreateBuffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,out_Buffer, out_BufferMemory);
 }
 
-bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, bool useDepth, VkRenderPass* out_renderPass)
+bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, VkRenderPass* out_renderPass)
 {
 	// Attachments
+	std::vector<VkAttachmentDescription> attachments;
+
 	// COLOR
-	VkAttachmentDescription colorAttachment =
+	VkAttachmentDescription color =
 	{
 		.format			= rpi.colorFormat,
 		.samples		= VK_SAMPLE_COUNT_1_BIT,														// No multisampling
@@ -417,40 +419,65 @@ bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, bool useDepth, Vk
 		.storeOp		= VK_ATTACHMENT_STORE_OP_STORE,													// Discard content when render pass ends ?
 		.stencilLoadOp	= VK_ATTACHMENT_LOAD_OP_DONT_CARE, 
 		.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-		.initialLayout	= (rpi.flags & RENDERPASS_FIRST) ? 
-						VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-		.finalLayout	= (rpi.flags & RENDERPASS_LAST) == RENDERPASS_LAST ? 
-						VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+		.initialLayout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		.finalLayout	= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
 	};
 
+	if (rpi.flags & RENDERPASS_FIRST) { color.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; }
+	if (rpi.flags & RENDERPASS_LAST)  { color.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; }
 	if (rpi.flags & RENDERPASS_INTERMEDIATE_OFFSCREEN)
 	{
-		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		colorAttachment.finalLayout   = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		color.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		color.finalLayout   = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	}
+
+	attachments.push_back(color);
+	VkAttachmentReference colorAttachmentRef = { .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 
 	// DEPTH
-	VkAttachmentDescription depthAttachment =
+	VkAttachmentReference depthAttachmentRef; 
+	if (rpi.depthStencilFormat != VK_FORMAT_UNDEFINED)
 	{
-		.format = rpi.depthStencilFormat,
-		.samples = VK_SAMPLE_COUNT_1_BIT,														// No multisampling
-		.loadOp  = rpi.clearDepth ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,	// Clear when render pass begins ?
-		.storeOp = VK_ATTACHMENT_STORE_OP_STORE,													// Discard content when render pass ends ?
-		.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-		.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-		.initialLayout  = (rpi.flags & RENDERPASS_FIRST) ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-		.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-		//(rpi.flags & RENDERPASS_LAST) == RENDERPASS_LAST ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-	};
+		VkAttachmentDescription depthAttachment =
+		{
+			.format = rpi.depthStencilFormat,
+			.samples = VK_SAMPLE_COUNT_1_BIT,														// No multisampling
+			.loadOp = rpi.clearDepth ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,	// Clear when render pass begins ?
+			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,													// Discard content when render pass ends ?
+			.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+			.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			.initialLayout = (rpi.flags & RENDERPASS_FIRST) ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+			.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+			//(rpi.flags & RENDERPASS_LAST) == RENDERPASS_LAST ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+		};
 
-	if (rpi.flags & RENDERPASS_INTERMEDIATE_OFFSCREEN)
-	{
-		depthAttachment.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		depthAttachment.finalLayout   = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		if (rpi.flags & RENDERPASS_INTERMEDIATE_OFFSCREEN)
+		{
+			depthAttachment.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			depthAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		}
+		
+		attachments.push_back(depthAttachment);
+		depthAttachmentRef = { .attachment = 1, .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 	}
 
-	VkAttachmentReference colorAttachmentRef = { .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-	VkAttachmentReference depthAttachmentRef = { .attachment = 1, .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+	// Subpasses
+	std::vector<VkSubpassDescription> subpasses =
+	{
+		// 0th subpass
+		{
+			.flags = 0,
+			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+			.inputAttachmentCount = 0,
+			.pInputAttachments = nullptr,
+			.colorAttachmentCount = 1,
+			.pColorAttachments = &colorAttachmentRef,
+			.pResolveAttachments = nullptr,
+			.pDepthStencilAttachment = rpi.depthStencilFormat != VK_FORMAT_UNDEFINED ? &depthAttachmentRef : nullptr,
+			.preserveAttachmentCount = 0,
+			.pPreserveAttachments = nullptr
+		}
+	};
 
 	// Subpass dependencies
 	std::vector<VkSubpassDependency> dependencies =
@@ -467,35 +494,16 @@ bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, bool useDepth, Vk
 		}
 	};
 
-	// Subpass
-	VkSubpassDescription subpass =
-	{
-		.flags=0,
-		.pipelineBindPoint=VK_PIPELINE_BIND_POINT_GRAPHICS,
-		.inputAttachmentCount=0,
-		.pInputAttachments=nullptr,
-		.colorAttachmentCount=1,
-		.pColorAttachments=&colorAttachmentRef,
-		.pResolveAttachments=nullptr,
-		.pDepthStencilAttachment= useDepth ? &depthAttachmentRef : nullptr,
-		.preserveAttachmentCount=0,
-		.pPreserveAttachments=nullptr,
-	};
-	
-	// Renderpass
-	std::vector<VkAttachmentDescription> attachments = { colorAttachment };
-	if (useDepth) attachments.push_back(depthAttachment);
-
 	VkRenderPassCreateInfo renderPassInfo =
 	{
 		.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 		.flags = 0,
 		.attachmentCount = (uint32_t)attachments.size(),
-		.pAttachments = attachments.data(),
-		.subpassCount = 1,
-		.pSubpasses   = &subpass,
+		.pAttachments	 = attachments.data(),
+		.subpassCount	 = (uint32_t)subpasses.size(),
+		.pSubpasses		 = subpasses.data(),
 		.dependencyCount = (uint32_t)dependencies.size(),
-		.pDependencies   = dependencies.data()
+		.pDependencies	 = dependencies.data()
 	};
 
 	return (vkCreateRenderPass(context.device, &renderPassInfo, nullptr, out_renderPass) == VK_SUCCESS);

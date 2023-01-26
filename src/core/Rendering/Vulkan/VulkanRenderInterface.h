@@ -97,11 +97,11 @@ enum RenderPassFlags
 struct RenderPassInitInfo
 {
 	// Clear attachments on initialization ?
-	bool clearColor;
-	bool clearDepth;
+	bool clearColor = false;
+	bool clearDepth = false;
 
-	VkFormat colorFormat;
-	VkFormat depthStencilFormat;
+	VkFormat colorFormat = VK_FORMAT_UNDEFINED;
+	VkFormat depthStencilFormat = VK_FORMAT_UNDEFINED;
 
 	// Is it the final pass ? 
 	RenderPassFlags flags = NONE; 
@@ -111,7 +111,7 @@ bool CreateBuffer(VkDeviceSize sizeInBytes, VkBufferUsageFlags usage, VkMemoryPr
 bool UploadBufferData(const VkDeviceMemory bufferMemory, VkDeviceSize offsetInBytes, const void* data, const size_t dataSizeInBytes);
 bool CreateUniformBuffer(VkDeviceSize size, VkBuffer& out_Buffer, VkDeviceMemory& out_BufferMemory);
 // Create a simple render pass with color and/or depth and a single subpass
-bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, bool useDepth, VkRenderPass* out_renderPass);
+bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, VkRenderPass* out_renderPass);
 bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const VulkanSwapchain* swapchain, VkFramebuffer* out_Framebuffers, bool useDepth);
 bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const VulkanTexture* colorAttachments, const VulkanTexture* depthAttachments, VkFramebuffer* out_Framebuffers, bool useDepth);
 

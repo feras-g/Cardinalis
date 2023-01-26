@@ -49,66 +49,10 @@ void Application::Run()
 
 		m_Window->HandleEvents();
 		Update();
-		PreRender();	
-		UpdateRenderersData(context.currentBackBuffer);
 		Render(context.currentBackBuffer);
-		PostRender();
 	}
 
 	Terminate();
-}
-
-void Application::PreRender()
-{
-	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// PRE-RENDER
-	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	const VulkanFrame& currentFrame = m_RHI->GetCurrentFrame();
-	VulkanSwapchain& swapchain = *m_RHI->GetSwapchain();
-
-	VK_CHECK(vkWaitForFences(context.device, 1, &currentFrame.renderFence, true, OneSecondInNanoSeconds));
-	VK_CHECK(vkResetFences(context.device, 1, &currentFrame.renderFence));
-
-	VkResult result = swapchain.AcquireNextImage(currentFrame.imageAcquiredSemaphore, &context.currentBackBuffer);
-}
-
-void Application::PostRender()
-{
-	// Submit commands for the GPU to work on the current backbuffer
-	// Has to wait for the swapchain image to be acquired before beginning, we wait on imageAcquired semaphore.
-	// Signals a renderComplete semaphore to let the next operation know that it finished
-	const VulkanFrame& currentFrame = m_RHI->GetCurrentFrame();
-	VulkanSwapchain& swapchain = *m_RHI->GetSwapchain();
-
-	VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	VkSubmitInfo submitInfo =
-	{
-		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-		.waitSemaphoreCount = 1,
-		.pWaitSemaphores = &currentFrame.imageAcquiredSemaphore,
-		.pWaitDstStageMask = &waitDstStageMask,
-		.commandBufferCount = 1,
-		.pCommandBuffers = &currentFrame.cmdBuffer,
-		.signalSemaphoreCount = 1,
-		.pSignalSemaphores = &currentFrame.renderCompleteSemaphore
-	};
-	vkQueueSubmit(context.queue, 1, &submitInfo, currentFrame.renderFence);
-
-	// Present work
-	// Waits for the GPU queue to finish execution before presenting, we wait on renderComplete semaphore
-	VkPresentInfoKHR presentInfo =
-	{
-		.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-		.waitSemaphoreCount = 1,
-		.pWaitSemaphores = &currentFrame.renderCompleteSemaphore,
-		.swapchainCount = 1,
-		.pSwapchains = &swapchain.swapchain,
-		.pImageIndices = &context.currentBackBuffer
-	};
-	
-	VkResult result = vkQueuePresentKHR(context.queue, &presentInfo);
-
-	context.frameCount++;
 }
 
 void Application::OnWindowResize()
@@ -117,6 +61,5 @@ void Application::OnWindowResize()
 
 	((VulkanRendererBase*)m_ClearRenderer.get())->RecreateFramebuffersRenderPass();
 	((VulkanRendererBase*)m_PresentRenderer.get())->RecreateFramebuffersRenderPass();
-	((VulkanRendererBase*)m_ModelRenderer.get())->RecreateFramebuffersRenderPass();
-	//((VulkanRendererBase*)m_ImGuiRenderer)->RecreateFramebuffersRenderPass();
+	m_ImGuiRenderer->RecreateFramebuffersRenderPass();
 }
