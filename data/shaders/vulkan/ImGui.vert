@@ -15,7 +15,7 @@ void main()
 
 	ImDrawVert v = sbo.data[idx];
 	uv     = vec2(v.u, v.v);
-	color  = unpackUnorm4x8(v.color); // must be in sRGB format
+	color  = pow(unpackUnorm4x8(v.color), vec4(vec3(2.2), 1.0)); 
 	gl_Position = ubo.inMtx * vec4(v.x, v.y, 0.0, 1.0);
 }
  

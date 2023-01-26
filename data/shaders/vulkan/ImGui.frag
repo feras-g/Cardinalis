@@ -33,6 +33,4 @@ void main()
 	vec4 value = texture(textures[nonuniformEXT(tex)], uv);
 
 	outColor = getColor(texType, value);
-
-	//outColor = color * texture(textures[nonuniformEXT(pushConstants.textureID], uv);
 }
