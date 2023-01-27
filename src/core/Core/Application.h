@@ -10,7 +10,6 @@ class FrameCounter;
 
 // Renderers forward decls
 class VulkanRendererBase;
-class VulkanClearColorRenderer;
 class VulkanImGuiRenderer;
 class VulkanModelRenderer;
 class VulkanPresentRenderer;
@@ -60,7 +59,6 @@ protected:
 	std::unique_ptr<VulkanRenderInterface> m_RHI;
 
 	// Renderers
-	std::unique_ptr<VulkanClearColorRenderer>	m_ClearRenderer;
 	std::unique_ptr<VulkanImGuiRenderer>		m_ImGuiRenderer;
 	std::unique_ptr<VulkanModelRenderer>		m_ModelRenderer;
 	std::unique_ptr<VulkanPresentRenderer>		m_PresentRenderer;

@@ -35,7 +35,7 @@ bool VulkanPresentRenderer::CreateDescriptorSets(VkDevice device, VkDescriptorSe
 
 bool VulkanPresentRenderer::CreateRenderPass()
 {
-	m_RenderPassInitInfo = { false, false, context.swapchain->info.colorFormat, context.swapchain->info.depthStencilFormat, RENDERPASS_LAST };
+	m_RenderPassInitInfo = { false, false, context.swapchain->info.colorFormat, VK_FORMAT_UNDEFINED, RENDERPASS_LAST };
 
 	if (!CreateColorDepthRenderPass(m_RenderPassInitInfo, &m_RenderPass))
 	{
@@ -48,7 +48,7 @@ bool VulkanPresentRenderer::CreateRenderPass()
 
 bool VulkanPresentRenderer::CreateFramebuffers()
 {
-	if (!CreateColorDepthFramebuffers(m_RenderPass, context.swapchain.get(), m_Framebuffers.data(), true))
+	if (!CreateColorDepthFramebuffers(m_RenderPass, context.swapchain.get(), m_Framebuffers.data(), false))
 	{
 		LOG_ERROR("Failed to create framebuffers.");
 		assert(false);

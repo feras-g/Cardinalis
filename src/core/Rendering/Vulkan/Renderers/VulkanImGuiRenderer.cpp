@@ -82,7 +82,9 @@ void VulkanImGuiRenderer::PopulateCommandBuffer(size_t currentImageIdx, VkComman
 	int32_t width = (int32_t)context.swapchain->info.extent.width;
 	int32_t height = (int32_t)context.swapchain->info.extent.height;
 
-	BeginRenderpass(cmdBuffer, m_RenderPass, m_Framebuffers[currentImageIdx], { width, height }, nullptr, 0);
+	VkClearValue clearValue = { { 0.1f, 0.0f, 0.1f, 1.0f } };
+
+	BeginRenderpass(cmdBuffer, m_RenderPass, m_Framebuffers[currentImageIdx], { width, height }, &clearValue, 1);
 	// Set viewport/scissor dynamically
 	SetViewportScissor(cmdBuffer, width, height);
 
@@ -233,7 +235,7 @@ bool VulkanImGuiRenderer::CreateFontTexture(ImGuiIO* io, const char* fontPath, V
 
 bool VulkanImGuiRenderer::CreateRenderPass()
 {
-	m_RenderPassInitInfo = { false, false, context.swapchain->info.colorFormat, VK_FORMAT_UNDEFINED };
+	m_RenderPassInitInfo = RenderPassInitInfo{ true, false, context.swapchain->info.colorFormat, VK_FORMAT_UNDEFINED, RENDERPASS_FIRST };
 
 	return CreateColorDepthRenderPass(m_RenderPassInitInfo, &m_RenderPass);
 }

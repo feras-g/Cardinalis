@@ -4,7 +4,6 @@
 #include "Core/EngineLogger.h"
 #include "Rendering/Vulkan/VulkanRenderInterface.h"
 #include "Rendering/Vulkan/VulkanRendererBase.h"
-#include "Rendering/Vulkan/Renderers/VulkanClearColorRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanPresentRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanImGuiRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanModelRenderer.h"
@@ -58,8 +57,6 @@ void Application::Run()
 void Application::OnWindowResize()
 {
 	context.swapchain->Reinitialize();
-
-	((VulkanRendererBase*)m_ClearRenderer.get())->RecreateFramebuffersRenderPass();
-	((VulkanRendererBase*)m_PresentRenderer.get())->RecreateFramebuffersRenderPass();
+	m_PresentRenderer->RecreateFramebuffersRenderPass();
 	m_ImGuiRenderer->RecreateFramebuffersRenderPass();
 }

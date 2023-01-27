@@ -5,7 +5,6 @@
 #include "Window/Window.h"
 #include "Rendering/Vulkan/VulkanRenderInterface.h"
 #include "Rendering/Vulkan/VulkanShader.h"
-#include "Rendering/Vulkan/Renderers/VulkanClearColorRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanPresentRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanImGuiRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanModelRenderer.h"
@@ -32,7 +31,6 @@ protected:
 
 void SampleApp::Initialize()
 {
-	m_ClearRenderer.reset(new VulkanClearColorRenderer(context, bUseDepth));
 	m_PresentRenderer.reset(new VulkanPresentRenderer(context, bUseDepth));
 	m_ModelRenderer.reset(new VulkanModelRenderer ("../../../data/models/suzanne.obj", "../../../data/textures/default.png"));
 	m_ImGuiRenderer.reset(new VulkanImGuiRenderer(context));
@@ -65,7 +63,6 @@ void SampleApp::Render(size_t currentImageIdx)
 		VK_CHECK(vkResetCommandBuffer(currentFrame.cmdBuffer, 0));
 		VK_CHECK(vkBeginCommandBuffer(currentFrame.cmdBuffer, &cmdBufferBeginInfo));
 
-		m_ClearRenderer->PopulateCommandBuffer(context.currentBackBuffer, currentFrame.cmdBuffer);
 		m_ModelRenderer->PopulateCommandBuffer(context.currentBackBuffer, currentFrame.cmdBuffer);
 		m_ImGuiRenderer->PopulateCommandBuffer(context.currentBackBuffer, currentFrame.cmdBuffer);
 		m_PresentRenderer->PopulateCommandBuffer(context.currentBackBuffer, currentFrame.cmdBuffer);
@@ -185,7 +182,7 @@ inline void SampleApp::UpdateRenderersData(size_t currentImageIdx)
 	// Other renderers data
 	{
 		static float angle = 0.0F;
-		angle += 0.00021 / Application::m_DeltaSeconds;
+		angle += 0.001 / Application::m_DeltaSeconds;
 		glm::mat4 m = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0.0f, 1.0f, 0.0f));
 		glm::mat4 v = glm::lookAt(glm::vec3(0.0f, 0.0f, -5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		glm::mat4 p = glm::perspective(45.0f, m_ImGuiRenderer->m_SceneViewAspectRatio, 0.1f, 1000.0f);
