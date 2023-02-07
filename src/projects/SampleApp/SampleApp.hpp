@@ -8,12 +8,13 @@
 #include "Rendering/Vulkan/Renderers/VulkanPresentRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanImGuiRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanModelRenderer.h"
+#include "Rendering/Vulkan/Renderers/VulkanClearColorRenderer.h"
 #include "Rendering/FrameCounter.h"
 
 class SampleApp final : public Application
 {
 public:
-	SampleApp() : Application("SampleApp", 1280, 720), bUseDepth(true) 
+	SampleApp() : Application("SampleApp", 1280, 720)
 	{
 
 	}
@@ -23,18 +24,24 @@ public:
 	void Render(size_t currentImageIdx)		override;
 	void UpdateGuiData(size_t currentImageIdx)	override;
 	void UpdateRenderersData(size_t currentImageIdx) override;
+	void OnWindowResize() override;
 	void Terminate()	override;
 
+
 protected:
-	bool bUseDepth;
+	std::unique_ptr<VulkanImGuiRenderer>		m_ImGuiRenderer;
+	std::unique_ptr<VulkanModelRenderer>		m_ModelRenderer;
+	std::unique_ptr<VulkanPresentRenderer>		m_PresentRenderer;
+	std::unique_ptr<VulkanClearColorRenderer>	m_ClearColorRenderer;
 };
 
 void SampleApp::Initialize()
 {
-	m_PresentRenderer.reset(new VulkanPresentRenderer(context, bUseDepth));
+	m_PresentRenderer.reset(new VulkanPresentRenderer(context, false));
 	m_ModelRenderer.reset(new VulkanModelRenderer ("../../../data/models/suzanne.obj", "../../../data/textures/default.png"));
 	m_ImGuiRenderer.reset(new VulkanImGuiRenderer(context));
 	m_ImGuiRenderer->Initialize(m_ModelRenderer->m_ColorAttachments);
+	m_ClearColorRenderer.reset(new VulkanClearColorRenderer(context));
 }
 
 void SampleApp::Update()
@@ -46,23 +53,25 @@ void SampleApp::Update()
 
 void SampleApp::Render(size_t currentImageIdx)
 {
-	const VulkanFrame& currentFrame = m_RHI->GetCurrentFrame();
+	VulkanFrame& currentFrame = context.frames[context.frameCount % NUM_FRAMES];
 	VulkanSwapchain& swapchain = *m_RHI->GetSwapchain();
+
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// PRE-RENDER
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	VK_CHECK(vkWaitForFences(context.device, 1, &currentFrame.renderFence, true, OneSecondInNanoSeconds));
-	VK_CHECK(vkResetFences(context.device, 1, &currentFrame.renderFence));
+	/*VK_CHECK*/(vkWaitForFences(context.device, 1, &currentFrame.renderFence, true, OneSecondInNanoSeconds));
+	/*VK_CHECK*/(vkResetFences(context.device, 1, &currentFrame.renderFence));
 
 	VkResult result = swapchain.AcquireNextImage(currentFrame.imageAcquiredSemaphore, &context.currentBackBuffer);
 
 	// Populate command buffers
-	{
+	{	
 		VkCommandBufferBeginInfo cmdBufferBeginInfo = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-		VK_CHECK(vkResetCommandBuffer(currentFrame.cmdBuffer, 0));
+		VK_CHECK(vkResetCommandPool(context.device, currentFrame.cmdPool, 0));
 		VK_CHECK(vkBeginCommandBuffer(currentFrame.cmdBuffer, &cmdBufferBeginInfo));
 
+		m_ClearColorRenderer->PopulateCommandBuffer(context.currentBackBuffer, currentFrame.cmdBuffer);
 		m_ModelRenderer->PopulateCommandBuffer(context.currentBackBuffer, currentFrame.cmdBuffer);
 		m_ImGuiRenderer->PopulateCommandBuffer(context.currentBackBuffer, currentFrame.cmdBuffer);
 		m_PresentRenderer->PopulateCommandBuffer(context.currentBackBuffer, currentFrame.cmdBuffer);
@@ -84,7 +93,7 @@ void SampleApp::Render(size_t currentImageIdx)
 		.commandBufferCount = 1,
 		.pCommandBuffers = &currentFrame.cmdBuffer,
 		.signalSemaphoreCount = 1,
-		.pSignalSemaphores = &currentFrame.renderCompleteSemaphore
+		.pSignalSemaphores = &currentFrame.queueSubmittedSemaphore
 	};
 	vkQueueSubmit(context.queue, 1, &submitInfo, currentFrame.renderFence);
 
@@ -94,7 +103,7 @@ void SampleApp::Render(size_t currentImageIdx)
 	{
 		.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
 		.waitSemaphoreCount = 1,
-		.pWaitSemaphores = &currentFrame.renderCompleteSemaphore,
+		.pWaitSemaphores = &currentFrame.queueSubmittedSemaphore,
 		.swapchainCount = 1,
 		.pSwapchains = &swapchain.swapchain,
 		.pImageIndices = &context.currentBackBuffer
@@ -167,7 +176,8 @@ inline void SampleApp::UpdateGuiData(size_t currentImageIdx)
 	{
 		ImGui::Text(m_DebugName);
 		ImGui::AlignTextToFramePadding();
-		ImGui::Text("CPU : %.2f ms (%d fps)", Application::m_DeltaSeconds * 1000.0f, (int)m_FramePerfCounter->GetFps());
+		const float s = Application::m_DeltaSeconds;
+		ImGui::Text("CPU : %.2f ms (%.1f fps)", s * 1000.0f, 1.0f / s);
 	}
 	ImGui::End();
 
@@ -181,14 +191,20 @@ inline void SampleApp::UpdateRenderersData(size_t currentImageIdx)
 
 	// Other renderers data
 	{
-		static float angle = 0.0F;
-		angle += 0.001 / Application::m_DeltaSeconds;
-		glm::mat4 m = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::mat4 m = glm::identity<glm::mat4>();
 		glm::mat4 v = glm::lookAt(glm::vec3(0.0f, 0.0f, -5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		glm::mat4 p = glm::perspective(45.0f, m_ImGuiRenderer->m_SceneViewAspectRatio, 0.1f, 1000.0f);
 
 		m_ModelRenderer->UpdateBuffers(currentImageIdx, m, v, p);
 	}
+}
+
+inline void SampleApp::OnWindowResize()
+{
+	context.swapchain->Reinitialize();
+	m_ClearColorRenderer->CreateFramebufferAndRenderPass();
+	m_PresentRenderer->RecreateFramebuffersRenderPass();
+	m_ImGuiRenderer->RecreateFramebuffersRenderPass();
 }
 
 inline void SampleApp::Terminate()

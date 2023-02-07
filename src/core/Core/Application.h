@@ -13,6 +13,7 @@ class VulkanRendererBase;
 class VulkanImGuiRenderer;
 class VulkanModelRenderer;
 class VulkanPresentRenderer;
+class VulkanClearColorRenderer;
 
 /// <summary>
 /// Skeleton of an application to derive in client code.
@@ -39,7 +40,7 @@ public:
 	virtual void UpdateGuiData(size_t currentImageIdx) = 0;
 	virtual void UpdateRenderersData(size_t currentImageIdx) = 0;
 	virtual void Terminate() = 0;
-	void OnWindowResize();
+	virtual void OnWindowResize();
 
 	bool bInitSuccess;
 	
@@ -57,11 +58,6 @@ protected:
 
 	std::unique_ptr<Window> m_Window;
 	std::unique_ptr<VulkanRenderInterface> m_RHI;
-
-	// Renderers
-	std::unique_ptr<VulkanImGuiRenderer>		m_ImGuiRenderer;
-	std::unique_ptr<VulkanModelRenderer>		m_ModelRenderer;
-	std::unique_ptr<VulkanPresentRenderer>		m_PresentRenderer;
 };
 
 #endif // !APPLICATION_H

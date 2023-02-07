@@ -28,7 +28,7 @@ VulkanSwapchain::VulkanSwapchain(VkSurfaceKHR surface, VkPhysicalDevice physDevi
 
     std::vector<VkPresentModeKHR> presentModes(presentModeCount);
     VK_CHECK(fpGetPhysicalDeviceSurfacePresentModesKHR(hPhysicalDevice, hSurface, &presentModeCount, presentModes.data()));
-    info.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+    info.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
     LOG_WARN("Current present mode : {0}", string_VkPresentModeKHR(info.presentMode));
 }
 
@@ -41,13 +41,19 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
     VkSurfaceCapabilitiesKHR caps;
     VK_CHECK(fpGetPhysicalDeviceSurfaceCapabilitiesKHR(hPhysicalDevice, hSurface, &caps));
 
-    //LOG_INFO("Surface capabilities : maxImageCount={0}, currentImageExtent={1}x{2}, maxImageExtent={3}x{1}\n",
-    //    caps.maxImageCount, caps.currentExtent.width, caps.currentExtent.height,
-    //    caps.maxImageExtent.width, caps.maxImageExtent.height);
+    LOG_INFO("Surface capabilities : minImageCount={0} maxImageCount={1}, currentImageExtent={2}x{3}, maxImageExtent={4}x{2}\n",
+        caps.minImageCount, caps.maxImageCount, caps.currentExtent.width, caps.currentExtent.height,
+        caps.maxImageExtent.width, caps.maxImageExtent.height);
+
+    uint32_t surfaceFormatsCount = 0;
+    fpGetPhysicalDeviceSurfaceFormatsKHR(context.physicalDevice, hSurface, &surfaceFormatsCount, nullptr);
+    std::vector<VkSurfaceFormatKHR> surfaceFormats (surfaceFormatsCount);
+    fpGetPhysicalDeviceSurfaceFormatsKHR(context.physicalDevice, hSurface, &surfaceFormatsCount, surfaceFormats.data());
+
    
     assert(caps.maxImageCount >= 1);
     info.extent = caps.currentExtent;
-    info.imageCount = std::min(NUM_FRAMES, caps.maxImageCount);
+    info.imageCount = NUM_FRAMES;// std::min(NUM_FRAMES, caps.maxImageCount);
 
     info.colorFormat = colorFormat;
     info.colorSpace = colorSpace;
@@ -146,7 +152,8 @@ void VulkanSwapchain::Destroy()
 
     for (int i = 0; i < images.size(); i++)
     {
-        vkDestroyImageView(context.device, images[i].view, nullptr);
+        if(images[i].view)
+            vkDestroyImageView(context.device, images[i].view, nullptr);
         vkFreeMemory(context.device, images[i].memory, nullptr);
 
         depthImages[i].Destroy(context.device);
@@ -155,9 +162,9 @@ void VulkanSwapchain::Destroy()
     vkDestroySwapchainKHR(context.device, swapchain, nullptr);
 }
 
-VkResult VulkanSwapchain::AcquireNextImage(VkSemaphore presentCompleteSemaphore, uint32_t* pBackbufferIndex) const
+VkResult VulkanSwapchain::AcquireNextImage(VkSemaphore imageAcquiredSmp, uint32_t* pBackbufferIndex) const
 {
-    return fpAcquireNextImageKHR(context.device, swapchain, OneSecondInNanoSeconds, presentCompleteSemaphore, VK_NULL_HANDLE, pBackbufferIndex);
+    return fpAcquireNextImageKHR(context.device, swapchain, OneSecondInNanoSeconds, imageAcquiredSmp, VK_NULL_HANDLE, pBackbufferIndex);
 }
 
 void VulkanSwapchain::Present(VkCommandBuffer cmdBuffer, VkQueue queue, uint32_t imageIndices)

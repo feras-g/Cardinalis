@@ -74,21 +74,19 @@ bool VulkanTexture::UpdateImageTextureData(VkDevice device, void* data)
     VkDeviceSize imageSizeInBytes = layerSizeInBytes * info.layerCount;
     
     // Create temp CPU-GPU visible buffer holding image data 
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMem;
-    CreateBuffer(imageSizeInBytes, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMem);
-    UploadBufferData(stagingBufferMem, 0, data, imageSizeInBytes);
+    Buffer stagingBuffer;
+    CreateStagingBuffer(stagingBuffer, imageSizeInBytes);
+    UploadBufferData(stagingBuffer, data, imageSizeInBytes, 0);
 
     // Copy content to image memory on GPU
     StartInstantUseCmdBuffer();
     Transition(context.mainCmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    CopyBufferToImage(context.mainCmdBuffer, stagingBuffer);
+    CopyBufferToImage(context.mainCmdBuffer, stagingBuffer.buffer);
     Transition(context.mainCmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     EndInstantUseCmdBuffer();
 
     // Cleanup
-    vkDestroyBuffer(device, stagingBuffer, nullptr);
-    vkFreeMemory(device, stagingBufferMem, nullptr);
+    DestroyBuffer(stagingBuffer);
 
     return true;
 }
@@ -151,17 +149,23 @@ bool VulkanTexture::CreateImageView(VkDevice device, const ImageViewInfo& info)
 
 void VulkanTexture::Destroy(VkDevice device)
 {
-    info = {};
+    if(view != VK_NULL_HANDLE) 
+    { 
+        vkDestroyImageView(device, view, nullptr); 
+    }
+    if(image != VK_NULL_HANDLE) 
+    {  
+        vkDestroyImage(device, image, nullptr);
+        vkFreeMemory(context.device, memory, nullptr);
+    }
 
-    vkDestroyImageView(device, view, nullptr);
-    vkDestroyImage(device, image, nullptr);
-    vkFreeMemory(context.device, memory, nullptr);
+    info = {};
 }
 
 // Helper to transition images and remember the current layout
 void VulkanTexture::Transition(VkCommandBuffer cmdBuffer, VkImageLayout newLayout)
 {
-    if (info.layout != newLayout)
+    if (info.layout != newLayout)   
     {
         VkImageMemoryBarrier barrier =
         {

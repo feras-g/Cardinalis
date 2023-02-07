@@ -18,7 +18,7 @@ constexpr uint32_t ImGuiVtxBufferSize = 64 * 1024 * sizeof(ImDrawVert);
 constexpr uint32_t ImGuiIdxBufferSize = 64 * 1024 * sizeof(int);
 constexpr uint32_t bufferSize = ImGuiVtxBufferSize + ImGuiIdxBufferSize;
 
-constexpr uint32_t numStorageBuffers   = NUM_FRAMES;
+constexpr uint32_t numStorageBuffers   = 2;
 constexpr uint32_t numUniformBuffers   = 1;
 constexpr uint32_t numCombinedSamplers = 1;
 
@@ -31,7 +31,7 @@ void VulkanImGuiRenderer::Initialize(const std::vector<VulkanTexture>& textures)
 	// Create font texture
 	m_Textures.push_back(VulkanTexture());
 
-	CreateFontTexture(&io, "../../../data/fonts/SegoeUI.ttf", m_Textures[FONT_TEXTURE_INDEX]);
+	CreateFontTexture(&io, "../../../data/fonts/BerkeleyMonoVariable-Regular.ttf", m_Textures[FONT_TEXTURE_INDEX]);
 	m_Textures[FONT_TEXTURE_INDEX].CreateImageView(context.device, { .format = VK_FORMAT_R8G8B8A8_UNORM, .aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevels = 1 });
 	io.Fonts->TexID = (ImTextureID)FONT_TEXTURE_INDEX;
 
@@ -58,11 +58,7 @@ void VulkanImGuiRenderer::Initialize(const std::vector<VulkanTexture>& textures)
 	// Storage buffers for vertex and index data
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
-		if (!CreateBuffer(bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_StorageBuffers[i], m_StorageBufferMems[i]))
-		{
-			LOG_ERROR("Failed to create storage buffers for ImGui Renderer.");
-			assert(false);
-		}
+		CreateStorageBuffer(m_StorageBuffers[i], bufferSize);
 	}
 
 	if (!CreatePipeline(context.device))
@@ -82,7 +78,7 @@ void VulkanImGuiRenderer::PopulateCommandBuffer(size_t currentImageIdx, VkComman
 	int32_t width = (int32_t)context.swapchain->info.extent.width;
 	int32_t height = (int32_t)context.swapchain->info.extent.height;
 
-	VkClearValue clearValue = { { 0.1f, 0.0f, 0.1f, 1.0f } };
+	VkClearValue clearValue = { { 1.0f, 0.0f, 0.0f, 1.0f } };
 
 	BeginRenderpass(cmdBuffer, m_RenderPass, m_Framebuffers[currentImageIdx], { width, height }, &clearValue, 1);
 	// Set viewport/scissor dynamically
@@ -155,11 +151,11 @@ void VulkanImGuiRenderer::UpdateBuffers(size_t currentImage, ImDrawData* pDrawDa
 
 	// UBO
 	const glm::mat4 inMtx = glm::ortho(L, R, T, B);
-	UploadBufferData(m_UniformBuffersMemory[currentImage], 0, glm::value_ptr(inMtx), sizeof(glm::mat4));
+	UploadBufferData(m_UniformBuffers[currentImage], glm::value_ptr(inMtx), sizeof(glm::mat4), 0);
 	
 	// SBO : Vertex/Index data
 	void* sboData = nullptr;
-	vkMapMemory(context.device, m_StorageBufferMems[currentImage], 0, bufferSize, 0, &sboData);
+	vkMapMemory(context.device, m_StorageBuffers[currentImage].memory, 0, bufferSize, 0, &sboData);
 	
 	ImDrawVert* vtx = (ImDrawVert*)sboData;
 	for (int n = 0; n < m_pDrawData->CmdListsCount; n++)
@@ -183,7 +179,7 @@ void VulkanImGuiRenderer::UpdateBuffers(size_t currentImage, ImDrawData* pDrawDa
 
 	}
 
-	vkUnmapMemory(context.device, m_StorageBufferMems[currentImage]);
+	vkUnmapMemory(context.device, m_StorageBuffers[currentImage].memory);
 }
 
 void VulkanImGuiRenderer::LoadSceneViewTextures(VulkanTexture* modelRendererColor, VulkanTexture* modelRendererDepth)
@@ -203,10 +199,14 @@ bool VulkanImGuiRenderer::RecreateFramebuffersRenderPass()
 	CreateFramebuffers();
 
 	return true;
-}
+}	
 
 VulkanImGuiRenderer::~VulkanImGuiRenderer()
 {
+	for (int i = 0; i < NUM_FRAMES; i++)
+	{
+		m_Textures[i].Destroy(context.device);
+	}
 }
 
 bool VulkanImGuiRenderer::CreateFontTexture(ImGuiIO* io, const char* fontPath, VulkanTexture& out_Font)
@@ -235,7 +235,7 @@ bool VulkanImGuiRenderer::CreateFontTexture(ImGuiIO* io, const char* fontPath, V
 
 bool VulkanImGuiRenderer::CreateRenderPass()
 {
-	m_RenderPassInitInfo = RenderPassInitInfo{ true, false, context.swapchain->info.colorFormat, VK_FORMAT_UNDEFINED, RENDERPASS_FIRST };
+	m_RenderPassInitInfo = RenderPassInitInfo{ false, false, context.swapchain->info.colorFormat, VK_FORMAT_UNDEFINED, NONE };
 
 	return CreateColorDepthRenderPass(m_RenderPassInitInfo, &m_RenderPass);
 }
@@ -266,9 +266,9 @@ bool VulkanImGuiRenderer::CreateDescriptorSets(VkDevice device, VkDescriptorSet*
 	// Specify layouts
 	std::vector<VkDescriptorSetLayoutBinding> bindings =
 	{
-		{.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_VERTEX_BIT },
-		{.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_VERTEX_BIT },
-		{.binding = 2, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_VERTEX_BIT },
+		{.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_VERTEX_BIT },	
+		{.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_VERTEX_BIT },	// Vertex buffer
+		{.binding = 2, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_VERTEX_BIT },	// Index buffer
 		{.binding = 3, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = (uint32_t)(m_Textures.size()), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT}
 	};
 
@@ -289,9 +289,9 @@ bool VulkanImGuiRenderer::UpdateDescriptorSets(VkDevice device)
 
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
-		VkDescriptorBufferInfo uboInfo0   = { .buffer = m_UniformBuffers[i], .offset = 0, .range = sizeof(glm::mat4)  };
-		VkDescriptorBufferInfo sboInfo0   = { .buffer = m_StorageBuffers[i], .offset = 0, .range = ImGuiVtxBufferSize };
-		VkDescriptorBufferInfo sboInfo1   = { .buffer = m_StorageBuffers[i], .offset = ImGuiVtxBufferSize, .range = ImGuiIdxBufferSize };
+		VkDescriptorBufferInfo uboInfo0   = { .buffer = m_UniformBuffers[i].buffer, .offset = 0, .range = sizeof(glm::mat4)  };
+		VkDescriptorBufferInfo sboInfo0   = { .buffer = m_StorageBuffers[i].buffer, .offset = 0, .range = ImGuiVtxBufferSize };
+		VkDescriptorBufferInfo sboInfo1   = { .buffer = m_StorageBuffers[i].buffer, .offset = ImGuiVtxBufferSize, .range = ImGuiIdxBufferSize };
 
 		std::array<VkWriteDescriptorSet, 4> descriptorWrites =
 		{
@@ -320,11 +320,7 @@ bool VulkanImGuiRenderer::CreateUniformBuffers(size_t dataSizeInBytes)
 {
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
-		if (!CreateUniformBuffer(dataSizeInBytes, m_UniformBuffers[i], m_UniformBuffersMemory[i]))
-		{
-			LOG_ERROR("Failed to create uniform buffer.");
-			return false;
-		}
+		CreateUniformBuffer(m_UniformBuffers[i], dataSizeInBytes);
 	}
 
 	return true;

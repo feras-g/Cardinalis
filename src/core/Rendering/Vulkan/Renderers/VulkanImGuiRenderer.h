@@ -29,7 +29,7 @@ public:
 	float m_SceneViewAspectRatio = 1.0;
 	bool CreateDescriptorSets(VkDevice device, VkDescriptorSet* out_DescriptorSets, VkDescriptorSetLayout* out_DescLayouts) override;
 
-	~VulkanImGuiRenderer() final;
+	~VulkanImGuiRenderer() override final;
 private:
 	ImDrawData* m_pDrawData = nullptr;
 
@@ -39,8 +39,7 @@ private:
 	std::vector<VkDescriptorImageInfo> m_TextureDescriptors;
 
 	// Storage buffers
-	VkBuffer m_StorageBuffers[NUM_FRAMES];
-	VkDeviceMemory m_StorageBufferMems[NUM_FRAMES];
+	Buffer m_StorageBuffers[NUM_FRAMES];
 
 	std::unique_ptr<VulkanShader> m_Shader;
 

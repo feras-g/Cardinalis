@@ -70,7 +70,7 @@ bool VulkanModelRenderer::UpdateBuffers(size_t currentImage, glm::mat4 model, gl
 	ModelUniformData.view  = view;
 	ModelUniformData.proj  = proj;
 
-	UploadBufferData(m_UniformBuffersMemory[currentImage], 0, &ModelUniformData, sizeof(UniformData));
+	UploadBufferData(m_UniformBuffers[currentImage], &ModelUniformData, sizeof(UniformData), 0);
 
 	return true;
 }
@@ -79,13 +79,13 @@ bool VulkanModelRenderer::UpdateBuffers(size_t currentImage, glm::mat4 model, gl
 bool VulkanModelRenderer::UpdateDescriptorSets(VkDevice device)
 {
 	// Mesh data is not modified between 2 frames
-	VkDescriptorBufferInfo sboInfo0 = { .buffer = m_Model.m_StorageBuffer, .offset = 0, .range = m_Model.m_VtxBufferSizeInBytes };
-	VkDescriptorBufferInfo sboInfo1 = { .buffer = m_Model.m_StorageBuffer, .offset = m_Model.m_VtxBufferSizeInBytes, .range = m_Model.m_IdxBufferSizeInBytes };
+	VkDescriptorBufferInfo sboInfo0 = { .buffer = m_Model.m_StorageBuffer.buffer, .offset = 0, .range = m_Model.m_VtxBufferSizeInBytes };
+	VkDescriptorBufferInfo sboInfo1 = { .buffer = m_Model.m_StorageBuffer.buffer, .offset = m_Model.m_VtxBufferSizeInBytes, .range = m_Model.m_IdxBufferSizeInBytes };
 	VkDescriptorImageInfo imageInfo0 = { .sampler = s_SamplerRepeatLinear, .imageView = m_Texture.view, .imageLayout = m_Texture.info.layout };
 
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
-		VkDescriptorBufferInfo uboInfo0  = { .buffer = m_UniformBuffers[i], .offset = 0, .range = sizeof(UniformData) };
+		VkDescriptorBufferInfo uboInfo0  = { .buffer = m_UniformBuffers[i].buffer, .offset = 0, .range = sizeof(UniformData) };
 
 		std::array<VkWriteDescriptorSet, 4> descriptorWrites =
 		{
@@ -103,8 +103,6 @@ bool VulkanModelRenderer::UpdateDescriptorSets(VkDevice device)
 
 bool VulkanModelRenderer::CreateRenderPass()
 {
-	m_RenderPassInitInfo = { true, true, m_ColorFormat, m_DepthStencilFormat, RENDERPASS_INTERMEDIATE_OFFSCREEN };
-
 	return CreateColorDepthRenderPass({ true, true, m_ColorFormat, m_DepthStencilFormat, RENDERPASS_INTERMEDIATE_OFFSCREEN }, &m_RenderPass);
 }
 
@@ -132,4 +130,10 @@ bool VulkanModelRenderer::CreateFramebuffers()
 
 VulkanModelRenderer::~VulkanModelRenderer()
 {
+	m_Texture.Destroy(context.device);
+	for (int i = 0; i < NUM_FRAMES; i++)
+	{
+		m_ColorAttachments[i].Destroy(context.device);
+		m_DepthStencilAttachments[i].Destroy(context.device);
+	}
 }

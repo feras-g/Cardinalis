@@ -5,7 +5,7 @@
 struct VulkanFrame
 {
 	VkSemaphore imageAcquiredSemaphore	 = VK_NULL_HANDLE;
-	VkSemaphore renderCompleteSemaphore	 = VK_NULL_HANDLE;
+	VkSemaphore queueSubmittedSemaphore	 = VK_NULL_HANDLE;
 	VkFence renderFence					 = VK_NULL_HANDLE;
 								 
 	VkCommandPool cmdPool		 = VK_NULL_HANDLE;

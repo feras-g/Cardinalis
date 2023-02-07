@@ -26,15 +26,16 @@ bool VulkanModel::CreateFromFile(const char* filename)
 	assert(scene->HasMeshes());
 
 	const aiMesh* mesh = scene->mMeshes[0];
-
+	
 	// Load vertices
 	std::vector<VertexData> vertices;
 	for (size_t i=0; i < mesh->mNumVertices; i++)
 	{
 		const aiVector3D& p = mesh->mVertices[i];
-		const aiVector3D& n = mesh->mNormals[i];
+
+		const aiVector3D& n = mesh->HasNormals() ? mesh->mNormals[i] : aiVector3D{0.0f, 0.0f, 0.0f} ;
 		
-		const aiVector3D& uv  = mesh->mTextureCoords[0][i]; // Select first uv channel by default
+		const aiVector3D& uv = mesh->HasTextureCoords(i) ? mesh->mTextureCoords[0][i] : p; // Select first uv channel by default
 
 		vertices.push_back({ .pos = {p.x, p.y, p.z}, .normal = {n.x, n.y, n.z}, .uv = {uv.x,  1.0f - uv.y}});
 	}
@@ -58,7 +59,7 @@ bool VulkanModel::CreateFromFile(const char* filename)
 	m_IdxBufferSizeInBytes = indices.size()  * sizeof(unsigned int);
 	m_VtxBufferSizeInBytes = vertices.size() * sizeof(VertexData);
 
-	CreateIndexVertexBuffer(vertices.data(), m_VtxBufferSizeInBytes, indices.data(), m_IdxBufferSizeInBytes, m_StorageBuffer, m_StorageBufferMem);
+	CreateIndexVertexBuffer(m_StorageBuffer, vertices.data(), m_VtxBufferSizeInBytes, indices.data(), m_IdxBufferSizeInBytes);
 
 	return true;
 }

@@ -15,12 +15,7 @@ VulkanRendererBase::~VulkanRendererBase()
 	vkDeviceWaitIdle(context.device);
 	for (size_t i = 0; i < NUM_FRAMES; i++)
 	{
-		vkDestroyBuffer(context.device, m_UniformBuffers[i], nullptr);
-	}
-
-	for (size_t i = 0; i < NUM_FRAMES; i++)
-	{
-		vkFreeMemory(context.device, m_UniformBuffersMemory[i], nullptr);
+		DestroyBuffer(m_UniformBuffers[i]);
 	}
 
 	vkDestroyDescriptorSetLayout(context.device, m_DescriptorSetLayout, nullptr);
@@ -57,7 +52,9 @@ bool VulkanRendererBase::CreateDescriptorSets(VkDevice device, const std::vector
 
 	VK_CHECK(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &m_DescriptorSetLayout));
 
-	std::array<VkDescriptorSetLayout, NUM_FRAMES> layouts = { m_DescriptorSetLayout, m_DescriptorSetLayout };	// 1 descriptor set per frame
+	// 1 descriptor set per frame
+	std::array<VkDescriptorSetLayout, NUM_FRAMES> layouts;
+	layouts.fill(m_DescriptorSetLayout);
 
 	// Allocate memory
 	VkDescriptorSetAllocateInfo allocInfo =
@@ -68,7 +65,9 @@ bool VulkanRendererBase::CreateDescriptorSets(VkDevice device, const std::vector
 		.pSetLayouts = layouts.data(),
 	};
 
-	return (vkAllocateDescriptorSets(device, &allocInfo, m_DescriptorSets) == VK_SUCCESS);
+	VK_CHECK(vkAllocateDescriptorSets(device, &allocInfo, m_DescriptorSets));
+
+	return true;
 }
 
 bool VulkanRendererBase::CreateDescriptorSets(VkDevice device, VkDescriptorSet* out_DescriptorSets, VkDescriptorSetLayout* out_DescLayouts)
@@ -90,15 +89,11 @@ bool VulkanRendererBase::UpdateDescriptorSets(VkDevice device)
 	return false;
 }
 
-bool VulkanRendererBase::CreateUniformBuffers(size_t uniformDataSize)
+bool VulkanRendererBase::CreateUniformBuffers(size_t size)
 {
 	for (size_t i = 0; i < NUM_FRAMES; i++)
 	{
-		if (!CreateUniformBuffer(uniformDataSize, m_UniformBuffers[i], m_UniformBuffersMemory[i]))
-		{
-			LOG_ERROR("Failed to create uniform buffers.");
-			return false;
-		}
+		CreateUniformBuffer(m_UniformBuffers[i], size);
 	}
 
 	return true;

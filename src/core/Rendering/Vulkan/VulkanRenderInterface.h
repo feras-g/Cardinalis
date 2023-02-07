@@ -4,15 +4,20 @@
 #include <memory>
 #include <vector>
 
+#ifdef _WIN32
+#define VK_USE_PLATFORM_WIN32_KHR
+#endif // _WIN32
+
+#include <vulkan/vulkan.h>
+#include <vulkan/vk_enum_string_helper.h>
+
 #include "Core/EngineLogger.h"
+#include "Rendering/Vulkan/VulkanResources.h"
 #include "Rendering/Vulkan/VulkanSwapchain.h"
 #include "Rendering/Vulkan/VulkanTexture.h"
 #include "Rendering/Vulkan/VulkanTools.h"
 #include "Rendering/Vulkan/VulkanFrame.h"
 #include "Rendering/Vulkan/VulkanShader.h"
-
-#include <vulkan/vulkan.h>
-#include <vulkan/vk_enum_string_helper.h>
 
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
@@ -106,10 +111,6 @@ struct RenderPassInitInfo
 	// Is it the final pass ? 
 	RenderPassFlags flags = NONE; 
 };
-
-bool CreateBuffer(VkDeviceSize sizeInBytes, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProperties, VkBuffer& out_Buffer, VkDeviceMemory& out_BufferMemory);
-bool UploadBufferData(const VkDeviceMemory bufferMemory, VkDeviceSize offsetInBytes, const void* data, const size_t dataSizeInBytes);
-bool CreateUniformBuffer(VkDeviceSize size, VkBuffer& out_Buffer, VkDeviceMemory& out_BufferMemory);
 // Create a simple render pass with color and/or depth and a single subpass
 bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, VkRenderPass* out_renderPass);
 bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const VulkanSwapchain* swapchain, VkFramebuffer* out_Framebuffers, bool useDepth);
@@ -120,10 +121,7 @@ bool CreateGraphicsPipeline(const VulkanShader& shader, bool useBlending, bool u
 
 // Create a storage buffer containing non-interleaved vertex and index data
 // Return the created buffer's size 
-size_t CreateIndexVertexBuffer(const void* vtxData, size_t vtxBufferSizeInBytes, const void* idxData, size_t idxBufferSizeInBytes, VkBuffer& out_StorageBuffer, VkDeviceMemory& out_StorageBufferMem);
-
-// Create and execute a buffer copy command 
-void CopyBuffer(VkBuffer srcBuffer, VkBuffer& dstBuffer, VkDeviceSize bufferSizeInBytes);
+size_t CreateIndexVertexBuffer(Buffer& result, const void* vtxData, size_t vtxBufferSizeInBytes, const void* idxData, size_t idxBufferSizeInBytes);
 
 VkPipelineShaderStageCreateInfo PipelineShaderStageCreateInfo(VkShaderModule shaderModule, VkShaderStageFlagBits shaderStage, const char* entryPoint);
 VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, const VkDescriptorBufferInfo* bufferInfo, VkDescriptorType descriptorType);

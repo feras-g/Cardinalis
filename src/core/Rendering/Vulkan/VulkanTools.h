@@ -10,8 +10,16 @@
 
 static constexpr uint64_t OneSecondInNanoSeconds = 1000000000;
 
-#define VK_CHECK(x)													                                \
-if(x != VK_SUCCESS) { LOG_ERROR("Assert on VkResult : {0}", string_VkResult(x)); assert(false); };  \
+#define VK_CHECK(x)                                                                             \
+	do                                                                                          \
+	{                                                                                           \
+		VkResult err = x;                                                                       \
+		if (err)                                                                                \
+		{                                                                                       \
+			LOG_ERROR("Detected Vulkan error {0} at {1}:{2}.\n", string_VkResult(err), __FILE__, __LINE__); \
+			abort();                                                                            \
+		}                                                                                       \
+	} while (0)
 
 #define GET_INSTANCE_PROC_ADDR(inst, entry)                            \
 {                                                                      \
@@ -57,5 +65,7 @@ static Image LoadImageFromFile(const char* filename, ImageInfo& info)
 
     return Image(data, stbi_image_free);
 }
+
+#define CHECK_DEREF(p) { assert(p); return *p; }
 
 #endif // !VULKAN_TOOLS_H

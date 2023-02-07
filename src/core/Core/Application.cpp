@@ -7,16 +7,17 @@
 #include "Rendering/Vulkan/Renderers/VulkanPresentRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanImGuiRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanModelRenderer.h"
+#include "Rendering/Vulkan/Renderers/VulkanClearColorRenderer.h"
 #include "Rendering/FrameCounter.h"
 
 Application::Application(const char* title, uint32_t width, uint32_t height) : bInitSuccess(false), m_DebugName(title)
 {
 	m_Window.reset(new Window({ .title = title, .width = width, .height = height }, this));
-	Logger::Init("EnginerLogger");
+	Logger::Init("Engine");
 
 	m_FramePerfCounter.reset(new FrameCounter());
 
-	m_RHI.reset(new VulkanRenderInterface(title, 1, 3, 283));
+	m_RHI.reset(new VulkanRenderInterface(title, 1, 2, 196));
 	m_RHI->Initialize();
 #ifdef _WIN32
 	m_RHI->CreateSurface(m_Window.get());
@@ -56,7 +57,5 @@ void Application::Run()
 
 void Application::OnWindowResize()
 {
-	context.swapchain->Reinitialize();
-	m_PresentRenderer->RecreateFramebuffersRenderPass();
-	m_ImGuiRenderer->RecreateFramebuffersRenderPass();
+
 }

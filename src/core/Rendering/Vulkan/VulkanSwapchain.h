@@ -1,10 +1,6 @@
 #ifndef VULKAN_SWAPCHAIN_H
 #define	VULKAN_SWAPCHAIN_H
 
-#ifdef _WIN32
-#define VK_USE_PLATFORM_WIN32_KHR
-#endif // _WIN32
-
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -30,7 +26,7 @@ public:
 
 	// Reset metadata and destroy images and framebuffers
 	void Destroy();
-	VkResult AcquireNextImage(VkSemaphore presentCompleteSemaphore, uint32_t* pImageIndex) const;
+	VkResult AcquireNextImage(VkSemaphore imageAcquiredSmp, uint32_t* pImageIndex) const;
 	void Present(VkCommandBuffer cmdBuffer, VkQueue queue, uint32_t imageIndices);
 
 	inline VkSwapchainKHR Get() const;

@@ -35,15 +35,19 @@ void VulkanRenderInterface::Initialize()
 
 void VulkanRenderInterface::Terminate()
 {
-	//context.swapchain->Destroy();
 
-	//for (uint32_t i = 0; i < NUM_FRAMES; i++)
-	//{
-	//	context.frames[i].Destroy(context.device);
-	//}
+	for (uint32_t i = 0; i < NUM_FRAMES; i++)
+	{
+		context.frames[i].Destroy(context.device);
+	}
 
-	//vkDestroySurfaceKHR(context.instance, m_Surface, nullptr);
-	//vkDestroyInstance(context.instance, nullptr);
+	vkDestroyCommandPool(context.device, context.mainCmdPool, nullptr);
+
+	context.swapchain->Destroy();
+	vkDestroySurfaceKHR(context.instance, m_Surface, nullptr);
+
+	vkDestroyDevice(context.device, nullptr);
+	vkDestroyInstance(context.instance, nullptr);
 }
 
 void VulkanRenderInterface::CreateInstance()
@@ -156,11 +160,10 @@ void VulkanRenderInterface::CreateCommandStructures()
 	assert(context.queue);
 
 	// Command buffers and command pools
-
 	VkCommandPoolCreateInfo poolCreateInfo =
 	{
 		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-		.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+		//.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
 		.queueFamilyIndex = context.gfxQueueFamily
 	};
 
@@ -197,7 +200,7 @@ void VulkanRenderInterface::CreateSyncStructures()
 		VK_CHECK(vkCreateFence(context.device, &fenceInfo, nullptr, &context.frames[i].renderFence));
 
 		VK_CHECK(vkCreateSemaphore(context.device, &semaphoreInfo, nullptr, &context.frames[i].imageAcquiredSemaphore));
-		VK_CHECK(vkCreateSemaphore(context.device, &semaphoreInfo, nullptr, &context.frames[i].renderCompleteSemaphore));
+		VK_CHECK(vkCreateSemaphore(context.device, &semaphoreInfo, nullptr, &context.frames[i].queueSubmittedSemaphore));
 	}
 }
 
@@ -321,16 +324,12 @@ void GetInstanceExtensionNames(std::vector<const char*>& extensions)
 	{
 		LOG_DEBUG("- {0}", e.extensionName);
 
+		// Debug markers
 		if (strcmp(e.extensionName, "VK_EXT_debug_utils") == 0)
 		{
 			extensions.push_back("VK_EXT_debug_utils");
 		}
-		
-		// Debug markers
-		if (strcmp(e.extensionName, "VK_EXT_debug_report") == 0)
-		{
-			extensions.push_back("VK_EXT_debug_report");
-		}
+
 	}
 }
 
@@ -356,53 +355,6 @@ void GetInstanceLayerNames(std::vector<const char*>& layers)
 #endif // _DEBUG
 	}
 
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-bool CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProperties,VkBuffer& out_Buffer, VkDeviceMemory& out_BufferMemory)
-{
-	VkBufferCreateInfo info =
-	{
-		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-		.flags = 0,
-		.size = size,
-		.usage = usage,
-		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-		.queueFamilyIndexCount = 0,
-		.pQueueFamilyIndices = nullptr
-	};
-
-	VK_CHECK(vkCreateBuffer(context.device, &info, nullptr, &out_Buffer));
-
-	VkMemoryRequirements memRequirements;
-	vkGetBufferMemoryRequirements(context.device, out_Buffer, &memRequirements);
-
-	VkMemoryAllocateInfo allocInfo =
-	{
-		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-		.allocationSize = size,
-		.memoryTypeIndex = FindMemoryType(context.physicalDevice, memRequirements.memoryTypeBits, memProperties)
-	};
-	VK_CHECK(vkAllocateMemory(context.device, &allocInfo, nullptr, &out_BufferMemory));
-
-	VK_CHECK(vkBindBufferMemory(context.device, out_Buffer, out_BufferMemory, 0));
-
-	return true;
-}
-bool UploadBufferData(const VkDeviceMemory bufferMemory, VkDeviceSize offsetInBytes, const void* data, const size_t dataSizeInBytes)
-{
-	void* pMappedData = nullptr;
-	VK_CHECK(vkMapMemory(context.device, bufferMemory, offsetInBytes, dataSizeInBytes, 0, &pMappedData));
-	memcpy(pMappedData, data, dataSizeInBytes);
-	vkUnmapMemory(context.device, bufferMemory);
-
-	return true;
-}
-
-bool CreateUniformBuffer(VkDeviceSize size, VkBuffer& out_Buffer, VkDeviceMemory& out_BufferMemory)
-{
-	return CreateBuffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,out_Buffer, out_BufferMemory);
 }
 
 bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, VkRenderPass* out_renderPass)
@@ -701,44 +653,28 @@ bool CreateGraphicsPipeline(const VulkanShader& shader, bool useBlending, bool u
 	return true;
 }
 
-size_t CreateIndexVertexBuffer(const void* vtxData, size_t vtxBufferSizeInBytes, const void* idxData, size_t idxBufferSizeInBytes, VkBuffer& out_StorageBuffer, VkDeviceMemory& out_StorageBufferMem)
+size_t CreateIndexVertexBuffer(Buffer& result, const void* vtxData, size_t vtxBufferSizeInBytes, const void* idxData, size_t idxBufferSizeInBytes)
 {
 	size_t totalSizeInBytes = vtxBufferSizeInBytes + idxBufferSizeInBytes;
 
 	// Staging buffer
-	VkBuffer stagingBuffer;
-	VkDeviceMemory stagingBufferMem;
-
-	CreateBuffer(totalSizeInBytes, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-		stagingBuffer, stagingBufferMem);
+	Buffer stagingBuffer;
+	CreateStagingBuffer(stagingBuffer, totalSizeInBytes);
 
 	// Copy vertex + index data to staging buffer
 	void* pData;
-	vkMapMemory(context.device, stagingBufferMem, 0, totalSizeInBytes, 0, &pData);
+	vkMapMemory(context.device, stagingBuffer.memory, 0, totalSizeInBytes, 0, &pData);
 	memcpy(pData, vtxData, vtxBufferSizeInBytes);
 	memcpy((unsigned char*)pData + vtxBufferSizeInBytes, idxData, idxBufferSizeInBytes);
-	vkUnmapMemory(context.device, stagingBufferMem);
+	vkUnmapMemory(context.device, stagingBuffer.memory);
 
 	// Create storage buffer containing non-interleaved vertex + index data 
-	CreateBuffer(totalSizeInBytes, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, out_StorageBuffer, out_StorageBufferMem);
-	CopyBuffer(stagingBuffer, out_StorageBuffer, totalSizeInBytes);
+	CreateStorageBuffer(result, totalSizeInBytes);
+	CopyBuffer(stagingBuffer, result, totalSizeInBytes);
 
-	vkDestroyBuffer(context.device, stagingBuffer, nullptr);
-	vkFreeMemory(context.device, stagingBufferMem, nullptr);
+	DestroyBuffer(stagingBuffer);
 
 	return totalSizeInBytes;
-}
-
-void CopyBuffer(VkBuffer srcBuffer, VkBuffer& dstBuffer, VkDeviceSize bufferSizeInBytes)
-{
-	StartInstantUseCmdBuffer();
-	VkBufferCopy bufferRegion =
-	{
-		.srcOffset = 0, .dstOffset = 0, .size = bufferSizeInBytes
-	};
-
-	vkCmdCopyBuffer(context.mainCmdBuffer, srcBuffer, dstBuffer, 1, &bufferRegion);
-	EndInstantUseCmdBuffer();
 }
 
 VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, const VkDescriptorBufferInfo* bufferInfo, VkDescriptorType descriptorType)

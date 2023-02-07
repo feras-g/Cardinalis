@@ -5,5 +5,5 @@ void VulkanFrame::Destroy(VkDevice device)
 	vkDestroyCommandPool(device, cmdPool, nullptr);
 	vkDestroyFence(device, renderFence, nullptr);
 	vkDestroySemaphore(device, imageAcquiredSemaphore, nullptr);
-	vkDestroySemaphore(device, renderCompleteSemaphore, nullptr);
+	vkDestroySemaphore(device, queueSubmittedSemaphore, nullptr);
 }

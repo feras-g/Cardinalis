@@ -2,6 +2,9 @@
 #define VULKAN_MODEL_H
 
 #include <vulkan/vulkan.h> 
+#include "Rendering/Vulkan/VulkanResources.h"
+
+struct Buffer;
 
 // Class describing a 3D model in Vulkan
 class VulkanModel
@@ -16,12 +19,12 @@ public:
 	size_t m_NumVertices;
 	size_t m_NumIndices;
 
-	VkBuffer m_StorageBuffer = VK_NULL_HANDLE;
+	// Contains non-interleaved vertex + index data 
+	Buffer m_StorageBuffer;
 
 	~VulkanModel() = default;
 private:
-	// Contains non-interleaved vertex + index data 
-	VkDeviceMemory m_StorageBufferMem;
+	
 };
 
 #endif // !VULKAN_MODEL_H

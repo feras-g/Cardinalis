@@ -23,7 +23,7 @@ protected:
 	virtual bool UpdateDescriptorSets(VkDevice device);
 	virtual bool CreateRenderPass() = 0;
 	virtual bool CreateFramebuffers() = 0;
-	bool CreateUniformBuffers(size_t uniformDataSize);
+	bool CreateUniformBuffers(size_t size);
 
 	RenderPassInitInfo m_RenderPassInitInfo;
 	VkExtent2D m_FramebufferExtent;
@@ -41,8 +41,7 @@ protected:
 	VkPipeline			m_GraphicsPipeline			= VK_NULL_HANDLE;
 	
 	// Uniform buffers
-	VkBuffer		m_UniformBuffers[NUM_FRAMES]		= { VK_NULL_HANDLE };
-	VkDeviceMemory	m_UniformBuffersMemory[NUM_FRAMES]	= { VK_NULL_HANDLE };
+	Buffer m_UniformBuffers[NUM_FRAMES];
 
 	// Samplers
 	static void CreateSamplers();
