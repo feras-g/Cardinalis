@@ -4,6 +4,8 @@
 #include <memory>
 #include <vector>
 
+#include "InputEvents.h"
+
 class Window;
 class VulkanRenderInterface;
 class FrameCounter;
@@ -40,9 +42,21 @@ public:
 	virtual void UpdateGuiData(size_t currentImageIdx) = 0;
 	virtual void UpdateRenderersData(size_t currentImageIdx) = 0;
 	virtual void Terminate() = 0;
+
+	/// <summary>
+	/// States callbacks
+	/// </summary>
+	bool EngineGetAsyncKeyState(Key key);
 	virtual void OnWindowResize();
+	virtual void OnLeftMouseButtonUp();
+	virtual void OnLeftMouseButtonDown();
+	virtual void OnMouseMove(int x, int y);
+	virtual void OnKeyEvent(KeyEvent event);
 
 	bool bInitSuccess;
+
+public:
+
 	
 public:
 	Application() = delete;
@@ -52,6 +66,9 @@ public:
 	Application& operator=(const Application&&) = delete;
 
 protected:
+	MouseEvent m_MouseEvent;
+	KeyEvent   m_KeyEvent;
+
 	double m_LastTime = 0.0f, m_DeltaSeconds = 0.0f;
 	const char* m_DebugName;
 	std::unique_ptr<FrameCounter> m_FramePerfCounter;

@@ -9,6 +9,7 @@
 #include "Rendering/Vulkan/Renderers/VulkanImGuiRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanModelRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanClearColorRenderer.h"
+#include "Rendering/Camera.h"
 #include "Rendering/FrameCounter.h"
 
 class SampleApp final : public Application
@@ -24,9 +25,18 @@ public:
 	void Render(size_t currentImageIdx)		override;
 	void UpdateGuiData(size_t currentImageIdx)	override;
 	void UpdateRenderersData(size_t currentImageIdx) override;
-	void OnWindowResize() override;
 	void Terminate()	override;
 
+	void OnWindowResize() override;
+	void OnLeftMouseButtonUp() override;
+	void OnLeftMouseButtonDown() override;
+	void OnMouseMove(int x, int y) override;
+	void OnKeyEvent(KeyEvent event);
+
+protected:
+	CameraController m_CameraController;
+
+	bool b_IsSceneViewportHovered = false;
 
 protected:
 	std::unique_ptr<VulkanImGuiRenderer>		m_ImGuiRenderer;
@@ -42,13 +52,28 @@ void SampleApp::Initialize()
 	m_ImGuiRenderer.reset(new VulkanImGuiRenderer(context));
 	m_ImGuiRenderer->Initialize(m_ModelRenderer->m_ColorAttachments);
 	m_ClearColorRenderer.reset(new VulkanClearColorRenderer(context));
+
+	m_CameraController = CameraController({ 0, 0, -5 }, { 0,0,1 }, { 0, 1, 0 });
 }
 
 void SampleApp::Update()
 {
 	// Update keyboard, mouse interaction
 	m_Window->UpdateGUI();
+
+	if (EngineGetAsyncKeyState(Key::Z)) m_CameraController.m_movement     = m_CameraController.m_movement | Movement::FORWARD;
+	if (EngineGetAsyncKeyState(Key::Q)) m_CameraController.m_movement     = m_CameraController.m_movement | Movement::LEFT;
+	if (EngineGetAsyncKeyState(Key::S)) m_CameraController.m_movement     = m_CameraController.m_movement | Movement::BACKWARD;
+	if (EngineGetAsyncKeyState(Key::D)) m_CameraController.m_movement     = m_CameraController.m_movement | Movement::RIGHT;
+	if (EngineGetAsyncKeyState(Key::SPACE)) m_CameraController.m_movement = m_CameraController.m_movement | Movement::UP;
+
+	if (m_CameraController.m_movement != Movement::NONE)
+	{
+		m_CameraController.UpdateTranslation(0.033f);
+	}
+
 	UpdateRenderersData(context.currentBackBuffer);
+
 }
 
 void SampleApp::Render(size_t currentImageIdx)
@@ -121,10 +146,10 @@ inline void SampleApp::UpdateGuiData(size_t currentImageIdx)
 	ImGui::NewFrame();
 	ImGui::StyleColorsDark();
 
-	// Viewport
+	// Global user interface consisting of multiple viewports
 	ImGui::DockSpaceOverViewport(0, ImGuiDockNodeFlags_PassthruCentralNode);
 
-	// Scene view
+	// Scene viewport
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {0.0f, 0.0f});
 	if (ImGui::Begin("Scene", 0, 0))
 	{
@@ -133,6 +158,9 @@ inline void SampleApp::UpdateGuiData(size_t currentImageIdx)
 		m_ImGuiRenderer->m_SceneViewAspectRatio = sceneViewPanelSize.x / sceneViewPanelSize.y;
 		ImGui::Image((ImTextureID)m_ImGuiRenderer->m_ModelRendererColorTextureId[currentImageIdx], sceneViewPanelSize);
 	}
+
+	b_IsSceneViewportHovered = ImGui::IsItemHovered();
+
 	ImGui::End();
 	ImGui::PopStyleVar();
 	
@@ -192,9 +220,9 @@ inline void SampleApp::UpdateRenderersData(size_t currentImageIdx)
 	// Other renderers data
 	{
 		glm::mat4 m = glm::identity<glm::mat4>();
-		glm::mat4 v = glm::lookAt(glm::vec3(0.0f, 0.0f, -5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::mat4 v = m_CameraController.GetView();
 		glm::mat4 p = glm::perspective(45.0f, m_ImGuiRenderer->m_SceneViewAspectRatio, 0.1f, 1000.0f);
-
+		
 		m_ModelRenderer->UpdateBuffers(currentImageIdx, m, v, p);
 	}
 }
@@ -205,6 +233,50 @@ inline void SampleApp::OnWindowResize()
 	m_ClearColorRenderer->CreateFramebufferAndRenderPass();
 	m_PresentRenderer->RecreateFramebuffersRenderPass();
 	m_ImGuiRenderer->RecreateFramebuffersRenderPass();
+}
+
+inline void SampleApp::OnLeftMouseButtonUp()
+{
+	Application::OnLeftMouseButtonUp();
+}
+
+void SampleApp::OnLeftMouseButtonDown()
+{
+	Application::OnLeftMouseButtonDown();
+	m_CameraController.m_last_mouse_pos = { m_MouseEvent.px, m_MouseEvent.py };
+}
+
+inline void SampleApp::OnMouseMove(int x, int y)
+{
+	if (b_IsSceneViewportHovered)
+	{
+		// Camera rotation
+		if (m_MouseEvent.bLeftClick)
+		{
+			if (m_MouseEvent.bFirstClick)
+			{
+				m_MouseEvent.lastClickPosX = x;
+				m_MouseEvent.lastClickPosY = y;
+
+				m_MouseEvent.bFirstClick = false;
+			}
+			else
+			{
+				float px = (m_MouseEvent.px - m_MouseEvent.lastClickPosX);
+				float py = (m_MouseEvent.py - m_MouseEvent.lastClickPosY);
+
+				m_CameraController.UpdateRotation(0.033f, { px, py });
+
+				m_MouseEvent.lastClickPosX = x;
+				m_MouseEvent.lastClickPosY = y;
+			}
+		}
+	}
+}
+
+inline void SampleApp::OnKeyEvent(KeyEvent event)
+{
+
 }
 
 inline void SampleApp::Terminate()

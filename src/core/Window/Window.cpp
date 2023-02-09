@@ -4,7 +4,7 @@
 ///// Window Implementation
 #if defined(_WIN32)	
 
-#include <Windows.h>
+#include <Windowsx.h>
 #include "Core/Application.h"
 #include "backends/imgui_impl_win32.h"
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -38,6 +38,13 @@ public:
 
 	void OnClose();
 	void OnResize(unsigned int width, unsigned int height);
+
+
+	void OnLeftMouseButtonUp();
+	void OnLeftMouseButtonDown();
+	void OnMouseMove(int x, int y);
+	void OnKeyEvent(KeyEvent event);
+	bool AsyncKeyState(Key key);
 
 	WindowInfo m_WinInfo;
 	WindowState m_WinState;
@@ -175,6 +182,55 @@ LRESULT CALLBACK Window::Impl::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 			EndPaint(hWnd, &ps);
 		}
 		break;
+
+		// Mouse events
+		case WM_MOUSEMOVE:
+		{
+			int x = GET_X_LPARAM(lParam);
+			int y = GET_Y_LPARAM(lParam);
+			self->OnMouseMove(x, y);
+		}
+		break;
+
+		case WM_LBUTTONDOWN:
+		{
+			self->OnLeftMouseButtonDown();
+		};
+		break;
+
+		case WM_LBUTTONUP:
+		{
+			self->OnLeftMouseButtonUp();
+
+		}
+		break;
+
+		// Keyboard events
+		case WM_KEYDOWN:
+		{
+			KeyEvent event;
+
+			if(uMsg == WM_KEYDOWN) event.pressed = true;
+
+			if (wParam == 'Z')		event.key = event.key | Key::Z;
+			if (wParam == 'Q')		event.key = event.key | Key::Q;
+			if (wParam == 'S')		event.key = event.key | Key::S;
+			if (wParam == 'D')		event.key = event.key | Key::D;
+			if (wParam == VK_LEFT)	event.key = event.key | Key::LEFT;
+			if (wParam == VK_RIGHT)	event.key = event.key | Key::RIGHT;
+			if (wParam == VK_UP)	event.key = event.key | Key::UP;
+			if (wParam == VK_DOWN)	event.key = event.key | Key::DOWN;
+
+			self->OnKeyEvent(event);
+		}
+		break;
+		case WM_KEYUP:
+		{
+			KeyEvent event;
+			event.pressed = false;
+			self->OnKeyEvent(event);
+		}
+		break;
 		}
 	}
 
@@ -210,6 +266,30 @@ inline void Window::Impl::UpdateGUI() const
 inline void Window::Impl::ShutdownGUI() const
 {
 	ImGui_ImplWin32_Shutdown();
+}
+
+/////////////////////////////////////////////////////////////////////////
+
+void Window::Impl::OnLeftMouseButtonUp() 
+{ 
+	hApplication->OnLeftMouseButtonUp();
+};
+void Window::Impl::OnLeftMouseButtonDown() 
+{ 
+	hApplication->OnLeftMouseButtonDown();
+};
+void Window::Impl::OnMouseMove(int x, int y) 
+{ 
+	hApplication->OnMouseMove(x, y);
+}
+void Window::Impl::OnKeyEvent(KeyEvent event)
+{
+	hApplication->OnKeyEvent(event);
+}
+
+bool Window::Impl::AsyncKeyState(Key key)
+{
+	return GetAsyncKeyState(keyToWindows(key));
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -273,6 +353,17 @@ void Window::HandleEvents() { return pImpl->HandleEvents(); }
 inline double Window::GetTimeSeconds() { return pImpl->GetTimeSeconds(); }
 void Window::OnClose()  { return pImpl->OnClose(); }
 void Window::OnResize(unsigned int width, unsigned int height) { return pImpl->OnResize(width, height); }
+
+bool Window::AsyncKeyState(Key key)
+{
+	return pImpl->AsyncKeyState(key);
+}
+
+void Window::OnKeyEvent(KeyEvent keypress) { pImpl->OnKeyEvent(keypress); }
+
+void Window::OnLeftMouseButtonUp()   { pImpl->OnLeftMouseButtonUp(); };
+void Window::OnLeftMouseButtonDown() { pImpl->OnLeftMouseButtonDown(); };
+void Window::OnMouseMove(int x, int y) { pImpl->OnMouseMove(x, y); };
 
 IWindow::IWindow()
 {

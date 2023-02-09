@@ -59,3 +59,39 @@ void Application::OnWindowResize()
 {
 
 }
+
+void Application::OnLeftMouseButtonDown()
+{
+	m_MouseEvent.bLeftClick = true;
+	LOG_INFO("LMB clicked");
+}
+
+void Application::OnLeftMouseButtonUp()
+{
+	m_MouseEvent.bLeftClick = false;
+	LOG_INFO("LMB released");
+}
+
+void Application::OnMouseMove(int x, int y)
+{
+	m_MouseEvent.px = x;
+	m_MouseEvent.py = y;
+	LOG_INFO("Mouse position : {0} {1}", x, y);
+}
+
+bool Application::EngineGetAsyncKeyState(Key key)
+{
+	return m_Window->AsyncKeyState(key);
+}
+
+void Application::OnKeyEvent(KeyEvent event)
+{
+	if (event.pressed)
+	{
+		LOG_INFO("Key pressed : {0}", keyToString(event.key).c_str());
+	}
+	else
+	{
+		LOG_ERROR("Key released");
+	}
+}

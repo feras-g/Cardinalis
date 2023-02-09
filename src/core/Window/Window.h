@@ -2,6 +2,9 @@
 #define ENGINE_WINDOW_H
 
 #include <memory>
+
+#include "InputEvents.h"
+
 struct WindowData;
 
 class IWindow
@@ -64,6 +67,12 @@ public:
 
 	void OnClose() override;
 	void OnResize(unsigned int width, unsigned int height) override;
+
+	void OnLeftMouseButtonUp();
+	void OnLeftMouseButtonDown();
+	void OnMouseMove(int x, int y);
+	void OnKeyEvent(KeyEvent event);
+	bool AsyncKeyState(Key key);
 };
 
 #endif // !WINDOW_H
