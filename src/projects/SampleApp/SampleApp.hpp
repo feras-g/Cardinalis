@@ -9,6 +9,7 @@
 #include "Rendering/Vulkan/Renderers/VulkanImGuiRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanModelRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanClearColorRenderer.h"
+#include "Rendering/Vulkan/VulkanUI.h"
 #include "Rendering/Camera.h"
 #include "Rendering/FrameCounter.h"
 
@@ -23,7 +24,6 @@ public:
 	void Initialize()	override;
 	void Update()		override;
 	void Render(size_t currentImageIdx)		override;
-	void UpdateGuiData(size_t currentImageIdx)	override;
 	void UpdateRenderersData(size_t currentImageIdx) override;
 	void Terminate()	override;
 
@@ -34,6 +34,7 @@ public:
 	void OnKeyEvent(KeyEvent event);
 
 protected:
+	VulkanUI m_UI;
 	Camera m_Camera;
 
 	bool b_IsSceneViewportHovered = false;
@@ -71,6 +72,10 @@ void SampleApp::Update()
 
 	//if (m_CameraController.m_movement != Movement::NONE)
 	{
+		if (m_UI.fSceneViewAspectRatio != m_Camera.aspect_ratio)
+		{
+			m_Camera.UpdateAspectRatio(m_UI.fSceneViewAspectRatio);
+		}
 		m_Camera.controller.UpdateTranslation(0.033f);
 	}
 
@@ -140,91 +145,21 @@ void SampleApp::Render(size_t currentImageIdx)
 	context.frameCount++;
 }
 
-inline void SampleApp::UpdateGuiData(size_t currentImageIdx)
-{
-	ImGuiViewport* viewport = ImGui::GetMainViewport();
-
-	ImGui::NewFrame();
-	ImGui::StyleColorsDark();
-
-	// Global user interface consisting of multiple viewports
-	ImGui::DockSpaceOverViewport(0, ImGuiDockNodeFlags_PassthruCentralNode);
-
-	// Scene viewport
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {0.0f, 0.0f});
-	if (ImGui::Begin("Scene", 0, 0))
-	{
-		ImVec2 sceneViewPanelSize = ImGui::GetContentRegionAvail();
-		const float currAspect = sceneViewPanelSize.x / sceneViewPanelSize.y;
-
-		if (currAspect != m_ImGuiRenderer->m_SceneViewAspectRatio)
-		{
-			m_ImGuiRenderer->m_SceneViewAspectRatio = currAspect;
-			m_Camera.UpdateAspectRatio(m_ImGuiRenderer->m_SceneViewAspectRatio);
-		}
-
-		ImGui::Image((ImTextureID)m_ImGuiRenderer->m_ModelRendererColorTextureId[currentImageIdx], sceneViewPanelSize);
-	}
-	
-	b_IsSceneViewportHovered = ImGui::IsItemHovered();
-
-	ImGui::End();
-	ImGui::PopStyleVar();
-	
-	// Hierachy panel
-	if (ImGui::Begin("Hierarchy", 0, 0))
-	{
-
-	}
-	ImGui::End();
-
-	// Toolbar
-	// TODO
-
-	// Inspector panel
-	if (ImGui::Begin("Inspector", 0, 0))
-	{
-
-	}
-	ImGui::End();
-
-
-	// Overlay
-	ImGuiWindowFlags overlayFlags = 
-		ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | 
-		ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | 
-		ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
-	const float PAD = 10.0f;
-	
-	ImVec2 work_pos  = viewport->WorkPos;
-	ImVec2 work_size = viewport->WorkSize;
-	ImVec2 window_pos, window_pos_pivot;
-	window_pos.x = (work_pos.x + PAD);
-	window_pos.y = (work_pos.y + work_size.y - PAD);
-
-	window_pos_pivot.x = 0.0f;
-	window_pos_pivot.y = 1.0f;
-
-	ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
-	ImGui::SetNextWindowBgAlpha(0.33f); // Transparent background
-	if (ImGui::Begin("Overlay", 0, overlayFlags))
-	{
-		ImGui::Text(m_DebugName);
-		ImGui::AlignTextToFramePadding();
-		const float s = Application::m_DeltaSeconds;
-		ImGui::Text("CPU : %.2f ms (%.1f fps)", s * 1000.0f, 1.0f / s);
-	}
-	ImGui::End();
-
-	ImGui::Render();
-}
-
 inline void SampleApp::UpdateRenderersData(size_t currentImageIdx)
 {
-	// Update ImGUI buffers
-	UpdateGuiData(context.currentBackBuffer);
+	// ImGui composition
+	{
+		m_UI.Start();
 
-	// Other renderers data
+		m_UI.AddHierarchyPanel();
+		m_UI.AddInspectorPanel();
+		m_UI.AddOverlay(m_DebugName, m_DeltaSeconds);
+		m_UI.ShowSceneViewportPanel(
+			m_ImGuiRenderer->m_ModelRendererColorTextureId[currentImageIdx],
+			m_ImGuiRenderer->m_ModelRendererDepthTextureId[currentImageIdx]);
+		m_UI.End();
+	}
+
 	{
 		glm::mat4 m = glm::identity<glm::mat4>();
 		glm::mat4 v = m_Camera.GetView();
@@ -258,7 +193,7 @@ void SampleApp::OnLeftMouseButtonDown()
 inline void SampleApp::OnMouseMove(int x, int y)
 {
 	Application::OnMouseMove(x, y);
-	if (b_IsSceneViewportHovered)
+	if (m_UI.bIsSceneViewportHovered)
 	{
 		// Camera rotation
 		if (m_MouseEvent.bLeftClick)

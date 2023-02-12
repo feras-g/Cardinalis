@@ -39,7 +39,6 @@ public:
 	virtual void Initialize() = 0;
 	virtual void Update(/* float delta */) = 0;
 	virtual void Render(size_t currentImageIdx) = 0;
-	virtual void UpdateGuiData(size_t currentImageIdx) = 0;
 	virtual void UpdateRenderersData(size_t currentImageIdx) = 0;
 	virtual void Terminate() = 0;
 
