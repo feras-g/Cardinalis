@@ -63,20 +63,29 @@ void Application::OnWindowResize()
 void Application::OnLeftMouseButtonDown()
 {
 	m_MouseEvent.bLeftClick = true;
+	m_MouseEvent.bFirstClick = true;
+
 	LOG_INFO("LMB clicked");
 }
 
 void Application::OnLeftMouseButtonUp()
 {
 	m_MouseEvent.bLeftClick = false;
+
 	LOG_INFO("LMB released");
 }
 
 void Application::OnMouseMove(int x, int y)
 {
+	if (m_MouseEvent.bLeftClick)
+	{
+		m_MouseEvent.bFirstClick = false;
+
+		LOG_INFO("LMB + Dragging mouse", x, y);
+	}
 	m_MouseEvent.px = x;
 	m_MouseEvent.py = y;
-	LOG_INFO("Mouse position : {0} {1}", x, y);
+	//LOG_INFO("Mouse position : {0} {1}", x, y);
 }
 
 bool Application::EngineGetAsyncKeyState(Key key)

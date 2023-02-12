@@ -2,59 +2,68 @@
 
 #include "Core/EngineLogger.h"
 
-void CameraController::UpdateRotation(double dt, const glm::vec2& mouse_pos)
-{
-	//// Rotation
-	//const glm::vec2 delta_mouse_pos = mouse_pos - m_last_mouse_pos;
+#include <glm/gtx/rotate_vector.hpp>
 
-	//const glm::quat delta_quat = glm::quat(glm::vec3(params.mouse_speed * delta_mouse_pos.y, params.mouse_speed * delta_mouse_pos.x, 0.0f));
-	//m_orientation = glm::normalize(delta_quat * m_orientation);
-	//m_last_mouse_pos = mouse_pos;
+void CameraController::UpdateRotation(float dt, const glm::vec2& mouse_pos)
+{
+	// Mouse delta in range [-1;1]
+	m_yaw   += (m_last_mouse_pos.x - mouse_pos.x) * params.mouse_speed;
+	m_pitch += (m_last_mouse_pos.y - mouse_pos.y) * params.mouse_speed;
+
+	if (m_pitch > 89.9f)  m_pitch = 89.9f;
+	if (m_pitch < -89.9f) m_pitch = -89.9f;
+
+	m_last_mouse_pos = mouse_pos;
 }
 
-void CameraController::UpdateTranslation(double dt)
+void CameraController::UpdateTranslation(float dt)
 {
 	// Translation
-	glm::vec3 right = glm::cross(m_forward, m_up);
-
 	glm::vec3 acceleration(0.0f);
 	if ((m_movement & Movement::UP) == Movement::UP)			acceleration += m_up;
 	if ((m_movement & Movement::DOWN) == Movement::DOWN)		acceleration -= m_up;
 
-	if ((m_movement & Movement::RIGHT) == Movement::RIGHT)		acceleration += right;
-	if ((m_movement & Movement::LEFT) == Movement::LEFT)		acceleration -= right;
+	if ((m_movement & Movement::RIGHT) == Movement::RIGHT)		acceleration += m_right;
+	if ((m_movement & Movement::LEFT) == Movement::LEFT)		acceleration -= m_right;
 
 	if ((m_movement & Movement::FORWARD) == Movement::FORWARD)   acceleration += m_forward;
 	if ((m_movement & Movement::BACKWARD) == Movement::BACKWARD) acceleration -= m_forward;
 
-	if (acceleration.length() == 0.0f)
+	if (glm::length(acceleration) == 0.0f)
 	{
 		// Decelerate progressively
 		float damping_factor = (1.0f / params.damping) * dt;
-		m_speed -= m_speed * std::min(damping_factor, 1.0F);
+		m_velocity -= m_velocity * damping_factor;
 	}
 	else
 	{
-		// Euler integration
-		m_speed += params.accel_factor * acceleration * static_cast<float>(dt);
-		if (glm::length(m_speed) > params.max_speed)
+		// Integrate velocity
+		m_velocity += params.accel_factor * acceleration * static_cast<float>(dt);
+		if (glm::length(m_velocity) > params.max_velocity)
 		{
-			m_speed = glm::normalize(m_speed) * params.max_speed;
+			m_velocity = glm::normalize(m_velocity) * params.max_velocity;
 		}
 	}
 
-	m_position += static_cast<float>(dt) * m_speed;// m_speed;
+	LOG_INFO("Speed: {} / Accel: {}", glm::length(m_velocity), glm::length(acceleration));
+
+	m_position = m_position + m_velocity * dt;
 
 	m_movement = Movement::NONE;
-	m_speed = glm::vec3(0.0f);
-
-	LOG_INFO("Speed : ({0}, {1}, {2}) Position : ({3}, {4}, {5})", params.accel_factor, m_speed.y, m_speed.z, m_position.x, m_position.y, m_position.z);
 }
 
 glm::mat4 CameraController::GetView()
 {
-	m_up	  = glm::normalize(m_up);
-	m_forward = glm::normalize(m_forward);
+	m_forward.x = cos(glm::radians(m_pitch)) * sin(glm::radians(m_yaw));
+	m_forward.y = sin(glm::radians(m_pitch));
+	m_forward.z = cos(glm::radians(m_pitch)) * cos(glm::radians(m_yaw));
 
-	return glm::lookAt(m_position, m_position + m_forward, m_up);
+
+	m_forward = glm::normalize(m_forward);
+	m_right   = glm::normalize(glm::cross(m_forward, { 0,1,0 }));
+	m_up      = glm::normalize(glm::cross(m_right, m_forward));
+	
+	m_view = glm::lookAt(m_position, m_position+m_forward, m_up);
+
+	return m_view;
 }

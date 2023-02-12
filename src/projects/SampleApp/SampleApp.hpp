@@ -67,7 +67,7 @@ void SampleApp::Update()
 	if (EngineGetAsyncKeyState(Key::D)) m_CameraController.m_movement     = m_CameraController.m_movement | Movement::RIGHT;
 	if (EngineGetAsyncKeyState(Key::SPACE)) m_CameraController.m_movement = m_CameraController.m_movement | Movement::UP;
 
-	if (m_CameraController.m_movement != Movement::NONE)
+	//if (m_CameraController.m_movement != Movement::NONE)
 	{
 		m_CameraController.UpdateTranslation(0.033f);
 	}
@@ -244,10 +244,13 @@ void SampleApp::OnLeftMouseButtonDown()
 {
 	Application::OnLeftMouseButtonDown();
 	m_CameraController.m_last_mouse_pos = { m_MouseEvent.px, m_MouseEvent.py };
+
+	//m_CameraController.UpdateArcball(0.033f, true, { m_MouseEvent.px, m_MouseEvent.py });
 }
 
 inline void SampleApp::OnMouseMove(int x, int y)
 {
+	Application::OnMouseMove(x, y);
 	if (b_IsSceneViewportHovered)
 	{
 		// Camera rotation
@@ -262,10 +265,7 @@ inline void SampleApp::OnMouseMove(int x, int y)
 			}
 			else
 			{
-				float px = (m_MouseEvent.px - m_MouseEvent.lastClickPosX);
-				float py = (m_MouseEvent.py - m_MouseEvent.lastClickPosY);
-
-				m_CameraController.UpdateRotation(0.033f, { px, py });
+				m_CameraController.UpdateRotation(0.033f, { x, y });
 
 				m_MouseEvent.lastClickPosX = x;
 				m_MouseEvent.lastClickPosY = y;

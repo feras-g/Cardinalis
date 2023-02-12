@@ -36,25 +36,35 @@ public:
 
 	CameraController() = default;
 	CameraController(glm::vec3 pos, glm::vec3 target, glm::vec3 up)
-		: m_position(pos), m_forward(target), m_up(up), m_last_mouse_pos(0.0f), m_speed(0.0f) {}
+		: m_position(pos), m_forward(target), m_up(up), m_last_mouse_pos(0.0f), m_velocity(0.0f) 
+	{
+		GetView();
+	}
 
-	void UpdateRotation(double dt, const glm::vec2& mouse_pos);
-	void UpdateTranslation(double dt);
+	void UpdateTranslation(float dt);
+	void UpdateRotation(float dt, const glm::vec2& mouse_pos);
 	glm::mat4 GetView();
 	struct
 	{
-		float mouse_speed	= 5.0f;
-		float accel_factor	= 150.0f;
-		float damping		= 0.2f;
-		float max_speed		= 10.0f;
+		float mouse_speed	= 0.1f;
+		float accel_factor	= 15.0f;
+		float damping		= 0.25f;
+		float max_velocity  = 15.0f;
 	} params;
 
 	Movement m_movement = Movement::NONE;
+	glm::mat4 m_view;
 	glm::vec3 m_position;
-	glm::vec3 m_forward;
-	glm::vec3 m_up;
-	glm::vec3 m_speed;
+	glm::vec3 m_forward = { 0, 0, -1 };
+	glm::vec3 m_up    =   {0, 1, 0 };
+	glm::vec3 m_right =   {1, 0, 0};
+	glm::vec3 m_velocity;
 	glm::vec2 m_last_mouse_pos;
+
+
+	bool m_rotate = false;
+	float m_pitch = 0.0f;
+	float m_yaw   = 0.0f;
 
 private:
 };
