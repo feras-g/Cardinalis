@@ -34,7 +34,7 @@ public:
 	void OnKeyEvent(KeyEvent event);
 
 protected:
-	CameraController m_CameraController;
+	Camera m_Camera;
 
 	bool b_IsSceneViewportHovered = false;
 
@@ -53,7 +53,9 @@ void SampleApp::Initialize()
 	m_ImGuiRenderer->Initialize(m_ModelRenderer->m_ColorAttachments);
 	m_ClearColorRenderer.reset(new VulkanClearColorRenderer(context));
 
-	m_CameraController = CameraController({ 0, 0, -5 }, { 0,0,1 }, { 0, 1, 0 });
+	CameraController fpsController = CameraController({ 0, 0, -5 }, { 0,0,1 }, { 0, 1, 0 });
+
+	m_Camera = Camera(fpsController, 45.0f, m_ImGuiRenderer->m_SceneViewAspectRatio, 0.1f, 1000.0f);
 }
 
 void SampleApp::Update()
@@ -61,19 +63,18 @@ void SampleApp::Update()
 	// Update keyboard, mouse interaction
 	m_Window->UpdateGUI();
 
-	if (EngineGetAsyncKeyState(Key::Z)) m_CameraController.m_movement     = m_CameraController.m_movement | Movement::FORWARD;
-	if (EngineGetAsyncKeyState(Key::Q)) m_CameraController.m_movement     = m_CameraController.m_movement | Movement::LEFT;
-	if (EngineGetAsyncKeyState(Key::S)) m_CameraController.m_movement     = m_CameraController.m_movement | Movement::BACKWARD;
-	if (EngineGetAsyncKeyState(Key::D)) m_CameraController.m_movement     = m_CameraController.m_movement | Movement::RIGHT;
-	if (EngineGetAsyncKeyState(Key::SPACE)) m_CameraController.m_movement = m_CameraController.m_movement | Movement::UP;
+	if (EngineGetAsyncKeyState(Key::Z))     m_Camera.controller.m_movement =  m_Camera.controller.m_movement | Movement::FORWARD;
+	if (EngineGetAsyncKeyState(Key::Q))     m_Camera.controller.m_movement =  m_Camera.controller.m_movement | Movement::LEFT;
+	if (EngineGetAsyncKeyState(Key::S))     m_Camera.controller.m_movement =  m_Camera.controller.m_movement | Movement::BACKWARD;
+	if (EngineGetAsyncKeyState(Key::D))     m_Camera.controller.m_movement =  m_Camera.controller.m_movement | Movement::RIGHT;
+	if (EngineGetAsyncKeyState(Key::SPACE)) m_Camera.controller.m_movement =  m_Camera.controller.m_movement | Movement::UP;
 
 	//if (m_CameraController.m_movement != Movement::NONE)
 	{
-		m_CameraController.UpdateTranslation(0.033f);
+		m_Camera.controller.UpdateTranslation(0.033f);
 	}
 
 	UpdateRenderersData(context.currentBackBuffer);
-
 }
 
 void SampleApp::Render(size_t currentImageIdx)
@@ -154,11 +155,17 @@ inline void SampleApp::UpdateGuiData(size_t currentImageIdx)
 	if (ImGui::Begin("Scene", 0, 0))
 	{
 		ImVec2 sceneViewPanelSize = ImGui::GetContentRegionAvail();
+		const float currAspect = sceneViewPanelSize.x / sceneViewPanelSize.y;
 
-		m_ImGuiRenderer->m_SceneViewAspectRatio = sceneViewPanelSize.x / sceneViewPanelSize.y;
+		if (currAspect != m_ImGuiRenderer->m_SceneViewAspectRatio)
+		{
+			m_ImGuiRenderer->m_SceneViewAspectRatio = currAspect;
+			m_Camera.UpdateAspectRatio(m_ImGuiRenderer->m_SceneViewAspectRatio);
+		}
+
 		ImGui::Image((ImTextureID)m_ImGuiRenderer->m_ModelRendererColorTextureId[currentImageIdx], sceneViewPanelSize);
 	}
-
+	
 	b_IsSceneViewportHovered = ImGui::IsItemHovered();
 
 	ImGui::End();
@@ -220,8 +227,8 @@ inline void SampleApp::UpdateRenderersData(size_t currentImageIdx)
 	// Other renderers data
 	{
 		glm::mat4 m = glm::identity<glm::mat4>();
-		glm::mat4 v = m_CameraController.GetView();
-		glm::mat4 p = glm::perspective(45.0f, m_ImGuiRenderer->m_SceneViewAspectRatio, 0.1f, 1000.0f);
+		glm::mat4 v = m_Camera.GetView();
+		glm::mat4 p = m_Camera.GetProj();
 		
 		m_ModelRenderer->UpdateBuffers(currentImageIdx, m, v, p);
 	}
@@ -243,7 +250,7 @@ inline void SampleApp::OnLeftMouseButtonUp()
 void SampleApp::OnLeftMouseButtonDown()
 {
 	Application::OnLeftMouseButtonDown();
-	m_CameraController.m_last_mouse_pos = { m_MouseEvent.px, m_MouseEvent.py };
+	m_Camera.controller.m_last_mouse_pos = { m_MouseEvent.px, m_MouseEvent.py };
 
 	//m_CameraController.UpdateArcball(0.033f, true, { m_MouseEvent.px, m_MouseEvent.py });
 }
@@ -265,7 +272,7 @@ inline void SampleApp::OnMouseMove(int x, int y)
 			}
 			else
 			{
-				m_CameraController.UpdateRotation(0.033f, { x, y });
+				m_Camera.controller.UpdateRotation(0.033f, { x, y });
 
 				m_MouseEvent.lastClickPosX = x;
 				m_MouseEvent.lastClickPosY = y;

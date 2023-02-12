@@ -52,7 +52,7 @@ void CameraController::UpdateTranslation(float dt)
 	m_movement = Movement::NONE;
 }
 
-glm::mat4 CameraController::GetView()
+glm::mat4& CameraController::GetView()
 {
 	m_forward.x = cos(glm::radians(m_pitch)) * sin(glm::radians(m_yaw));
 	m_forward.y = sin(glm::radians(m_pitch));
@@ -66,4 +66,31 @@ glm::mat4 CameraController::GetView()
 	m_view = glm::lookAt(m_position, m_position+m_forward, m_up);
 
 	return m_view;
+}
+
+Camera::Camera() 
+	: controller({ 0, 0, -5 }, { 0, 0, 1 }, { 0, 1, 0 }), fov(45.0f), aspect_ratio(ASPECT_16_9), z_near(0.0f), z_far(1000.0f)
+{
+	projection = glm::perspective(fov, aspect_ratio, z_near, z_far);
+}
+
+Camera::Camera(CameraController controller, float fov, float aspect_ratio, float zNear, float zFar)
+	: controller(controller), fov(fov), aspect_ratio(ASPECT_16_9), z_near(zNear), z_far(zFar)
+{
+	projection = glm::perspective(fov, aspect_ratio, z_near, z_far);
+}
+
+void Camera::UpdateAspectRatio(float aspect)
+{
+	projection = glm::perspective(fov, aspect, z_near, z_far);
+}
+
+glm::mat4& Camera::GetProj()
+{
+	return projection;
+}
+
+glm::mat4& Camera::GetView()
+{
+	return controller.GetView();
 }
