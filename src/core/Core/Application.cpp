@@ -15,8 +15,6 @@ Application::Application(const char* title, uint32_t width, uint32_t height) : b
 	m_Window.reset(new Window({ .title = title, .width = width, .height = height }, this));
 	Logger::Init("Engine");
 
-	m_FramePerfCounter.reset(new FrameCounter());
-
 	m_RHI.reset(new VulkanRenderInterface(title, 1, 2, 196));
 	m_RHI->Initialize();
 #ifdef _WIN32
@@ -39,17 +37,17 @@ Application::~Application()
 void Application::Run()
 {
 	Initialize();
-
+	static unsigned int i = 0;
 	while (!m_Window->IsClosed())
 	{
-		double now = m_Window->GetTimeSeconds();
-		m_DeltaSeconds = now - m_LastTime;
-		m_FramePerfCounter->Tick((float)m_DeltaSeconds);
-		m_LastTime = now;
-
+		float time = (float)m_Window->GetTime();
+		Timestep timestep = time - m_LastFrameTime;
+		lastTimeSteps[i % 500] = timestep.GetMilliseconds();
+		m_LastFrameTime = time;
 		m_Window->HandleEvents();
-		Update();
+		Update(timestep.GetSeconds());
 		Render(context.currentBackBuffer);
+		i++;
 	}
 
 	Terminate();
@@ -83,8 +81,11 @@ void Application::OnMouseMove(int x, int y)
 
 		LOG_INFO("LMB + Dragging mouse", x, y);
 	}
+
 	m_MouseEvent.px = x;
 	m_MouseEvent.py = y;
+
+
 	//LOG_INFO("Mouse position : {0} {1}", x, y);
 }
 

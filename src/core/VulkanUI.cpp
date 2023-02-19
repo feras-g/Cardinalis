@@ -37,18 +37,38 @@ VulkanUI& VulkanUI::ShowSceneViewportPanel(unsigned int texColorId, unsigned int
 		{
 			ImGui::Image((ImTextureID)texColorId, sceneViewPanelSize);
 		}
-		if (texDepthId != 0)
-		{
-			ImGui::Image((ImTextureID)texDepthId, sceneViewPanelSize);
-		}
-
+		bIsSceneViewportHovered = ImGui::IsItemHovered();
 	}
 
-	bIsSceneViewportHovered = ImGui::IsItemHovered();
 	
 	ImGui::End();
+
+
 	ImGui::PopStyleVar();
 
+	return *this;
+}
+
+VulkanUI& VulkanUI::ShowMenuBar()
+{
+	if (ImGui::BeginMainMenuBar())
+	{
+		if (ImGui::BeginMenu("File"))
+		{
+			ImGui::EndMenu();
+		}
+		if (ImGui::BeginMenu("Edit"))
+		{
+			if (ImGui::MenuItem("Undo", "CTRL+Z")) {}
+			if (ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {}  // Disabled item
+			ImGui::Separator();
+			if (ImGui::MenuItem("Cut", "CTRL+X")) {}
+			if (ImGui::MenuItem("Copy", "CTRL+C")) {}
+			if (ImGui::MenuItem("Paste", "CTRL+V")) {}
+			ImGui::EndMenu();
+		}
+		ImGui::EndMainMenuBar();
+	}
 	return *this;
 }
 
@@ -62,7 +82,6 @@ VulkanUI& VulkanUI::AddHierarchyPanel()
 	ImGui::End();
 
 	return *this;
-
 }
 
 VulkanUI& VulkanUI::AddInspectorPanel()
@@ -75,7 +94,6 @@ VulkanUI& VulkanUI::AddInspectorPanel()
 	ImGui::End();
 
 	return *this;
-
 }
 
 VulkanUI& VulkanUI::AddOverlay(const char* title, float deltaSeconds)
@@ -105,7 +123,16 @@ VulkanUI& VulkanUI::AddOverlay(const char* title, float deltaSeconds)
 		ImGui::AlignTextToFramePadding();
 		ImGui::Text("CPU : %.2f ms (%.1f fps)", deltaSeconds * 1000.0f, 1.0f / deltaSeconds);
 	}
+
 	ImGui::End();
 
+	return *this;
+}
+
+VulkanUI& VulkanUI::ShowPlot(float* values, size_t nbValues)
+{
+	ImVec2 plotextent(ImGui::GetContentRegionAvail().x, 250);
+	ImGui::Text("I am a fancy tooltip");
+	ImGui::PlotHistogram("Lines", values, nbValues, 0, 0, 0.0f, 32.0f, plotextent);
 	return *this;
 }

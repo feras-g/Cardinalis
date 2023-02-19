@@ -4,7 +4,7 @@
 
 #include <glm/gtx/rotate_vector.hpp>
 
-void CameraController::UpdateRotation(float dt, const glm::vec2& mouse_pos)
+void CameraController::UpdateRotation(const glm::vec2& mouse_pos)
 {
 	// Mouse delta in range [-1;1]
 	m_yaw   += (m_last_mouse_pos.x - mouse_pos.x) * params.mouse_speed;

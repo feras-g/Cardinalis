@@ -34,7 +34,7 @@ public:
 	inline const WindowData*  GetData()	const;
 	void HandleEvents();
 
-	double GetTimeSeconds();
+	double GetTime() const;
 
 	void OnClose();
 	void OnResize(unsigned int width, unsigned int height);
@@ -54,6 +54,8 @@ public:
 
 	HWND hWnd;
 	HINSTANCE hInstance;
+
+	double m_PerfCounterFreq;
 };
 
 /////////////////////////////////////////////////////////////////////////
@@ -105,6 +107,11 @@ void Window::Impl::Create()
 	m_WinInfo.aspect = (float)w / h;
 	
 	CreateWindowA(title, title, style, left, top, w, h, nullptr, nullptr, m_Data.hInstance, this);
+
+	// Init performance counter
+	LARGE_INTEGER perfCountFreq;
+	QueryPerformanceFrequency(&perfCountFreq);
+	m_PerfCounterFreq = perfCountFreq.QuadPart;
 
 	// Initialize ImGui
 	ImGui::CreateContext();
@@ -309,14 +316,11 @@ void Window::Impl::HandleEvents()
 	}
 }
 
-double Window::Impl::GetTimeSeconds()
+double Window::Impl::GetTime() const
 {
-	static LARGE_INTEGER s_frequency;
-	QueryPerformanceFrequency(&s_frequency);
-
 	LARGE_INTEGER now;
 	QueryPerformanceCounter(&now);
-	return (double)now.QuadPart / s_frequency.QuadPart;
+	return (double)now.QuadPart / m_PerfCounterFreq;
 }
 
 #else
@@ -350,7 +354,7 @@ inline void Window::UpdateGUI() const { return pImpl->UpdateGUI(); }
 inline void Window::ShutdownGUI() const { pImpl->ShutdownGUI(); }
 inline const WindowData* Window::GetData() const { return pImpl->GetData(); }
 void Window::HandleEvents() { return pImpl->HandleEvents(); }
-inline double Window::GetTimeSeconds() { return pImpl->GetTimeSeconds(); }
+inline double Window::GetTime() const { return pImpl->GetTime(); }
 void Window::OnClose()  { return pImpl->OnClose(); }
 void Window::OnResize(unsigned int width, unsigned int height) { return pImpl->OnResize(width, height); }
 

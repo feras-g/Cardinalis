@@ -45,7 +45,7 @@ public:
 	}
 
     void UpdateTranslation(float dt);
-    void UpdateRotation(float dt, const glm::vec2 &mouse_pos);
+    void UpdateRotation(const glm::vec2 &mouse_pos);
     glm::mat4 &GetView();
     struct
     {
@@ -63,6 +63,8 @@ public:
     glm::vec3 m_right = {1, 0, 0};
     glm::vec3 m_velocity;
     glm::vec2 m_last_mouse_pos;
+
+    float deltaTime;
 
     bool m_rotate = false;
     float m_pitch = 0.0f;

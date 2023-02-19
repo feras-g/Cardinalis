@@ -17,6 +17,7 @@ public:
 	bool CreateDescriptorSets(VkDevice device, const std::vector<VkDescriptorSetLayoutBinding>& bindings,
 		VkDescriptorSet* out_DescriptorSets, VkDescriptorSetLayout* out_DescLayouts);
 
+	VkPipeline			m_GraphicsPipeline			= VK_NULL_HANDLE;
 protected:
 	bool bUseDepth;
 	virtual bool CreateDescriptorSets(VkDevice device, VkDescriptorSet* out_DescriptorSets, VkDescriptorSetLayout* out_DescLayouts);
@@ -38,7 +39,6 @@ protected:
 	VkRenderPass		m_RenderPass				= VK_NULL_HANDLE;
 	std::array<VkFramebuffer, NUM_FRAMES> m_Framebuffers	= { VK_NULL_HANDLE };
 	VkPipelineLayout	m_PipelineLayout			= VK_NULL_HANDLE;
-	VkPipeline			m_GraphicsPipeline			= VK_NULL_HANDLE;
 	
 	// Uniform buffers
 	Buffer m_UniformBuffers[NUM_FRAMES];

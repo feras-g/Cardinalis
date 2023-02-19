@@ -22,9 +22,9 @@ public:
 	}
 	~SampleApp();
 	void Initialize()	override;
-	void Update()		override;
+	void Update(float dt)		override;
 	void Render(size_t currentImageIdx)		override;
-	void UpdateRenderersData(size_t currentImageIdx) override;
+	void UpdateRenderersData(float dt, size_t currentImageIdx) override;
 	void Terminate()	override;
 
 	void OnWindowResize() override;
@@ -59,7 +59,7 @@ void SampleApp::Initialize()
 	m_Camera = Camera(fpsController, 45.0f, m_ImGuiRenderer->m_SceneViewAspectRatio, 0.1f, 1000.0f);
 }
 
-void SampleApp::Update()
+void SampleApp::Update(float dt)
 {
 	// Update keyboard, mouse interaction
 	m_Window->UpdateGUI();
@@ -76,10 +76,11 @@ void SampleApp::Update()
 		{
 			m_Camera.UpdateAspectRatio(m_UI.fSceneViewAspectRatio);
 		}
-		m_Camera.controller.UpdateTranslation(0.033f);
+		m_Camera.controller.deltaTime = dt;
+		m_Camera.controller.UpdateTranslation(dt);
 	}
 
-	UpdateRenderersData(context.currentBackBuffer);
+	UpdateRenderersData(dt, context.currentBackBuffer);
 }
 
 void SampleApp::Render(size_t currentImageIdx)
@@ -145,18 +146,19 @@ void SampleApp::Render(size_t currentImageIdx)
 	context.frameCount++;
 }
 
-inline void SampleApp::UpdateRenderersData(size_t currentImageIdx)
+inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 {
 	// ImGui composition
 	{
 		m_UI.Start();
-
 		m_UI.AddHierarchyPanel();
+		m_UI.ShowMenuBar();
 		m_UI.AddInspectorPanel();
-		m_UI.AddOverlay(m_DebugName, m_DeltaSeconds);
+		m_UI.AddOverlay(m_DebugName, dt);
 		m_UI.ShowSceneViewportPanel(
 			m_ImGuiRenderer->m_ModelRendererColorTextureId[currentImageIdx],
 			m_ImGuiRenderer->m_ModelRendererDepthTextureId[currentImageIdx]);
+		m_UI.ShowPlot(lastTimeSteps, 500);
 		m_UI.End();
 	}
 
@@ -186,8 +188,6 @@ void SampleApp::OnLeftMouseButtonDown()
 {
 	Application::OnLeftMouseButtonDown();
 	m_Camera.controller.m_last_mouse_pos = { m_MouseEvent.px, m_MouseEvent.py };
-
-	//m_CameraController.UpdateArcball(0.033f, true, { m_MouseEvent.px, m_MouseEvent.py });
 }
 
 inline void SampleApp::OnMouseMove(int x, int y)
@@ -207,7 +207,7 @@ inline void SampleApp::OnMouseMove(int x, int y)
 			}
 			else
 			{
-				m_Camera.controller.UpdateRotation(0.033f, { x, y });
+				m_Camera.controller.UpdateRotation({x, y});
 
 				m_MouseEvent.lastClickPosX = x;
 				m_MouseEvent.lastClickPosY = y;

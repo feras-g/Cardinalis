@@ -23,7 +23,7 @@ public:
 	virtual void OnResize(unsigned int width, unsigned int height) = 0;
 	virtual int GetHeight() const = 0;
 	virtual int GetWidth()  const = 0;
-	virtual double GetTimeSeconds() = 0;
+	virtual double GetTime() const = 0;
 
 	virtual const WindowData* GetData() const = 0;
 
@@ -63,7 +63,7 @@ public:
 	inline const WindowData* GetData() const override;
 	void HandleEvents();
 
-	inline double GetTimeSeconds();
+	inline double GetTime() const;
 
 	void OnClose() override;
 	void OnResize(unsigned int width, unsigned int height) override;

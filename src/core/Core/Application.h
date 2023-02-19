@@ -37,9 +37,9 @@ public:
 	/// Application specific functions to derive in client code.
 	/// </summary>
 	virtual void Initialize() = 0;
-	virtual void Update(/* float delta */) = 0;
+	virtual void Update(float dt) = 0;
 	virtual void Render(size_t currentImageIdx) = 0;
-	virtual void UpdateRenderersData(size_t currentImageIdx) = 0;
+	virtual void UpdateRenderersData(float dt, size_t currentImageIdx) = 0;
 	virtual void Terminate() = 0;
 
 	/// <summary>
@@ -53,9 +53,6 @@ public:
 	virtual void OnKeyEvent(KeyEvent event);
 
 	bool bInitSuccess;
-
-public:
-
 	
 public:
 	Application() = delete;
@@ -65,12 +62,12 @@ public:
 	Application& operator=(const Application&&) = delete;
 
 protected:
+	float m_LastFrameTime;
+	float lastTimeSteps[500];
 	MouseEvent m_MouseEvent;
 	KeyEvent   m_KeyEvent;
 
-	double m_LastTime = 0.0f, m_DeltaSeconds = 0.0f;
 	const char* m_DebugName;
-	std::unique_ptr<FrameCounter> m_FramePerfCounter;
 
 	std::unique_ptr<Window> m_Window;
 	std::unique_ptr<VulkanRenderInterface> m_RHI;
