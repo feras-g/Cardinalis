@@ -16,10 +16,10 @@ class VulkanImGuiRenderer : public VulkanRendererBase
 public:
 	VulkanImGuiRenderer() = default;
 	VulkanImGuiRenderer(const VulkanContext& vkContext);
-	void Initialize(const std::vector<VulkanTexture>& textures);
+	void Initialize(const std::vector<Texture2D>& textures);
 	void PopulateCommandBuffer(size_t currentImageIdx, VkCommandBuffer cmdBuffer) override;
 	void UpdateBuffers(size_t currentImage, ImDrawData* pDrawData);
-	void LoadSceneViewTextures(VulkanTexture* modelRendererColor, VulkanTexture* modelRendererDepth);
+	void LoadSceneViewTextures(Texture2D* modelRendererColor, Texture2D* modelRendererDepth);
 	bool RecreateFramebuffersRenderPass();
 
 	// Texture Ids
@@ -34,8 +34,8 @@ private:
 	ImDrawData* m_pDrawData = nullptr;
 
 	VkSampler m_SamplerRepeatLinear;
-	VulkanTexture m_FontTexture;
-	std::vector<VulkanTexture> m_Textures;	// Textures displayed inside UI
+	Texture2D m_FontTexture;
+	std::vector<Texture2D> m_Textures;	// Textures displayed inside UI
 	std::vector<VkDescriptorImageInfo> m_TextureDescriptors;
 
 	// Storage buffers
@@ -43,7 +43,7 @@ private:
 
 	std::unique_ptr<VulkanShader> m_Shader;
 
-	bool CreateFontTexture(ImGuiIO* io, const char* fontPath, VulkanTexture& out_Font);
+	bool CreateFontTexture(ImGuiIO* io, const char* fontPath, Texture2D& out_Font);
 	bool CreatePipeline(VkDevice device);
 	bool CreateUniformBuffers(size_t dataSizeInBytes);
 

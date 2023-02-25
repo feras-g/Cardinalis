@@ -463,10 +463,10 @@ bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, VkRenderPass* out
 
 bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const VulkanSwapchain* swapchain, VkFramebuffer* out_Framebuffers, bool useDepth)
 {
-	return CreateColorDepthFramebuffers(renderPass, swapchain->images.data(), swapchain->depthImages.data(), out_Framebuffers, useDepth);
+	return CreateColorDepthFramebuffers(renderPass, swapchain->colorTextures.data(), swapchain->depthTextures.data(), out_Framebuffers, useDepth);
 }
 
-bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const VulkanTexture* colorAttachments, const VulkanTexture* depthAttachments, VkFramebuffer* out_Framebuffers, bool useDepth)
+bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colorAttachments, const Texture2D* depthAttachments, VkFramebuffer* out_Framebuffers, bool useDepth)
 {
 	VkFramebufferCreateInfo fbInfo =
 	{

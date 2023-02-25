@@ -55,10 +55,10 @@ static uint32_t FindMemoryType(VkPhysicalDevice physDevice, uint32_t memoryTypeB
 
 using Image = std::unique_ptr<stbi_uc, decltype(&stbi_image_free)>;
 
-static Image LoadImageFromFile(const char* filename, ImageInfo& info)
+static Image LoadImageFromFile(std::string_view filename, TextureInfo& info)
 {
     int w, h, n;
-    stbi_uc* data = stbi_load(filename, &w, &h, &n, 0);
+    stbi_uc* data = stbi_load(filename.data(), &w, &h, &n, 0);
 
     info.width  = (uint32_t)w;
     info.height = (uint32_t)h;

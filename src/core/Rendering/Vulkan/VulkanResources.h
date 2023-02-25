@@ -1,15 +1,14 @@
 #ifndef VULKAN_RESOURCES_H
 #define VULKAN_RESOURCES_H
 
-#include <vulkan/vulkan.h>
+#include "vulkan/vulkan.h"
 
 struct Buffer
 {
-	VkBuffer buffer		  = VK_NULL_HANDLE;
-	VkDeviceMemory memory = VK_NULL_HANDLE;
-
-	void* data = nullptr;
-	size_t size = 0;
+	VkBuffer_T* buffer { VK_NULL_HANDLE };
+	VkDeviceMemory_T* memory { VK_NULL_HANDLE };
+	size_t sizeInBytes { 0 };
+	void* data { nullptr };
 };
 
 void CreateBuffer(Buffer& result, size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProperties);

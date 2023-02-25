@@ -6,69 +6,110 @@ static VkAccessFlags GetAccessMask(VkImageLayout layout);
 static uint32_t GetBytesPerPixelFromFormat(VkFormat format);
 static void GetSrcDstPipelineStage(VkImageLayout oldLayout, VkImageLayout newLayout, VkPipelineStageFlags& out_srcStageMask, VkPipelineStageFlags& out_dstStageMask);
 
-bool VulkanTexture::CreateFromFile(const char* filename, VkFormat format, VkImageAspectFlags imageAspect)
+void Texture2D::CreateFromFile(
+    VkDevice			device,
+    std::string_view	filename,
+    VkFormat			format,
+    VkImageUsageFlags	imageUsage,
+    VkImageLayout		layout)
 {
-    info.format = format;
-    info.aspectFlag = imageAspect;
-    Image texture = LoadImageFromFile(filename, info);
-    return CreateImageFromData(context.device, info, texture.get());
+    info.imageFormat = format;
+    Image rawImage = LoadImageFromFile(filename, info);
+    ::CreateImage(device, false, *this, imageUsage | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+    UpdateData(device, rawImage.get());
 }
 
-bool VulkanTexture::CreateImage(VkDevice device, const ImageInfo& info)
+void Texture2D::CreateFromData(
+    VkDevice			device,
+    void const* const   data,
+    size_t				sizeInBytes,
+    TextureInfo			info,
+    VkImageUsageFlags	imageUsage,
+    VkImageLayout		layout)
 {
     this->info = info;
+    ::CreateImage(device, false, *this, imageUsage | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+    UpdateData(device, data);
+}
 
-    bool isCube = (info.flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) == VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+void Texture2D::CreateImage(VkDevice device, VkImageUsageFlags imageUsage)
+{
+    ::CreateImage(device, false, *this, imageUsage);
+}
+
+void Texture::CopyFromBuffer(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer)
+{
+    VkBufferImageCopy imageRegion =
+    {
+        .bufferOffset       { 0 },
+        .bufferRowLength    { 0 },
+        .bufferImageHeight  { 0 },
+        .imageSubresource
+        {
+            .aspectMask     { VK_IMAGE_ASPECT_COLOR_BIT },
+            .mipLevel       { 0 },
+            .baseArrayLayer { 0 },
+            .layerCount     { info.layerCount }
+        },
+        .imageOffset {.x = 0, .y = 0, .z = 0 },
+        .imageExtent { info.width, info.height, 1 }
+    };
+
+    vkCmdCopyBufferToImage(
+        cmdBuffer,
+        srcBuffer,
+        image,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageRegion);
+}
+
+void CreateImage(VkDevice device, bool isCubemap, Texture& texture, VkImageUsageFlags imageUsage)
+{
+    VkImageCreateFlags flags{ 0 };
+    uint32_t arrayLayers = 1u;
+    if (isCubemap)
+    {
+        flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+        arrayLayers = 6u;
+    }
 
     VkImageCreateInfo createInfo =
     {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .flags = NULL,
-        .imageType = VK_IMAGE_TYPE_2D,
-        .format = info.format,
-        .extent = { info.width, info.height, 1 },
-        .mipLevels = info.mipLevels,
-        .arrayLayers = (uint32_t)(isCube ? 6 : 1),
-        .samples = VK_SAMPLE_COUNT_1_BIT, // No multisampling
-        .tiling = info.tiling, // VK_IMAGE_TILING_OPTIMAL
-        .usage = info.usage, //VK_IMAGE_USAGE_SAMPLED_BIT
-        .sharingMode=VK_SHARING_MODE_EXCLUSIVE,
-        .queueFamilyIndexCount=0,
-        .pQueueFamilyIndices= nullptr,
-        .initialLayout= VK_IMAGE_LAYOUT_UNDEFINED,
+        .sType                  { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO },
+        .flags                  { 0 },
+        .imageType              { VK_IMAGE_TYPE_2D },
+        .format                 { texture.info.imageFormat },
+        .extent                 { texture.info.width, texture.info.height, 1 },
+        .mipLevels              { texture.info.mipLevels },
+        .arrayLayers            { arrayLayers },
+        .samples                { VK_SAMPLE_COUNT_1_BIT },
+        .tiling                 { VK_IMAGE_TILING_OPTIMAL },
+        .usage                  { imageUsage },
+        .sharingMode            { VK_SHARING_MODE_EXCLUSIVE },
+        .queueFamilyIndexCount  { 0 },
+        .pQueueFamilyIndices    { nullptr },
+        .initialLayout          { texture.info.imageLayout }
     };
 
-
-    VK_CHECK(vkCreateImage(device, &createInfo, nullptr, &image));
+    VK_CHECK(vkCreateImage(device, &createInfo, nullptr, &texture.image));
 
     // Image memory
     VkMemoryRequirements imageMemReq;
-    vkGetImageMemoryRequirements(device, image, &imageMemReq);
+    vkGetImageMemoryRequirements(device, texture.image, &imageMemReq);
 
     VkMemoryAllocateInfo allocInfo =
     {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize = imageMemReq.size,
-        .memoryTypeIndex = FindMemoryType(context.physicalDevice, imageMemReq.memoryTypeBits, info.memoryProperties)
+        .memoryTypeIndex = FindMemoryType(context.physicalDevice, imageMemReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
     };
     
-    VK_CHECK(vkAllocateMemory(device, &allocInfo, nullptr, &memory));
-    VK_CHECK(vkBindImageMemory(device, image, memory, 0));
-
-    return true;
+    VK_CHECK(vkAllocateMemory(device, &allocInfo, nullptr, &texture.deviceMemory));
+    VK_CHECK(vkBindImageMemory(device, texture.image, texture.deviceMemory, 0));
 }
 
-bool VulkanTexture::CreateImageFromData(VkDevice device, const ImageInfo& info, void* data)
+void Texture::UpdateData(VkDevice device, void const* const data)
 {
-    CreateImage(device, info);
-    UpdateImageTextureData(device, data);
-
-    return true;
-}
-
-bool VulkanTexture::UpdateImageTextureData(VkDevice device, void* data)
-{
-    uint32_t bpp = GetBytesPerPixelFromFormat(info.format);
+    uint32_t bpp = GetBytesPerPixelFromFormat(info.imageFormat);
 
     VkDeviceSize layerSizeInBytes = info.width * info.height * bpp;
     VkDeviceSize imageSizeInBytes = layerSizeInBytes * info.layerCount;
@@ -80,99 +121,64 @@ bool VulkanTexture::UpdateImageTextureData(VkDevice device, void* data)
 
     // Copy content to image memory on GPU
     StartInstantUseCmdBuffer();
-    Transition(context.mainCmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    CopyBufferToImage(context.mainCmdBuffer, stagingBuffer.buffer);
-    Transition(context.mainCmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    TransitionLayout(context.mainCmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    CopyFromBuffer(context.mainCmdBuffer, stagingBuffer.buffer);
+    TransitionLayout(context.mainCmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     EndInstantUseCmdBuffer();
 
-    // Cleanup
     DestroyBuffer(stagingBuffer);
-
-    return true;
 }
 
-bool VulkanTexture::CopyBufferToImage(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer)
+void Texture::CreateView(VkDevice device, const ImageViewInitInfo& viewInfo)
 {
-    VkBufferImageCopy imageRegion =
-    {
-        .bufferOffset = 0,
-        .bufferRowLength = 0,
-        .bufferImageHeight = 0,
-        .imageSubresource = VkImageSubresourceLayers {
-            .aspectMask = info.aspectFlag,
-            .mipLevel = 0,
-            .baseArrayLayer = 0,
-            .layerCount = info.layerCount
-        },
-        .imageOffset = VkOffset3D {.x = 0, .y = 0, .z = 0 },
-        .imageExtent = { info.width, info.height, 1 }
-    };
-
-    vkCmdCopyBufferToImage(cmdBuffer, srcBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageRegion);
-
-    return true;
-}
-
-bool VulkanTexture::CreateImageView(VkDevice device, const ImageViewInfo& info)
-{
-    this->viewInfo = info;
-
     VkImageViewCreateInfo createInfo =
     {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-        //.flags = ,
-        .image = image,
-        .viewType = VK_IMAGE_VIEW_TYPE_2D,
-        .format   = info.format,
-        .components = 
+        .sType      { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO },
+        .flags      { 0 },
+        .image      { image },
+        .viewType   { VK_IMAGE_VIEW_TYPE_2D },
+        .format     { info.imageFormat },
+        .components 
         {
             .r = VK_COMPONENT_SWIZZLE_R,
             .g = VK_COMPONENT_SWIZZLE_G,
             .b = VK_COMPONENT_SWIZZLE_B,
             .a = VK_COMPONENT_SWIZZLE_A
         },
-        .subresourceRange =
+        .subresourceRange
         {
-            .aspectMask     = info.aspectFlags,
-            .baseMipLevel   = 0,
-            .levelCount     = info.mipLevels,
-            .baseArrayLayer = 0,
-            .layerCount     = 1
+            .aspectMask     { viewInfo.aspectMask },
+            .baseMipLevel   { viewInfo.baseMipLevel },
+            .levelCount     { viewInfo.levelCount },
+            .baseArrayLayer { viewInfo.baseArrayLayer },
+            .layerCount     { viewInfo.layerCount },
         }
     };
 
-    VkResult result = vkCreateImageView(context.device, &createInfo, nullptr, &view);
-    assert(result == VK_SUCCESS);
-
-    return true;
+    VK_CHECK(vkCreateImageView(context.device, &createInfo, nullptr, &view));
 }
 
-void VulkanTexture::Destroy(VkDevice device)
+void Texture::Destroy(VkDevice device)
 {
-    if(view != VK_NULL_HANDLE) 
-    { 
-        vkDestroyImageView(device, view, nullptr); 
-    }
-    if(image != VK_NULL_HANDLE) 
+    if(view) vkDestroyImageView(device, view, nullptr);
+    if(image) 
     {  
         vkDestroyImage(device, image, nullptr);
-        vkFreeMemory(context.device, memory, nullptr);
+        vkFreeMemory  (device, deviceMemory, nullptr);
     }
-
-    info = {};
+    *this = {};
 }
 
 // Helper to transition images and remember the current layout
-void VulkanTexture::Transition(VkCommandBuffer cmdBuffer, VkImageLayout newLayout)
+void Texture::TransitionLayout(VkCommandBuffer cmdBuffer, VkImageLayout newLayout)
 {
-    if (info.layout != newLayout)   
     {
         VkImageMemoryBarrier barrier =
         {
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-            .srcAccessMask = GetAccessMask(info.layout),
+            .srcAccessMask = GetAccessMask(info.imageLayout),
             .dstAccessMask = GetAccessMask(newLayout),
-            .oldLayout = info.layout,
+            .oldLayout = info.imageLayout,
             .newLayout = newLayout,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -181,20 +187,20 @@ void VulkanTexture::Transition(VkCommandBuffer cmdBuffer, VkImageLayout newLayou
             {
                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                 .baseMipLevel = 0,
-                .levelCount = viewInfo.mipLevels, // Transition all mip levels by default
+                .levelCount = info.mipLevels, // Transition all mip levels by default
                 .baseArrayLayer = 0,
                 .layerCount = 1,
             }
         };
 
         if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL || 
-            (info.format == VK_FORMAT_D16_UNORM)         || (info.format == VK_FORMAT_X8_D24_UNORM_PACK32) ||
-            (info.format == VK_FORMAT_D32_SFLOAT)        || (info.format == VK_FORMAT_S8_UINT) ||
-            (info.format == VK_FORMAT_D16_UNORM_S8_UINT) || (info.format == VK_FORMAT_D24_UNORM_S8_UINT))
+            (info.imageFormat == VK_FORMAT_D16_UNORM)         || (info.imageFormat == VK_FORMAT_X8_D24_UNORM_PACK32) ||
+            (info.imageFormat == VK_FORMAT_D32_SFLOAT)        || (info.imageFormat == VK_FORMAT_S8_UINT) ||
+            (info.imageFormat == VK_FORMAT_D16_UNORM_S8_UINT) || (info.imageFormat == VK_FORMAT_D24_UNORM_S8_UINT))
         {
             barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
-            if (info.format == VK_FORMAT_D32_SFLOAT_S8_UINT || info.format == VK_FORMAT_D24_UNORM_S8_UINT)
+            if (info.imageFormat == VK_FORMAT_D32_SFLOAT_S8_UINT || info.imageFormat == VK_FORMAT_D24_UNORM_S8_UINT)
             {
                 barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
             }
@@ -202,11 +208,11 @@ void VulkanTexture::Transition(VkCommandBuffer cmdBuffer, VkImageLayout newLayou
 
         VkPipelineStageFlags srcStageMask = 0;
         VkPipelineStageFlags dstStageMask = 0;
-        GetSrcDstPipelineStage(info.layout, newLayout, srcStageMask, dstStageMask);
+        GetSrcDstPipelineStage(info.imageLayout, newLayout, srcStageMask, dstStageMask);
 
         vkCmdPipelineBarrier(cmdBuffer, srcStageMask, dstStageMask, 0, 0, NULL, 0, NULL, 1, &barrier);
 
-        info.layout = newLayout;
+        info.imageLayout = newLayout;
     }
 }
 

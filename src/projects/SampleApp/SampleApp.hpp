@@ -154,11 +154,11 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 		m_UI.AddHierarchyPanel();
 		m_UI.ShowMenuBar();
 		m_UI.AddInspectorPanel();
-		m_UI.AddOverlay(m_DebugName, dt);
+		m_UI.ShowStatistics(m_DebugName, dt, context.frameCount);
 		m_UI.ShowSceneViewportPanel(
 			m_ImGuiRenderer->m_ModelRendererColorTextureId[currentImageIdx],
 			m_ImGuiRenderer->m_ModelRendererDepthTextureId[currentImageIdx]);
-		m_UI.ShowPlot(lastTimeSteps, 500);
+		m_UI.ShowFrameTimeGraph(FrameStats::History.data(), FrameStats::History.size());
 		m_UI.End();
 	}
 

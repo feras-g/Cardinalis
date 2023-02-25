@@ -1,8 +1,11 @@
 #include "Rendering/Vulkan/VulkanUI.h"
+#include "Rendering/FrameCounter.h"
 
 #include "../imgui/imgui.h"
 #include "../imgui/backends/imgui_impl_win32.h"
 #include "../imgui/backends/imgui_impl_vulkan.h"
+
+#include "glm/gtx/log_base.hpp"
 
 VulkanUI& VulkanUI::Start()
 {
@@ -96,14 +99,13 @@ VulkanUI& VulkanUI::AddInspectorPanel()
 	return *this;
 }
 
-VulkanUI& VulkanUI::AddOverlay(const char* title, float deltaSeconds)
+VulkanUI& VulkanUI::ShowStatistics(const char* title, float cpuDeltaSecs, size_t frameNumber)
 {
 	ImGuiViewport* viewport = ImGui::GetMainViewport();
 
 	ImGuiWindowFlags overlayFlags =
-		ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking |
-		ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings |
-		ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+		ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings |
+		 ImGuiWindowFlags_NoNav;
 	const float PAD = 10.0f;
 
 	ImVec2 work_pos =  viewport->WorkPos;
@@ -121,7 +123,8 @@ VulkanUI& VulkanUI::AddOverlay(const char* title, float deltaSeconds)
 	{
 		ImGui::Text(title);
 		ImGui::AlignTextToFramePadding();
-		ImGui::Text("CPU : %.2f ms (%.1f fps)", deltaSeconds * 1000.0f, 1.0f / deltaSeconds);
+		ImGui::Text("Frame: %d", frameNumber);
+		ImGui::Text("Avg CPU Frame-Time (ms): %.2f", FrameStats::CurrentFrameTimeAvg);
 	}
 
 	ImGui::End();
@@ -129,10 +132,11 @@ VulkanUI& VulkanUI::AddOverlay(const char* title, float deltaSeconds)
 	return *this;
 }
 
-VulkanUI& VulkanUI::ShowPlot(float* values, size_t nbValues)
+VulkanUI& VulkanUI::ShowFrameTimeGraph(float* values, size_t nbValues)
 {
-	ImVec2 plotextent(ImGui::GetContentRegionAvail().x, 250);
-	ImGui::Text("I am a fancy tooltip");
-	ImGui::PlotHistogram("Lines", values, nbValues, 0, 0, 0.0f, 32.0f, plotextent);
+	const float width = ImGui::GetWindowWidth();
+
+	ImGui::PlotLines("CPU Time", values, nbValues, 0, 0, 0, 33);
+
 	return *this;
 }

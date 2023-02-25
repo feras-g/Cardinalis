@@ -114,7 +114,7 @@ struct RenderPassInitInfo
 // Create a simple render pass with color and/or depth and a single subpass
 bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, VkRenderPass* out_renderPass);
 bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const VulkanSwapchain* swapchain, VkFramebuffer* out_Framebuffers, bool useDepth);
-bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const VulkanTexture* colorAttachments, const VulkanTexture* depthAttachments, VkFramebuffer* out_Framebuffers, bool useDepth);
+bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colorAttachments, const Texture2D* depthAttachments, VkFramebuffer* out_Framebuffers, bool useDepth);
 
 bool CreateDescriptorPool(uint32_t numStorageBuffers, uint32_t numUniformBuffers, uint32_t numCombinedSamplers, VkDescriptorPool* out_DescriptorPool);
 bool CreateGraphicsPipeline(const VulkanShader& shader, bool useBlending, bool useDepth, VkPrimitiveTopology topology, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPipeline* out_GraphicsPipeline, float customViewportWidth, float customViewportHeight, VkCullModeFlags cullMode, VkFrontFace frontFace);

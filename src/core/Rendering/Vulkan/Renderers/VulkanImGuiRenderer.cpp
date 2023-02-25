@@ -22,17 +22,17 @@ constexpr uint32_t numStorageBuffers   = 2;
 constexpr uint32_t numUniformBuffers   = 1;
 constexpr uint32_t numCombinedSamplers = 1;
 
-void VulkanImGuiRenderer::Initialize(const std::vector<VulkanTexture>& textures)
+void VulkanImGuiRenderer::Initialize(const std::vector<Texture2D>& textures)
 {
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	//io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
 	// Create font texture
-	m_Textures.push_back(VulkanTexture());
+	m_Textures.push_back(Texture2D());
 
 	CreateFontTexture(&io, "../../../data/fonts/BerkeleyMonoVariable-Regular.ttf", m_Textures[FONT_TEXTURE_INDEX]);
-	m_Textures[FONT_TEXTURE_INDEX].CreateImageView(context.device, { .format = VK_FORMAT_R8G8B8A8_UNORM, .aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevels = 1 });
+	//m_Textures[FONT_TEXTURE_INDEX].CreateView(context.device, { .format = VK_FORMAT_R8G8B8A8_UNORM, .aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevels = 1 });
 	io.Fonts->TexID = (ImTextureID)FONT_TEXTURE_INDEX;
 
 	// Then add other textures
@@ -182,7 +182,7 @@ void VulkanImGuiRenderer::UpdateBuffers(size_t currentImage, ImDrawData* pDrawDa
 	vkUnmapMemory(context.device, m_StorageBuffers[currentImage].memory);
 }
 
-void VulkanImGuiRenderer::LoadSceneViewTextures(VulkanTexture* modelRendererColor, VulkanTexture* modelRendererDepth)
+void VulkanImGuiRenderer::LoadSceneViewTextures(Texture2D* modelRendererColor, Texture2D* modelRendererDepth)
 {
 
 }
@@ -209,7 +209,7 @@ VulkanImGuiRenderer::~VulkanImGuiRenderer()
 	}
 }
 
-bool VulkanImGuiRenderer::CreateFontTexture(ImGuiIO* io, const char* fontPath, VulkanTexture& out_Font)
+bool VulkanImGuiRenderer::CreateFontTexture(ImGuiIO* io, const char* fontPath, Texture2D& out_Font)
 {
 	ImFontConfig cfg = ImFontConfig();
 	cfg.FontDataOwnedByAtlas = false;
@@ -219,14 +219,20 @@ bool VulkanImGuiRenderer::CreateFontTexture(ImGuiIO* io, const char* fontPath, V
 	
 	unsigned char* pixels = nullptr;
 	int texWidth = 1, texHeight = 1;
-	io->Fonts->GetTexDataAsRGBA32(&pixels, &texWidth, &texHeight);
-	
-	if (!pixels || !out_Font.CreateImageFromData(context.device, { (uint32_t)texWidth, (uint32_t)texHeight, VK_FORMAT_R8G8B8A8_UNORM }, pixels))
+	int bpp;
+	io->Fonts->GetTexDataAsRGBA32(&pixels, &texWidth, &texHeight, &bpp);
+	if (!pixels)
 	{
 		LOG_ERROR("Failed to load texture\n"); 
 		return false;
 	}
-	
+
+	out_Font.CreateFromData(
+		context.device,
+		pixels,
+		texWidth * texHeight * bpp,
+		TextureInfo{ VK_FORMAT_R8G8B8A8_UNORM, (uint32_t)texWidth, (uint32_t)texHeight, 1, 1 });
+	out_Font.CreateView(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
 	io->FontDefault = Font;
 	//io->DisplayFramebufferScale = ImVec2(1, 1);
 
@@ -279,35 +285,34 @@ bool VulkanImGuiRenderer::CreateDescriptorSets(VkDevice device, VkDescriptorSet*
 bool VulkanImGuiRenderer::UpdateDescriptorSets(VkDevice device)
 {
 	// Create descriptors for each texture used in ImGui 
+	std::vector<VkDescriptorImageInfo> textureDescriptors;
 	for (size_t i = 0; i < m_Textures.size(); i++)
 	{
-		m_TextureDescriptors.push_back
-		(
-			{ .sampler = s_SamplerClampNearest, .imageView = m_Textures[i].view, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
-		);
+		m_Textures[i].descriptor = { .sampler = s_SamplerClampNearest, .imageView = m_Textures[i].view, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
+		textureDescriptors.push_back(m_Textures[i].descriptor);
 	}
 
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
-		VkDescriptorBufferInfo uboInfo0   = { .buffer = m_UniformBuffers[i].buffer, .offset = 0, .range = sizeof(glm::mat4)  };
-		VkDescriptorBufferInfo sboInfo0   = { .buffer = m_StorageBuffers[i].buffer, .offset = 0, .range = ImGuiVtxBufferSize };
-		VkDescriptorBufferInfo sboInfo1   = { .buffer = m_StorageBuffers[i].buffer, .offset = ImGuiVtxBufferSize, .range = ImGuiIdxBufferSize };
+		VkDescriptorBufferInfo uboInfo0 { .buffer = m_UniformBuffers[i].buffer, .offset = 0, .range = sizeof(glm::mat4)  };
+		VkDescriptorBufferInfo sboInfo0 { .buffer = m_StorageBuffers[i].buffer, .offset = 0, .range = ImGuiVtxBufferSize };
+		VkDescriptorBufferInfo sboInfo1 { .buffer = m_StorageBuffers[i].buffer, .offset = ImGuiVtxBufferSize, .range = ImGuiIdxBufferSize };
 
-		std::array<VkWriteDescriptorSet, 4> descriptorWrites =
+		std::array<VkWriteDescriptorSet, 4> descriptorWrites
 		{
 			BufferWriteDescriptorSet(m_DescriptorSets[i], 0, &uboInfo0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER),
 			BufferWriteDescriptorSet(m_DescriptorSets[i], 1, &sboInfo0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER),
 			BufferWriteDescriptorSet(m_DescriptorSets[i], 2, &sboInfo1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER),
 			// Descriptor array
-			VkWriteDescriptorSet {
+			VkWriteDescriptorSet{
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.dstSet = m_DescriptorSets[i],
 				.dstBinding = 3,
 				.dstArrayElement = 0,
 				.descriptorCount = static_cast<uint32_t>(m_Textures.size()),
 				.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				.pImageInfo = m_TextureDescriptors.data()
-			},
+				.pImageInfo = textureDescriptors.data()
+			}
 		};
 
 		vkUpdateDescriptorSets(device, (uint32_t)(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);

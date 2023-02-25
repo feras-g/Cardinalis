@@ -62,8 +62,7 @@ public:
 	Application& operator=(const Application&&) = delete;
 
 protected:
-	float m_LastFrameTime;
-	float lastTimeSteps[500];
+	float m_LastFrameTime {};
 	MouseEvent m_MouseEvent;
 	KeyEvent   m_KeyEvent;
 

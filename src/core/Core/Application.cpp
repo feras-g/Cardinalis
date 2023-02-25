@@ -1,6 +1,6 @@
 #include "Application.h"
 #include "Window/Window.h"
-
+#include <iostream>
 #include "Core/EngineLogger.h"
 #include "Rendering/Vulkan/VulkanRenderInterface.h"
 #include "Rendering/Vulkan/VulkanRendererBase.h"
@@ -37,17 +37,16 @@ Application::~Application()
 void Application::Run()
 {
 	Initialize();
-	static unsigned int i = 0;
 	while (!m_Window->IsClosed())
 	{
 		float time = (float)m_Window->GetTime();
 		Timestep timestep = time - m_LastFrameTime;
-		lastTimeSteps[i % 500] = timestep.GetMilliseconds();
+		std::cout << timestep.GetSeconds() << std::endl;
+		FrameStats::UpdateFrameTimeHistory(timestep.GetMilliseconds());
 		m_LastFrameTime = time;
 		m_Window->HandleEvents();
 		Update(timestep.GetSeconds());
 		Render(context.currentBackBuffer);
-		i++;
 	}
 
 	Terminate();

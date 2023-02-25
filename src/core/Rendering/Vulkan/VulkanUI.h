@@ -9,8 +9,8 @@ public:
 	VulkanUI& ShowMenuBar();
 	VulkanUI& AddHierarchyPanel();
 	VulkanUI& AddInspectorPanel();
-	VulkanUI& AddOverlay(const char* title, float deltaSeconds);
-	VulkanUI& ShowPlot(float* values, size_t nbValues);
+	VulkanUI& ShowStatistics(const char* title, float cpuDeltaSecs, size_t frameNumber);
+	VulkanUI& ShowFrameTimeGraph(float* values, size_t nbValues);
 	void End();
 
 	bool bIsSceneViewportHovered = false;

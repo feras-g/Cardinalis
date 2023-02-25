@@ -4,7 +4,7 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-struct VulkanTexture;
+struct Texture2D;
 
 struct VulkanSwapchainInfo
 {
@@ -37,8 +37,8 @@ public:
 	VulkanSwapchainInfo info;
 
 	// Data
-	std::vector<VulkanTexture> images;
-	std::vector<VulkanTexture> depthImages;
+	std::vector<Texture2D> colorTextures;
+	std::vector<Texture2D> depthTextures;
 	std::vector<VkFramebuffer> framebuffers;
 private:
 	// Function pointers

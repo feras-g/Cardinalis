@@ -45,7 +45,7 @@ void CameraController::UpdateTranslation(float dt)
 		}
 	}
 
-	LOG_INFO("Speed: {} / Accel: {}", glm::length(m_velocity), glm::length(acceleration));
+	//LOG_INFO("Speed: {} / Accel: {}", glm::length(m_velocity), glm::length(acceleration));
 
 	m_position = m_position + m_velocity * dt;
 

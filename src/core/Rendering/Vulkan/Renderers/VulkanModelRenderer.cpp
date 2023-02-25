@@ -22,8 +22,8 @@ VulkanModelRenderer::VulkanModelRenderer(const char* modelFilename, const char* 
 		LOG_ERROR("Failed to create model from {0}", modelFilename);
 	}
 
-	m_Texture.CreateFromFile(textureFilename, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
-	m_Texture.CreateImageView(context.device, { .format = VK_FORMAT_R8G8B8A8_UNORM, .aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT });
+	m_Texture.CreateFromFile(context.device, textureFilename, VK_FORMAT_R8G8B8A8_UNORM);
+	m_Texture.CreateView(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
 
 	m_Shader.reset(new VulkanShader("Model.vert.spv", "Model.frag.spv"));
 
@@ -81,7 +81,7 @@ bool VulkanModelRenderer::UpdateDescriptorSets(VkDevice device)
 	// Mesh data is not modified between 2 frames
 	VkDescriptorBufferInfo sboInfo0 = { .buffer = m_Model.m_StorageBuffer.buffer, .offset = 0, .range = m_Model.m_VtxBufferSizeInBytes };
 	VkDescriptorBufferInfo sboInfo1 = { .buffer = m_Model.m_StorageBuffer.buffer, .offset = m_Model.m_VtxBufferSizeInBytes, .range = m_Model.m_IdxBufferSizeInBytes };
-	VkDescriptorImageInfo imageInfo0 = { .sampler = s_SamplerRepeatLinear, .imageView = m_Texture.view, .imageLayout = m_Texture.info.layout };
+	VkDescriptorImageInfo imageInfo0 = { .sampler = s_SamplerRepeatLinear, .imageView = m_Texture.view, .imageLayout = m_Texture.info.imageLayout };
 
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
@@ -115,13 +115,16 @@ bool VulkanModelRenderer::CreateFramebuffers()
 	m_DepthStencilAttachments.resize(NUM_FRAMES);
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
-		m_ColorAttachments[i].CreateImage(context.device, { .width = attachmentWidth, .height = attachmentHeight, .format = m_ColorFormat, .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT });
-		m_ColorAttachments[i].CreateImageView(context.device, { .format = m_ColorFormat, .aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT });
-		m_ColorAttachments[i].Transition(context.mainCmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		
-		m_DepthStencilAttachments[i].CreateImage(context.device, { .width = attachmentWidth, .height = attachmentHeight, .format = m_DepthStencilFormat, .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT });
-		m_DepthStencilAttachments[i].CreateImageView(context.device, { .format = m_DepthStencilFormat, .aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT });
-		m_DepthStencilAttachments[i].Transition(context.mainCmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		m_ColorAttachments[i].info = { m_ColorFormat, attachmentWidth, attachmentHeight, 1, 1, VK_IMAGE_LAYOUT_UNDEFINED };
+		m_ColorAttachments[i].CreateImage(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+		m_ColorAttachments[i].CreateView(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
+		m_ColorAttachments[i].TransitionLayout(context.mainCmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+		m_DepthStencilAttachments[i].info = { m_DepthStencilFormat, attachmentWidth, attachmentHeight, 1, 1, VK_IMAGE_LAYOUT_UNDEFINED };
+		m_DepthStencilAttachments[i].CreateImage(context.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+		m_DepthStencilAttachments[i].CreateView(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT });
+		m_DepthStencilAttachments[i].TransitionLayout(context.mainCmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
 	}
 	EndInstantUseCmdBuffer();
 

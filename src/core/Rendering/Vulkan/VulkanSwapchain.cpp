@@ -83,8 +83,8 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
 
     VK_CHECK(vkCreateSwapchainKHR(hDevice, &swapchainCreateInfo, nullptr, &swapchain));
     
-    depthImages.resize(info.imageCount);
-    images.resize(info.imageCount);
+    depthTextures.resize(info.imageCount);
+    colorTextures.resize(info.imageCount);
     framebuffers.resize(info.imageCount);
 
     std::vector<VkImage> tmp(info.imageCount);
@@ -94,42 +94,32 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
     VkCommandBuffer& cmdBuffer = context.frames[context.currentBackBuffer].cmdBuffer;
     BeginCommandBuffer(cmdBuffer);
 
-    // Depth-Stencil 
     for (uint32_t i = 0; i < info.imageCount; i++)
     {
         // COLOR
-        images[i].image = std::move(tmp[i]);
-        images[i].info =
+        colorTextures[i].image = tmp[i];
+        colorTextures[i].info =
         {
-            .width  = info.extent.width,
-            .height = info.extent.height,
-            .format = colorFormat,
-            .usage  = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-            .aspectFlag = VK_IMAGE_ASPECT_COLOR_BIT,
-            .mipLevels = 1,
-            .memoryProperties = 0,
+            colorFormat,
+            info.extent.width,
+            info.extent.height,
+              1, 1,
+            VK_IMAGE_LAYOUT_UNDEFINED
         };
-        images[i].CreateImageView(context.device, 
-        {
-            .format      = colorFormat,
-            .aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT,
-            .mipLevels   = 1
-        });
-        images[i].Transition(cmdBuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-
+        colorTextures[i].CreateView(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
+        colorTextures[i].TransitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
         // DEPTH
-        depthImages[i].CreateImage(context.device,
+        depthTextures[i].info =
         {
-            .width      = info.extent.width,
-            .height     = info.extent.height,
-            .format     = depthStencilFormat,
-            .usage      = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-            .aspectFlag = VK_IMAGE_ASPECT_DEPTH_BIT,
-            .mipLevels  = 1,
-            .memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        });
-        depthImages[i].CreateImageView(context.device, { .format = depthStencilFormat, .aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT, .mipLevels = 1 });
-        depthImages[i].Transition(cmdBuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+            depthStencilFormat,
+            info.extent.width,
+            info.extent.height,
+            1, 1,
+            VK_IMAGE_LAYOUT_UNDEFINED
+        };
+        depthTextures[i].CreateImage(context.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+        depthTextures[i].CreateView(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT });
+        depthTextures[i].TransitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     }
 
     EndCommandBuffer(cmdBuffer);
@@ -148,15 +138,6 @@ void VulkanSwapchain::Destroy()
     for (int i = 0; i < framebuffers.size(); i++)
     {
         vkDestroyFramebuffer(context.device, framebuffers[i], nullptr);
-    }
-
-    for (int i = 0; i < images.size(); i++)
-    {
-        if(images[i].view)
-            vkDestroyImageView(context.device, images[i].view, nullptr);
-        vkFreeMemory(context.device, images[i].memory, nullptr);
-
-        depthImages[i].Destroy(context.device);
     }
     
     vkDestroySwapchainKHR(context.device, swapchain, nullptr);

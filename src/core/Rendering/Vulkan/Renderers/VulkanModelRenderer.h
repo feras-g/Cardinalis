@@ -20,8 +20,8 @@ public:
 	virtual bool CreateFramebuffers() override;
 
 	// Use offscreen buffer to render into
-	std::vector<VulkanTexture> m_ColorAttachments;
-	std::vector<VulkanTexture> m_DepthStencilAttachments;
+	std::vector<Texture2D> m_ColorAttachments;
+	std::vector<Texture2D> m_DepthStencilAttachments;
 
 	~VulkanModelRenderer() final;
 private:
@@ -32,6 +32,6 @@ private:
 	VkFormat m_DepthStencilFormat = VK_FORMAT_D32_SFLOAT;
 
 	VkSampler m_TextureSampler;
-	VulkanTexture m_Texture;
+	Texture2D m_Texture;
 };
 #endif // !VULKAN_CLEAR_COLOR_RENDERER_H
