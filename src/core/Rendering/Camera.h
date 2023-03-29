@@ -51,7 +51,7 @@ public:
     {
         float mouse_speed = 0.1f;
         float accel_factor = 15.0f;
-        float damping = 0.25f;
+        float damping = 0.1f;
         float max_velocity = 15.0f;
     } params;
 
@@ -67,8 +67,8 @@ public:
     float deltaTime;
 
     bool m_rotate = false;
-    float m_pitch = 0.0f;
-    float m_yaw = 0.0f;
+
+    glm::vec3 m_rotation{ };
 };
 
 constexpr float ASPECT_16_9 = 16.0F / 9;
@@ -83,13 +83,22 @@ class Camera
     glm::mat4& GetView();
 
     void UpdateAspectRatio(float aspect);
+    void UpdateProjection();
 
     CameraController controller;
 
     float fov;
     float aspect_ratio;
-    float z_near;
-    float z_far;
+
+    glm::vec2 near_far;
+
+
+    enum ProjectionType
+    {
+        PERSPECTIVE  = 0,
+        ORTHOGRAPHIC = 1
+    };
+
     glm::mat4 projection;
 
   protected:

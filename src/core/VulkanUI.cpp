@@ -1,11 +1,13 @@
 #include "Rendering/Vulkan/VulkanUI.h"
 #include "Rendering/FrameCounter.h"
+#include "Rendering/Camera.h"
 
 #include "../imgui/imgui.h"
 #include "../imgui/backends/imgui_impl_win32.h"
 #include "../imgui/backends/imgui_impl_vulkan.h"
 
 #include "glm/gtx/log_base.hpp"
+#include <glm/gtc/type_ptr.hpp> // value_ptr
 
 VulkanUI& VulkanUI::Start()
 {
@@ -136,7 +138,53 @@ VulkanUI& VulkanUI::ShowFrameTimeGraph(float* values, size_t nbValues)
 {
 	const float width = ImGui::GetWindowWidth();
 
-	ImGui::PlotLines("CPU Time", values, nbValues, 0, 0, 0, 33);
+	if (ImGui::Begin("Statistics", 0, 0))
+	{
+		ImGui::PlotLines("CPU Time", values, nbValues, 0, 0, 0, 33);
+	}
+	ImGui::End();
+
+	return *this;
+}
+
+VulkanUI& VulkanUI::ShowCameraSettings(Camera* camera)
+{
+	// TODO: insert return statement here
+	if (ImGui::Begin("Camera", 0, 0))
+	{
+		ImGui::SetNextItemOpen(true);
+		if (ImGui::TreeNode("Controller Settings"))
+		{
+			static float vec4f[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
+			static int vec4i[4] = { 1, 5, 100, 255 };
+
+			ImGuiSliderFlags flags = ImGuiSliderFlags_AlwaysClamp;
+
+			ImGui::SeparatorText("Physics");
+
+			ImGui::DragFloat("Damping", &camera->controller.params.damping, 0.01f, 0.01f, 1.0f);
+			ImGui::DragFloat("Acceleration Factor", &camera->controller.params.accel_factor, 0.01f, 0.01f, 15.0f);
+			ImGui::DragFloat("Max Speed", &camera->controller.params.max_velocity, 0.01f, 0.01f, 30.0f);
+			
+			ImGui::SeparatorText("Transform");
+			ImGui::DragFloat3("Location", glm::value_ptr(camera->controller.m_position), 0.1f);
+			ImGui::DragFloat3("Rotation", glm::value_ptr(camera->controller.m_rotation), 0.1f);
+
+			ImGui::TreePop();
+		}
+
+		ImGui::SetNextItemOpen(true);
+		if (ImGui::TreeNode("Camera Settings"))
+		{
+			ImGui::InputFloat("Field Of View", &camera->fov);
+			ImGui::InputFloat2("Near-Far", glm::value_ptr(camera->near_far));
+
+			ImGui::TreePop();
+		}
+	}
+
+	ImGui::End();
+
 
 	return *this;
 }

@@ -7,11 +7,11 @@
 void CameraController::UpdateRotation(const glm::vec2& mouse_pos)
 {
 	// Mouse delta in range [-1;1]
-	m_yaw   += (m_last_mouse_pos.x - mouse_pos.x) * params.mouse_speed;
-	m_pitch += (m_last_mouse_pos.y - mouse_pos.y) * params.mouse_speed;
+	m_rotation.y += (m_last_mouse_pos.x - mouse_pos.x) * params.mouse_speed;
+	m_rotation.x += (m_last_mouse_pos.y - mouse_pos.y) * params.mouse_speed;
 
-	if (m_pitch > 89.9f)  m_pitch = 89.9f;
-	if (m_pitch < -89.9f) m_pitch = -89.9f;
+	if (m_rotation.x > 89.9f)  m_rotation.x = 89.9f;
+	if (m_rotation.y < -89.9f) m_rotation.y = -89.9f;
 
 	m_last_mouse_pos = mouse_pos;
 }
@@ -54,10 +54,9 @@ void CameraController::UpdateTranslation(float dt)
 
 glm::mat4& CameraController::GetView()
 {
-	m_forward.x = cos(glm::radians(m_pitch)) * sin(glm::radians(m_yaw));
-	m_forward.y = sin(glm::radians(m_pitch));
-	m_forward.z = cos(glm::radians(m_pitch)) * cos(glm::radians(m_yaw));
-
+	m_forward.x = cos(glm::radians(m_rotation.x)) * sin(glm::radians(m_rotation.y));
+	m_forward.y = sin(glm::radians(m_rotation.x));
+	m_forward.z = cos(glm::radians(m_rotation.x)) * cos(glm::radians(m_rotation.y));
 
 	m_forward = glm::normalize(m_forward);
 	m_right   = glm::normalize(glm::cross(m_forward, { 0,1,0 }));
@@ -69,20 +68,26 @@ glm::mat4& CameraController::GetView()
 }
 
 Camera::Camera() 
-	: controller({ 0, 0, -5 }, { 0, 0, 1 }, { 0, 1, 0 }), fov(45.0f), aspect_ratio(ASPECT_16_9), z_near(0.0f), z_far(1000.0f)
+	: controller({ 0, 0, -5 }, { 0, 0, 1 }, { 0, 1, 0 }), fov(45.0f), aspect_ratio(ASPECT_16_9), near_far(0.0f, 1000.0f)
 {
-	projection = glm::perspective(fov, aspect_ratio, z_near, z_far);
+	UpdateProjection();
 }
 
 Camera::Camera(CameraController controller, float fov, float aspect_ratio, float zNear, float zFar)
-	: controller(controller), fov(fov), aspect_ratio(ASPECT_16_9), z_near(zNear), z_far(zFar)
+	: controller(controller), fov(fov), aspect_ratio(ASPECT_16_9), near_far(zNear, zFar)
 {
-	projection = glm::perspective(fov, aspect_ratio, z_near, z_far);
+	UpdateProjection();
+}
+
+
+void Camera::UpdateProjection()
+{
+	projection = glm::perspective(fov, aspect_ratio, near_far.x, near_far.y);
 }
 
 void Camera::UpdateAspectRatio(float aspect)
 {
-	projection = glm::perspective(fov, aspect, z_near, z_far);
+	projection = glm::perspective(fov, aspect, near_far.x, near_far.y);
 }
 
 glm::mat4& Camera::GetProj()

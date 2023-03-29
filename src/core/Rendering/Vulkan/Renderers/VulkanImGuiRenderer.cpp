@@ -31,7 +31,7 @@ void VulkanImGuiRenderer::Initialize(const std::vector<Texture2D>& textures)
 	// Create font texture
 	m_Textures.push_back(Texture2D());
 
-	CreateFontTexture(&io, "../../../data/fonts/BerkeleyMonoVariable-Regular.ttf", m_Textures[FONT_TEXTURE_INDEX]);
+	CreateFontTexture(&io, "../../../data/fonts/SSTRg.ttf", m_Textures[FONT_TEXTURE_INDEX]);
 	//m_Textures[FONT_TEXTURE_INDEX].CreateView(context.device, { .format = VK_FORMAT_R8G8B8A8_UNORM, .aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevels = 1 });
 	io.Fonts->TexID = (ImTextureID)FONT_TEXTURE_INDEX;
 
