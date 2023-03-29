@@ -59,7 +59,7 @@ bool VulkanModelRenderer::CreatePipeline()
 	if (!UpdateDescriptorSets(context.device)) return false;
 	if (!CreatePipelineLayout(context.device, m_DescriptorSetLayout, &m_PipelineLayout)) return false;
 	if (!CreateGraphicsPipeline(*m_Shader.get(), false, true, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, m_RenderPass, m_PipelineLayout, &m_GraphicsPipeline, 
-0.0f, 0.0f, VK_CULL_MODE_NONE, VK_FRONT_FACE_COUNTER_CLOCKWISE)) return false;
+0.0f, 0.0f, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE)) return false;
 
 	return true;
 }

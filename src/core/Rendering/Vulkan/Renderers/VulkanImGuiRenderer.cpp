@@ -75,12 +75,14 @@ void VulkanImGuiRenderer::PopulateCommandBuffer(size_t currentImageIdx, VkComman
 	ImDrawData* draw_data = ImGui::GetDrawData();
 	UpdateBuffers(currentImageIdx, draw_data);
 
-	int32_t width = (int32_t)context.swapchain->info.extent.width;
-	int32_t height = (int32_t)context.swapchain->info.extent.height;
+	uint32_t width = context.swapchain->info.extent.width;
+	uint32_t height = context.swapchain->info.extent.height;
 
 	VkClearValue clearValue = { { 1.0f, 0.0f, 0.0f, 1.0f } };
-
-	BeginRenderpass(cmdBuffer, m_RenderPass, m_Framebuffers[currentImageIdx], { width, height }, &clearValue, 1);
+	
+	VkRect2D renderArea{ .offset {0, 0}, .extent { width, height } };
+	
+	BeginRenderpass(cmdBuffer, m_RenderPass, m_Framebuffers[currentImageIdx], renderArea, &clearValue, 1);
 	// Set viewport/scissor dynamically
 	SetViewportScissor(cmdBuffer, width, height);
 
@@ -262,7 +264,7 @@ bool VulkanImGuiRenderer::CreatePipeline(VkDevice device)
 	
 	size_t fragConstRangeSizeInBytes = sizeof(uint32_t); // Size of 1 Push constant holding the texture ID passed from ImGui::Image
 	if (!CreatePipelineLayout(device, m_DescriptorSetLayout, &m_PipelineLayout, 0, fragConstRangeSizeInBytes)) return false;
-	if (!CreateGraphicsPipeline(*m_Shader.get(), false, true, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, m_RenderPass, m_PipelineLayout, &m_GraphicsPipeline, 0.0F, 0.0F, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE)) return false;
+	if (!CreateGraphicsPipeline(*m_Shader.get(), false, false, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, m_RenderPass, m_PipelineLayout, &m_GraphicsPipeline, 0.0F, 0.0F, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE)) return false;
 
 	return true;
 }

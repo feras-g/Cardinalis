@@ -16,7 +16,7 @@
 #include "Rendering/Vulkan/VulkanSwapchain.h"
 #include "Rendering/Vulkan/VulkanTexture.h"
 #include "Rendering/Vulkan/VulkanTools.h"
-#include "Rendering/Vulkan/VulkanFrame.h"
+#include "Rendering/Vulkan/VulkanFrame.hpp"
 #include "Rendering/Vulkan/VulkanShader.h"
 
 #include <glm/vec2.hpp>

@@ -10,6 +10,12 @@ struct VulkanFrame
 								 
 	VkCommandPool cmdPool		 = VK_NULL_HANDLE;
 	VkCommandBuffer cmdBuffer	 = VK_NULL_HANDLE;
-
-	void Destroy(VkDevice device);
 };
+
+static void Destroy(VkDevice device, VulkanFrame frame)
+{
+	vkDestroyCommandPool(device, frame.cmdPool, nullptr);
+	vkDestroyFence(device, frame.renderFence, nullptr);
+	vkDestroySemaphore(device, frame.imageAcquiredSemaphore, nullptr);
+	vkDestroySemaphore(device, frame.queueSubmittedSemaphore, nullptr);
+}

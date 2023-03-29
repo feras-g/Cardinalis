@@ -38,7 +38,7 @@ void VulkanRenderInterface::Terminate()
 
 	for (uint32_t i = 0; i < NUM_FRAMES; i++)
 	{
-		context.frames[i].Destroy(context.device);
+		Destroy(context.device, context.frames[i]);
 	}
 
 	vkDestroyCommandPool(context.device, context.mainCmdPool, nullptr);
