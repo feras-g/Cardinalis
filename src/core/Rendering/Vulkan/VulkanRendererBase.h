@@ -22,8 +22,8 @@ protected:
 	bool bUseDepth;
 	virtual bool CreateDescriptorSets(VkDevice device, VkDescriptorSet* out_DescriptorSets, VkDescriptorSetLayout* out_DescLayouts);
 	virtual bool UpdateDescriptorSets(VkDevice device);
-	virtual bool CreateRenderPass() = 0;
-	virtual bool CreateFramebuffers() = 0;
+	virtual bool CreateRenderPass() { return false; };
+	virtual bool CreateFramebuffers() { return false; };
 	bool CreateUniformBuffers(size_t size);
 
 	RenderPassInitInfo m_RenderPassInitInfo;

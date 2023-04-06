@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "VulkanRenderInterface.h"
+#include "VulkanDebugUtils.h"
 
 VulkanSwapchain::VulkanSwapchain(VkSurfaceKHR surface, VkPhysicalDevice physDevice)
     : hSurface(surface), hPhysicalDevice(physDevice)
@@ -28,7 +29,7 @@ VulkanSwapchain::VulkanSwapchain(VkSurfaceKHR surface, VkPhysicalDevice physDevi
 
     std::vector<VkPresentModeKHR> presentModes(presentModeCount);
     VK_CHECK(fpGetPhysicalDeviceSurfacePresentModesKHR(hPhysicalDevice, hSurface, &presentModeCount, presentModes.data()));
-    info.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+    info.presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
     LOG_WARN("Current present mode : {0}", string_VkPresentModeKHR(info.presentMode));
 }
 
@@ -90,13 +91,19 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
     std::vector<VkImage> tmp(info.imageCount);
     VK_CHECK(fpGetSwapchainImagesKHR(hDevice, swapchain, &info.imageCount, tmp.data()));
 
+    for (size_t i = 0; i < tmp.size(); i++)
+    {
+        std::string name = "Swapchain Image " + std::to_string(i);
+        set_object_name(VK_OBJECT_TYPE_IMAGE, (uint64_t)tmp[i], name.c_str());
+    }
+
     // Swapchain images creation
-    VkCommandBuffer& cmdBuffer = context.frames[context.currentBackBuffer].cmdBuffer;
-    BeginCommandBuffer(cmdBuffer);
+    VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
 
     for (uint32_t i = 0; i < info.imageCount; i++)
     {
         // COLOR
+		std::string color_name = "Swapchain Color Image #" + std::to_string(i);
         colorTextures[i].image = tmp[i];
         colorTextures[i].info =
         {
@@ -107,8 +114,12 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
             VK_IMAGE_LAYOUT_UNDEFINED
         };
         colorTextures[i].CreateView(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
-        colorTextures[i].TransitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        colorTextures[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+		set_object_name(VK_OBJECT_TYPE_IMAGE, (uint64_t)colorTextures[i].image, color_name.c_str());
+
         // DEPTH
+		std::string ds_name = "Swapchain Depth/Stencil Image #" + std::to_string(i);
+
         depthTextures[i].info =
         {
             depthStencilFormat,
@@ -119,10 +130,10 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
         };
         depthTextures[i].CreateImage(context.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
         depthTextures[i].CreateView(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT });
-        depthTextures[i].TransitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        //depthTextures[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     }
 
-    EndCommandBuffer(cmdBuffer);
+    end_temp_cmd_buffer();
 }
 
 void VulkanSwapchain::Reinitialize()

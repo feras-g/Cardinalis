@@ -63,3 +63,8 @@ bool VulkanModel::CreateFromFile(const char* filename)
 
 	return true;
 }
+
+void VulkanModel::draw_indexed(VkCommandBuffer cbuf)
+{
+	vkCmdDrawIndexed(cbuf, m_NumIndices, 1, 0, 0, 0);
+}

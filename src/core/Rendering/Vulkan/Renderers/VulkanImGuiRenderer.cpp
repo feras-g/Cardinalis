@@ -1,5 +1,5 @@
 #include "VulkanImGuiRenderer.h"
-#include "Rendering/Vulkan/VulkanRenderDebugMarker.h"
+#include "Rendering/Vulkan/VulkanDebugUtils.h"
 #include "Rendering/Vulkan/VulkanRenderInterface.h"
 #include "Rendering/Vulkan/VulkanShader.h"
 #include "glm/mat4x4.hpp"
@@ -31,7 +31,7 @@ void VulkanImGuiRenderer::Initialize(const std::vector<Texture2D>& textures)
 	// Create font texture
 	m_Textures.push_back(Texture2D());
 
-	CreateFontTexture(&io, "../../../data/fonts/SSTRg.ttf", m_Textures[FONT_TEXTURE_INDEX]);
+	CreateFontTexture(&io, "../../../data/fonts/Arial-Bold.ttf", m_Textures[FONT_TEXTURE_INDEX]);
 	//m_Textures[FONT_TEXTURE_INDEX].CreateView(context.device, { .format = VK_FORMAT_R8G8B8A8_UNORM, .aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevels = 1 });
 	io.Fonts->TexID = (ImTextureID)FONT_TEXTURE_INDEX;
 
@@ -230,8 +230,8 @@ bool VulkanImGuiRenderer::CreateFontTexture(ImGuiIO* io, const char* fontPath, T
 	}
 
 	out_Font.CreateFromData(
-		context.device,
 		pixels,
+		"Font texture",
 		texWidth * texHeight * bpp,
 		TextureInfo{ VK_FORMAT_R8G8B8A8_UNORM, (uint32_t)texWidth, (uint32_t)texHeight, 1, 1 });
 	out_Font.CreateView(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
@@ -264,7 +264,7 @@ bool VulkanImGuiRenderer::CreatePipeline(VkDevice device)
 	
 	size_t fragConstRangeSizeInBytes = sizeof(uint32_t); // Size of 1 Push constant holding the texture ID passed from ImGui::Image
 	if (!CreatePipelineLayout(device, m_DescriptorSetLayout, &m_PipelineLayout, 0, fragConstRangeSizeInBytes)) return false;
-	if (!CreateGraphicsPipeline(*m_Shader.get(), false, false, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, m_RenderPass, m_PipelineLayout, &m_GraphicsPipeline, 0.0F, 0.0F, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE)) return false;
+	if (!GraphicsPipeline::Create(*m_Shader.get(), 1, GraphicsPipeline::Flags::NONE, m_RenderPass, m_PipelineLayout, &m_GraphicsPipeline, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE)) return false;
 
 	return true;
 }

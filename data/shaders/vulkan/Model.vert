@@ -26,7 +26,5 @@ void main()
     Vertex v = vbo.data[index];
     uv = vec2(v.u, v.v);
     normal = vec3(v.nx, v.ny, v.nz);
-    
-    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(v.px, v.py, v.pz, 1.0f) + 
-    vec4(gl_InstanceIndex * 5, 0, 0, 0);
+    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(v.px, v.py, v.pz, 1.0f);
 }

@@ -13,7 +13,7 @@ public:
 	VulkanModel() = default;
 
 	bool CreateFromFile(const char* filename);
-
+	void draw_indexed(VkCommandBuffer cbuf);
 	size_t m_VtxBufferSizeInBytes;
 	size_t m_IdxBufferSizeInBytes;
 	size_t m_NumVertices;

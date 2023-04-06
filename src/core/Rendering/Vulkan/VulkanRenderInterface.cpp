@@ -41,7 +41,7 @@ void VulkanRenderInterface::Terminate()
 		Destroy(context.device, context.frames[i]);
 	}
 
-	vkDestroyCommandPool(context.device, context.mainCmdPool, nullptr);
+	vkDestroyCommandPool(context.device, context.temp_cmd_pool, nullptr);
 
 	context.swapchain->Destroy();
 	vkDestroySurfaceKHR(context.instance, m_Surface, nullptr);
@@ -121,8 +121,7 @@ void VulkanRenderInterface::CreateDevices()
 		.pQueuePriorities = queuePriorities
 	};
 
-	deviceExtensions = { "VK_KHR_swapchain", "VK_KHR_shader_draw_parameters", "VK_EXT_descriptor_indexing" };
-
+	deviceExtensions = { "VK_KHR_swapchain", "VK_KHR_shader_draw_parameters", "VK_EXT_descriptor_indexing", "VK_KHR_dynamic_rendering"};
 
 	// Enable runtime descriptor indexing
 	VkPhysicalDeviceDescriptorIndexingFeaturesEXT indexingFeatures
@@ -134,10 +133,18 @@ void VulkanRenderInterface::CreateDevices()
 		.runtimeDescriptorArray = VK_TRUE
 	};
 
+	// Enable dynamic rendering
+	VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamic_rendering_feature
+	{
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
+		.pNext = &indexingFeatures,
+		.dynamicRendering = VK_TRUE,
+	};
+
 	VkDeviceCreateInfo deviceInfo = 
 	{
 		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-		.pNext = &indexingFeatures,
+		.pNext = &dynamic_rendering_feature,
 		.flags = NULL,
 		.queueCreateInfoCount = 1,
 		.pQueueCreateInfos = &queueInfo,
@@ -149,6 +156,12 @@ void VulkanRenderInterface::CreateDevices()
 	};
 	
 	VK_CHECK(vkCreateDevice(context.physicalDevice, &deviceInfo, nullptr, &context.device));
+	
+	/* Initialize function pointers */
+	fpCmdBeginDebugUtilsLabelEXT = (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetInstanceProcAddr(context.instance, "vkCmdBeginDebugUtilsLabelEXT");
+	fpCmdEndDebugUtilsLabelEXT = (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetInstanceProcAddr(context.instance, "vkCmdEndDebugUtilsLabelEXT");
+	fpCmdInsertDebugUtilsLabelEXT = (PFN_vkCmdInsertDebugUtilsLabelEXT)vkGetInstanceProcAddr(context.instance, "vkCmdInsertDebugUtilsLabelEXT");
+	fpSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(context.instance, "vkSetDebugUtilsObjectNameEXT");
 
 	LOG_INFO("vkCreateDevice() : success.");
 }
@@ -167,26 +180,24 @@ void VulkanRenderInterface::CreateCommandStructures()
 		.queueFamilyIndex = context.gfxQueueFamily
 	};
 
-	// Create main command pool/buffer
-	vkCreateCommandPool(context.device, &poolCreateInfo, nullptr, &context.mainCmdPool);
-	VkCommandBufferAllocateInfo cmdBufferAllocInfo =
+
+	VkCommandBufferAllocateInfo alloc_info =
 	{
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
 		.pNext = NULL,
-		.commandPool = context.mainCmdPool,
+		.commandPool = context.temp_cmd_pool,
 		.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
 		.commandBufferCount = 1
 	};
-	vkAllocateCommandBuffers(context.device, &cmdBufferAllocInfo, &context.mainCmdBuffer);
 
 	// Create a command pool and command buffer for each frame
 	for (uint32_t i = 0; i < NUM_FRAMES; i++)
 	{
-		vkCreateCommandPool(context.device, &poolCreateInfo, nullptr, &context.frames[i].cmdPool);
+		vkCreateCommandPool(context.device, &poolCreateInfo, nullptr, &context.frames[i].cmd_pool);
 
-		cmdBufferAllocInfo.commandPool = context.frames[i].cmdPool;
+		alloc_info.commandPool = context.frames[i].cmd_pool;
 
-		vkAllocateCommandBuffers(context.device, &cmdBufferAllocInfo, &context.frames[i].cmdBuffer);
+		vkAllocateCommandBuffers(context.device, &alloc_info, &context.frames[i].cmd_buffer);
 	}
 }
 
@@ -241,9 +252,26 @@ VulkanFrame& VulkanRenderInterface::GetCurrentFrame()
 	return context.frames[context.frameCount % NUM_FRAMES];
 }
 
-void BeginCommandBuffer(VkCommandBuffer cmdBuffer)
+[[nodiscard]] VkCommandBuffer begin_temp_cmd_buffer()
 {
-	VkCommandBufferBeginInfo beginInfo =
+	VkCommandPoolCreateInfo temp_cmd_pool_info
+	{
+		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO
+	};
+
+	vkCreateCommandPool(context.device, &temp_cmd_pool_info, nullptr, &context.temp_cmd_pool);
+
+	VkCommandBufferAllocateInfo alloc_info
+	{
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+		.commandPool = context.temp_cmd_pool,
+		.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+		.commandBufferCount = 1,
+	};
+
+	VK_CHECK(vkAllocateCommandBuffers(context.device, &alloc_info, &context.temp_cmd_buffer));
+
+	VkCommandBufferBeginInfo beginInfo
 	{
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		.pNext = nullptr,
@@ -251,58 +279,42 @@ void BeginCommandBuffer(VkCommandBuffer cmdBuffer)
 		.pInheritanceInfo = nullptr
 	};
 
-	VK_CHECK(vkBeginCommandBuffer(cmdBuffer, &beginInfo));
+	VK_CHECK(vkBeginCommandBuffer(context.temp_cmd_buffer, &beginInfo));
+
+	return context.temp_cmd_buffer;
+}
+
+void end_temp_cmd_buffer()
+{
+	VK_CHECK(vkEndCommandBuffer(context.temp_cmd_buffer));
+
+	/* Submit commands and signal fence when done */
+	VkSubmitInfo submit_info = {};
+	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submit_info.commandBufferCount = 1;
+	submit_info.pCommandBuffers = &context.temp_cmd_buffer;
+
+	VkFenceCreateInfo submit_fence_info
+	{
+		.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+		.flags = 0
+	};
+	VkFence submit_fence;
+
+	VK_CHECK(vkCreateFence(context.device, &submit_fence_info, nullptr, &submit_fence));
+	VK_CHECK(vkQueueSubmit(context.queue, 1, &submit_info, submit_fence));
+
+	/* Destroy temporary command buffers */
+	vkWaitForFences(context.device, 1, &submit_fence, VK_TRUE, OneSecondInNanoSeconds);
+	if (context.temp_cmd_pool)
+	{
+		vkDestroyCommandPool(context.device, context.temp_cmd_pool, nullptr);
+	}
 }
 
 void EndCommandBuffer(VkCommandBuffer cmdBuffer)
 {
 	VK_CHECK(vkEndCommandBuffer(cmdBuffer));
-}
-
-void StartInstantUseCmdBuffer()
-{
-	VkCommandBuffer& commandBuffer = context.mainCmdBuffer;
-
-	const VkCommandBufferAllocateInfo allocInfo = {
-		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-		.pNext = nullptr,
-		.commandPool = context.mainCmdPool,
-		.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-		.commandBufferCount = 1
-	};
-
-	vkAllocateCommandBuffers(context.device, &allocInfo, &commandBuffer);
-
-	const VkCommandBufferBeginInfo beginInfo = {
-		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		.pNext = nullptr,
-		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-		.pInheritanceInfo = nullptr
-	};
-
-	vkBeginCommandBuffer(commandBuffer, &beginInfo);
-}
-
-void EndInstantUseCmdBuffer()
-{
-	vkEndCommandBuffer(context.mainCmdBuffer);
-
-	const VkSubmitInfo submitInfo = {
-		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-		.pNext = nullptr,
-		.waitSemaphoreCount = 0,
-		.pWaitSemaphores = nullptr,
-		.pWaitDstStageMask = nullptr,
-		.commandBufferCount = 1,
-		.pCommandBuffers = &context.mainCmdBuffer,
-		.signalSemaphoreCount = 0,
-		.pSignalSemaphores = nullptr
-	};
-
-	vkQueueSubmit(context.queue, 1, &submitInfo, VK_NULL_HANDLE);
-	vkQueueWaitIdle(context.queue);
-
-	vkFreeCommandBuffers(context.device, context.mainCmdPool, 1, &context.mainCmdBuffer);
 }
 
 void GetInstanceExtensionNames(std::vector<const char*>& extensions)
@@ -523,8 +535,21 @@ bool CreateDescriptorPool(uint32_t numStorageBuffers, uint32_t numUniformBuffers
 	return true;
 }
 
-bool CreateGraphicsPipeline(const VulkanShader& shader, bool useBlending, bool useDepth, VkPrimitiveTopology topology, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPipeline* out_GraphicsPipeline, float customViewportWidth, float customViewportHeight, 
-	VkCullModeFlags cullMode, VkFrontFace frontFace)
+bool GraphicsPipeline::CreateDynamic(const VulkanShader& shader, std::span<VkFormat> colorAttachmentFormats, VkFormat depthAttachmentFormat, Flags flags, VkPipelineLayout pipelineLayout,
+	VkPipeline* out_GraphicsPipeline, VkCullModeFlags cullMode, VkFrontFace frontFace, glm::vec2 customViewport)
+{
+	VkPipelineRenderingCreateInfoKHR pipeline_create{ VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR };
+	pipeline_create.pNext = VK_NULL_HANDLE;
+	pipeline_create.colorAttachmentCount = colorAttachmentFormats.size();
+	pipeline_create.pColorAttachmentFormats = colorAttachmentFormats.data();
+	pipeline_create.depthAttachmentFormat = depthAttachmentFormat;
+	pipeline_create.stencilAttachmentFormat = depthAttachmentFormat;
+	
+	return Create(shader, colorAttachmentFormats.size(), flags, nullptr, pipelineLayout, out_GraphicsPipeline, cullMode, frontFace, &pipeline_create, customViewport);
+}
+
+bool GraphicsPipeline::Create(const VulkanShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPipeline* out_GraphicsPipeline,
+	VkCullModeFlags cullMode, VkFrontFace frontFace, VkPipelineRenderingCreateInfoKHR* dynamic_pipeline_create, glm::vec2 customViewport)
 {
 	// Pipeline stages
 	// Vertex Input -> Input Assembly -> Viewport -> Rasterization -> Depth-Stencil -> Color Blending
@@ -547,13 +572,13 @@ bool CreateGraphicsPipeline(const VulkanShader& shader, bool useBlending, bool u
 	inputAssemblyState =
 	{
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-		.topology = topology,
+		.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
 		.primitiveRestartEnable = VK_FALSE
 	};
 
 	VkViewport viewport = { .x = 0, .y = 0, .width = 0, .height = 0, .minDepth=0.0f, .maxDepth=1.0f };
-	viewport.width  = customViewportWidth  > 0 ? customViewportWidth : context.swapchain->info.extent.width;
-	viewport.height = customViewportHeight > 0 ? customViewportHeight : context.swapchain->info.extent.height;
+	viewport.width  = customViewport.x > 0 ? customViewport.x : context.swapchain->info.extent.width;
+	viewport.height = customViewport.y > 0 ? customViewport.y : context.swapchain->info.extent.height;
 
 	VkRect2D scissor = { .offset = {0,0}, .extent = {.width = (uint32_t)viewport.width, .height = (uint32_t)viewport.height } };
 
@@ -593,24 +618,31 @@ bool CreateGraphicsPipeline(const VulkanShader& shader, bool useBlending, bool u
 		.maxDepthBounds = 1.0f
 	};
 
-	VkPipelineColorBlendAttachmentState colorBlendAttachment = {
-		.blendEnable = VK_TRUE,
-		.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
-		.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-		.colorBlendOp = VK_BLEND_OP_ADD,
-		.srcAlphaBlendFactor = useBlending ? VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA : VK_BLEND_FACTOR_ONE,
-		.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-		.alphaBlendOp = VK_BLEND_OP_ADD,
-		.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
-	};
+
+	std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments = {};
+	for (int i = 0; i < numColorAttachments; i++)
+	{
+		colorBlendAttachments.push_back(
+			{
+				.blendEnable = VK_TRUE,
+				.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+				.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+				.colorBlendOp = VK_BLEND_OP_ADD,
+				.srcAlphaBlendFactor = !!(flags & ENABLE_ALPHA_BLENDING) ? VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA : VK_BLEND_FACTOR_ONE,
+				.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+				.alphaBlendOp = VK_BLEND_OP_ADD,
+				.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
+			}
+		);
+	}
 
 	colorBlendState =
 	{
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
 		.logicOpEnable = VK_FALSE,
 		.logicOp = VK_LOGIC_OP_COPY,
-		.attachmentCount = 1,
-		.pAttachments = &colorBlendAttachment,
+		.attachmentCount = (uint32_t)colorBlendAttachments.size(),
+		.pAttachments = colorBlendAttachments.data(),
 		.blendConstants = { 0.0f, 0.0f, 0.0f, 0.0f }
 	};
 
@@ -627,7 +659,7 @@ bool CreateGraphicsPipeline(const VulkanShader& shader, bool useBlending, bool u
 	VkGraphicsPipelineCreateInfo gfxPipeline =
 	{
 		.sType=VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-		.pNext=nullptr,
+		.pNext= dynamic_pipeline_create,
 		.flags=0,
 		.stageCount=(uint32_t)shader.pipelineStages.size(),
 		.pStages=shader.pipelineStages.data(),
@@ -637,7 +669,7 @@ bool CreateGraphicsPipeline(const VulkanShader& shader, bool useBlending, bool u
 		.pViewportState=&viewportState,
 		.pRasterizationState=&rasterizerState,
 		.pMultisampleState=&multisampleState,
-		.pDepthStencilState=useDepth ? &depthStencilState : VK_NULL_HANDLE,
+		.pDepthStencilState= !!(flags & ENABLE_DEPTH_STATE) ? &depthStencilState : VK_NULL_HANDLE,
 		.pColorBlendState=&colorBlendState,
 		.pDynamicState=&dynamicState,
 		.layout=pipelineLayout,

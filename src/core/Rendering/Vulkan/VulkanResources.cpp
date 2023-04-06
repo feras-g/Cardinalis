@@ -55,10 +55,10 @@ void UploadBufferData(Buffer& buffer, const void* data, const size_t size, VkDev
 
 void CopyBuffer(const Buffer& src, const Buffer& dst, VkDeviceSize size)
 {
-	StartInstantUseCmdBuffer();
+	VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
 	VkBufferCopy bufferRegion = { .srcOffset = 0, .dstOffset = 0, .size = size };
-	vkCmdCopyBuffer(context.mainCmdBuffer, src.buffer, dst.buffer, 1, &bufferRegion);
-	EndInstantUseCmdBuffer();
+	vkCmdCopyBuffer(cmd_buffer, src.buffer, dst.buffer, 1, &bufferRegion);
+	end_temp_cmd_buffer();
 }
 
 void DestroyBuffer(const Buffer& buffer)

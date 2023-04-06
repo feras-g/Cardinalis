@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <vector>
+#include <span>
 
 #ifdef _WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
@@ -37,8 +38,9 @@ struct VulkanContext
 	VkDevice   device			= VK_NULL_HANDLE;
 	VkPhysicalDevice physicalDevice	= VK_NULL_HANDLE;
 	VkQueue	   queue			= VK_NULL_HANDLE;
-	VkCommandPool mainCmdPool	= VK_NULL_HANDLE;
-	VkCommandBuffer mainCmdBuffer = VK_NULL_HANDLE;
+	VkCommandPool frames_cmd_pool = VK_NULL_HANDLE;
+	VkCommandBuffer temp_cmd_buffer	= VK_NULL_HANDLE;
+	VkCommandPool temp_cmd_pool	= VK_NULL_HANDLE;
 	std::unique_ptr<VulkanSwapchain> swapchain;
 
 	uint32_t frameCount= 0;
@@ -46,11 +48,7 @@ struct VulkanContext
 	VulkanFrame frames[NUM_FRAMES];
 	uint32_t gfxQueueFamily		= 0;
 };
-
 extern VulkanContext context;
-
-void BeginCommandBuffer(VkCommandBuffer cmdBuffer);
-void EndCommandBuffer(VkCommandBuffer cmdBuffer);
 
 class VulkanRenderInterface
 {
@@ -74,8 +72,6 @@ public:
 
 	inline size_t GetCurrentImageIdx() { return context.frameCount % NUM_FRAMES;  }
 private:
-
-private:
 	std::vector<VkPhysicalDevice> vkPhysicalDevices;
 
 	std::vector<const char*> deviceExtensions;
@@ -84,13 +80,18 @@ private:
 
 	VkSurfaceKHR m_Surface;
 	void CreateFramebuffers(VkRenderPass renderPass, VulkanSwapchain& swapchain);
-	
+
 	const char* m_Name;
 	int minVer, majVer, patchVer;
 };
 
-// Render pass description
+/* Function pointers*/
+inline PFN_vkCmdBeginDebugUtilsLabelEXT		fpCmdBeginDebugUtilsLabelEXT;
+inline PFN_vkCmdEndDebugUtilsLabelEXT		fpCmdEndDebugUtilsLabelEXT;
+inline PFN_vkCmdInsertDebugUtilsLabelEXT	fpCmdInsertDebugUtilsLabelEXT;
+inline PFN_vkSetDebugUtilsObjectNameEXT		fpSetDebugUtilsObjectNameEXT;
 
+// Render pass description
 enum RenderPassFlags
 {
 	NONE								= 0,
@@ -111,13 +112,33 @@ struct RenderPassInitInfo
 	// Is it the final pass ? 
 	RenderPassFlags flags = NONE; 
 };
+
+VkCommandBuffer begin_temp_cmd_buffer();
+void end_temp_cmd_buffer();
+
+void EndCommandBuffer(VkCommandBuffer cmdBuffer);
 // Create a simple render pass with color and/or depth and a single subpass
 bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, VkRenderPass* out_renderPass);
 bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const VulkanSwapchain* swapchain, VkFramebuffer* out_Framebuffers, bool useDepth);
 bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colorAttachments, const Texture2D* depthAttachments, VkFramebuffer* out_Framebuffers, bool useDepth);
 
 bool CreateDescriptorPool(uint32_t numStorageBuffers, uint32_t numUniformBuffers, uint32_t numCombinedSamplers, VkDescriptorPool* out_DescriptorPool);
-bool CreateGraphicsPipeline(const VulkanShader& shader, bool useBlending, bool useDepth, VkPrimitiveTopology topology, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPipeline* out_GraphicsPipeline, float customViewportWidth, float customViewportHeight, VkCullModeFlags cullMode, VkFrontFace frontFace);
+
+
+struct GraphicsPipeline
+{
+	enum Flags
+	{
+		NONE = 0,
+		ENABLE_ALPHA_BLENDING = 1 << 1,
+		ENABLE_DEPTH_STATE = 1 << 2
+	};
+
+	static bool CreateDynamic(const VulkanShader& shader, std::span<VkFormat> colorAttachmentFormats, VkFormat depthAttachmentFormat, Flags flags, VkPipelineLayout pipelineLayout,
+		VkPipeline* out_GraphicsPipeline, VkCullModeFlags cullMode, VkFrontFace frontFace, glm::vec2 customViewport = {});
+	static bool Create(const VulkanShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPipeline* out_GraphicsPipeline,
+		VkCullModeFlags cullMode, VkFrontFace frontFace, VkPipelineRenderingCreateInfoKHR* dynamic_pipeline_create = nullptr, glm::vec2 customViewport = {});
+};
 
 // Create a storage buffer containing non-interleaved vertex and index data
 // Return the created buffer's size 
@@ -137,6 +158,7 @@ bool CreatePipelineLayout(VkDevice device, VkDescriptorSetLayout descSetLayout, 
 
 void StartInstantUseCmdBuffer();
 void EndInstantUseCmdBuffer();
+
 
 
 #endif // !VULKAN_RENDER_INTERFACE_H

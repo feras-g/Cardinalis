@@ -8,7 +8,6 @@
 #include "Rendering/Vulkan/Renderers/VulkanPresentRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanImGuiRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanModelRenderer.h"
-#include "Rendering/Vulkan/Renderers/VulkanClearColorRenderer.h"
 #include "Rendering/Vulkan/VulkanUI.h"
 #include "Rendering/Camera.h"
 #include "Rendering/FrameCounter.h"
@@ -23,7 +22,7 @@ public:
 	~SampleApp();
 	void Initialize()	override;
 	void Update(float dt)		override;
-	void Render(size_t currentImageIdx)		override;
+	void Render(size_t currentImageIdx, VulkanFrame& currentFrame)		override;
 	void UpdateRenderersData(float dt, size_t currentImageIdx) override;
 	void Terminate()	override;
 
@@ -43,7 +42,6 @@ protected:
 	std::unique_ptr<VulkanImGuiRenderer>		m_ImGuiRenderer;
 	std::unique_ptr<VulkanModelRenderer>		m_ModelRenderer;
 	std::unique_ptr<VulkanPresentRenderer>		m_PresentRenderer;
-	std::unique_ptr<VulkanClearColorRenderer>	m_ClearColorRenderer;
 };
 
 void SampleApp::Initialize()
@@ -52,7 +50,6 @@ void SampleApp::Initialize()
 	m_ModelRenderer.reset(new VulkanModelRenderer ("../../../data/models/suzanne.obj", "../../../data/textures/default.png"));
 	m_ImGuiRenderer.reset(new VulkanImGuiRenderer(context));
 	m_ImGuiRenderer->Initialize(m_ModelRenderer->m_ColorAttachments);
-	m_ClearColorRenderer.reset(new VulkanClearColorRenderer(context));
 
 	CameraController fpsController = CameraController({ 0, 0, -5 }, { 0,0,1 }, { 0, 1, 0 });
 
@@ -70,50 +67,55 @@ void SampleApp::Update(float dt)
 	if (EngineGetAsyncKeyState(Key::D))     m_Camera.controller.m_movement =  m_Camera.controller.m_movement | Movement::RIGHT;
 	if (EngineGetAsyncKeyState(Key::SPACE)) m_Camera.controller.m_movement =  m_Camera.controller.m_movement | Movement::UP;
 
-	//if (m_CameraController.m_movement != Movement::NONE)
+	if (m_UI.fSceneViewAspectRatio != m_Camera.aspect_ratio)
 	{
-		if (m_UI.fSceneViewAspectRatio != m_Camera.aspect_ratio)
-		{
-			m_Camera.UpdateAspectRatio(m_UI.fSceneViewAspectRatio);
-		}
-		m_Camera.controller.deltaTime = dt;
-		m_Camera.controller.UpdateTranslation(dt);
+		m_Camera.UpdateAspectRatio(m_UI.fSceneViewAspectRatio);
 	}
+	m_Camera.controller.deltaTime = dt;
+	m_Camera.controller.UpdateTranslation(dt);
 
 	UpdateRenderersData(dt, context.currentBackBuffer);
 }
 
-void SampleApp::Render(size_t currentImageIdx)
+void SampleApp::Render(size_t currentFrameIdx, VulkanFrame& currentFrame)
 {
-	VulkanFrame& currentFrame = context.frames[context.frameCount % NUM_FRAMES];
 	VulkanSwapchain& swapchain = *m_RHI->GetSwapchain();
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// PRE-RENDER
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	/*VK_CHECK*/(vkWaitForFences(context.device, 1, &currentFrame.renderFence, true, OneSecondInNanoSeconds));
-	/*VK_CHECK*/(vkResetFences(context.device, 1, &currentFrame.renderFence));
+	VK_CHECK(vkWaitForFences(context.device, 1, &currentFrame.renderFence, true, OneSecondInNanoSeconds));
+	VK_CHECK(vkResetFences(context.device, 1, &currentFrame.renderFence));
 
 	VkResult result = swapchain.AcquireNextImage(currentFrame.imageAcquiredSemaphore, &context.currentBackBuffer);
 
 	// Populate command buffers
 	{	
 		VkCommandBufferBeginInfo cmdBufferBeginInfo = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-		VK_CHECK(vkResetCommandPool(context.device, currentFrame.cmdPool, 0));
-		VK_CHECK(vkBeginCommandBuffer(currentFrame.cmdBuffer, &cmdBufferBeginInfo));
+		VK_CHECK(vkResetCommandPool(context.device, currentFrame.cmd_pool, 0));
+		VK_CHECK(vkBeginCommandBuffer(currentFrame.cmd_buffer, &cmdBufferBeginInfo));
 
-		m_ClearColorRenderer->PopulateCommandBuffer(context.currentBackBuffer, currentFrame.cmdBuffer);
-		m_ModelRenderer->PopulateCommandBuffer(context.currentBackBuffer, currentFrame.cmdBuffer);
-		m_ImGuiRenderer->PopulateCommandBuffer(context.currentBackBuffer, currentFrame.cmdBuffer);
-		m_PresentRenderer->PopulateCommandBuffer(context.currentBackBuffer, currentFrame.cmdBuffer);
+		{
+			/* Transition to color attachment */
+			swapchain.colorTextures[currentFrameIdx].transition_layout(currentFrame.cmd_buffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+		}
 
-		VK_CHECK(vkEndCommandBuffer(currentFrame.cmdBuffer));
+		//m_ImGuiRenderer->PopulateCommandBuffer(context.currentBackBuffer, currentFrame.cmd_buffer);
+		//m_ModelRenderer->PopulateCommandBuffer(context.currentBackBuffer, currentFrame.cmdBuffer);
+
+		{
+			/* Present */
+			swapchain.colorTextures[currentFrameIdx].transition_layout(currentFrame.cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+		}
+
+		VK_CHECK(vkEndCommandBuffer(currentFrame.cmd_buffer));
 	}
-
+	
 	// Submit commands for the GPU to work on the current backbuffer
 	// Has to wait for the swapchain image to be acquired before beginning, we wait on imageAcquired semaphore.
 	// Signals a renderComplete semaphore to let the next operation know that it finished
+
 
 	VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 	VkSubmitInfo submitInfo =
@@ -123,7 +125,7 @@ void SampleApp::Render(size_t currentImageIdx)
 		.pWaitSemaphores = &currentFrame.imageAcquiredSemaphore,
 		.pWaitDstStageMask = &waitDstStageMask,
 		.commandBufferCount = 1,
-		.pCommandBuffers = &currentFrame.cmdBuffer,
+		.pCommandBuffers = &currentFrame.cmd_buffer,
 		.signalSemaphoreCount = 1,
 		.pSignalSemaphores = &currentFrame.queueSubmittedSemaphore
 	};
@@ -140,7 +142,7 @@ void SampleApp::Render(size_t currentImageIdx)
 		.pSwapchains = &swapchain.swapchain,
 		.pImageIndices = &context.currentBackBuffer
 	};
-
+	
 	vkQueuePresentKHR(context.queue, &presentInfo);
 
 	context.frameCount++;
@@ -175,7 +177,6 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 inline void SampleApp::OnWindowResize()
 {
 	context.swapchain->Reinitialize();
-	m_ClearColorRenderer->CreateFramebufferAndRenderPass();
 	m_PresentRenderer->RecreateFramebuffersRenderPass();
 	m_ImGuiRenderer->RecreateFramebuffersRenderPass();
 }

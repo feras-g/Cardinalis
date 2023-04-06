@@ -42,6 +42,11 @@ VulkanUI& VulkanUI::ShowSceneViewportPanel(unsigned int texColorId, unsigned int
 		{
 			ImGui::Image((ImTextureID)texColorId, sceneViewPanelSize);
 		}
+
+		if (texDepthId != 0)
+		{
+			ImGui::Image((ImTextureID)texDepthId, sceneViewPanelSize);
+		}
 		bIsSceneViewportHovered = ImGui::IsItemHovered();
 	}
 
@@ -149,7 +154,6 @@ VulkanUI& VulkanUI::ShowFrameTimeGraph(float* values, size_t nbValues)
 
 VulkanUI& VulkanUI::ShowCameraSettings(Camera* camera)
 {
-	// TODO: insert return statement here
 	if (ImGui::Begin("Camera", 0, 0))
 	{
 		ImGui::SetNextItemOpen(true);

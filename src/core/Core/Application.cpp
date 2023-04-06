@@ -3,11 +3,11 @@
 #include <iostream>
 #include "Core/EngineLogger.h"
 #include "Rendering/Vulkan/VulkanRenderInterface.h"
+#include "Rendering/Vulkan/VulkanFrame.hpp"
 #include "Rendering/Vulkan/VulkanRendererBase.h"
 #include "Rendering/Vulkan/Renderers/VulkanPresentRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanImGuiRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanModelRenderer.h"
-#include "Rendering/Vulkan/Renderers/VulkanClearColorRenderer.h"
 #include "Rendering/FrameCounter.h"
 
 Application::Application(const char* title, uint32_t width, uint32_t height) : bInitSuccess(false), m_DebugName(title)
@@ -41,12 +41,10 @@ void Application::Run()
 	{
 		float time = (float)m_Window->GetTime();
 		Timestep timestep = time - m_LastFrameTime;
-		std::cout << timestep.GetSeconds() << std::endl;
-		FrameStats::UpdateFrameTimeHistory(timestep.GetMilliseconds());
 		m_LastFrameTime = time;
 		m_Window->HandleEvents();
 		Update(timestep.GetSeconds());
-		Render(context.currentBackBuffer);
+		Render(context.currentBackBuffer, context.frames[context.currentBackBuffer]);
 	}
 
 	Terminate();
