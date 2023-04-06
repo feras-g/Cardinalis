@@ -58,7 +58,7 @@ void CopyBuffer(const Buffer& src, const Buffer& dst, VkDeviceSize size)
 	VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
 	VkBufferCopy bufferRegion = { .srcOffset = 0, .dstOffset = 0, .size = size };
 	vkCmdCopyBuffer(cmd_buffer, src.buffer, dst.buffer, 1, &bufferRegion);
-	end_temp_cmd_buffer();
+	end_temp_cmd_buffer(cmd_buffer);
 }
 
 void DestroyBuffer(const Buffer& buffer)

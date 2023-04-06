@@ -12,7 +12,7 @@ public:
 	VulkanRendererBase(const VulkanContext& vkContext, bool useDepth);
 
 	virtual ~VulkanRendererBase();
-	virtual void PopulateCommandBuffer(size_t currentImageIdx, VkCommandBuffer cmdBuffer) = 0; // Write render commands here
+	virtual void render(size_t currentImageIdx, VkCommandBuffer cmdBuffer) = 0; // Write render commands here
 	bool RecreateFramebuffersRenderPass();
 	bool CreateDescriptorSets(VkDevice device, const std::vector<VkDescriptorSetLayoutBinding>& bindings,
 		VkDescriptorSet* out_DescriptorSets, VkDescriptorSetLayout* out_DescLayouts);

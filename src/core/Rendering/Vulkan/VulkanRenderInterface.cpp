@@ -158,10 +158,12 @@ void VulkanRenderInterface::CreateDevices()
 	VK_CHECK(vkCreateDevice(context.physicalDevice, &deviceInfo, nullptr, &context.device));
 	
 	/* Initialize function pointers */
-	fpCmdBeginDebugUtilsLabelEXT = (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetInstanceProcAddr(context.instance, "vkCmdBeginDebugUtilsLabelEXT");
-	fpCmdEndDebugUtilsLabelEXT = (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetInstanceProcAddr(context.instance, "vkCmdEndDebugUtilsLabelEXT");
-	fpCmdInsertDebugUtilsLabelEXT = (PFN_vkCmdInsertDebugUtilsLabelEXT)vkGetInstanceProcAddr(context.instance, "vkCmdInsertDebugUtilsLabelEXT");
-	fpSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(context.instance, "vkSetDebugUtilsObjectNameEXT");
+	assert(fpCmdBeginDebugUtilsLabelEXT = (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetInstanceProcAddr(context.instance, "vkCmdBeginDebugUtilsLabelEXT"));
+	assert(fpCmdEndDebugUtilsLabelEXT = (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetInstanceProcAddr(context.instance, "vkCmdEndDebugUtilsLabelEXT"));
+	assert(fpCmdInsertDebugUtilsLabelEXT = (PFN_vkCmdInsertDebugUtilsLabelEXT)vkGetInstanceProcAddr(context.instance, "vkCmdInsertDebugUtilsLabelEXT"));
+	assert(fpSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(context.instance, "vkSetDebugUtilsObjectNameEXT"));
+	assert(fpCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)vkGetInstanceProcAddr(context.instance, "vkCmdBeginRenderingKHR"));
+	assert(fpCmdEndRenderingKHR = (PFN_vkCmdEndRenderingKHR)(vkGetInstanceProcAddr(context.instance, "vkCmdEndRenderingKHR")));
 
 	LOG_INFO("vkCreateDevice() : success.");
 }
@@ -254,12 +256,17 @@ VulkanFrame& VulkanRenderInterface::GetCurrentFrame()
 
 [[nodiscard]] VkCommandBuffer begin_temp_cmd_buffer()
 {
-	VkCommandPoolCreateInfo temp_cmd_pool_info
-	{
-		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO
-	};
+	VkCommandBuffer temp_cmd_buffer = VK_NULL_HANDLE;
 
-	vkCreateCommandPool(context.device, &temp_cmd_pool_info, nullptr, &context.temp_cmd_pool);
+	if (context.temp_cmd_pool == VK_NULL_HANDLE)
+	{
+		VkCommandPoolCreateInfo temp_cmd_pool_info
+		{
+			.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO
+		};
+
+		vkCreateCommandPool(context.device, &temp_cmd_pool_info, nullptr, &context.temp_cmd_pool);
+	}
 
 	VkCommandBufferAllocateInfo alloc_info
 	{
@@ -269,7 +276,7 @@ VulkanFrame& VulkanRenderInterface::GetCurrentFrame()
 		.commandBufferCount = 1,
 	};
 
-	VK_CHECK(vkAllocateCommandBuffers(context.device, &alloc_info, &context.temp_cmd_buffer));
+	VK_CHECK(vkAllocateCommandBuffers(context.device, &alloc_info, &temp_cmd_buffer));
 
 	VkCommandBufferBeginInfo beginInfo
 	{
@@ -279,20 +286,20 @@ VulkanFrame& VulkanRenderInterface::GetCurrentFrame()
 		.pInheritanceInfo = nullptr
 	};
 
-	VK_CHECK(vkBeginCommandBuffer(context.temp_cmd_buffer, &beginInfo));
+	VK_CHECK(vkBeginCommandBuffer(temp_cmd_buffer, &beginInfo));
 
-	return context.temp_cmd_buffer;
+	return temp_cmd_buffer;
 }
 
-void end_temp_cmd_buffer()
+void end_temp_cmd_buffer(VkCommandBuffer cmd_buffer)
 {
-	VK_CHECK(vkEndCommandBuffer(context.temp_cmd_buffer));
+	VK_CHECK(vkEndCommandBuffer(cmd_buffer));
 
 	/* Submit commands and signal fence when done */
 	VkSubmitInfo submit_info = {};
 	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submit_info.commandBufferCount = 1;
-	submit_info.pCommandBuffers = &context.temp_cmd_buffer;
+	submit_info.pCommandBuffers = &cmd_buffer;
 
 	VkFenceCreateInfo submit_fence_info
 	{
@@ -306,10 +313,8 @@ void end_temp_cmd_buffer()
 
 	/* Destroy temporary command buffers */
 	vkWaitForFences(context.device, 1, &submit_fence, VK_TRUE, OneSecondInNanoSeconds);
-	if (context.temp_cmd_pool)
-	{
-		vkDestroyCommandPool(context.device, context.temp_cmd_pool, nullptr);
-	}
+
+	vkFreeCommandBuffers(context.device, context.temp_cmd_pool, 1, &cmd_buffer);
 }
 
 void EndCommandBuffer(VkCommandBuffer cmdBuffer)

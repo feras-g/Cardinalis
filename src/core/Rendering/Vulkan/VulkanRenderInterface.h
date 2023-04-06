@@ -39,7 +39,6 @@ struct VulkanContext
 	VkPhysicalDevice physicalDevice	= VK_NULL_HANDLE;
 	VkQueue	   queue			= VK_NULL_HANDLE;
 	VkCommandPool frames_cmd_pool = VK_NULL_HANDLE;
-	VkCommandBuffer temp_cmd_buffer	= VK_NULL_HANDLE;
 	VkCommandPool temp_cmd_pool	= VK_NULL_HANDLE;
 	std::unique_ptr<VulkanSwapchain> swapchain;
 
@@ -90,6 +89,8 @@ inline PFN_vkCmdBeginDebugUtilsLabelEXT		fpCmdBeginDebugUtilsLabelEXT;
 inline PFN_vkCmdEndDebugUtilsLabelEXT		fpCmdEndDebugUtilsLabelEXT;
 inline PFN_vkCmdInsertDebugUtilsLabelEXT	fpCmdInsertDebugUtilsLabelEXT;
 inline PFN_vkSetDebugUtilsObjectNameEXT		fpSetDebugUtilsObjectNameEXT;
+inline PFN_vkCmdBeginRenderingKHR			fpCmdBeginRenderingKHR;
+inline PFN_vkCmdEndRenderingKHR				fpCmdEndRenderingKHR;
 
 // Render pass description
 enum RenderPassFlags
@@ -114,7 +115,7 @@ struct RenderPassInitInfo
 };
 
 VkCommandBuffer begin_temp_cmd_buffer();
-void end_temp_cmd_buffer();
+void end_temp_cmd_buffer(VkCommandBuffer cmd_buffer);
 
 void EndCommandBuffer(VkCommandBuffer cmdBuffer);
 // Create a simple render pass with color and/or depth and a single subpass

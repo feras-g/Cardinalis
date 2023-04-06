@@ -138,7 +138,7 @@ void Texture::UpdateData(VkDevice device, void const* const data)
     transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     CopyFromBuffer(cmd_buffer, stagingBuffer.buffer);
     transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    end_temp_cmd_buffer();
+    end_temp_cmd_buffer(cmd_buffer);
 
     DestroyBuffer(stagingBuffer);
 }

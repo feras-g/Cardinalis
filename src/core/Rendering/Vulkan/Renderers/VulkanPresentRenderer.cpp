@@ -8,7 +8,7 @@ VulkanPresentRenderer::VulkanPresentRenderer(const VulkanContext& vkContext, boo
 	CreateFramebuffers();
 }
 
-void VulkanPresentRenderer::PopulateCommandBuffer(size_t currentImageIdx, VkCommandBuffer cmdBuffer) 
+void VulkanPresentRenderer::render(size_t currentImageIdx, VkCommandBuffer cmdBuffer) 
 {
 	VULKAN_RENDER_DEBUG_MARKER(cmdBuffer, "Present");
 

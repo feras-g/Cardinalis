@@ -5,6 +5,7 @@
 #include "glm/mat4x4.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
+#include "vulkan/vulkan.hpp"
 
 const size_t FONT_TEXTURE_INDEX = 0;
 
@@ -66,31 +67,49 @@ void VulkanImGuiRenderer::Initialize(const std::vector<Texture2D>& textures)
 		LOG_ERROR("Failed to create pipeline for ImGui renderer.");
 		assert(false);
 	}
+
+	/* Dynamic renderpass setup */
+	for (int i = 0; i < NUM_FRAMES; i++)
+	{
+		m_dyn_renderpass[i].add_color_attachment(context.swapchain->colorTextures[i].view);
+		m_dyn_renderpass[i].add_depth_attachment(context.swapchain->depthTextures[i].view);
+	}
+
 }
 
-void VulkanImGuiRenderer::PopulateCommandBuffer(size_t currentImageIdx, VkCommandBuffer cmdBuffer) 
+void VulkanImGuiRenderer::render(size_t currentImageIdx, VkCommandBuffer cmdBuffer) 
 {
 	VULKAN_RENDER_DEBUG_MARKER(cmdBuffer, "ImGui");
 
-	ImDrawData* draw_data = ImGui::GetDrawData();
-	UpdateBuffers(currentImageIdx, draw_data);
-
-	uint32_t width = context.swapchain->info.extent.width;
-	uint32_t height = context.swapchain->info.extent.height;
+	update_buffers(currentImageIdx, ImGui::GetDrawData());
 
 	VkClearValue clearValue = { { 1.0f, 0.0f, 0.0f, 1.0f } };
 	
+	const uint32_t width = context.swapchain->info.extent.width;
+	const uint32_t height = context.swapchain->info.extent.height;
 	VkRect2D renderArea{ .offset {0, 0}, .extent { width, height } };
-	
-	BeginRenderpass(cmdBuffer, m_RenderPass, m_Framebuffers[currentImageIdx], renderArea, &clearValue, 1);
+
 	// Set viewport/scissor dynamically
 	SetViewportScissor(cmdBuffer, width, height);
 
+	m_dyn_renderpass[currentImageIdx].begin(cmdBuffer, renderArea);
+
 	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline);
 	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_PipelineLayout, 0, 1, &m_DescriptorSets[currentImageIdx], 0, nullptr);
-	
+
+	draw_scene(cmdBuffer);
+
+	m_dyn_renderpass[currentImageIdx].end(cmdBuffer);
+}
+
+void VulkanImGuiRenderer::draw_scene(VkCommandBuffer cmd_buffer)
+{
 	ImVec2 clipOff = m_pDrawData->DisplayPos;         // (0,0) unless using multi-viewports
 	ImVec2 clipScale = m_pDrawData->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
+
+	const uint32_t width = context.swapchain->info.extent.width;
+	const uint32_t height = context.swapchain->info.extent.height;
+
 
 	int vtxOffset = 0;
 	int idxOffset = 0;
@@ -102,7 +121,7 @@ void VulkanImGuiRenderer::PopulateCommandBuffer(size_t currentImageIdx, VkComman
 		for (int cmd = 0; cmd < cmdList->CmdBuffer.Size; cmd++)
 		{
 			const ImDrawCmd* pcmd = &cmdList->CmdBuffer[cmd];
-			
+
 			if (pcmd->UserCallback)
 				return;
 
@@ -123,26 +142,24 @@ void VulkanImGuiRenderer::PopulateCommandBuffer(size_t currentImageIdx, VkComman
 					.offset = {.x = (int32_t)(clipRect.x), .y = (int32_t)(clipRect.y) },
 					.extent = {.width = (uint32_t)(clipRect.z - clipRect.x), .height = (uint32_t)(clipRect.w - clipRect.y) }
 				};
-				vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
+				vkCmdSetScissor(cmd_buffer, 0, 1, &scissor);
 
 				// Texture ID push constant
 				if (m_Textures.size() > 0)
 				{
 					uint32_t texture = (uint32_t)(intptr_t)pcmd->TextureId;
-					vkCmdPushConstants(cmdBuffer, m_PipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(uint32_t), &pcmd->TextureId);
+					vkCmdPushConstants(cmd_buffer, m_PipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(uint32_t), &pcmd->TextureId);
 				}
 
-				vkCmdDraw(cmdBuffer, pcmd->ElemCount, 1, pcmd->IdxOffset + idxOffset, pcmd->VtxOffset + vtxOffset);
+				vkCmdDraw(cmd_buffer, pcmd->ElemCount, 1, pcmd->IdxOffset + idxOffset, pcmd->VtxOffset + vtxOffset);
 			}
 		}
 		idxOffset += cmdList->IdxBuffer.Size;
 		vtxOffset += cmdList->VtxBuffer.Size;
 	}
-
-	EndRenderPass(cmdBuffer);
 }
 
-void VulkanImGuiRenderer::UpdateBuffers(size_t currentImage, ImDrawData* pDrawData)
+void VulkanImGuiRenderer::update_buffers(size_t currentImage, ImDrawData* pDrawData)
 {
 	m_pDrawData = pDrawData;
 
@@ -184,11 +201,6 @@ void VulkanImGuiRenderer::UpdateBuffers(size_t currentImage, ImDrawData* pDrawDa
 	vkUnmapMemory(context.device, m_StorageBuffers[currentImage].memory);
 }
 
-void VulkanImGuiRenderer::LoadSceneViewTextures(Texture2D* modelRendererColor, Texture2D* modelRendererDepth)
-{
-
-}
-
 bool VulkanImGuiRenderer::RecreateFramebuffersRenderPass()
 {
 	for (int i = 0; i < m_Framebuffers.size(); i++)
@@ -198,7 +210,6 @@ bool VulkanImGuiRenderer::RecreateFramebuffersRenderPass()
 
 	vkDestroyRenderPass(context.device, m_RenderPass, nullptr);
 	CreateRenderPass();
-	CreateFramebuffers();
 
 	return true;
 }	
@@ -241,22 +252,8 @@ bool VulkanImGuiRenderer::CreateFontTexture(ImGuiIO* io, const char* fontPath, T
 	return true;
 }
 
-bool VulkanImGuiRenderer::CreateRenderPass()
-{
-	m_RenderPassInitInfo = RenderPassInitInfo{ false, false, context.swapchain->info.colorFormat, VK_FORMAT_UNDEFINED, NONE };
-
-	return CreateColorDepthRenderPass(m_RenderPassInitInfo, &m_RenderPass);
-}
-
-bool VulkanImGuiRenderer::CreateFramebuffers()
-{
-	return CreateColorDepthFramebuffers(m_RenderPass, context.swapchain.get(), m_Framebuffers.data(), false);
-}
-
 bool VulkanImGuiRenderer::CreatePipeline(VkDevice device)
 {
-	if (!CreateRenderPass())   return false;
-	if (!CreateFramebuffers()) return false;
 	if (!CreateUniformBuffers(sizeof(glm::mat4x4))) return false;
 	if (!CreateDescriptorPool(numStorageBuffers, numUniformBuffers, m_Textures.size(), &m_DescriptorPool)) return false;
 	if (!CreateDescriptorSets(device, m_DescriptorSets, &m_DescriptorSetLayout)) return false;
@@ -264,7 +261,9 @@ bool VulkanImGuiRenderer::CreatePipeline(VkDevice device)
 	
 	size_t fragConstRangeSizeInBytes = sizeof(uint32_t); // Size of 1 Push constant holding the texture ID passed from ImGui::Image
 	if (!CreatePipelineLayout(device, m_DescriptorSetLayout, &m_PipelineLayout, 0, fragConstRangeSizeInBytes)) return false;
-	if (!GraphicsPipeline::Create(*m_Shader.get(), 1, GraphicsPipeline::Flags::NONE, m_RenderPass, m_PipelineLayout, &m_GraphicsPipeline, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE)) return false;
+
+	GraphicsPipeline::Flags pp_flags = GraphicsPipeline::Flags::NONE;
+	if (!GraphicsPipeline::Create(*m_Shader.get(), 1, pp_flags, m_RenderPass, m_PipelineLayout, &m_GraphicsPipeline, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE)) return false;
 
 	return true;
 }

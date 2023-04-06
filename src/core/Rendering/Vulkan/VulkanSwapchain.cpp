@@ -133,7 +133,7 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
         //depthTextures[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     }
 
-    end_temp_cmd_buffer();
+    end_temp_cmd_buffer(cmd_buffer);
 }
 
 void VulkanSwapchain::Reinitialize()

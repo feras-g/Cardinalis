@@ -2,6 +2,7 @@
 #define VULKAN_IMGUI_RENDERER_H
 
 #include "Rendering/Vulkan/VulkanRendererBase.h"
+#include "Rendering/Vulkan/RenderPass.h"
 
 #include "../imgui/imgui.h"
 #include "../imgui/backends/imgui_impl_win32.h"
@@ -17,9 +18,9 @@ public:
 	VulkanImGuiRenderer() = default;
 	VulkanImGuiRenderer(const VulkanContext& vkContext);
 	void Initialize(const std::vector<Texture2D>& textures);
-	void PopulateCommandBuffer(size_t currentImageIdx, VkCommandBuffer cmdBuffer) override;
-	void UpdateBuffers(size_t currentImage, ImDrawData* pDrawData);
-	void LoadSceneViewTextures(Texture2D* modelRendererColor, Texture2D* modelRendererDepth);
+	void draw_scene(VkCommandBuffer cmd_buffer);
+	void render(size_t currentImageIdx, VkCommandBuffer cmd_buffer) override;
+	void update_buffers(size_t currentImage, ImDrawData* pDrawData);
 	bool RecreateFramebuffersRenderPass();
 
 	// Texture Ids
@@ -32,6 +33,8 @@ public:
 	~VulkanImGuiRenderer() override final;
 private:
 	ImDrawData* m_pDrawData = nullptr;
+
+	vk::DynamicRenderPass m_dyn_renderpass[NUM_FRAMES];
 
 	VkSampler m_SamplerRepeatLinear;
 	Texture2D m_FontTexture;
@@ -48,9 +51,6 @@ private:
 	bool CreateUniformBuffers(size_t dataSizeInBytes);
 
 	bool UpdateDescriptorSets(VkDevice device) final override;
-
-	virtual bool CreateRenderPass() override;
-	virtual bool CreateFramebuffers() override;
 
 	VkDescriptorPool m_ImGuiDescriptorPool;
 

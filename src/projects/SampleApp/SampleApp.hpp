@@ -47,7 +47,7 @@ protected:
 void SampleApp::Initialize()
 {
 	m_PresentRenderer.reset(new VulkanPresentRenderer(context, false));
-	m_ModelRenderer.reset(new VulkanModelRenderer ("../../../data/models/suzanne.obj", "../../../data/textures/default.png"));
+	m_ModelRenderer.reset(new VulkanModelRenderer ("../../../data/models/suzanne.obj"));
 	m_ImGuiRenderer.reset(new VulkanImGuiRenderer(context));
 	m_ImGuiRenderer->Initialize(m_ModelRenderer->m_ColorAttachments);
 
@@ -101,8 +101,8 @@ void SampleApp::Render(size_t currentFrameIdx, VulkanFrame& currentFrame)
 			swapchain.colorTextures[currentFrameIdx].transition_layout(currentFrame.cmd_buffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 		}
 
-		//m_ImGuiRenderer->PopulateCommandBuffer(context.currentBackBuffer, currentFrame.cmd_buffer);
-		//m_ModelRenderer->PopulateCommandBuffer(context.currentBackBuffer, currentFrame.cmdBuffer);
+		m_ModelRenderer->render(context.currentBackBuffer, currentFrame.cmd_buffer);
+		m_ImGuiRenderer->render(context.currentBackBuffer, currentFrame.cmd_buffer);
 
 		{
 			/* Present */

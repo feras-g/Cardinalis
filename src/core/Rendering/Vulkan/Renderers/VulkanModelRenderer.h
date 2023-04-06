@@ -3,6 +3,7 @@
 
 #include "Rendering/Vulkan/VulkanRendererBase.h"
 #include "Rendering/Vulkan/VulkanModel.h"
+#include "Rendering/Vulkan/RenderPass.h"
 
 class VulkanShader;
 
@@ -10,19 +11,20 @@ class VulkanModelRenderer final : public VulkanRendererBase
 {
 public:
 	VulkanModelRenderer() = default;
-	explicit VulkanModelRenderer(const char* modelFilename, const char* textureFilename);
-	void PopulateCommandBuffer(size_t currentImageIdx, VkCommandBuffer cmdBuffer)  override;
+	explicit VulkanModelRenderer(const char* modelFilename);
+	void render(size_t currentImageIdx, VkCommandBuffer cmdBuffer)  override;
 
 	bool Init();
 	void draw_scene(size_t currentImageIdx, VkCommandBuffer cmdBuffer);
 	bool UpdateBuffers(size_t currentImage, glm::mat4 model, glm::mat4 view, glm::mat4 proj);
 	bool UpdateDescriptorSets(VkDevice device) final override;
-	bool CreateAttachments();
+	void create_attachments();
 
 	// Offscreen images
-
 	std::vector<Texture2D> m_ColorAttachments; // 0: Color, 1: Normal
 	std::vector<Texture2D> m_DepthAttachments;
+
+	vk::DynamicRenderPass m_dyn_renderpass[NUM_FRAMES];
 
 	~VulkanModelRenderer() final;
 private:
