@@ -35,7 +35,6 @@ public:
 		{
 			CurrentFrameTimeAvg = AccumulatedFrameTime / MaxFrames;
 			AccumulatedFrameTime = 0.0f;
-
 		}
 	}
 private:

@@ -25,8 +25,35 @@ void VulkanUI::End()
 	ImGui::Render();
 }
 
-VulkanUI& VulkanUI::ShowSceneViewportPanel(unsigned int texColorId, unsigned int texDepthId)
+VulkanUI& VulkanUI::ShowSceneViewportPanel(unsigned int texColorId, unsigned int texNormalId, unsigned int texDepthId)
 {
+
+	static ImGuiComboFlags flags = 0;
+
+	const char* items[] = { "Color", "Normal", "Depth" };
+	static int item_current_idx = 0; // Here we store our selection data as an index.
+	const char* combo_preview_value = items[item_current_idx];  // Pass in the preview value visible before opening the combo (it could be anything)
+
+	if (ImGui::Begin("Settings", 0, 0))
+	{
+		if (ImGui::BeginCombo("View Mode", combo_preview_value, flags))
+		{
+			for (int n = 0; n < IM_ARRAYSIZE(items); n++)
+			{
+				const bool is_selected = (item_current_idx == n);
+				if (ImGui::Selectable(items[n], is_selected))
+					item_current_idx = n;
+
+				// Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+				if (is_selected)
+					ImGui::SetItemDefaultFocus();
+			}
+			ImGui::EndCombo();
+		}
+	}
+	ImGui::End();
+
+
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0.0f, 0.0f });
 	if (ImGui::Begin("Scene", 0, 0))
 	{
@@ -38,21 +65,21 @@ VulkanUI& VulkanUI::ShowSceneViewportPanel(unsigned int texColorId, unsigned int
 			fSceneViewAspectRatio = currAspect;
 		}
 
-		if (texColorId != 0)
+		if (combo_preview_value == "Color")
 		{
 			ImGui::Image((ImTextureID)texColorId, sceneViewPanelSize);
 		}
-
-		if (texDepthId != 0)
+		else if (combo_preview_value == "Normal")
+		{
+			ImGui::Image((ImTextureID)texNormalId, sceneViewPanelSize);
+		}
+		else if (combo_preview_value == "Depth")
 		{
 			ImGui::Image((ImTextureID)texDepthId, sceneViewPanelSize);
 		}
 		bIsSceneViewportHovered = ImGui::IsItemHovered();
 	}
-
-	
 	ImGui::End();
-
 
 	ImGui::PopStyleVar();
 

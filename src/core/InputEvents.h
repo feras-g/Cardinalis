@@ -14,7 +14,8 @@ enum class Key
 	DOWN = 1 << 5,
 	LEFT = 1 << 6,
 	RIGHT = 1 << 7,
-	SPACE = 1 << 8
+	SPACE = 1 << 8,
+	LSHIFT = 1 << 9
 };
 
 static std::string keyToString(Key key)
@@ -31,6 +32,7 @@ static std::string keyToString(Key key)
 		case Key::DOWN: { out += "ARROW_DOWN"; } break;
 		case Key::LEFT: { out += "ARROW_LEFT"; } break;
 		case Key::RIGHT: { out += "ARROW_RIGHT"; } break;
+		case Key::LSHIFT: { out += "LEFT_SHIFT"; } break;
 		default: out += "Unknown"; 
 	}
 
@@ -51,6 +53,7 @@ static int keyToWindows(Key key)
 		case Key::LEFT: { return 0x25; }
 		case Key::RIGHT: { return 0x27; }
 		case Key::SPACE: { return 0x20; }
+		case Key::LSHIFT: { return 0x10; }
 	}
 
 	return 0;

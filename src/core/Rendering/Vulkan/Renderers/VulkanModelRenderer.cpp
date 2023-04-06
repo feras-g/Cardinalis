@@ -22,7 +22,7 @@ VulkanModelRenderer::VulkanModelRenderer(const char* modelFilename)
 		LOG_ERROR("Failed to create model from {0}", modelFilename);
 	}
 
-	m_Shader.reset(new VulkanShader("Model.vert.spv", "Model.frag.spv"));
+	m_Shader.reset(new VulkanShader("Deferred.vert.spv", "Deferred.frag.spv"));
 
 	/* Render objects creation */
 	create_attachments();
@@ -39,19 +39,19 @@ VulkanModelRenderer::VulkanModelRenderer(const char* modelFilename)
 		if (i == 0)
 		{
 			m_dyn_renderpass[i].add_color_attachment(m_ColorAttachments[0].view);
-			m_dyn_renderpass[i].add_color_attachment(m_ColorAttachments[1].view);
+			m_dyn_renderpass[i].add_color_attachment(m_ColorAttachments[2].view);
 		}
 		else
 		{
-			m_dyn_renderpass[i].add_color_attachment(m_ColorAttachments[2].view);
+			m_dyn_renderpass[i].add_color_attachment(m_ColorAttachments[1].view);
 			m_dyn_renderpass[i].add_color_attachment(m_ColorAttachments[3].view);
 		}
 
-		m_dyn_renderpass[i].add_depth_attachment(m_DepthAttachments[i].view);
+		m_dyn_renderpass[i].add_attachment(m_DepthAttachments[i].view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
 	}
 
 	GraphicsPipeline::Flags ppl_flags = GraphicsPipeline::Flags::ENABLE_DEPTH_STATE;
-	GraphicsPipeline::CreateDynamic(*m_Shader.get(), m_ColorAttachmentFormats, m_DepthAttachmentFormat, ppl_flags, m_PipelineLayout, &m_GraphicsPipeline, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_CLOCKWISE);
+	GraphicsPipeline::CreateDynamic(*m_Shader.get(), m_ColorAttachmentFormats, m_DepthAttachmentFormat, ppl_flags, m_PipelineLayout, &m_GraphicsPipeline, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
 }
 
 void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buffer)
@@ -59,10 +59,9 @@ void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buf
 	VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Deferred Pass");
 
 	/* Transition */
-	for (int i = 0; i < m_ColorAttachments.size(); i++)
-	{
-		m_ColorAttachments[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-	}
+	m_ColorAttachments[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	m_ColorAttachments[currentImageIdx + 2].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	m_DepthAttachments[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 	VkRect2D render_area{ .offset {}, .extent { m_ColorAttachments[0].info.width, m_ColorAttachments[0].info.height } };
 	m_dyn_renderpass[currentImageIdx].begin(cmd_buffer, render_area);
@@ -70,32 +69,20 @@ void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buf
 	m_dyn_renderpass[currentImageIdx].end(cmd_buffer);
 
 	/* Transition */
-	for (int i = 0; i < m_ColorAttachments.size(); i++)
-	{
-		m_ColorAttachments[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-	}
+	m_ColorAttachments[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	m_ColorAttachments[currentImageIdx + 2].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	m_DepthAttachments[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
 void VulkanModelRenderer::draw_scene(size_t currentImageIdx, VkCommandBuffer cmdBuffer)
 {
-	uint32_t width = context.swapchain->info.extent.width;
-	uint32_t height = context.swapchain->info.extent.height;
-	SetViewportScissor(cmdBuffer, width, height);
-
-	// Descriptor sets
+	SetViewportScissor(cmdBuffer, attachmentWidth, attachmentHeight, true);
 
 	// Graphics pipeline
 	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline);
 	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_PipelineLayout, 0, 1, &m_DescriptorSets[currentImageIdx], 0, nullptr);
 	vkCmdDraw(cmdBuffer, m_Model.m_NumVertices, 1, 0, 0);
 	//m_Model.draw_indexed(cmdBuffer);
-}
-
-bool VulkanModelRenderer::Init()
-{
-
-	
-	return true;
 }
 
 bool VulkanModelRenderer::UpdateBuffers(size_t currentImage, glm::mat4 model, glm::mat4 view, glm::mat4 proj)
@@ -152,10 +139,10 @@ void VulkanModelRenderer::create_attachments()
 
 	/* G-Buffer Color */
 	m_ColorAttachments[0].info = { m_ColorAttachmentFormats[0], attachmentWidth, attachmentHeight, 1, 1, VK_IMAGE_LAYOUT_UNDEFINED,  "Frame #0: G-Buffer Color" };
-	m_ColorAttachments[1].info = { m_ColorAttachmentFormats[1], attachmentWidth, attachmentHeight, 1, 1, VK_IMAGE_LAYOUT_UNDEFINED,  "Frame #0: G-Buffer Normal" };
+	m_ColorAttachments[1].info = { m_ColorAttachmentFormats[0], attachmentWidth, attachmentHeight, 1, 1, VK_IMAGE_LAYOUT_UNDEFINED,  "Frame #1: G-Buffer Color" };
 
 	/* G-Buffer Normal */
-	m_ColorAttachments[2].info = { m_ColorAttachmentFormats[0], attachmentWidth, attachmentHeight, 1, 1, VK_IMAGE_LAYOUT_UNDEFINED,  "Frame #1: G-Buffer Color" };
+	m_ColorAttachments[2].info = { m_ColorAttachmentFormats[1], attachmentWidth, attachmentHeight, 1, 1, VK_IMAGE_LAYOUT_UNDEFINED,  "Frame #0: G-Buffer Normal" };
 	m_ColorAttachments[3].info = { m_ColorAttachmentFormats[1], attachmentWidth, attachmentHeight, 1, 1, VK_IMAGE_LAYOUT_UNDEFINED,  "Frame #1: G-Buffer Normal" };
 
 	for (int i = 0; i < m_ColorAttachments.size(); i++)
@@ -168,12 +155,12 @@ void VulkanModelRenderer::create_attachments()
 	/* G-Buffer Depth */
 	m_DepthAttachments[0].info = m_DepthAttachments[1].info = { m_DepthAttachmentFormat, attachmentWidth, attachmentHeight, 1, 1, VK_IMAGE_LAYOUT_UNDEFINED, "" };
 	m_DepthAttachments[0].info.debugName = "Frame #0: G-Buffer Depth";
-	m_DepthAttachments[1].info.debugName = "Frame #0: G-Buffer Normal";
+	m_DepthAttachments[1].info.debugName = "Frame #1: G-Buffer Depth";
 	for (int i = 0; i < m_DepthAttachments.size(); i++)
 	{
 		m_DepthAttachments[i].CreateImage(context.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 		m_DepthAttachments[i].CreateView(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT });
-		m_DepthAttachments[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+		m_DepthAttachments[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
 	
 	end_temp_cmd_buffer(cmd_buffer);

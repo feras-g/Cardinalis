@@ -8,7 +8,7 @@ public:
 	VulkanUI() = default;
 
 	VulkanUI& Start();
-	VulkanUI& ShowSceneViewportPanel(unsigned int texColorId, unsigned int texDepthId);
+	VulkanUI& ShowSceneViewportPanel(unsigned int texColorId, unsigned int texNormalId, unsigned int texDepthId);
 	VulkanUI& ShowMenuBar();
 	VulkanUI& AddHierarchyPanel();
 	VulkanUI& AddInspectorPanel();

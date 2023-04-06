@@ -301,9 +301,12 @@ void GetSrcDstPipelineStage(VkImageLayout oldLayout, VkImageLayout newLayout, Vk
 	case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
 		out_srcStageMask = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
 		break;
-    case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+	case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
         out_srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
         break;
+	case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL:
+		out_srcStageMask = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+		break;
     default:
         LOG_ERROR("Unsupported old_layout.");
         assert(false);
@@ -338,8 +341,9 @@ void GetSrcDstPipelineStage(VkImageLayout oldLayout, VkImageLayout newLayout, Vk
     //    break;
     //case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL:
     //    break;
-    //case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL:
-    //    break;
+    case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL:
+		out_dstStageMask = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+        break;
     //case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL:
     //    break;
     //case VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL:

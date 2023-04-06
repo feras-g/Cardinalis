@@ -25,7 +25,7 @@ private:
 	VkCommandBuffer m_cmd_buffer = VK_NULL_HANDLE;
 };
 
-typedef VulkanRenderDebugMarker VULKAN_RENDER_DEBUG_MARKER;
+#define VULKAN_RENDER_DEBUG_MARKER(...) VulkanRenderDebugMarker a = VulkanRenderDebugMarker(__VA_ARGS__);
 
 /*
 *	Set a debug name for a Vulkan object

@@ -49,7 +49,7 @@ void SampleApp::Initialize()
 	m_PresentRenderer.reset(new VulkanPresentRenderer(context, false));
 	m_ModelRenderer.reset(new VulkanModelRenderer ("../../../data/models/suzanne.obj"));
 	m_ImGuiRenderer.reset(new VulkanImGuiRenderer(context));
-	m_ImGuiRenderer->Initialize(m_ModelRenderer->m_ColorAttachments);
+	m_ImGuiRenderer->Initialize(m_ModelRenderer->m_ColorAttachments, m_ModelRenderer->m_DepthAttachments);
 
 	CameraController fpsController = CameraController({ 0, 0, -5 }, { 0,0,1 }, { 0, 1, 0 });
 
@@ -66,6 +66,7 @@ void SampleApp::Update(float dt)
 	if (EngineGetAsyncKeyState(Key::S))     m_Camera.controller.m_movement =  m_Camera.controller.m_movement | Movement::BACKWARD;
 	if (EngineGetAsyncKeyState(Key::D))     m_Camera.controller.m_movement =  m_Camera.controller.m_movement | Movement::RIGHT;
 	if (EngineGetAsyncKeyState(Key::SPACE)) m_Camera.controller.m_movement =  m_Camera.controller.m_movement | Movement::UP;
+	if (EngineGetAsyncKeyState(Key::LSHIFT)) m_Camera.controller.m_movement =  m_Camera.controller.m_movement | Movement::DOWN;
 
 	if (m_UI.fSceneViewAspectRatio != m_Camera.aspect_ratio)
 	{
@@ -159,6 +160,7 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 		m_UI.ShowStatistics(m_DebugName, dt, context.frameCount);
 		m_UI.ShowSceneViewportPanel(
 			m_ImGuiRenderer->m_ModelRendererColorTextureId[currentImageIdx],
+			m_ImGuiRenderer->m_ModelRendererNormalTextureId[currentImageIdx],
 			m_ImGuiRenderer->m_ModelRendererDepthTextureId[currentImageIdx]);
 		m_UI.ShowFrameTimeGraph(FrameStats::History.data(), FrameStats::History.size());
 		m_UI.ShowCameraSettings(&m_Camera);
@@ -177,8 +179,7 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 inline void SampleApp::OnWindowResize()
 {
 	context.swapchain->Reinitialize();
-	m_PresentRenderer->RecreateFramebuffersRenderPass();
-	m_ImGuiRenderer->RecreateFramebuffersRenderPass();
+	m_ImGuiRenderer->UpdateAttachments();
 }
 
 inline void SampleApp::OnLeftMouseButtonUp()

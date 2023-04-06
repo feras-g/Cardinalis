@@ -4,10 +4,6 @@
 
 #include <vector>
 
-constexpr VkFormat ENGINE_SWAPCHAIN_COLOR_FORMAT = VK_FORMAT_B8G8R8A8_SRGB;
-constexpr VkFormat ENGINE_SWAPCHAIN_DS_FORMAT    = VK_FORMAT_D32_SFLOAT;
-constexpr VkColorSpaceKHR ENGINE_SWAPCHAIN_COLOR_SPACE = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-
 VulkanContext context;
 
 static void GetInstanceExtensionNames(std::vector<const char*>& extensions);
@@ -548,8 +544,9 @@ bool GraphicsPipeline::CreateDynamic(const VulkanShader& shader, std::span<VkFor
 	pipeline_create.colorAttachmentCount = colorAttachmentFormats.size();
 	pipeline_create.pColorAttachmentFormats = colorAttachmentFormats.data();
 	pipeline_create.depthAttachmentFormat = depthAttachmentFormat;
-	pipeline_create.stencilAttachmentFormat = depthAttachmentFormat;
+	//pipeline_create.stencilAttachmentFormat = VK_NULL_HANDLE;
 	
+
 	return Create(shader, colorAttachmentFormats.size(), flags, nullptr, pipelineLayout, out_GraphicsPipeline, cullMode, frontFace, &pipeline_create, customViewport);
 }
 

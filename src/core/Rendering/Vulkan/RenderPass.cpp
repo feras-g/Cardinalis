@@ -34,16 +34,18 @@ void DynamicRenderPass::add_attachment(VkImageView view, VkImageLayout layout)
 	
 	if (layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 	{
-		attachment_info.clearValue.color = { 1.0f, 0.0f, 1.0f, 1.0f };
+		attachment_info.clearValue.color = { 0.1f, 0.1f, 1.0f, 1.0f };
 		color_attachments.push_back(attachment_info);
 	}
-	else if (layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL)
+	else if (layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL || VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 	{
+		has_depth_attachment = true;
 		attachment_info.clearValue.depthStencil = { 1.0f, 1 };
 		depth_attachment = attachment_info;
 	}
-	else if (layout == VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL)
+	else if (layout == VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL || VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 	{
+		has_stencil_attachment = true;
 		attachment_info.clearValue.depthStencil = { 1.0f, 1 };
 		stencil_attachment = attachment_info;
 	}
@@ -60,7 +62,7 @@ void DynamicRenderPass::add_color_attachment(VkImageView view)
 
 void DynamicRenderPass::add_depth_attachment(VkImageView view)
 {
-	add_attachment(view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+	add_attachment(view, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
 void DynamicRenderPass::add_stencil_attachment(VkImageView view)

@@ -17,7 +17,7 @@ class VulkanImGuiRenderer : public VulkanRendererBase
 public:
 	VulkanImGuiRenderer() = default;
 	VulkanImGuiRenderer(const VulkanContext& vkContext);
-	void Initialize(const std::vector<Texture2D>& textures);
+	void Initialize(std::span<Texture2D> model_render_color, std::span<Texture2D> model_render_depth);
 	void draw_scene(VkCommandBuffer cmd_buffer);
 	void render(size_t currentImageIdx, VkCommandBuffer cmd_buffer) override;
 	void update_buffers(size_t currentImage, ImDrawData* pDrawData);
@@ -25,11 +25,12 @@ public:
 
 	// Texture Ids
 	uint32_t m_ModelRendererColorTextureId[NUM_FRAMES];
+	uint32_t m_ModelRendererNormalTextureId[NUM_FRAMES];
 	uint32_t m_ModelRendererDepthTextureId[NUM_FRAMES];
 
 	float m_SceneViewAspectRatio = 1.0;
 	bool CreateDescriptorSets(VkDevice device, VkDescriptorSet* out_DescriptorSets, VkDescriptorSetLayout* out_DescLayouts) override;
-
+	void UpdateAttachments();
 	~VulkanImGuiRenderer() override final;
 private:
 	ImDrawData* m_pDrawData = nullptr;

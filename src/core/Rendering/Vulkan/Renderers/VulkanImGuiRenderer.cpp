@@ -23,7 +23,7 @@ constexpr uint32_t numStorageBuffers   = 2;
 constexpr uint32_t numUniformBuffers   = 1;
 constexpr uint32_t numCombinedSamplers = 1;
 
-void VulkanImGuiRenderer::Initialize(const std::vector<Texture2D>& textures)
+void VulkanImGuiRenderer::Initialize(std::span<Texture2D> model_render_color, std::span<Texture2D> model_render_depth)
 {
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -39,18 +39,25 @@ void VulkanImGuiRenderer::Initialize(const std::vector<Texture2D>& textures)
 	// Then add other textures
 	// BY DEFAULT : 
 	// [0] : ImGui Font texture
-	// [1] [2] : Color output of model's renderer for each swapchain image (double buffered)
-	// [3] [4] : Depth output of model's renderer for each swapchain image (double buffered)
+	// [1] [2] : Color output of model's renderer for Frame 0 / Frame 1
+	// [3] [4] : Normal output of model's renderer for Frame 0 / Frame 1
+	// [5] [6] : Depth output of model's renderer for Frame 0 / Frame 1
 
 	m_ModelRendererColorTextureId[0] = 1;
 	m_ModelRendererColorTextureId[1] = 2;
-
-	m_ModelRendererDepthTextureId[0] = 3;
-	m_ModelRendererDepthTextureId[1] = 4;
+	m_ModelRendererNormalTextureId[0] = 3;
+	m_ModelRendererNormalTextureId[1] = 4;
+	m_ModelRendererDepthTextureId[0] = 5;
+	m_ModelRendererDepthTextureId[1] = 6;
 	
-	for (size_t i = 0; i < textures.size(); i++)
+	for (size_t i = 0; i < model_render_color.size(); i++)
 	{
-		m_Textures.push_back(textures[i]);
+		m_Textures.push_back(model_render_color[i]);
+	}
+
+	for (size_t i = 0; i < model_render_depth.size(); i++)
+	{
+		m_Textures.push_back(model_render_depth[i]);
 	}
 
 	// Shaders
@@ -69,12 +76,23 @@ void VulkanImGuiRenderer::Initialize(const std::vector<Texture2D>& textures)
 	}
 
 	/* Dynamic renderpass setup */
+	UpdateAttachments();
+}
+
+void VulkanImGuiRenderer::UpdateAttachments()
+{
+	for (int i = 0; i < NUM_FRAMES; i++)
+	{
+		m_dyn_renderpass[i].color_attachments.clear();
+		m_dyn_renderpass[i].has_depth_attachment = false;
+		m_dyn_renderpass[i].has_stencil_attachment = false;
+	}
+
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
 		m_dyn_renderpass[i].add_color_attachment(context.swapchain->colorTextures[i].view);
-		m_dyn_renderpass[i].add_depth_attachment(context.swapchain->depthTextures[i].view);
+		//m_dyn_renderpass[i].add_depth_attachment(context.swapchain->depthTextures[i].view);
 	}
-
 }
 
 void VulkanImGuiRenderer::render(size_t currentImageIdx, VkCommandBuffer cmdBuffer) 
@@ -83,9 +101,9 @@ void VulkanImGuiRenderer::render(size_t currentImageIdx, VkCommandBuffer cmdBuff
 
 	update_buffers(currentImageIdx, ImGui::GetDrawData());
 
-	VkClearValue clearValue = { { 1.0f, 0.0f, 0.0f, 1.0f } };
+	VkClearValue clearValue = { { 0.1f, 0.1f, 1.0f, 1.0f } };
 	
-	const uint32_t width = context.swapchain->info.extent.width;
+	const uint32_t width  = context.swapchain->info.extent.width;
 	const uint32_t height = context.swapchain->info.extent.height;
 	VkRect2D renderArea{ .offset {0, 0}, .extent { width, height } };
 
@@ -263,7 +281,8 @@ bool VulkanImGuiRenderer::CreatePipeline(VkDevice device)
 	if (!CreatePipelineLayout(device, m_DescriptorSetLayout, &m_PipelineLayout, 0, fragConstRangeSizeInBytes)) return false;
 
 	GraphicsPipeline::Flags pp_flags = GraphicsPipeline::Flags::NONE;
-	if (!GraphicsPipeline::Create(*m_Shader.get(), 1, pp_flags, m_RenderPass, m_PipelineLayout, &m_GraphicsPipeline, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE)) return false;
+	std::array<VkFormat, 1> color_formats = { ENGINE_SWAPCHAIN_COLOR_FORMAT };
+	GraphicsPipeline::CreateDynamic(*m_Shader.get(), color_formats, {}, pp_flags, m_PipelineLayout, &m_GraphicsPipeline, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
 
 	return true;
 }

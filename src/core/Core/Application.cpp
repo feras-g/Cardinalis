@@ -43,6 +43,7 @@ void Application::Run()
 		Timestep timestep = time - m_LastFrameTime;
 		m_LastFrameTime = time;
 		m_Window->HandleEvents();
+		FrameStats::UpdateFrameTimeHistory(timestep.GetSeconds());
 		Update(timestep.GetSeconds());
 		Render(context.currentBackBuffer, context.frames[context.currentBackBuffer]);
 	}
