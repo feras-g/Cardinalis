@@ -8,6 +8,11 @@
 static std::string baseSpirvFolder("../../../data/shaders/vulkan/spirv/");
 VulkanShader::VulkanShader(const char* vertexShader, const char* fragShader)
 {
+	LoadFromFile(vertexShader, fragShader);
+}
+
+void VulkanShader::LoadFromFile(const char* vertexShader, const char* fragShader)
+{
 	LoadModule(VK_SHADER_STAGE_VERTEX_BIT, vertexShader);
 	LoadModule(VK_SHADER_STAGE_FRAGMENT_BIT, fragShader);
 }

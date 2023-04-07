@@ -4,8 +4,8 @@
 #include <glm/mat4x4.hpp>
 
 /** Size in pixels of the offscreen buffers */
-const uint32_t attachmentWidth  = 1024;
-const uint32_t attachmentHeight = 1024;
+const uint32_t render_width  = 1024;
+const uint32_t render_height = 1024;
 
 struct UniformData
 {
@@ -17,10 +17,7 @@ struct UniformData
 VulkanModelRenderer::VulkanModelRenderer(const char* modelFilename) 
 	: VulkanRendererBase(context, true)
 {
-	if (!m_Model.CreateFromFile(modelFilename))
-	{
-		LOG_ERROR("Failed to create model from {0}", modelFilename);
-	}
+	m_Model.CreateFromFile(modelFilename);
 
 	m_Shader.reset(new VulkanShader("Deferred.vert.spv", "Deferred.frag.spv"));
 
@@ -35,19 +32,9 @@ VulkanModelRenderer::VulkanModelRenderer(const char* modelFilename)
 	/* Dynamic renderpass setup */
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
-		/* Each frame has 1 color/normal/depth g-buffer */
-		if (i == 0)
-		{
-			m_dyn_renderpass[i].add_color_attachment(m_ColorAttachments[0].view);
-			m_dyn_renderpass[i].add_color_attachment(m_ColorAttachments[2].view);
-		}
-		else
-		{
-			m_dyn_renderpass[i].add_color_attachment(m_ColorAttachments[1].view);
-			m_dyn_renderpass[i].add_color_attachment(m_ColorAttachments[3].view);
-		}
-
-		m_dyn_renderpass[i].add_attachment(m_DepthAttachments[i].view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+		m_dyn_renderpass[i].add_color_attachment(m_Albedo_Output[i].view);
+		m_dyn_renderpass[i].add_color_attachment(m_Normal_Output[i].view);
+		m_dyn_renderpass[i].add_depth_attachment(m_Depth_Output[i].view);
 	}
 
 	GraphicsPipeline::Flags ppl_flags = GraphicsPipeline::Flags::ENABLE_DEPTH_STATE;
@@ -59,30 +46,29 @@ void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buf
 	VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Deferred Pass");
 
 	/* Transition */
-	m_ColorAttachments[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-	m_ColorAttachments[currentImageIdx + 2].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-	m_DepthAttachments[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+	m_Albedo_Output[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	m_Normal_Output[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	m_Depth_Output[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-	VkRect2D render_area{ .offset {}, .extent { m_ColorAttachments[0].info.width, m_ColorAttachments[0].info.height } };
+	VkRect2D render_area{ .offset {}, .extent { render_width , render_height } };
 	m_dyn_renderpass[currentImageIdx].begin(cmd_buffer, render_area);
 	draw_scene(currentImageIdx, cmd_buffer);
 	m_dyn_renderpass[currentImageIdx].end(cmd_buffer);
 
 	/* Transition */
-	m_ColorAttachments[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-	m_ColorAttachments[currentImageIdx + 2].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-	m_DepthAttachments[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	m_Albedo_Output[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	m_Normal_Output[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	m_Depth_Output[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
 void VulkanModelRenderer::draw_scene(size_t currentImageIdx, VkCommandBuffer cmdBuffer)
 {
-	SetViewportScissor(cmdBuffer, attachmentWidth, attachmentHeight, true);
+	SetViewportScissor(cmdBuffer, render_width, render_height, true);
 
 	// Graphics pipeline
 	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline);
 	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_PipelineLayout, 0, 1, &m_DescriptorSets[currentImageIdx], 0, nullptr);
-	vkCmdDraw(cmdBuffer, m_Model.m_NumVertices, 1, 0, 0);
-	//m_Model.draw_indexed(cmdBuffer);
+	m_Model.draw_indexed(cmdBuffer);
 }
 
 bool VulkanModelRenderer::UpdateBuffers(size_t currentImage, glm::mat4 model, glm::mat4 view, glm::mat4 proj)
@@ -131,36 +117,27 @@ void VulkanModelRenderer::create_attachments()
 	m_Texture.CreateView(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
 	m_Texture.transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-
-	/* Create G-Buffers for Color, Normal, Depth
-	   Each frame has its own G-Buffer to work on */
-	m_ColorAttachments.resize(NUM_FRAMES * 2);
-	m_DepthAttachments.resize(NUM_FRAMES);
-
-	/* G-Buffer Color */
-	m_ColorAttachments[0].info = { m_ColorAttachmentFormats[0], attachmentWidth, attachmentHeight, 1, 1, VK_IMAGE_LAYOUT_UNDEFINED,  "Frame #0: G-Buffer Color" };
-	m_ColorAttachments[1].info = { m_ColorAttachmentFormats[0], attachmentWidth, attachmentHeight, 1, 1, VK_IMAGE_LAYOUT_UNDEFINED,  "Frame #1: G-Buffer Color" };
-
-	/* G-Buffer Normal */
-	m_ColorAttachments[2].info = { m_ColorAttachmentFormats[1], attachmentWidth, attachmentHeight, 1, 1, VK_IMAGE_LAYOUT_UNDEFINED,  "Frame #0: G-Buffer Normal" };
-	m_ColorAttachments[3].info = { m_ColorAttachmentFormats[1], attachmentWidth, attachmentHeight, 1, 1, VK_IMAGE_LAYOUT_UNDEFINED,  "Frame #1: G-Buffer Normal" };
-
-	for (int i = 0; i < m_ColorAttachments.size(); i++)
+	/* Write Attachments */
+	/* Create G-Buffers for Albedo, Normal, Depth for each Frame */
+	for (int i = 0; i < NUM_FRAMES; i++)
 	{
-		m_ColorAttachments[i].CreateImage(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-		m_ColorAttachments[i].CreateView(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
-		m_ColorAttachments[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-	}
+		std::string s_prefix = "Frame #" + std::to_string(i) + "G-Buffer ";
 
-	/* G-Buffer Depth */
-	m_DepthAttachments[0].info = m_DepthAttachments[1].info = { m_DepthAttachmentFormat, attachmentWidth, attachmentHeight, 1, 1, VK_IMAGE_LAYOUT_UNDEFINED, "" };
-	m_DepthAttachments[0].info.debugName = "Frame #0: G-Buffer Depth";
-	m_DepthAttachments[1].info.debugName = "Frame #1: G-Buffer Depth";
-	for (int i = 0; i < m_DepthAttachments.size(); i++)
-	{
-		m_DepthAttachments[i].CreateImage(context.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-		m_DepthAttachments[i].CreateView(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT });
-		m_DepthAttachments[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		m_Albedo_Output[i].info = { m_ColorAttachmentFormats[0], render_width, render_height, 1, 1, VK_IMAGE_LAYOUT_UNDEFINED,  s_prefix.c_str() }; /* G-Buffer Color */
+		m_Normal_Output[i].info = { m_ColorAttachmentFormats[1], render_width, render_height, 1, 1, VK_IMAGE_LAYOUT_UNDEFINED,  s_prefix.c_str() }; /* G-Buffer Normal */
+		m_Depth_Output[i].info  = { m_DepthAttachmentFormat,     render_width, render_height, 1, 1, VK_IMAGE_LAYOUT_UNDEFINED,  s_prefix.c_str()  }; /* G-Buffer Depth */
+
+		m_Albedo_Output[i].CreateImage(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+		m_Normal_Output[i].CreateImage(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+		m_Depth_Output[i].CreateImage(context.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+
+		m_Albedo_Output[i].CreateView(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
+		m_Normal_Output[i].CreateView(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
+		m_Depth_Output[i].CreateView(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT });
+
+		m_Albedo_Output[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		m_Normal_Output[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		m_Depth_Output[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
 	
 	end_temp_cmd_buffer(cmd_buffer);
@@ -171,7 +148,8 @@ VulkanModelRenderer::~VulkanModelRenderer()
 	m_Texture.Destroy(context.device);
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
-		m_ColorAttachments[i].Destroy(context.device);
-		m_DepthAttachments[i].Destroy(context.device);
+		m_Albedo_Output[i].Destroy(context.device);
+		m_Normal_Output[i].Destroy(context.device);
+		m_Depth_Output[i].Destroy(context.device);
 	}
 }

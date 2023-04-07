@@ -1,4 +1,5 @@
 #include "VulkanRenderInterface.h"
+#include "VulkanRendererBase.h"
 
 #include "Window/Window.h"
 
@@ -23,6 +24,8 @@ void VulkanRenderInterface::Initialize()
 	// Init frames
 	CreateCommandStructures();
 	CreateSyncStructures();
+
+	VulkanRendererBase::CreateSamplers();
 
 	m_InitSuccess = true;
 
@@ -476,7 +479,7 @@ bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, VkRenderPass* out
 
 bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const VulkanSwapchain* swapchain, VkFramebuffer* out_Framebuffers, bool useDepth)
 {
-	return CreateColorDepthFramebuffers(renderPass, swapchain->colorTextures.data(), swapchain->depthTextures.data(), out_Framebuffers, useDepth);
+	return CreateColorDepthFramebuffers(renderPass, swapchain->color_attachments.data(), swapchain->depthTextures.data(), out_Framebuffers, useDepth);
 }
 
 bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colorAttachments, const Texture2D* depthAttachments, VkFramebuffer* out_Framebuffers, bool useDepth)
@@ -665,7 +668,7 @@ bool GraphicsPipeline::Create(const VulkanShader& shader, uint32_t numColorAttac
 		.flags=0,
 		.stageCount=(uint32_t)shader.pipelineStages.size(),
 		.pStages=shader.pipelineStages.data(),
-		.pVertexInputState=&vertexInputState,
+		.pVertexInputState= !!(flags & DISABLE_VTX_INPUT_STATE) ? VK_NULL_HANDLE  : &vertexInputState,
 		.pInputAssemblyState=&inputAssemblyState,
 		.pTessellationState=nullptr,
 		.pViewportState=&viewportState,

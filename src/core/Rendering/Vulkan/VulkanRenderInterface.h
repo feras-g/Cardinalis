@@ -135,8 +135,9 @@ struct GraphicsPipeline
 	enum Flags
 	{
 		NONE = 0,
-		ENABLE_ALPHA_BLENDING = 1 << 1,
-		ENABLE_DEPTH_STATE = 1 << 2
+		ENABLE_ALPHA_BLENDING	= 1 << 1,
+		ENABLE_DEPTH_STATE		= 1 << 2,
+		DISABLE_VTX_INPUT_STATE = 1 << 3
 	};
 
 	static bool CreateDynamic(const VulkanShader& shader, std::span<VkFormat> colorAttachmentFormats, VkFormat depthAttachmentFormat, Flags flags, VkPipelineLayout pipelineLayout,

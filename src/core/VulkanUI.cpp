@@ -53,10 +53,11 @@ VulkanUI& VulkanUI::ShowSceneViewportPanel(unsigned int texColorId, unsigned int
 	}
 	ImGui::End();
 
-
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0.0f, 0.0f });
-	if (ImGui::Begin("Scene", 0, 0))
+	if (ImGui::Begin("Scene", 0, ImGuiWindowFlags_MenuBar |  ImGuiWindowFlags_NoDecoration))
 	{
+		
+
 		ImVec2 sceneViewPanelSize = ImGui::GetContentRegionAvail();
 		const float currAspect = sceneViewPanelSize.x / sceneViewPanelSize.y;
 
@@ -78,10 +79,22 @@ VulkanUI& VulkanUI::ShowSceneViewportPanel(unsigned int texColorId, unsigned int
 			ImGui::Image((ImTextureID)texDepthId, sceneViewPanelSize);
 		}
 		bIsSceneViewportHovered = ImGui::IsItemHovered();
+		ImGui::PopStyleVar();
+
+		if (ImGui::BeginMenuBar())
+		{
+			if (ImGui::BeginMenu("Display"))
+			{
+				if (ImGui::MenuItem("Wireframe")) {}
+				ImGui::EndMenu();
+			}
+			ImGui::EndMenuBar();
+		}
+
+
 	}
 	ImGui::End();
 
-	ImGui::PopStyleVar();
 
 	return *this;
 }

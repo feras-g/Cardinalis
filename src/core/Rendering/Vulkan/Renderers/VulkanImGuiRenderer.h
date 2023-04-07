@@ -11,26 +11,27 @@
 struct ImDrawData;
 struct ImGuiIO;
 class VulkanShader;
+class VulkanModelRenderer;
 
 class VulkanImGuiRenderer : public VulkanRendererBase
 {
 public:
 	VulkanImGuiRenderer() = default;
 	VulkanImGuiRenderer(const VulkanContext& vkContext);
-	void Initialize(std::span<Texture2D> model_render_color, std::span<Texture2D> model_render_depth);
+	void Initialize(const VulkanModelRenderer& model_renderer);
 	void draw_scene(VkCommandBuffer cmd_buffer);
 	void render(size_t currentImageIdx, VkCommandBuffer cmd_buffer) override;
 	void update_buffers(size_t currentImage, ImDrawData* pDrawData);
 	bool RecreateFramebuffersRenderPass();
 
-	// Texture Ids
-	uint32_t m_ModelRendererColorTextureId[NUM_FRAMES];
-	uint32_t m_ModelRendererNormalTextureId[NUM_FRAMES];
-	uint32_t m_ModelRendererDepthTextureId[NUM_FRAMES];
-
 	float m_SceneViewAspectRatio = 1.0;
 	bool CreateDescriptorSets(VkDevice device, VkDescriptorSet* out_DescriptorSets, VkDescriptorSetLayout* out_DescLayouts) override;
 	void UpdateAttachments();
+
+	std::array<int, NUM_FRAMES> m_ModelRendererColorTextureId;
+	std::array<int, NUM_FRAMES> m_ModelRendererNormalTextureId;
+	std::array<int, NUM_FRAMES> m_ModelRendererDepthTextureId;
+
 	~VulkanImGuiRenderer() override final;
 private:
 	ImDrawData* m_pDrawData = nullptr;
@@ -41,6 +42,8 @@ private:
 	Texture2D m_FontTexture;
 	std::vector<Texture2D> m_Textures;	// Textures displayed inside UI
 	std::vector<VkDescriptorImageInfo> m_TextureDescriptors;
+
+
 
 	// Storage buffers
 	Buffer m_StorageBuffers[NUM_FRAMES];

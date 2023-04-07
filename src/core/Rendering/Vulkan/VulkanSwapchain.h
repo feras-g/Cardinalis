@@ -37,7 +37,7 @@ public:
 	VulkanSwapchainInfo info;
 
 	// Data
-	std::vector<Texture2D> colorTextures;
+	std::vector<Texture2D> color_attachments;
 	std::vector<Texture2D> depthTextures;
 	std::vector<VkFramebuffer> framebuffers;
 private:

@@ -1,6 +1,7 @@
 #include "VulkanImGuiRenderer.h"
 #include "Rendering/Vulkan/VulkanDebugUtils.h"
 #include "Rendering/Vulkan/VulkanRenderInterface.h"
+#include "Rendering/Vulkan/Renderers/VulkanModelRenderer.h"
 #include "Rendering/Vulkan/VulkanShader.h"
 #include "glm/mat4x4.hpp"
 #include "glm/gtc/matrix_transform.hpp"
@@ -23,7 +24,7 @@ constexpr uint32_t numStorageBuffers   = 2;
 constexpr uint32_t numUniformBuffers   = 1;
 constexpr uint32_t numCombinedSamplers = 1;
 
-void VulkanImGuiRenderer::Initialize(std::span<Texture2D> model_render_color, std::span<Texture2D> model_render_depth)
+void VulkanImGuiRenderer::Initialize(const VulkanModelRenderer& model_renderer)
 {
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -42,22 +43,24 @@ void VulkanImGuiRenderer::Initialize(std::span<Texture2D> model_render_color, st
 	// [1] [2] : Color output of model's renderer for Frame 0 / Frame 1
 	// [3] [4] : Normal output of model's renderer for Frame 0 / Frame 1
 	// [5] [6] : Depth output of model's renderer for Frame 0 / Frame 1
-
-	m_ModelRendererColorTextureId[0] = 1;
-	m_ModelRendererColorTextureId[1] = 2;
-	m_ModelRendererNormalTextureId[0] = 3;
-	m_ModelRendererNormalTextureId[1] = 4;
-	m_ModelRendererDepthTextureId[0] = 5;
-	m_ModelRendererDepthTextureId[1] = 6;
 	
-	for (size_t i = 0; i < model_render_color.size(); i++)
+	int tex_id = 0;
+	for (size_t i = 0; i < model_renderer.m_Albedo_Output.size(); i++)
 	{
-		m_Textures.push_back(model_render_color[i]);
+		m_ModelRendererColorTextureId[i] = ++tex_id;
+		m_Textures.push_back(model_renderer.m_Albedo_Output[i]);
 	}
 
-	for (size_t i = 0; i < model_render_depth.size(); i++)
+	for (size_t i = 0; i < model_renderer.m_Normal_Output.size(); i++)
 	{
-		m_Textures.push_back(model_render_depth[i]);
+		m_ModelRendererNormalTextureId[i] = ++tex_id;
+		m_Textures.push_back(model_renderer.m_Normal_Output[i]);
+	}
+
+	for (size_t i = 0; i < model_renderer.m_Depth_Output.size(); i++)
+	{
+		m_ModelRendererDepthTextureId[i] = ++tex_id;
+		m_Textures.push_back(model_renderer.m_Depth_Output[i]);
 	}
 
 	// Shaders
@@ -90,7 +93,7 @@ void VulkanImGuiRenderer::UpdateAttachments()
 
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
-		m_dyn_renderpass[i].add_color_attachment(context.swapchain->colorTextures[i].view);
+		m_dyn_renderpass[i].add_color_attachment(context.swapchain->color_attachments[i].view);
 		//m_dyn_renderpass[i].add_depth_attachment(context.swapchain->depthTextures[i].view);
 	}
 }
@@ -234,10 +237,7 @@ bool VulkanImGuiRenderer::RecreateFramebuffersRenderPass()
 
 VulkanImGuiRenderer::~VulkanImGuiRenderer()
 {
-	for (int i = 0; i < NUM_FRAMES; i++)
-	{
-		m_Textures[i].Destroy(context.device);
-	}
+
 }
 
 bool VulkanImGuiRenderer::CreateFontTexture(ImGuiIO* io, const char* fontPath, Texture2D& out_Font)

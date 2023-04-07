@@ -9,6 +9,7 @@ class VulkanShader;
 
 class VulkanModelRenderer final : public VulkanRendererBase
 {
+	friend class VulkanImGuiRenderer;
 public:
 	VulkanModelRenderer() = default;
 	explicit VulkanModelRenderer(const char* modelFilename);
@@ -21,8 +22,9 @@ public:
 	void create_attachments();
 
 	// Offscreen images
-	std::vector<Texture2D> m_ColorAttachments; // 0: Color, 1: Normal
-	std::vector<Texture2D> m_DepthAttachments;
+	std::array<Texture2D, NUM_FRAMES> m_Albedo_Output;
+	std::array<Texture2D, NUM_FRAMES> m_Normal_Output;
+	std::array<Texture2D, NUM_FRAMES> m_Depth_Output;
 
 	vk::DynamicRenderPass m_dyn_renderpass[NUM_FRAMES];
 

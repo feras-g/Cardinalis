@@ -8,6 +8,7 @@
 #include "Rendering/Vulkan/Renderers/VulkanPresentRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanImGuiRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanModelRenderer.h"
+#include "Rendering/Vulkan/Renderers/DeferredRenderer.hpp"
 #include "Rendering/Vulkan/VulkanUI.h"
 #include "Rendering/Camera.h"
 #include "Rendering/FrameCounter.h"
@@ -39,21 +40,26 @@ protected:
 	bool b_IsSceneViewportHovered = false;
 
 protected:
-	std::unique_ptr<VulkanImGuiRenderer>		m_ImGuiRenderer;
-	std::unique_ptr<VulkanModelRenderer>		m_ModelRenderer;
-	std::unique_ptr<VulkanPresentRenderer>		m_PresentRenderer;
+	std::unique_ptr<VulkanImGuiRenderer>		m_imgui_renderer;
+	std::unique_ptr<VulkanModelRenderer>		m_model_renderer;
+	DeferredRenderer							m_deferred_renderer;
 };
 
 void SampleApp::Initialize()
 {
-	m_PresentRenderer.reset(new VulkanPresentRenderer(context, false));
-	m_ModelRenderer.reset(new VulkanModelRenderer ("../../../data/models/suzanne.obj"));
-	m_ImGuiRenderer.reset(new VulkanImGuiRenderer(context));
-	m_ImGuiRenderer->Initialize(m_ModelRenderer->m_ColorAttachments, m_ModelRenderer->m_DepthAttachments);
+	m_model_renderer.reset(new VulkanModelRenderer ("../../../data/models/suzanne.obj"));
+	m_imgui_renderer.reset(new VulkanImGuiRenderer(context));
+
+	m_imgui_renderer->Initialize(*m_model_renderer.get());
+	
+	m_deferred_renderer.init(
+		m_model_renderer->m_Albedo_Output, 
+		m_model_renderer->m_Normal_Output, 
+		m_model_renderer->m_Depth_Output);
 
 	CameraController fpsController = CameraController({ 0, 0, -5 }, { 0,0,1 }, { 0, 1, 0 });
 
-	m_Camera = Camera(fpsController, 45.0f, m_ImGuiRenderer->m_SceneViewAspectRatio, 0.1f, 1000.0f);
+	m_Camera = Camera(fpsController, 45.0f, m_imgui_renderer->m_SceneViewAspectRatio, 0.1f, 1000.0f);
 }
 
 void SampleApp::Update(float dt)
@@ -99,15 +105,16 @@ void SampleApp::Render(size_t currentFrameIdx, VulkanFrame& currentFrame)
 
 		{
 			/* Transition to color attachment */
-			swapchain.colorTextures[currentFrameIdx].transition_layout(currentFrame.cmd_buffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			swapchain.color_attachments[currentFrameIdx].transition_layout(currentFrame.cmd_buffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 		}
 
-		m_ModelRenderer->render(context.currentBackBuffer, currentFrame.cmd_buffer);
-		m_ImGuiRenderer->render(context.currentBackBuffer, currentFrame.cmd_buffer);
+		m_model_renderer->render(context.currentBackBuffer, currentFrame.cmd_buffer);
+		m_imgui_renderer->render(context.currentBackBuffer, currentFrame.cmd_buffer);
+		m_deferred_renderer.render(context.currentBackBuffer);
 
 		{
 			/* Present */
-			swapchain.colorTextures[currentFrameIdx].transition_layout(currentFrame.cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+			swapchain.color_attachments[currentFrameIdx].transition_layout(currentFrame.cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 		}
 
 		VK_CHECK(vkEndCommandBuffer(currentFrame.cmd_buffer));
@@ -159,27 +166,27 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 		m_UI.AddInspectorPanel();
 		m_UI.ShowStatistics(m_DebugName, dt, context.frameCount);
 		m_UI.ShowSceneViewportPanel(
-			m_ImGuiRenderer->m_ModelRendererColorTextureId[currentImageIdx],
-			m_ImGuiRenderer->m_ModelRendererNormalTextureId[currentImageIdx],
-			m_ImGuiRenderer->m_ModelRendererDepthTextureId[currentImageIdx]);
+			m_imgui_renderer->m_ModelRendererColorTextureId[currentImageIdx],
+			m_imgui_renderer->m_ModelRendererNormalTextureId[currentImageIdx],
+			m_imgui_renderer->m_ModelRendererDepthTextureId[currentImageIdx]);
 		m_UI.ShowFrameTimeGraph(FrameStats::History.data(), FrameStats::History.size());
 		m_UI.ShowCameraSettings(&m_Camera);
 		m_UI.End();
 	}
 
 	{
-		glm::mat4 m = glm::identity<glm::mat4>();
+		glm::mat4 m = glm::identity<glm::mat4>() * glm::scale(glm::identity<glm::mat4>(), glm::vec3(0.1f));
 		glm::mat4 v = m_Camera.GetView();
 		glm::mat4 p = m_Camera.GetProj();
 		
-		m_ModelRenderer->UpdateBuffers(currentImageIdx, m, v, p);
+		m_model_renderer->UpdateBuffers(currentImageIdx, m, v, p);
 	}
 }
 
 inline void SampleApp::OnWindowResize()
 {
 	context.swapchain->Reinitialize();
-	m_ImGuiRenderer->UpdateAttachments();
+	m_imgui_renderer->UpdateAttachments();
 }
 
 inline void SampleApp::OnLeftMouseButtonUp()

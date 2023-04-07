@@ -3,6 +3,8 @@
 
 #include <Rendering/Vulkan/VulkanRenderInterface.h>
 
+
+
 // Base class to derive to describe a rendering layer
 // Example of layers : UI rendering, post-process, different kinds of passes ... 
 class VulkanRendererBase
@@ -18,6 +20,13 @@ public:
 		VkDescriptorSet* out_DescriptorSets, VkDescriptorSetLayout* out_DescLayouts);
 
 	VkPipeline			m_GraphicsPipeline			= VK_NULL_HANDLE;
+
+	// Samplers
+	static void CreateSamplers();
+	static VkSampler s_SamplerRepeatLinear;
+	static VkSampler s_SamplerClampLinear;
+	static VkSampler s_SamplerClampNearest;
+
 protected:
 	bool bUseDepth;
 	virtual bool CreateDescriptorSets(VkDevice device, VkDescriptorSet* out_DescriptorSets, VkDescriptorSetLayout* out_DescLayouts);
@@ -43,12 +52,7 @@ protected:
 	// Uniform buffers
 	Buffer m_UniformBuffers[NUM_FRAMES];
 
-	// Samplers
-	static void CreateSamplers();
 
-	static VkSampler s_SamplerRepeatLinear;
-	static VkSampler s_SamplerClampLinear;
-	static VkSampler s_SamplerClampNearest;
 };
 
 #endif // !RENDERER_BASE_H

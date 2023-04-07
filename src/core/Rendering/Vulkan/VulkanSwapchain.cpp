@@ -85,7 +85,7 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
     VK_CHECK(vkCreateSwapchainKHR(hDevice, &swapchainCreateInfo, nullptr, &swapchain));
     
     depthTextures.resize(info.imageCount);
-    colorTextures.resize(info.imageCount);
+    color_attachments.resize(info.imageCount);
     framebuffers.resize(info.imageCount);
 
     std::vector<VkImage> tmp(info.imageCount);
@@ -104,8 +104,8 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
     {
         // COLOR
 		std::string color_name = "Swapchain Color Image #" + std::to_string(i);
-        colorTextures[i].image = tmp[i];
-        colorTextures[i].info =
+        color_attachments[i].image = tmp[i];
+        color_attachments[i].info =
         {
             colorFormat,
             info.extent.width,
@@ -113,9 +113,9 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
               1, 1,
             VK_IMAGE_LAYOUT_UNDEFINED
         };
-        colorTextures[i].CreateView(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
-        colorTextures[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-		set_object_name(VK_OBJECT_TYPE_IMAGE, (uint64_t)colorTextures[i].image, color_name.c_str());
+        color_attachments[i].CreateView(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
+        color_attachments[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+		set_object_name(VK_OBJECT_TYPE_IMAGE, (uint64_t)color_attachments[i].image, color_name.c_str());
 
         // DEPTH
 		std::string ds_name = "Swapchain Depth/Stencil Image #" + std::to_string(i);
