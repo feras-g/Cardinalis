@@ -25,6 +25,8 @@ void DynamicRenderPass::end(VkCommandBuffer cmd_buffer) const
 
 void DynamicRenderPass::add_attachment(VkImageView view, VkImageLayout layout)
 {
+	assert(view);
+
 	VkRenderingAttachmentInfoKHR attachment_info{};
 	attachment_info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
 	attachment_info.imageLayout = layout;
@@ -34,7 +36,7 @@ void DynamicRenderPass::add_attachment(VkImageView view, VkImageLayout layout)
 	
 	if (layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 	{
-		attachment_info.clearValue.color = { 0.1f, 0.1f, 1.0f, 1.0f };
+		attachment_info.clearValue.color = { 0.0f, 0.0f, 0.0f, 1.0f };
 		color_attachments.push_back(attachment_info);
 	}
 	else if (layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL || VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)

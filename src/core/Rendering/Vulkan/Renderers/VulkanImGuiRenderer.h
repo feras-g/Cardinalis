@@ -12,13 +12,14 @@ struct ImDrawData;
 struct ImGuiIO;
 class VulkanShader;
 class VulkanModelRenderer;
+class DeferredRenderer;
 
 class VulkanImGuiRenderer : public VulkanRendererBase
 {
 public:
 	VulkanImGuiRenderer() = default;
 	VulkanImGuiRenderer(const VulkanContext& vkContext);
-	void Initialize(const VulkanModelRenderer& model_renderer);
+	void Initialize(const VulkanModelRenderer& model_renderer, const DeferredRenderer& deferred_renderer);
 	void draw_scene(VkCommandBuffer cmd_buffer);
 	void render(size_t currentImageIdx, VkCommandBuffer cmd_buffer) override;
 	void update_buffers(size_t currentImage, ImDrawData* pDrawData);
@@ -31,6 +32,7 @@ public:
 	std::array<int, NUM_FRAMES> m_ModelRendererColorTextureId;
 	std::array<int, NUM_FRAMES> m_ModelRendererNormalTextureId;
 	std::array<int, NUM_FRAMES> m_ModelRendererDepthTextureId;
+	std::array<int, NUM_FRAMES> m_DeferredRendererOutputTextureId;
 
 	~VulkanImGuiRenderer() override final;
 private:

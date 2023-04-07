@@ -3,10 +3,6 @@
 
 #include <glm/mat4x4.hpp>
 
-/** Size in pixels of the offscreen buffers */
-const uint32_t render_width  = 1024;
-const uint32_t render_height = 1024;
-
 struct UniformData
 {
 	glm::mat4 model;
@@ -19,7 +15,7 @@ VulkanModelRenderer::VulkanModelRenderer(const char* modelFilename)
 {
 	m_Model.CreateFromFile(modelFilename);
 
-	m_Shader.reset(new VulkanShader("Deferred.vert.spv", "Deferred.frag.spv"));
+	m_Shader.reset(new VulkanShader("Model.vert.spv", "Model.frag.spv"));
 
 	/* Render objects creation */
 	create_attachments();
@@ -43,7 +39,7 @@ VulkanModelRenderer::VulkanModelRenderer(const char* modelFilename)
 
 void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buffer)
 {
-	VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Deferred Pass");
+	VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Deferred G-Buffer Pass");
 
 	/* Transition */
 	m_Albedo_Output[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);

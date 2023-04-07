@@ -10,8 +10,8 @@ void CameraController::UpdateRotation(const glm::vec2& mouse_pos)
 	m_rotation.y += (m_last_mouse_pos.x - mouse_pos.x) * params.mouse_speed;
 	m_rotation.x += (m_last_mouse_pos.y - mouse_pos.y) * params.mouse_speed;
 
-	if (m_rotation.x > 89.9f)  m_rotation.x = 89.9f;
-	if (m_rotation.y < -89.9f) m_rotation.y = -89.9f;
+	//if (m_rotation.x > 89.9f)  m_rotation.x = 89.9f;
+	//if (m_rotation.y < -89.9f) m_rotation.y = -89.9f;
 
 	m_last_mouse_pos = mouse_pos;
 }
@@ -67,8 +67,8 @@ glm::mat4& CameraController::GetView()
 	return m_view;
 }
 
-Camera::Camera() 
-	: controller({ 0, 0, -5 }, { 0, 0, 1 }, { 0, 1, 0 }), fov(45.0f), aspect_ratio(ASPECT_16_9), near_far(0.0f, 1000.0f)
+Camera::Camera()
+	: controller({ 0,0,-5 }, { 0,-180,0 }, { 0,0,1 }, { 0,1,0 }), fov(45.0f), aspect_ratio(ASPECT_16_9), near_far(0.0f, 1000.0f)
 {
 	UpdateProjection();
 }

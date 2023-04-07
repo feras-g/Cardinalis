@@ -2,6 +2,7 @@
 #include "Rendering/Vulkan/VulkanDebugUtils.h"
 #include "Rendering/Vulkan/VulkanRenderInterface.h"
 #include "Rendering/Vulkan/Renderers/VulkanModelRenderer.h"
+#include "Rendering/Vulkan/Renderers/DeferredRenderer.h"
 #include "Rendering/Vulkan/VulkanShader.h"
 #include "glm/mat4x4.hpp"
 #include "glm/gtc/matrix_transform.hpp"
@@ -24,7 +25,7 @@ constexpr uint32_t numStorageBuffers   = 2;
 constexpr uint32_t numUniformBuffers   = 1;
 constexpr uint32_t numCombinedSamplers = 1;
 
-void VulkanImGuiRenderer::Initialize(const VulkanModelRenderer& model_renderer)
+void VulkanImGuiRenderer::Initialize(const VulkanModelRenderer& model_renderer, const DeferredRenderer& deferred_renderer)
 {
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -40,11 +41,18 @@ void VulkanImGuiRenderer::Initialize(const VulkanModelRenderer& model_renderer)
 	// Then add other textures
 	// BY DEFAULT : 
 	// [0] : ImGui Font texture
-	// [1] [2] : Color output of model's renderer for Frame 0 / Frame 1
-	// [3] [4] : Normal output of model's renderer for Frame 0 / Frame 1
-	// [5] [6] : Depth output of model's renderer for Frame 0 / Frame 1
-	
+	// [1] [2] : Output of deferred renderer for Frame 0 / Frame 1
+	// [3] [4] : Color output of model's renderer for Frame 0 / Frame 1
+	// [5] [6] : Normal output of model's renderer for Frame 0 / Frame 1
+	// [7] [8] : Depth output of model's renderer for Frame 0 / Frame 1
+
 	int tex_id = 0;
+	for (size_t i = 0; i < deferred_renderer.m_output_attachment.size(); i++)
+	{
+		m_DeferredRendererOutputTextureId[i] = ++tex_id;
+		m_Textures.push_back(deferred_renderer.m_output_attachment[i]);
+	}
+
 	for (size_t i = 0; i < model_renderer.m_Albedo_Output.size(); i++)
 	{
 		m_ModelRendererColorTextureId[i] = ++tex_id;

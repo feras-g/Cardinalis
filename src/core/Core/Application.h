@@ -39,7 +39,7 @@ public:
 	/// </summary>
 	virtual void Initialize() = 0;
 	virtual void Update(float dt) = 0;
-	virtual void Render(size_t currentFrameIdx, VulkanFrame& currentFrame) = 0;
+	virtual void Render() = 0;
 	virtual void UpdateRenderersData(float dt, size_t currentImageIdx) = 0;
 	virtual void Terminate() = 0;
 

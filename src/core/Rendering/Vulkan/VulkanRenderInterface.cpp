@@ -567,8 +567,6 @@ bool GraphicsPipeline::Create(const VulkanShader& shader, uint32_t numColorAttac
 	VkPipelineColorBlendStateCreateInfo colorBlendState;
 	VkPipelineDynamicStateCreateInfo dynamicState;
 
-	const uint32_t stageCount = 7;
-
 	vertexInputState =
 	{
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO

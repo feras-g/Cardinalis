@@ -25,12 +25,12 @@ void VulkanUI::End()
 	ImGui::Render();
 }
 
-VulkanUI& VulkanUI::ShowSceneViewportPanel(unsigned int texColorId, unsigned int texNormalId, unsigned int texDepthId)
+VulkanUI& VulkanUI::ShowSceneViewportPanel(unsigned int texDeferred, unsigned int texColorId, unsigned int texNormalId, unsigned int texDepthId)
 {
 
 	static ImGuiComboFlags flags = 0;
 
-	const char* items[] = { "Color", "Normal", "Depth" };
+	const char* items[] = { "Deferred Output", "Albedo", "Normal", "Depth" };
 	static int item_current_idx = 0; // Here we store our selection data as an index.
 	const char* combo_preview_value = items[item_current_idx];  // Pass in the preview value visible before opening the combo (it could be anything)
 
@@ -66,7 +66,11 @@ VulkanUI& VulkanUI::ShowSceneViewportPanel(unsigned int texColorId, unsigned int
 			fSceneViewAspectRatio = currAspect;
 		}
 
-		if (combo_preview_value == "Color")
+		if (combo_preview_value == "Deferred Output")
+		{
+			ImGui::Image((ImTextureID)texDeferred, sceneViewPanelSize);
+		}
+		else if (combo_preview_value == "Albedo")
 		{
 			ImGui::Image((ImTextureID)texColorId, sceneViewPanelSize);
 		}
@@ -79,20 +83,21 @@ VulkanUI& VulkanUI::ShowSceneViewportPanel(unsigned int texColorId, unsigned int
 			ImGui::Image((ImTextureID)texDepthId, sceneViewPanelSize);
 		}
 		bIsSceneViewportHovered = ImGui::IsItemHovered();
-		ImGui::PopStyleVar();
-
-		if (ImGui::BeginMenuBar())
-		{
-			if (ImGui::BeginMenu("Display"))
-			{
-				if (ImGui::MenuItem("Wireframe")) {}
-				ImGui::EndMenu();
-			}
-			ImGui::EndMenuBar();
-		}
+		
+		//if (ImGui::BeginMenuBar())
+		//{
+		//	if (ImGui::BeginMenu("Display"))
+		//	{
+		//		if (ImGui::MenuItem("Wireframe")) {}
+		//		ImGui::EndMenu();
+		//	}
+		//	ImGui::EndMenuBar();
+		//}
 
 
 	}
+	ImGui::PopStyleVar();
+
 	ImGui::End();
 
 

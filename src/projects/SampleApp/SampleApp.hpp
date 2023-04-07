@@ -8,7 +8,7 @@
 #include "Rendering/Vulkan/Renderers/VulkanPresentRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanImGuiRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanModelRenderer.h"
-#include "Rendering/Vulkan/Renderers/DeferredRenderer.hpp"
+#include "Rendering/Vulkan/Renderers/DeferredRenderer.h"
 #include "Rendering/Vulkan/VulkanUI.h"
 #include "Rendering/Camera.h"
 #include "Rendering/FrameCounter.h"
@@ -23,7 +23,7 @@ public:
 	~SampleApp();
 	void Initialize()	override;
 	void Update(float dt)		override;
-	void Render(size_t currentImageIdx, VulkanFrame& currentFrame)		override;
+	void Render() override;
 	void UpdateRenderersData(float dt, size_t currentImageIdx) override;
 	void Terminate()	override;
 
@@ -49,15 +49,16 @@ void SampleApp::Initialize()
 {
 	m_model_renderer.reset(new VulkanModelRenderer ("../../../data/models/suzanne.obj"));
 	m_imgui_renderer.reset(new VulkanImGuiRenderer(context));
-
-	m_imgui_renderer->Initialize(*m_model_renderer.get());
 	
 	m_deferred_renderer.init(
 		m_model_renderer->m_Albedo_Output, 
 		m_model_renderer->m_Normal_Output, 
 		m_model_renderer->m_Depth_Output);
 
-	CameraController fpsController = CameraController({ 0, 0, -5 }, { 0,0,1 }, { 0, 1, 0 });
+	m_imgui_renderer->Initialize(*m_model_renderer.get(), m_deferred_renderer);
+
+
+	CameraController fpsController = CameraController({ 0,0,5 }, { 0,-180,0 }, { 0,0,1 }, { 0,1,0 });
 
 	m_Camera = Camera(fpsController, 45.0f, m_imgui_renderer->m_SceneViewAspectRatio, 0.1f, 1000.0f);
 }
@@ -84,8 +85,11 @@ void SampleApp::Update(float dt)
 	UpdateRenderersData(dt, context.currentBackBuffer);
 }
 
-void SampleApp::Render(size_t currentFrameIdx, VulkanFrame& currentFrame)
+void SampleApp::Render()
 {
+	static uint32_t current_frame_idx = 0;
+	VulkanFrame currentFrame = context.frames[current_frame_idx];
+
 	VulkanSwapchain& swapchain = *m_RHI->GetSwapchain();
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -105,16 +109,16 @@ void SampleApp::Render(size_t currentFrameIdx, VulkanFrame& currentFrame)
 
 		{
 			/* Transition to color attachment */
-			swapchain.color_attachments[currentFrameIdx].transition_layout(currentFrame.cmd_buffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			swapchain.color_attachments[current_frame_idx].transition_layout(currentFrame.cmd_buffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 		}
 
-		m_model_renderer->render(context.currentBackBuffer, currentFrame.cmd_buffer);
-		m_imgui_renderer->render(context.currentBackBuffer, currentFrame.cmd_buffer);
-		m_deferred_renderer.render(context.currentBackBuffer);
+		m_model_renderer->render(current_frame_idx, currentFrame.cmd_buffer);
+		m_deferred_renderer.render(current_frame_idx, currentFrame.cmd_buffer);
+		m_imgui_renderer->render(current_frame_idx, currentFrame.cmd_buffer);
 
 		{
 			/* Present */
-			swapchain.color_attachments[currentFrameIdx].transition_layout(currentFrame.cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+			swapchain.color_attachments[current_frame_idx].transition_layout(currentFrame.cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 		}
 
 		VK_CHECK(vkEndCommandBuffer(currentFrame.cmd_buffer));
@@ -141,6 +145,7 @@ void SampleApp::Render(size_t currentFrameIdx, VulkanFrame& currentFrame)
 
 	// Present work
 	// Waits for the GPU queue to finish execution before presenting, we wait on renderComplete semaphore
+	uint32_t to_remove;
 	VkPresentInfoKHR presentInfo =
 	{
 		.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
@@ -154,6 +159,7 @@ void SampleApp::Render(size_t currentFrameIdx, VulkanFrame& currentFrame)
 	vkQueuePresentKHR(context.queue, &presentInfo);
 
 	context.frameCount++;
+	current_frame_idx = (current_frame_idx + 1) % NUM_FRAMES;
 }
 
 inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
@@ -166,6 +172,7 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 		m_UI.AddInspectorPanel();
 		m_UI.ShowStatistics(m_DebugName, dt, context.frameCount);
 		m_UI.ShowSceneViewportPanel(
+			m_imgui_renderer->m_DeferredRendererOutputTextureId[currentImageIdx],
 			m_imgui_renderer->m_ModelRendererColorTextureId[currentImageIdx],
 			m_imgui_renderer->m_ModelRendererNormalTextureId[currentImageIdx],
 			m_imgui_renderer->m_ModelRendererDepthTextureId[currentImageIdx]);
@@ -175,7 +182,7 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 	}
 
 	{
-		glm::mat4 m = glm::identity<glm::mat4>() * glm::scale(glm::identity<glm::mat4>(), glm::vec3(0.1f));
+		glm::mat4 m = glm::identity<glm::mat4>();
 		glm::mat4 v = m_Camera.GetView();
 		glm::mat4 p = m_Camera.GetProj();
 		

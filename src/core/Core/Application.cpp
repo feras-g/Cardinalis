@@ -45,7 +45,7 @@ void Application::Run()
 		m_Window->HandleEvents();
 		FrameStats::UpdateFrameTimeHistory(timestep.GetSeconds());
 		Update(timestep.GetSeconds());
-		Render(context.currentBackBuffer, context.frames[context.currentBackBuffer]);
+		Render();
 	}
 
 	Terminate();

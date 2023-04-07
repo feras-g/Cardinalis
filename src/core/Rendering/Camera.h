@@ -34,12 +34,12 @@ class CameraController
 {
 public:
 	CameraController()
-		: m_position({ 0,0,-5 }), m_forward({ 0,0,0 }), m_up({ 0,1,0 }), m_last_mouse_pos(0.0f), m_velocity(0.0f)
+		: m_position({ 0,0,5 }), m_forward({ 0,0,0 }), m_up({ 0,1,0 }), m_rotation{ 0.0f, -180.0f, 0.0f }, m_last_mouse_pos(0.0f), m_velocity(0.0f)
 	{
 		GetView();
 	}
-	CameraController(glm::vec3 pos, glm::vec3 target, glm::vec3 up)
-		: m_position(pos), m_forward(target), m_up(up), m_last_mouse_pos(0.0f), m_velocity(0.0f)
+	CameraController(glm::vec3 pos, glm::vec3 rot, glm::vec3 target, glm::vec3 up)
+		: m_position(pos), m_rotation(rot), m_forward(target), m_up(up), m_last_mouse_pos(0.0f), m_velocity(0.0f)
 	{
 		GetView();
 	}
@@ -68,7 +68,7 @@ public:
 
     bool m_rotate = false;
 
-    glm::vec3 m_rotation{ };
+    glm::vec3 m_rotation;
 };
 
 constexpr float ASPECT_16_9 = 16.0F / 9;
