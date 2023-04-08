@@ -3,15 +3,13 @@
 
 #include <glm/mat4x4.hpp>
 
-struct UniformData
-{
-	glm::mat4 model;
-	glm::mat4 view;
-	glm::mat4 proj;
-} ModelUniformData;
+Buffer VulkanModelRenderer::m_uniform_buffer;
 
-VulkanModelRenderer::VulkanModelRenderer(const char* modelFilename) 
-	: VulkanRendererBase(context, true)
+const uint32_t num_storage_buffers = 2;
+const uint32_t num_uniform_buffers = 1;
+const uint32_t num_combined_image_smp = 1;
+
+VulkanModelRenderer::VulkanModelRenderer(const char* modelFilename)
 {
 	m_Model.CreateFromFile(modelFilename);
 
@@ -19,11 +17,22 @@ VulkanModelRenderer::VulkanModelRenderer(const char* modelFilename)
 
 	/* Render objects creation */
 	create_attachments();
-	CreateDescriptorPool(2, 1, 1, &m_DescriptorPool);
-	CreateUniformBuffers(sizeof(UniformData));
-	CreateDescriptorSets(context.device, m_DescriptorSets, &m_DescriptorSetLayout);
-	UpdateDescriptorSets(context.device);
-	CreatePipelineLayout(context.device, m_DescriptorSetLayout, &m_PipelineLayout);
+	m_descriptor_pool = create_descriptor_pool(num_storage_buffers, num_uniform_buffers, num_combined_image_smp);
+	create_buffers();
+
+	constexpr uint32_t descriptor_count = num_storage_buffers + num_uniform_buffers + num_combined_image_smp;
+
+	std::array<VkDescriptorSetLayoutBinding, descriptor_count> bindings = {};
+	bindings[0] = { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,VK_SHADER_STAGE_VERTEX_BIT };
+	bindings[1] = { 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1,VK_SHADER_STAGE_VERTEX_BIT };
+	bindings[2] = { 2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1,VK_SHADER_STAGE_VERTEX_BIT };
+	bindings[3] = { 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerRepeatLinear };
+	
+	m_descriptor_set_layout = create_descriptor_set_layout(bindings);
+	m_descriptor_set = create_descriptor_set(m_descriptor_pool, m_descriptor_set_layout);
+
+	update_descriptor_set(context.device);
+	m_ppl_layout = create_pipeline_layout(context.device, m_descriptor_set_layout);
 
 	/* Dynamic renderpass setup */
 	for (int i = 0; i < NUM_FRAMES; i++)
@@ -34,7 +43,7 @@ VulkanModelRenderer::VulkanModelRenderer(const char* modelFilename)
 	}
 
 	GraphicsPipeline::Flags ppl_flags = GraphicsPipeline::Flags::ENABLE_DEPTH_STATE;
-	GraphicsPipeline::CreateDynamic(*m_Shader.get(), m_ColorAttachmentFormats, m_DepthAttachmentFormat, ppl_flags, m_PipelineLayout, &m_GraphicsPipeline, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+	GraphicsPipeline::CreateDynamic(*m_Shader.get(), m_ColorAttachmentFormats, m_DepthAttachmentFormat, ppl_flags, m_ppl_layout, &m_gfx_pipeline, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
 }
 
 void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buffer)
@@ -48,7 +57,7 @@ void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buf
 
 	VkRect2D render_area{ .offset {}, .extent { render_width , render_height } };
 	m_dyn_renderpass[currentImageIdx].begin(cmd_buffer, render_area);
-	draw_scene(currentImageIdx, cmd_buffer);
+	draw_scene(cmd_buffer);
 	m_dyn_renderpass[currentImageIdx].end(cmd_buffer);
 
 	/* Transition */
@@ -57,51 +66,40 @@ void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buf
 	m_Depth_Output[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
-void VulkanModelRenderer::draw_scene(size_t currentImageIdx, VkCommandBuffer cmdBuffer)
+void VulkanModelRenderer::draw_scene(VkCommandBuffer cmdBuffer)
 {
 	SetViewportScissor(cmdBuffer, render_width, render_height, true);
 
 	// Graphics pipeline
-	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline);
-	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_PipelineLayout, 0, 1, &m_DescriptorSets[currentImageIdx], 0, nullptr);
+	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline);
+	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ppl_layout, 0, 1, &m_descriptor_set, 0, nullptr);
 	m_Model.draw_indexed(cmdBuffer);
 }
 
-bool VulkanModelRenderer::UpdateBuffers(size_t currentImage, glm::mat4 model, glm::mat4 view, glm::mat4 proj)
+void VulkanModelRenderer::update_buffers(void* uniform_data, size_t data_size)
 {
-	ModelUniformData.model = model;
-	ModelUniformData.view  = view;
-	ModelUniformData.proj  = proj;
-
-	UploadBufferData(m_UniformBuffers[currentImage], &ModelUniformData, sizeof(UniformData), 0);
-
-	return true;
+	UploadBufferData(m_uniform_buffer, uniform_data, data_size, 0);
 }
 
 
-bool VulkanModelRenderer::UpdateDescriptorSets(VkDevice device)
+void VulkanModelRenderer::update_descriptor_set(VkDevice device)
 {
 	// Mesh data is not modified between 2 frames
 	VkDescriptorBufferInfo sboInfo0 = { .buffer = m_Model.m_StorageBuffer.buffer, .offset = 0, .range = m_Model.m_VtxBufferSizeInBytes };
 	VkDescriptorBufferInfo sboInfo1 = { .buffer = m_Model.m_StorageBuffer.buffer, .offset = m_Model.m_VtxBufferSizeInBytes, .range = m_Model.m_IdxBufferSizeInBytes };
-	VkDescriptorImageInfo imageInfo0 = { .sampler = s_SamplerRepeatLinear, .imageView = m_Texture.view, .imageLayout = m_Texture.info.imageLayout };
+	VkDescriptorImageInfo imageInfo0 = { .sampler = VulkanRendererBase::s_SamplerRepeatLinear, .imageView = m_default_texture.view, .imageLayout = m_default_texture.info.imageLayout };
 
-	for (int i = 0; i < NUM_FRAMES; i++)
+	VkDescriptorBufferInfo uboInfo0 = { .buffer = m_uniform_buffer.buffer, .offset = 0, .range = sizeof(UniformData) };
+
+	std::array<VkWriteDescriptorSet, 4> descriptorWrites =
 	{
-		VkDescriptorBufferInfo uboInfo0  = { .buffer = m_UniformBuffers[i].buffer, .offset = 0, .range = sizeof(UniformData) };
+		BufferWriteDescriptorSet(m_descriptor_set, 0, &uboInfo0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER),
+		BufferWriteDescriptorSet(m_descriptor_set, 1, &sboInfo0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER),
+		BufferWriteDescriptorSet(m_descriptor_set, 2, &sboInfo1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER),
+		ImageWriteDescriptorSet(m_descriptor_set,  3,  &imageInfo0)
+	};
 
-		std::array<VkWriteDescriptorSet, 4> descriptorWrites =
-		{
-			BufferWriteDescriptorSet(m_DescriptorSets[i], 0, &uboInfo0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER),
-			BufferWriteDescriptorSet(m_DescriptorSets[i], 1, &sboInfo0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER),
-			BufferWriteDescriptorSet(m_DescriptorSets[i], 2, &sboInfo1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER),
-			ImageWriteDescriptorSet(m_DescriptorSets[i],  3,  &imageInfo0)
-		};
-
-		vkUpdateDescriptorSets(device, (uint32_t)(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-	}
-
-	return true;
+	vkUpdateDescriptorSets(device, (uint32_t)(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 }
 
 void VulkanModelRenderer::create_attachments()
@@ -109,9 +107,9 @@ void VulkanModelRenderer::create_attachments()
 	VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
 
 	/* Input attachments */
-	m_Texture.CreateFromFile("../../../data/textures/default.png", "Default Checkerboard Texture", VK_FORMAT_R8G8B8A8_UNORM);
-	m_Texture.CreateView(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
-	m_Texture.transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	m_default_texture.CreateFromFile("../../../data/textures/default.png", "Default Checkerboard Texture", VK_FORMAT_R8G8B8A8_UNORM);
+	m_default_texture.CreateView(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
+	m_default_texture.transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 	/* Write Attachments */
 	/* Create G-Buffers for Albedo, Normal, Depth for each Frame */
@@ -139,9 +137,16 @@ void VulkanModelRenderer::create_attachments()
 	end_temp_cmd_buffer(cmd_buffer);
 }
 
+
+void VulkanModelRenderer::create_buffers()
+{
+	create_uniform_buffer(m_uniform_buffer, sizeof(UniformData));
+}
+
 VulkanModelRenderer::~VulkanModelRenderer()
 {
-	m_Texture.Destroy(context.device);
+	vkDeviceWaitIdle(context.device);
+	m_default_texture.Destroy(context.device);
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
 		m_Albedo_Output[i].Destroy(context.device);

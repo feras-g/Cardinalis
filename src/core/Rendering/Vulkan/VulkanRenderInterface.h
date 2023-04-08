@@ -127,8 +127,7 @@ bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, VkRenderPass* out
 bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const VulkanSwapchain* swapchain, VkFramebuffer* out_Framebuffers, bool useDepth);
 bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colorAttachments, const Texture2D* depthAttachments, VkFramebuffer* out_Framebuffers, bool useDepth);
 
-bool CreateDescriptorPool(uint32_t numStorageBuffers, uint32_t numUniformBuffers, uint32_t numCombinedSamplers, VkDescriptorPool* out_DescriptorPool);
-
+VkDescriptorPool create_descriptor_pool(uint32_t numStorageBuffers, uint32_t numUniformBuffers, uint32_t numCombinedSamplers);
 
 struct GraphicsPipeline
 {
@@ -159,8 +158,13 @@ void BeginRenderpass(VkCommandBuffer cmdBuffer, VkRenderPass renderPass, VkFrame
 
 void EndRenderPass(VkCommandBuffer cmdBuffer);
 void SetViewportScissor(VkCommandBuffer cmdBuffer, uint32_t width, uint32_t height, bool invertViewportY = false);
-bool CreatePipelineLayout(VkDevice device, VkDescriptorSetLayout descSetLayout, VkPipelineLayout* out_PipelineLayout);
-bool CreatePipelineLayout(VkDevice device, VkDescriptorSetLayout descSetLayout, VkPipelineLayout* out_PipelineLayout, uint32_t vtxConstRangeSizeInBytes, uint32_t fragConstRangeSizeInBytes);
+
+VkPipelineLayout create_pipeline_layout(VkDevice device, VkDescriptorSetLayout descSetLayout);
+VkPipelineLayout create_pipeline_layout(VkDevice device, VkDescriptorSetLayout descSetLayout, uint32_t vtxConstRangeSizeInBytes, uint32_t fragConstRangeSizeInBytes);
+
+
+VkDescriptorSetLayout create_descriptor_set_layout(std::span<VkDescriptorSetLayoutBinding> layout_bindings);
+VkDescriptorSet create_descriptor_set(VkDescriptorPool pool, VkDescriptorSetLayout layout);
 
 void StartInstantUseCmdBuffer();
 void EndInstantUseCmdBuffer();

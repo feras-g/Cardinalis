@@ -34,6 +34,7 @@ void VulkanRenderInterface::Initialize()
 
 void VulkanRenderInterface::Terminate()
 {
+	vkDeviceWaitIdle(context.device);
 
 	for (uint32_t i = 0; i < NUM_FRAMES; i++)
 	{
@@ -482,6 +483,38 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const VulkanSwapchain
 	return CreateColorDepthFramebuffers(renderPass, swapchain->color_attachments.data(), swapchain->depthTextures.data(), out_Framebuffers, useDepth);
 }
 
+[[nodiscard]] VkDescriptorSetLayout create_descriptor_set_layout(std::span<VkDescriptorSetLayoutBinding> layout_bindings)
+{
+	VkDescriptorSetLayoutCreateInfo layout_info =
+	{
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		.flags = 0,
+		.bindingCount	= (uint32_t)layout_bindings.size(),
+		.pBindings		= layout_bindings.data()
+	};
+
+	VkDescriptorSetLayout out;
+	VK_CHECK(vkCreateDescriptorSetLayout(context.device, &layout_info, nullptr, &out));
+	return out;
+}
+
+[[nodiscard]] VkDescriptorSet create_descriptor_set(VkDescriptorPool pool, VkDescriptorSetLayout layout)
+{
+	VkDescriptorSet out;
+
+	// Allocate memory
+	VkDescriptorSetAllocateInfo allocInfo =
+	{
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+		.descriptorPool		= pool,
+		.descriptorSetCount = 1,
+		.pSetLayouts		= &layout,
+	};
+
+	VK_CHECK(vkAllocateDescriptorSets(context.device, &allocInfo, &out));
+	return out;
+}
+
 bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colorAttachments, const Texture2D* depthAttachments, VkFramebuffer* out_Framebuffers, bool useDepth)
 {
 	VkFramebufferCreateInfo fbInfo =
@@ -508,8 +541,10 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colo
 	return true;
 }
 
-bool CreateDescriptorPool(uint32_t numStorageBuffers, uint32_t numUniformBuffers, uint32_t numCombinedSamplers, VkDescriptorPool* out_DescriptorPool)
+[[nodiscard]] VkDescriptorPool create_descriptor_pool(uint32_t numStorageBuffers, uint32_t numUniformBuffers, uint32_t numCombinedSamplers)
 {
+	VkDescriptorPool out;
+
 	std::vector<VkDescriptorPoolSize> poolSizes;
 
 	if (numStorageBuffers)	 
@@ -534,9 +569,9 @@ bool CreateDescriptorPool(uint32_t numStorageBuffers, uint32_t numUniformBuffers
 		.pPoolSizes = poolSizes.data()
 	};
 
-	VK_CHECK(vkCreateDescriptorPool(context.device, &poolInfo, nullptr, out_DescriptorPool));
+	VK_CHECK(vkCreateDescriptorPool(context.device, &poolInfo, nullptr, &out));
 
-	return true;
+	return out;
 }
 
 bool GraphicsPipeline::CreateDynamic(const VulkanShader& shader, std::span<VkFormat> colorAttachmentFormats, VkFormat depthAttachmentFormat, Flags flags, VkPipelineLayout pipelineLayout,
@@ -704,7 +739,7 @@ size_t CreateIndexVertexBuffer(Buffer& result, const void* vtxData, size_t vtxBu
 	vkUnmapMemory(context.device, stagingBuffer.memory);
 
 	// Create storage buffer containing non-interleaved vertex + index data 
-	CreateStorageBuffer(result, totalSizeInBytes);
+	create_storage_buffer(result, totalSizeInBytes);
 	CopyBuffer(stagingBuffer, result, totalSizeInBytes);
 
 	DestroyBuffer(stagingBuffer);
@@ -831,13 +866,15 @@ void SetViewportScissor(VkCommandBuffer cmdBuffer, uint32_t width, uint32_t heig
 	vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
 }
 
-bool CreatePipelineLayout(VkDevice device, VkDescriptorSetLayout descSetLayout, VkPipelineLayout* out_PipelineLayout)
+VkPipelineLayout create_pipeline_layout(VkDevice device, VkDescriptorSetLayout descSetLayout)
 {
-	return CreatePipelineLayout(device, descSetLayout, out_PipelineLayout, 0, 0);
+	return create_pipeline_layout(device, descSetLayout, 0, 0);
 }
 
-bool CreatePipelineLayout(VkDevice device, VkDescriptorSetLayout descSetLayout, VkPipelineLayout* out_PipelineLayout, uint32_t vtxConstRangeSizeInBytes, uint32_t fragConstRangeSizeInBytes)
+VkPipelineLayout create_pipeline_layout(VkDevice device, VkDescriptorSetLayout descSetLayout, uint32_t vtxConstRangeSizeInBytes, uint32_t fragConstRangeSizeInBytes)
 {
+	VkPipelineLayout out;
+
 	VkPushConstantRange pushConstantRanges[2] =
 	{
 		{
@@ -865,7 +902,7 @@ bool CreatePipelineLayout(VkDevice device, VkDescriptorSetLayout descSetLayout, 
 		.pPushConstantRanges = pushConstantRangeCount == 0 ? nullptr : (vtxConstRangeSizeInBytes > 0 ? pushConstantRanges : &pushConstantRanges[1])
 	};
 
-	VK_CHECK(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, out_PipelineLayout));
+	VK_CHECK(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &out));
 
-	return true;
+	return out;
 }

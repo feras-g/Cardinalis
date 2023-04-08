@@ -12,8 +12,8 @@ struct Buffer
 };
 
 void CreateBuffer(Buffer& result, size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProperties);
-void CreateUniformBuffer(Buffer& result, VkDeviceSize size);
-void CreateStorageBuffer(Buffer& result, VkDeviceSize size);
+void create_uniform_buffer(Buffer& result, VkDeviceSize size);
+void create_storage_buffer(Buffer& result, VkDeviceSize size);
 void CreateStagingBuffer(Buffer& result, VkDeviceSize size);
 void UploadBufferData(Buffer& buffer, const void* data, const size_t size, VkDeviceSize offset);
 void CopyBuffer(const Buffer& src, const Buffer& dst, VkDeviceSize size);

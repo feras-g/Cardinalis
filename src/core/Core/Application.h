@@ -15,7 +15,6 @@ struct VulkanFrame;
 class VulkanRendererBase;
 class VulkanImGuiRenderer;
 class VulkanModelRenderer;
-class VulkanPresentRenderer;
 class VulkanClearColorRenderer;
 
 /// <summary>

@@ -14,19 +14,19 @@ class VulkanShader;
 class VulkanModelRenderer;
 class DeferredRenderer;
 
-class VulkanImGuiRenderer : public VulkanRendererBase
+class VulkanImGuiRenderer
 {
 public:
 	VulkanImGuiRenderer() = default;
 	VulkanImGuiRenderer(const VulkanContext& vkContext);
 	void Initialize(const VulkanModelRenderer& model_renderer, const DeferredRenderer& deferred_renderer);
 	void draw_scene(VkCommandBuffer cmd_buffer);
-	void render(size_t currentImageIdx, VkCommandBuffer cmd_buffer) override;
-	void update_buffers(size_t currentImage, ImDrawData* pDrawData);
-	bool RecreateFramebuffersRenderPass();
+	void render(size_t currentImageIdx, VkCommandBuffer cmd_buffer);
+	void create_buffers();
+	void update_buffers(ImDrawData* pDrawData);
 
 	float m_SceneViewAspectRatio = 1.0;
-	bool CreateDescriptorSets(VkDevice device, VkDescriptorSet* out_DescriptorSets, VkDescriptorSetLayout* out_DescLayouts) override;
+	
 	void UpdateAttachments();
 
 	std::array<int, NUM_FRAMES> m_ModelRendererColorTextureId;
@@ -34,21 +34,17 @@ public:
 	std::array<int, NUM_FRAMES> m_ModelRendererDepthTextureId;
 	std::array<int, NUM_FRAMES> m_DeferredRendererOutputTextureId;
 
-	~VulkanImGuiRenderer() override final;
+	~VulkanImGuiRenderer() ;
 private:
 	ImDrawData* m_pDrawData = nullptr;
 
-	vk::DynamicRenderPass m_dyn_renderpass[NUM_FRAMES];
-
-	VkSampler m_SamplerRepeatLinear;
 	Texture2D m_FontTexture;
 	std::vector<Texture2D> m_Textures;	// Textures displayed inside UI
 	std::vector<VkDescriptorImageInfo> m_TextureDescriptors;
 
-
-
 	// Storage buffers
-	Buffer m_StorageBuffers[NUM_FRAMES];
+	Buffer m_storage_buffer;
+	Buffer m_uniform_buffer;
 
 	std::unique_ptr<VulkanShader> m_Shader;
 
@@ -56,9 +52,13 @@ private:
 	bool CreatePipeline(VkDevice device);
 	bool CreateUniformBuffers(size_t dataSizeInBytes);
 
-	bool UpdateDescriptorSets(VkDevice device) final override;
+	void update_descriptor_set(VkDevice device);
 
-	VkDescriptorPool m_ImGuiDescriptorPool;
-
+	vk::DynamicRenderPass m_dyn_renderpass[NUM_FRAMES];
+	VkPipeline m_gfx_pipeline = VK_NULL_HANDLE;
+	VkDescriptorPool m_descriptor_pool;
+	VkPipelineLayout m_pipeline_layout;
+	VkDescriptorSetLayout m_descriptor_set_layout;
+	VkDescriptorSet m_descriptor_set;
 };
 #endif // !VULKAN_IMGUI_RENDERER_H

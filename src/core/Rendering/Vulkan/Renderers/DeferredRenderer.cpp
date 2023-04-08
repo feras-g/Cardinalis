@@ -5,8 +5,12 @@
 
 void DeferredRenderer::init(std::span<Texture2D> g_buffers_albedo, std::span<Texture2D> g_buffers_normal, std::span<Texture2D> g_buffers_depth)
 {
-	/* Create renderpass */
 
+	for (int i = 0; i < g_buffers_albedo.size(); i++) m_g_buffers_albedo[i] = &g_buffers_albedo[i];
+	for (int i = 0; i < g_buffers_normal.size(); i++) m_g_buffers_normal[i] = &g_buffers_normal[i];
+	for (int i = 0; i < g_buffers_depth.size(); i++) m_g_buffers_depth[i] = &g_buffers_depth[i];
+
+	/* Create renderpass */
 	VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
@@ -30,18 +34,7 @@ void DeferredRenderer::init(std::span<Texture2D> g_buffers_albedo, std::span<Tex
 	// Descriptot Set Layout
 
 	/* Create Descriptor Pool */
-	VkDescriptorPoolSize pool_size = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, num_gbuffers * NUM_FRAMES };
-	VkDescriptorPoolCreateInfo desc_pool_info
-	{
-		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-		.maxSets = NUM_FRAMES,
-		.poolSizeCount = 1,
-		.pPoolSizes = &pool_size
-	};
-
-	VkDescriptorPool desc_pool;
-	VK_CHECK(vkCreateDescriptorPool(context.device, &desc_pool_info, nullptr, &desc_pool));
-
+	m_descriptor_pool = create_descriptor_pool(0, 0, num_gbuffers);
 
 	/* Create descriptor set bindings */
 	std::array<VkDescriptorSetLayoutBinding, num_gbuffers> desc_set_layout_bindings = {};
@@ -51,80 +44,58 @@ void DeferredRenderer::init(std::span<Texture2D> g_buffers_albedo, std::span<Tex
 	}
 
 	/* Create Descriptor Set Layout */
-	VkDescriptorSetLayout desc_set_layout[NUM_FRAMES];
-	VkDescriptorSetLayoutCreateInfo desc_set_layout_info = {};
-	desc_set_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	desc_set_layout_info.bindingCount = desc_set_layout_bindings.size();
-	desc_set_layout_info.pBindings = desc_set_layout_bindings.data();
-	VK_CHECK(vkCreateDescriptorSetLayout(context.device, &desc_set_layout_info, nullptr, &desc_set_layout[0]));
-	VK_CHECK(vkCreateDescriptorSetLayout(context.device, &desc_set_layout_info, nullptr, &desc_set_layout[1]));
+	m_descriptor_set_layout = create_descriptor_set_layout(desc_set_layout_bindings);
 
-	VkDescriptorSetAllocateInfo desc_set_alloc_info = {};
-	desc_set_alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	desc_set_alloc_info.descriptorSetCount = NUM_FRAMES;
-	desc_set_alloc_info.descriptorPool = desc_pool;
-	desc_set_alloc_info.pSetLayouts = desc_set_layout;
-	VK_CHECK(vkAllocateDescriptorSets(context.device, &desc_set_alloc_info, m_descriptor_sets.data()));
+	m_descriptor_set = create_descriptor_set(m_descriptor_pool, m_descriptor_set_layout);
 
-	std::array<VkDescriptorImageInfo, 3> desc_image_info_frame0;
-	std::array<VkDescriptorImageInfo, 3> desc_image_info_frame1;
+	/*update_descriptor_set();*/
 
-	for (int i = 0; i < desc_image_info_frame0.size(); i++)
-	{
-		desc_image_info_frame0[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		desc_image_info_frame0[i].sampler = VulkanRendererBase::s_SamplerClampNearest;
-
-		desc_image_info_frame1[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		desc_image_info_frame1[i].sampler = VulkanRendererBase::s_SamplerClampNearest;
-	}
-
-	desc_image_info_frame0[0].imageView = g_buffers_albedo[0].view;
-	desc_image_info_frame0[1].imageView = g_buffers_normal[0].view;
-	desc_image_info_frame0[2].imageView = g_buffers_depth[0].view;
-
-	desc_image_info_frame1[0].imageView = g_buffers_albedo[1].view;
-	desc_image_info_frame1[1].imageView = g_buffers_normal[1].view;
-	desc_image_info_frame1[2].imageView = g_buffers_depth[1].view;
-
-	std::array<VkWriteDescriptorSet, num_gbuffers> desc_writes_frame0
-	{
-		ImageWriteDescriptorSet(m_descriptor_sets[0], 0, &desc_image_info_frame0[0]),
-		ImageWriteDescriptorSet(m_descriptor_sets[0], 1, &desc_image_info_frame0[1]),
-		ImageWriteDescriptorSet(m_descriptor_sets[0], 2, &desc_image_info_frame0[2])
-	};
-
-	std::array<VkWriteDescriptorSet, num_gbuffers> desc_writes_frame1
-	{
-		ImageWriteDescriptorSet(m_descriptor_sets[1], 0, &desc_image_info_frame1[0]),
-		ImageWriteDescriptorSet(m_descriptor_sets[1], 1, &desc_image_info_frame1[1]),
-		ImageWriteDescriptorSet(m_descriptor_sets[1], 2, &desc_image_info_frame1[2])
-	};
-
-	vkUpdateDescriptorSets(context.device, (uint32_t)(desc_writes_frame0.size()), desc_writes_frame0.data(), 0, nullptr);
-	vkUpdateDescriptorSets(context.device, (uint32_t)(desc_writes_frame1.size()), desc_writes_frame1.data(), 0, nullptr);
-
-	VkPipelineLayoutCreateInfo ppl_layout_info
-	{
-		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-		.setLayoutCount = NUM_FRAMES,
-		.pSetLayouts = desc_set_layout,
-		.pushConstantRangeCount = 0,
-		.pPushConstantRanges = VK_NULL_HANDLE
-	};
-	VK_CHECK(vkCreatePipelineLayout(context.device, &ppl_layout_info, nullptr, &m_ppl_layout));
+	m_pipeline_layout = create_pipeline_layout(context.device, m_descriptor_set_layout);
 
 	/* Create graphics pipeline */
 	GraphicsPipeline::Flags ppl_flags = GraphicsPipeline::NONE;
 	std::array<VkFormat, 1> color_formats = { color_attachment_format };
-	GraphicsPipeline::CreateDynamic(m_shader_deferred, color_formats, {}, ppl_flags, m_ppl_layout, &m_gfx_pipeline, VK_CULL_MODE_FRONT_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+	GraphicsPipeline::CreateDynamic(m_shader_deferred, color_formats, {}, ppl_flags, m_pipeline_layout, &m_gfx_pipeline, VK_CULL_MODE_FRONT_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
 }
 
 void DeferredRenderer::draw_scene(size_t current_backbuffer_idx, VkCommandBuffer cmd_buffer)
 {
 	SetViewportScissor(cmd_buffer, VulkanModelRenderer::render_width, VulkanModelRenderer::render_height);
 	vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline);
-	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ppl_layout, 0, 1, &m_descriptor_sets[current_backbuffer_idx], 0, nullptr);
+	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_descriptor_set, 0, nullptr);
 	vkCmdDraw(cmd_buffer, 3, 1, 0, 0);
+}
+
+void DeferredRenderer::create_uniform_buffers()
+{
+
+}
+
+void DeferredRenderer::update(size_t frame_idx)
+{
+	update_descriptor_set(frame_idx);
+}
+
+void DeferredRenderer::update_descriptor_set(size_t frame_idx)
+{
+	using DescriptorImageInfo_GBuffers = std::array<VkDescriptorImageInfo, num_gbuffers>;
+	using WriteDescriptorSets_GBuffers = std::array<VkWriteDescriptorSet, num_gbuffers>;
+
+	DescriptorImageInfo_GBuffers descriptor_image_infos = {};
+	WriteDescriptorSets_GBuffers write_descriptor_set = {};
+
+	for (int gbuffer_idx = 0; gbuffer_idx < num_gbuffers; gbuffer_idx++)
+	{
+		descriptor_image_infos[gbuffer_idx].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		descriptor_image_infos[gbuffer_idx].sampler = VulkanRendererBase::s_SamplerClampNearest;
+
+		if (gbuffer_idx == 0)	descriptor_image_infos[gbuffer_idx].imageView = m_g_buffers_albedo[frame_idx]->view;
+		if (gbuffer_idx == 1)	descriptor_image_infos[gbuffer_idx].imageView = m_g_buffers_normal[frame_idx]->view;
+		if (gbuffer_idx == 2)	descriptor_image_infos[gbuffer_idx].imageView = m_g_buffers_depth[frame_idx]->view;
+
+		write_descriptor_set[gbuffer_idx] = ImageWriteDescriptorSet(m_descriptor_set, gbuffer_idx, &descriptor_image_infos[gbuffer_idx]);
+	}
+	vkUpdateDescriptorSets(context.device, (uint32_t)(write_descriptor_set.size()), write_descriptor_set.data(), 0, nullptr);
 }
 
 void DeferredRenderer::render(size_t current_backbuffer_idx, VkCommandBuffer cmd_buffer)

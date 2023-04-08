@@ -7,19 +7,19 @@
 
 class VulkanShader;
 
-class VulkanModelRenderer final : public VulkanRendererBase
+class VulkanModelRenderer 
 {
 	friend class VulkanImGuiRenderer;
 public:
 	VulkanModelRenderer() = default;
 	explicit VulkanModelRenderer(const char* modelFilename);
-	void render(size_t currentImageIdx, VkCommandBuffer cmdBuffer)  override;
+	void render(size_t currentImageIdx, VkCommandBuffer cmdBuffer);
 
-	bool Init();
-	void draw_scene(size_t currentImageIdx, VkCommandBuffer cmdBuffer);
-	bool UpdateBuffers(size_t currentImage, glm::mat4 model, glm::mat4 view, glm::mat4 proj);
-	bool UpdateDescriptorSets(VkDevice device) final override;
+	void draw_scene(VkCommandBuffer cmdBuffer);
+	void update_buffers(void* uniform_data, size_t data_size);
+	void update_descriptor_set(VkDevice device);
 	void create_attachments();
+	void create_buffers();
 
 	// Offscreen images
 	std::array<Texture2D, NUM_FRAMES> m_Albedo_Output;
@@ -32,16 +32,32 @@ public:
 	static const uint32_t render_width = 1024;
 	static const uint32_t render_height = 1024;
 
-	~VulkanModelRenderer() final;
+	static Buffer m_uniform_buffer;
+
+	struct UniformData
+	{
+		glm::mat4 model;
+		glm::mat4 view;
+		glm::mat4 proj;
+		glm::mat4 mvp;
+	} frame_data;
+
+	~VulkanModelRenderer();
 private:
 	VulkanModel m_Model;
 	std::unique_ptr<VulkanShader> m_Shader;
 
 	std::vector<VkFormat> m_ColorAttachmentFormats = { VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_R16G16B16A16_SFLOAT };
 	VkFormat m_DepthAttachmentFormat	= VK_FORMAT_D16_UNORM;
-	VkPipeline			m_GraphicsPipeline = VK_NULL_HANDLE;
 
 	VkSampler m_TextureSampler;
-	Texture2D m_Texture;
+	Texture2D m_default_texture;
+
+	VkPipeline			m_gfx_pipeline = VK_NULL_HANDLE;
+	VkDescriptorPool m_descriptor_pool;
+	VkPipelineLayout m_ppl_layout;
+	
+	VkDescriptorSetLayout m_descriptor_set_layout;
+	VkDescriptorSet m_descriptor_set;
 };
 #endif // !VULKAN_CLEAR_COLOR_RENDERER_H

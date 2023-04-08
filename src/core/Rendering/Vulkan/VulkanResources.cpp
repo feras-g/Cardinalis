@@ -30,12 +30,12 @@ void CreateBuffer(Buffer& result, size_t size, VkBufferUsageFlags usage, VkMemor
 	VK_CHECK(vkBindBufferMemory(context.device, result.buffer, result.memory, 0));
 }
 
-void CreateUniformBuffer(Buffer& result, VkDeviceSize size)
+void create_uniform_buffer(Buffer& result, VkDeviceSize size)
 {
 	CreateBuffer(result, size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 }
 
-void CreateStorageBuffer(Buffer& result, VkDeviceSize size)
+void create_storage_buffer(Buffer& result, VkDeviceSize size)
 {
 	CreateBuffer(result, size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 }

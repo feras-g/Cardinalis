@@ -5,7 +5,6 @@
 #include "Window/Window.h"
 #include "Rendering/Vulkan/VulkanRenderInterface.h"
 #include "Rendering/Vulkan/VulkanShader.h"
-#include "Rendering/Vulkan/Renderers/VulkanPresentRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanImGuiRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanModelRenderer.h"
 #include "Rendering/Vulkan/Renderers/DeferredRenderer.h"
@@ -145,7 +144,7 @@ void SampleApp::Render()
 
 	// Present work
 	// Waits for the GPU queue to finish execution before presenting, we wait on renderComplete semaphore
-	uint32_t to_remove;
+	
 	VkPresentInfoKHR presentInfo =
 	{
 		.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
@@ -164,6 +163,21 @@ void SampleApp::Render()
 
 inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 {
+	vkWaitForFences(context.device, 1, &context.frames[currentImageIdx].renderFence, TRUE, UINT64_MAX);
+
+	{
+		VulkanModelRenderer::UniformData frame_data;
+
+		frame_data.model = glm::identity<glm::mat4>();
+		frame_data.view = m_Camera.GetView();
+		frame_data.proj = m_Camera.GetProj();
+		frame_data.mvp = frame_data.proj * frame_data.view * frame_data.model;
+
+		m_model_renderer->update_buffers(&frame_data, sizeof(frame_data));
+	}
+
+	m_deferred_renderer.update(currentImageIdx);
+
 	// ImGui composition
 	{
 		m_UI.Start();
@@ -182,11 +196,7 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 	}
 
 	{
-		glm::mat4 m = glm::identity<glm::mat4>();
-		glm::mat4 v = m_Camera.GetView();
-		glm::mat4 p = m_Camera.GetProj();
-		
-		m_model_renderer->UpdateBuffers(currentImageIdx, m, v, p);
+		m_imgui_renderer->update_buffers(ImGui::GetDrawData());
 	}
 }
 

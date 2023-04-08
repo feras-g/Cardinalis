@@ -20,14 +20,22 @@ struct DeferredRenderer
 	void init(std::span<Texture2D> g_buffers_albedo, std::span<Texture2D> g_buffers_normal, std::span<Texture2D> g_buffers_depth);
 	void render(size_t current_backbuffer_idx, VkCommandBuffer cmd_buffer);
 	void draw_scene(size_t current_backbuffer_idx, VkCommandBuffer cmd_buffer);
-
-
+	void create_uniform_buffers();
+	void update(size_t frame_idx);
+	void update_descriptor_set(size_t frame_idx);
 	VkPipeline m_gfx_pipeline;
-	VkPipelineLayout m_ppl_layout;
-
+	VkPipelineLayout m_pipeline_layout;
+	VkDescriptorSetLayout m_descriptor_set_layout;
 	VulkanShader m_shader_deferred;
 
+	VkDescriptorPool m_descriptor_pool;
 	std::array <vk::DynamicRenderPass, NUM_FRAMES> m_dyn_renderpass;
-	std::array<VkDescriptorSet, NUM_FRAMES> m_descriptor_sets;
+	VkDescriptorSet m_descriptor_set;
 	std::array <Texture2D, NUM_FRAMES> m_output_attachment;
+	std::array<Buffer, NUM_FRAMES> m_uniform_buffers;
+
+
+	std::array<Texture2D*, NUM_FRAMES> m_g_buffers_albedo;
+	std::array<Texture2D*, NUM_FRAMES> m_g_buffers_normal;
+	std::array<Texture2D*, NUM_FRAMES> m_g_buffers_depth;
 };
