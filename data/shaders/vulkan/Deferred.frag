@@ -4,6 +4,15 @@ layout(binding = 0) uniform sampler2D gbuffer_color;
 layout(binding = 1) uniform sampler2D gbuffer_WS_normal;
 layout(binding = 2) uniform sampler2D gbuffer_depth;
 
+layout(binding = 3) uniform FrameData 
+{ 
+    mat4 model; 
+    mat4 view; 
+    mat4 proj; 
+    mat4 mvp; 
+} ubo;
+
+
 layout (location = 0) in vec2 uv;
 layout (location = 0) out vec4 out_color;
 
@@ -26,5 +35,5 @@ void main()
 	vec3 base_color = texture(gbuffer_color, uv).rgb;
 
 	vec3 color = fr * nDotL * d_light.color;
-    out_color = vec4(color * base_color, 1.0);
+    out_color = vec4(base_color, 1.0);
 }

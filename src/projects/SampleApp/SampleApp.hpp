@@ -164,19 +164,19 @@ void SampleApp::Render()
 inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 {
 	vkWaitForFences(context.device, 1, &context.frames[currentImageIdx].renderFence, TRUE, UINT64_MAX);
-
+	VulkanRendererBase::UniformData frame_data;
 	{
-		VulkanModelRenderer::UniformData frame_data;
 
 		frame_data.model = glm::identity<glm::mat4>();
 		frame_data.view = m_Camera.GetView();
 		frame_data.proj = m_Camera.GetProj();
 		frame_data.mvp = frame_data.proj * frame_data.view * frame_data.model;
 
-		m_model_renderer->update_buffers(&frame_data, sizeof(frame_data));
+		VulkanRendererBase::update_common_framedata(frame_data);
 	}
 
-	m_deferred_renderer.update(currentImageIdx);
+	m_model_renderer->update_buffers(&frame_data, sizeof(frame_data));
+	m_deferred_renderer.update_descriptor_set(currentImageIdx);
 
 	// ImGui composition
 	{

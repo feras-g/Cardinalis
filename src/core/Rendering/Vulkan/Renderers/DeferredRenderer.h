@@ -32,7 +32,7 @@ struct DeferredRenderer
 	std::array <vk::DynamicRenderPass, NUM_FRAMES> m_dyn_renderpass;
 	VkDescriptorSet m_descriptor_set;
 	std::array <Texture2D, NUM_FRAMES> m_output_attachment;
-	std::array<Buffer, NUM_FRAMES> m_uniform_buffers;
+	Buffer m_uniform_buffer;
 
 
 	std::array<Texture2D*, NUM_FRAMES> m_g_buffers_albedo;

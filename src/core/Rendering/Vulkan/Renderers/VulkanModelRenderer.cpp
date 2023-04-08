@@ -78,7 +78,7 @@ void VulkanModelRenderer::draw_scene(VkCommandBuffer cmdBuffer)
 
 void VulkanModelRenderer::update_buffers(void* uniform_data, size_t data_size)
 {
-	UploadBufferData(m_uniform_buffer, uniform_data, data_size, 0);
+	
 }
 
 
@@ -89,7 +89,7 @@ void VulkanModelRenderer::update_descriptor_set(VkDevice device)
 	VkDescriptorBufferInfo sboInfo1 = { .buffer = m_Model.m_StorageBuffer.buffer, .offset = m_Model.m_VtxBufferSizeInBytes, .range = m_Model.m_IdxBufferSizeInBytes };
 	VkDescriptorImageInfo imageInfo0 = { .sampler = VulkanRendererBase::s_SamplerRepeatLinear, .imageView = m_default_texture.view, .imageLayout = m_default_texture.info.imageLayout };
 
-	VkDescriptorBufferInfo uboInfo0 = { .buffer = m_uniform_buffer.buffer, .offset = 0, .range = sizeof(UniformData) };
+	VkDescriptorBufferInfo uboInfo0 = { .buffer = VulkanRendererBase::m_ubo_common_framedata.buffer, .offset = 0, .range = sizeof(VulkanRendererBase::UniformData) };
 
 	std::array<VkWriteDescriptorSet, 4> descriptorWrites =
 	{
@@ -140,7 +140,7 @@ void VulkanModelRenderer::create_attachments()
 
 void VulkanModelRenderer::create_buffers()
 {
-	create_uniform_buffer(m_uniform_buffer, sizeof(UniformData));
+	
 }
 
 VulkanModelRenderer::~VulkanModelRenderer()

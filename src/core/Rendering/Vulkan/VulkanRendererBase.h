@@ -4,14 +4,28 @@
 #include <Rendering/Vulkan/VulkanRenderInterface.h>
 #include <Rendering/Vulkan/RenderPass.h>
 
+
+
 class VulkanRendererBase
 {
 public:
-	static void CreateSamplers();
+	struct UniformData
+	{
+		glm::mat4 model;
+		glm::mat4 view;
+		glm::mat4 proj;
+		glm::mat4 mvp;
+	} frame_data;
+
+	static void create_samplers();
+	static void create_common_buffers();
+	static void update_common_framedata(const UniformData& data);
+
 	static VkSampler s_SamplerRepeatLinear;
 	static VkSampler s_SamplerClampLinear;
 	static VkSampler s_SamplerClampNearest;
-
+	static Buffer m_ubo_common_framedata;
+	
 
 	/* WIP */
 	vk::DynamicRenderPass m_dyn_renderpass[NUM_FRAMES];

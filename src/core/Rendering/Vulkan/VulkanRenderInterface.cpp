@@ -25,7 +25,8 @@ void VulkanRenderInterface::Initialize()
 	CreateCommandStructures();
 	CreateSyncStructures();
 
-	VulkanRendererBase::CreateSamplers();
+	VulkanRendererBase::create_samplers();
+	VulkanRendererBase::create_common_buffers();
 
 	m_InitSuccess = true;
 

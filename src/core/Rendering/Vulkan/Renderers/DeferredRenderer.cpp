@@ -3,6 +3,8 @@
 #include "Rendering/Vulkan/VulkanRendererBase.h"
 #include "Rendering/Vulkan/VulkanDebugUtils.h"
 
+const uint32_t num_descriptors = 4;
+
 void DeferredRenderer::init(std::span<Texture2D> g_buffers_albedo, std::span<Texture2D> g_buffers_normal, std::span<Texture2D> g_buffers_depth)
 {
 
@@ -34,14 +36,14 @@ void DeferredRenderer::init(std::span<Texture2D> g_buffers_albedo, std::span<Tex
 	// Descriptot Set Layout
 
 	/* Create Descriptor Pool */
-	m_descriptor_pool = create_descriptor_pool(0, 0, num_gbuffers);
+	m_descriptor_pool = create_descriptor_pool(0, 0, num_descriptors);
 
 	/* Create descriptor set bindings */
-	std::array<VkDescriptorSetLayoutBinding, num_gbuffers> desc_set_layout_bindings = {};
-	for (uint32_t binding = 0; binding < num_gbuffers; binding++)
-	{
-		desc_set_layout_bindings[binding] = { binding, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerClampNearest };
-	}
+	std::array<VkDescriptorSetLayoutBinding, num_descriptors> desc_set_layout_bindings = {};
+	desc_set_layout_bindings[0] = { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerClampNearest };
+	desc_set_layout_bindings[1] = { 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerClampNearest };
+	desc_set_layout_bindings[2] = { 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerClampNearest };
+	desc_set_layout_bindings[3] = { 3, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT };
 
 	/* Create Descriptor Set Layout */
 	m_descriptor_set_layout = create_descriptor_set_layout(desc_set_layout_bindings);
@@ -73,28 +75,38 @@ void DeferredRenderer::create_uniform_buffers()
 
 void DeferredRenderer::update(size_t frame_idx)
 {
-	update_descriptor_set(frame_idx);
+	
 }
 
 void DeferredRenderer::update_descriptor_set(size_t frame_idx)
 {
-	using DescriptorImageInfo_GBuffers = std::array<VkDescriptorImageInfo, num_gbuffers>;
-	using WriteDescriptorSets_GBuffers = std::array<VkWriteDescriptorSet, num_gbuffers>;
+	constexpr uint32_t num_descriptors = 4;
 
-	DescriptorImageInfo_GBuffers descriptor_image_infos = {};
-	WriteDescriptorSets_GBuffers write_descriptor_set = {};
+	std::array<VkDescriptorImageInfo, num_gbuffers>  descriptor_image_infos = {};
+	std::array<VkWriteDescriptorSet, num_descriptors> write_descriptor_set = {};
 
+	descriptor_image_infos[0].imageView = m_g_buffers_albedo[frame_idx]->view;
+	descriptor_image_infos[1].imageView = m_g_buffers_normal[frame_idx]->view;
+	descriptor_image_infos[2].imageView = m_g_buffers_depth[frame_idx]->view;
+
+	uint32_t curr_binding = 0;
 	for (int gbuffer_idx = 0; gbuffer_idx < num_gbuffers; gbuffer_idx++)
 	{
+		curr_binding++;
 		descriptor_image_infos[gbuffer_idx].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		descriptor_image_infos[gbuffer_idx].sampler = VulkanRendererBase::s_SamplerClampNearest;
-
-		if (gbuffer_idx == 0)	descriptor_image_infos[gbuffer_idx].imageView = m_g_buffers_albedo[frame_idx]->view;
-		if (gbuffer_idx == 1)	descriptor_image_infos[gbuffer_idx].imageView = m_g_buffers_normal[frame_idx]->view;
-		if (gbuffer_idx == 2)	descriptor_image_infos[gbuffer_idx].imageView = m_g_buffers_depth[frame_idx]->view;
-
 		write_descriptor_set[gbuffer_idx] = ImageWriteDescriptorSet(m_descriptor_set, gbuffer_idx, &descriptor_image_infos[gbuffer_idx]);
 	}
+
+
+
+	VkDescriptorBufferInfo desc_buffer_info = {};
+	desc_buffer_info.buffer = VulkanRendererBase::m_ubo_common_framedata.buffer;
+	desc_buffer_info.offset = 0;
+	desc_buffer_info.range = sizeof(VulkanRendererBase::UniformData);
+	
+	write_descriptor_set[curr_binding] = BufferWriteDescriptorSet(m_descriptor_set, curr_binding, &desc_buffer_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+	curr_binding++;
 	vkUpdateDescriptorSets(context.device, (uint32_t)(write_descriptor_set.size()), write_descriptor_set.data(), 0, nullptr);
 }
 
