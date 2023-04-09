@@ -170,6 +170,7 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 		frame_data.model = glm::identity<glm::mat4>();
 		frame_data.view = m_Camera.GetView();
 		frame_data.proj = m_Camera.GetProj();
+		frame_data.inv_view_proj = glm::inverse(frame_data.proj * frame_data.view);
 		frame_data.mvp = frame_data.proj * frame_data.view * frame_data.model;
 
 		VulkanRendererBase::update_common_framedata(frame_data);

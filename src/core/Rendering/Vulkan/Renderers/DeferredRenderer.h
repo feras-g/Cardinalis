@@ -4,6 +4,29 @@
 #include "Rendering/Vulkan/VulkanModel.h"
 #include "Rendering/Vulkan/VulkanRenderInterface.h"
 
+struct PointLight
+{
+	glm::vec4 position;
+	glm::vec4 color;
+	float radius;
+	float padding[3];
+};
+
+struct LightData
+{
+	PointLight point_lights[100];
+};
+
+struct LightManager
+{
+	void init(size_t x, size_t y);
+	void init_ubo();
+
+	size_t m_total_size_bytes = 0;
+	LightData m_light_data;
+	Buffer m_uniform_buffer;
+};
+
 static const VkFormat color_attachment_format = VK_FORMAT_R8G8B8A8_SRGB;
 /* 
 	Number of g-buffers to read from : 
@@ -32,10 +55,10 @@ struct DeferredRenderer
 	std::array <vk::DynamicRenderPass, NUM_FRAMES> m_dyn_renderpass;
 	VkDescriptorSet m_descriptor_set;
 	std::array <Texture2D, NUM_FRAMES> m_output_attachment;
-	Buffer m_uniform_buffer;
-
 
 	std::array<Texture2D*, NUM_FRAMES> m_g_buffers_albedo;
 	std::array<Texture2D*, NUM_FRAMES> m_g_buffers_normal;
 	std::array<Texture2D*, NUM_FRAMES> m_g_buffers_depth;
+
+	LightManager m_light_manager;
 };

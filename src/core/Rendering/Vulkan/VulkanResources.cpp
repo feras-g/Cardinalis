@@ -19,10 +19,12 @@ void CreateBuffer(Buffer& result, size_t size, VkBufferUsageFlags usage, VkMemor
 	VkMemoryRequirements memRequirements;
 	vkGetBufferMemoryRequirements(context.device, result.buffer, &memRequirements);
 
+	result.size_bytes = memRequirements.size;
+
 	VkMemoryAllocateInfo allocInfo =
 	{
 		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-		.allocationSize = size,
+		.allocationSize = memRequirements.size,
 		.memoryTypeIndex = FindMemoryType(context.physicalDevice, memRequirements.memoryTypeBits, memProperties)
 	};
 	VK_CHECK(vkAllocateMemory(context.device, &allocInfo, nullptr, &result.memory));

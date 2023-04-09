@@ -1,39 +1,54 @@
 #version 460
 
-layout(binding = 0) uniform sampler2D gbuffer_color;
-layout(binding = 1) uniform sampler2D gbuffer_WS_normal;
-layout(binding = 2) uniform sampler2D gbuffer_depth;
-
-layout(binding = 3) uniform FrameData 
-{ 
-    mat4 model; 
-    mat4 view; 
-    mat4 proj; 
-    mat4 mvp; 
+layout(set = 0, binding = 0) uniform sampler2D gbuffer_color;
+layout(set = 0, binding = 1) uniform sampler2D gbuffer_WS_normal;
+layout(set = 0, binding = 2) uniform sampler2D gbuffer_depth;
+layout(set = 0, binding = 3, std140) uniform FrameData
+{
+    mat4 model;
+    mat4 view;
+    mat4 proj;
+    mat4 inv_view_proj;
+    mat4 mvp;
 } ubo;
 
-
-layout (location = 0) in vec2 uv;
-layout (location = 0) out vec4 out_color;
-
-struct DirectionalLight
+struct PointLight
 {
-	vec3 color;
-	vec3 direction;
+    vec4 position;
+    vec4 color;
+    float radius;
 };
+
+layout(set = 0, binding = 4) uniform LightData
+{
+    PointLight point_light[50];
+} lights;
+
+layout(location = 0) in vec2 uv;
+layout(location = 0) out vec4 out_color;
+
+vec3 ws_pos_from_depth(vec2 uv, float z_ndc)
+{
+    // Compute NDC position
+    float x = uv.x * 2 - 1;
+	float y = (1-uv.y) * 2 - 1;
+    vec4 ndc_pos = vec4(x,y,z_ndc, 1.0);
+
+    // NDC -> View-Space
+    // After applying inverse view proj, vector is still in projective space,
+    // this is why we divide by W
+    vec4 ws_pos = ubo.inv_view_proj * ndc_pos; 
+    ws_pos.xyz /= ws_pos.w;
+
+    return ws_pos.xyz;
+}
 
 void main()
 {
-	DirectionalLight d_light;
-	d_light.color = vec3(0.99, 0.98, 0.82);
-	d_light.direction = normalize(vec3(0, 0.1, 0));
-	
-	float fr = 1.0 / 3.14;
-	vec3 WS_normal = texture(gbuffer_WS_normal, uv).xyz;
+    float d = texture(gbuffer_depth, uv).x;
+	vec3 posWS = ws_pos_from_depth(uv, d);
+    vec3 normalWS = texture(gbuffer_WS_normal, uv).xyz;
+    vec3 base_color = texture(gbuffer_color, uv).xyz;
 
-	float nDotL = max(dot(WS_normal, d_light.direction), 0.0);
-	vec3 base_color = texture(gbuffer_color, uv).rgb;
-
-	vec3 color = fr * nDotL * d_light.color;
-    out_color = vec4(base_color, 1.0);
+    out_color = vec4(posWS.xyz, 1.0);
 }

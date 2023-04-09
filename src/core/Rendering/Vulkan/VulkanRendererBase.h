@@ -14,6 +14,7 @@ public:
 		glm::mat4 model;
 		glm::mat4 view;
 		glm::mat4 proj;
+		glm::mat4 inv_view_proj;
 		glm::mat4 mvp;
 	} frame_data;
 

@@ -146,11 +146,6 @@ void VulkanSwapchain::Reinitialize()
 
 void VulkanSwapchain::Destroy()
 {
-    for (int i = 0; i < framebuffers.size(); i++)
-    {
-        vkDestroyFramebuffer(context.device, framebuffers[i], nullptr);
-    }
-    
     vkDestroySwapchainKHR(context.device, swapchain, nullptr);
 }
 

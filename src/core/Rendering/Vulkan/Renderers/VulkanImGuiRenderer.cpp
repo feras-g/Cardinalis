@@ -89,13 +89,10 @@ void VulkanImGuiRenderer::UpdateAttachments()
 		m_dyn_renderpass[i].color_attachments.clear();
 		m_dyn_renderpass[i].has_depth_attachment = false;
 		m_dyn_renderpass[i].has_stencil_attachment = false;
+
+		m_dyn_renderpass[i].add_color_attachment(context.swapchain->color_attachments[i].view);
 	}
 
-	for (int i = 0; i < NUM_FRAMES; i++)
-	{
-		m_dyn_renderpass[i].add_color_attachment(context.swapchain->color_attachments[i].view);
-		//m_dyn_renderpass[i].add_depth_attachment(context.swapchain->depthTextures[i].view);
-	}
 }
 
 void VulkanImGuiRenderer::render(size_t currentImageIdx, VkCommandBuffer cmdBuffer) 

@@ -7,7 +7,7 @@ struct Buffer
 {
 	VkBuffer_T* buffer { VK_NULL_HANDLE };
 	VkDeviceMemory_T* memory { VK_NULL_HANDLE };
-	size_t sizeInBytes { 0 };
+	size_t size_bytes { 0 };
 	void* data { nullptr };
 };
 
