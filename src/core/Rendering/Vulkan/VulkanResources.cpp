@@ -18,7 +18,7 @@ void CreateBuffer(Buffer& result, size_t size, VkBufferUsageFlags usage, VkMemor
 
 	VkMemoryRequirements memRequirements;
 	vkGetBufferMemoryRequirements(context.device, result.buffer, &memRequirements);
-
+	
 	result.size_bytes = memRequirements.size;
 
 	VkMemoryAllocateInfo allocInfo =

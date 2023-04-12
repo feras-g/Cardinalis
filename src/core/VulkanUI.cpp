@@ -6,8 +6,7 @@
 #include "../imgui/backends/imgui_impl_win32.h"
 #include "../imgui/backends/imgui_impl_vulkan.h"
 
-#include "glm/gtx/log_base.hpp"
-#include <glm/gtc/type_ptr.hpp> // value_ptr
+
 
 VulkanUI& VulkanUI::Start()
 {
@@ -27,7 +26,6 @@ void VulkanUI::End()
 
 VulkanUI& VulkanUI::ShowSceneViewportPanel(unsigned int texDeferred, unsigned int texColorId, unsigned int texNormalId, unsigned int texDepthId)
 {
-
 	static ImGuiComboFlags flags = 0;
 
 	const char* items[] = { "Deferred Output", "Albedo", "Normal", "Depth" };
@@ -218,6 +216,11 @@ VulkanUI& VulkanUI::ShowCameraSettings(Camera* camera)
 			ImGui::SeparatorText("Transform");
 			ImGui::DragFloat3("Location", glm::value_ptr(camera->controller.m_position), 0.1f);
 			ImGui::DragFloat3("Rotation", glm::value_ptr(camera->controller.m_rotation), 0.1f);
+
+			ImGui::SeparatorText("Transform");
+			ImGui::DragFloat3("Position",	glm::value_ptr(this->pos), 0.1f);
+			ImGui::DragFloat3("Scale",		glm::value_ptr(this->scale), 0.1f);
+			ImGui::DragFloat3("Rotation",	glm::value_ptr(this->rot), 0.1f);
 
 			ImGui::TreePop();
 		}

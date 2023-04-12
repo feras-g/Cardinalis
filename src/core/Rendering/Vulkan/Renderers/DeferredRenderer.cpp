@@ -28,6 +28,8 @@ void DeferredRenderer::init(std::span<Texture2D> g_buffers_albedo, std::span<Tex
 		m_dyn_renderpass[i].add_color_attachment(m_output_attachment[i].view);
 	}
 
+	m_light_manager.init(32, 32);
+
 	/* Create shader */
 	m_shader_deferred.LoadFromFile("Deferred.vert.spv", "Deferred.frag.spv");
 
@@ -48,9 +50,6 @@ void DeferredRenderer::init(std::span<Texture2D> g_buffers_albedo, std::span<Tex
 	m_descriptor_set = create_descriptor_set(m_descriptor_pool, m_descriptor_set_layout);
 
 	m_pipeline_layout = create_pipeline_layout(context.device, m_descriptor_set_layout);
-
-	m_light_manager.init(10, 10);
-
 
 	/* Create graphics pipeline */
 	GraphicsPipeline::Flags ppl_flags = GraphicsPipeline::NONE;
@@ -73,7 +72,8 @@ void DeferredRenderer::create_uniform_buffers()
 
 void DeferredRenderer::update(size_t frame_idx)
 {
-	
+	m_light_manager.update_ubo();
+	update_descriptor_set(frame_idx);
 }
 
 void DeferredRenderer::update_descriptor_set(size_t frame_idx)
@@ -107,7 +107,7 @@ void DeferredRenderer::update_descriptor_set(size_t frame_idx)
 	VkDescriptorBufferInfo desc_buffer_info_ = {};
 	desc_buffer_info_.buffer = m_light_manager.m_uniform_buffer.buffer;
 	desc_buffer_info_.offset = 0;
-	desc_buffer_info_.range = m_light_manager.m_total_size_bytes;
+	desc_buffer_info_.range = sizeof(m_light_manager.m_light_data.point_lights);
 	write_descriptor_set.push_back(BufferWriteDescriptorSet(m_descriptor_set, 4, &desc_buffer_info_, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
 
 	vkUpdateDescriptorSets(context.device, (uint32_t)write_descriptor_set.size(), write_descriptor_set.data(), 0, nullptr);
@@ -127,24 +127,53 @@ void DeferredRenderer::render(size_t current_backbuffer_idx, VkCommandBuffer cmd
 	m_output_attachment[current_backbuffer_idx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
+float randomFloat(float a, float b) 
+{
+	return a + (b - a) * ((float)rand() / RAND_MAX);
+}
+
+static glm::vec4 my_colors[3] = { glm::vec4(1,0,0,1),  glm::vec4(0,1,0,1), glm::vec4(0,0,1,1) };
+
+glm::vec4 randomPosition(glm::vec3 min, glm::vec3 max) 
+{
+	glm::vec4 out;
+	out.x = randomFloat(min.x, max.x);
+	out.y = randomFloat(min.y, max.y);
+	out.z = randomFloat(min.z, max.z);
+	out.w = 1.0;
+	return out;
+}
+
+glm::vec4 randomPositionPoisson(float lambda, float radius)
+{
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::poisson_distribution<int> poisson(lambda);
+
+	float x = poisson(gen);
+	float y = poisson(gen);
+	float z = poisson(gen);
+
+	glm::vec4 position(x, 0.25, z, 1.0);
+	position *= radius;
+
+	return position;
+}
+
 /* Light manager */
 void LightManager::init(size_t w, size_t h)
 {
-	size_t total_size = w * h;
+	m_w = w;
+	m_h = h;
 
 	for (size_t x = 0; x < w; x++)
 	{
 		for (size_t y = 0; y < h; y++)
 		{
 			size_t idx = (y * w) + x;
-
-			m_light_data.point_lights[idx].position = glm::vec4(x, y, 50, 1.0);
-			m_light_data.point_lights[idx].color = glm::vec4(
-				0.5f + (float)(rand() % 129) / 128.0f, 
-				0.5f + (float)(rand() % 129) / 128.0f, 
-				0.5f + (float)(rand() % 129) / 128.0f,
-				1.0);
-			m_light_data.point_lights[idx].radius = 10;
+			m_light_data.point_lights[idx].position = randomPositionPoisson(1.0, 3.0f);
+			m_light_data.point_lights[idx].color	= my_colors[idx%3];
+			m_light_data.point_lights[idx].props.x	= randomFloat(0.1f, 0.13f);
 		}
 	}
 
@@ -154,7 +183,27 @@ void LightManager::init(size_t w, size_t h)
 
 void LightManager::init_ubo()
 {
-	m_total_size_bytes = 100 * sizeof(PointLight);
-	CreateBuffer(m_uniform_buffer, m_total_size_bytes, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-	UploadBufferData(m_uniform_buffer, &m_light_data, m_total_size_bytes, 0);
+	CreateBuffer(m_uniform_buffer, sizeof(m_light_data.point_lights), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+	void* pMappedData = nullptr;
+	VK_CHECK(vkMapMemory(context.device, m_uniform_buffer.memory, 0, sizeof(m_light_data.point_lights), 0, &pMappedData));
+	memcpy(pMappedData, m_light_data.point_lights, sizeof(m_light_data.point_lights));
+	vkUnmapMemory(context.device, m_uniform_buffer.memory);
+}
+void LightManager::update_ubo()
+{
+	float min_vel = -1.0f;
+	float max_vel = 1.0f;
+
+	for (size_t idx = 0; idx < m_w * m_h; idx++)
+	{
+		std::uniform_real_distribution<float> dist(min_vel, max_vel);
+		glm::vec4 rand_vel(dist(rng), 0 /* dist(rng) */, dist(rng), 1.0);
+		m_light_data.point_lights[idx].position += rand_vel * 0.033f;
+	}
+
+	void* pMappedData = nullptr;
+	VK_CHECK(vkMapMemory(context.device, m_uniform_buffer.memory, 0, sizeof(m_light_data.point_lights), 0, &pMappedData));
+	memcpy(pMappedData, m_light_data.point_lights, sizeof(m_light_data.point_lights));
+	vkUnmapMemory(context.device, m_uniform_buffer.memory);
 }

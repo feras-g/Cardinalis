@@ -46,7 +46,7 @@ protected:
 
 void SampleApp::Initialize()
 {
-	m_model_renderer.reset(new VulkanModelRenderer ("../../../data/models/suzanne.obj"));
+	m_model_renderer.reset(new VulkanModelRenderer ("../../../data/models/plane.obj"));
 	m_imgui_renderer.reset(new VulkanImGuiRenderer(context));
 	
 	m_deferred_renderer.init(
@@ -55,7 +55,6 @@ void SampleApp::Initialize()
 		m_model_renderer->m_Depth_Output);
 
 	m_imgui_renderer->Initialize(*m_model_renderer.get(), m_deferred_renderer);
-
 
 	CameraController fpsController = CameraController({ 0,0,5 }, { 0,-180,0 }, { 0,0,1 }, { 0,1,0 });
 
@@ -164,20 +163,25 @@ void SampleApp::Render()
 inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 {
 	vkWaitForFences(context.device, 1, &context.frames[currentImageIdx].renderFence, TRUE, UINT64_MAX);
+	
 	VulkanRendererBase::UniformData frame_data;
 	{
-
-		frame_data.model = glm::identity<glm::mat4>();
+		frame_data.model = glm::identity<glm::mat4>() * glm::translate(glm::identity<glm::mat4>(), m_UI.pos) * glm::scale(glm::identity<glm::mat4>(), m_UI.scale);
 		frame_data.view = m_Camera.GetView();
 		frame_data.proj = m_Camera.GetProj();
 		frame_data.inv_view_proj = glm::inverse(frame_data.proj * frame_data.view);
 		frame_data.mvp = frame_data.proj * frame_data.view * frame_data.model;
-
+		frame_data.view_pos = glm::vec4(
+			m_Camera.controller.m_position.x,
+			m_Camera.controller.m_position.y,
+			m_Camera.controller.m_position.z,
+			1.0);
 		VulkanRendererBase::update_common_framedata(frame_data);
 	}
 
 	m_model_renderer->update_buffers(&frame_data, sizeof(frame_data));
-	m_deferred_renderer.update_descriptor_set(currentImageIdx);
+
+	m_deferred_renderer.update(currentImageIdx);
 
 	// ImGui composition
 	{

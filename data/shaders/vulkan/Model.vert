@@ -15,11 +15,12 @@ struct Vertex
 
 layout(binding = 0) uniform UniformData 
 { 
-    mat4 model; 
-    mat4 view; 
-    mat4 proj; 
+    mat4 model;
+    mat4 view;
+    mat4 proj;
     mat4 inv_view_proj;
-    mat4 mvp; 
+    mat4 mvp;
+    vec4 view_pos;
 } ubo;
 
 layout(binding = 1) readonly buffer VBO { Vertex data[]; } vbo;

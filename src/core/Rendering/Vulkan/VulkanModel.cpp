@@ -32,7 +32,7 @@ void VulkanModel::CreateFromFile(const char* filename)
 			const aiVector3D& n = mesh->HasNormals() ? mesh->mNormals[i] : vec3_zero;
 			const aiVector3D& uv = mesh->HasTextureCoords(i) ? mesh->mTextureCoords[0][i] : p; 
 
-			vertices.push_back({ .pos = {p.x, p.y, p.z}, .normal = {n.x, n.y, n.z}, .uv = {uv.x,  1.0f - uv.y} });
+			vertices.push_back({ .pos = {p.x, p.y, p.z}, .normal = {n.x, n.y, n.z}, .uv = {uv.x,  uv.y} });
 		}
 
 		/* Indices */

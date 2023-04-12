@@ -1,5 +1,8 @@
 #pragma once
 
+#include "glm/gtx/log_base.hpp"
+#include <glm/gtc/type_ptr.hpp> // value_ptr
+
 struct Camera;
 
 class VulkanUI
@@ -19,5 +22,10 @@ public:
 
 	bool bIsSceneViewportHovered = false;
 	float fSceneViewAspectRatio = 1.0f;
+
+	/* To remove */
+	glm::vec3 pos{0,0,0};
+	glm::vec3 rot{0,0,0};
+	glm::vec3 scale{1,1,1};
 };
 

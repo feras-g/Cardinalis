@@ -48,31 +48,6 @@ void Texture2D::CreateImage(VkDevice device, VkImageUsageFlags imageUsage, std::
     ::CreateImage(device, false, *this, imageUsage);
 }
 
-void Texture::CopyFromBuffer(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer)
-{
-    VkBufferImageCopy imageRegion =
-    {
-        .bufferOffset       { 0 },
-        .bufferRowLength    { 0 },
-        .bufferImageHeight  { 0 },
-        .imageSubresource
-        {
-            .aspectMask     { VK_IMAGE_ASPECT_COLOR_BIT },
-            .mipLevel       { 0 },
-            .baseArrayLayer { 0 },
-            .layerCount     { info.layerCount }
-        },
-        .imageOffset {.x = 0, .y = 0, .z = 0 },
-        .imageExtent { info.width, info.height, 1 }
-    };
-
-    vkCmdCopyBufferToImage(
-        cmdBuffer,
-        srcBuffer,
-        image,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageRegion);
-}
-
 void CreateImage(VkDevice device, bool isCubemap, Texture& texture, VkImageUsageFlags imageUsage)
 {
     VkImageCreateFlags flags{ 0 };
@@ -119,6 +94,31 @@ void CreateImage(VkDevice device, bool isCubemap, Texture& texture, VkImageUsage
 
     /* Debug name */
     set_object_name(VK_OBJECT_TYPE_IMAGE, (uint64_t)texture.image, texture.info.debugName);
+}
+
+void Texture::CopyFromBuffer(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer)
+{
+	VkBufferImageCopy imageRegion =
+	{
+		.bufferOffset       { 0 },
+		.bufferRowLength    { 0 },
+		.bufferImageHeight  { 0 },
+		.imageSubresource
+		{
+			.aspectMask     { VK_IMAGE_ASPECT_COLOR_BIT },
+			.mipLevel       { 0 },
+			.baseArrayLayer { 0 },
+			.layerCount     { info.layerCount }
+		},
+		.imageOffset {.x = 0, .y = 0, .z = 0 },
+		.imageExtent { info.width, info.height, 1 }
+	};
+
+	vkCmdCopyBufferToImage(
+		cmdBuffer,
+		srcBuffer,
+		image,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageRegion);
 }
 
 void Texture::UpdateData(VkDevice device, void const* const data)

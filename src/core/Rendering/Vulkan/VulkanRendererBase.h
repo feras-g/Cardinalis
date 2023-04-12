@@ -16,6 +16,7 @@ public:
 		glm::mat4 proj;
 		glm::mat4 inv_view_proj;
 		glm::mat4 mvp;
+		glm::vec4 view_pos;
 	} frame_data;
 
 	static void create_samplers();

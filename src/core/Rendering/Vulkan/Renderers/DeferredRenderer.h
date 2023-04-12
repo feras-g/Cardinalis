@@ -3,24 +3,30 @@
 #include "Rendering/Vulkan/RenderPass.h"
 #include "Rendering/Vulkan/VulkanModel.h"
 #include "Rendering/Vulkan/VulkanRenderInterface.h"
+#include <random>
 
 struct PointLight
 {
-	glm::vec4 position;
-	glm::vec4 color;
-	float radius;
-	float padding[3];
+	glm::vec4 position{};
+	glm::vec4 color{};
+	glm::vec4 props{};
 };
 
 struct LightData
 {
-	PointLight point_lights[100];
+	PointLight point_lights[1024];
 };
 
 struct LightManager
 {
 	void init(size_t x, size_t y);
 	void init_ubo();
+	void update_ubo();
+
+	size_t m_w = 0;
+	size_t m_h = 0;
+
+	std::mt19937 rng;
 
 	size_t m_total_size_bytes = 0;
 	LightData m_light_data;

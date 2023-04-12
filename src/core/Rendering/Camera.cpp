@@ -29,25 +29,27 @@ void CameraController::UpdateTranslation(float dt)
 	if ((m_movement & Movement::FORWARD) == Movement::FORWARD)   acceleration += m_forward;
 	if ((m_movement & Movement::BACKWARD) == Movement::BACKWARD) acceleration -= m_forward;
 
-	if (glm::length(acceleration) == 0.0f)
-	{
-		// Decelerate progressively
-		float damping_factor = (1.0f / params.damping) * dt;
-		m_velocity -= m_velocity * damping_factor;
-	}
-	else
-	{
-		// Integrate velocity
-		m_velocity += params.accel_factor * acceleration * static_cast<float>(dt);
-		if (glm::length(m_velocity) > params.max_velocity)
-		{
-			m_velocity = glm::normalize(m_velocity) * params.max_velocity;
-		}
-	}
+	//if (glm::length(acceleration) == 0.0f)
+	//{
+	//	// Decelerate progressively
+	//	float damping_factor = (1.0f / params.damping) * dt;
+	//	m_velocity -= m_velocity * damping_factor;
+	//}
+	//else
+	//{
+	//	// Integrate velocity
+	//	m_velocity += params.accel_factor * acceleration * static_cast<float>(dt);
+	//	if (glm::length(m_velocity) > params.max_velocity)
+	//	{
+	//		m_velocity = glm::normalize(m_velocity) * params.max_velocity;
+	//	}
+	//}
 
 	//LOG_INFO("Speed: {} / Accel: {}", glm::length(m_velocity), glm::length(acceleration));
 
-	m_position = m_position + m_velocity * dt;
+	//m_position = m_position + m_velocity * dt;
+
+	m_position = m_position + (acceleration * dt);
 
 	m_movement = Movement::NONE;
 }
