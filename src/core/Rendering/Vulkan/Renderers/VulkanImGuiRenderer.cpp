@@ -236,24 +236,18 @@ bool VulkanImGuiRenderer::CreateFontTexture(ImGuiIO* io, const char* fontPath, T
 	
 	ImFont* Font = io->Fonts->AddFontFromFileTTF(fontPath, cfg.SizePixels, &cfg);
 	
-	unsigned char* pixels = nullptr;
-	int texWidth = 1, texHeight = 1;
-	int bpp;
-	io->Fonts->GetTexDataAsRGBA32(&pixels, &texWidth, &texHeight, &bpp);
-	if (!pixels)
+	unsigned char* im_data = nullptr;
+	int tex_width = 1, tex_height = 1, bpp = 0;
+	io->Fonts->GetTexDataAsRGBA32(&im_data, &tex_width, &tex_height, &bpp);
+	if (!im_data)
 	{
 		LOG_ERROR("Failed to load texture\n"); 
 		return false;
 	}
-
-	out_Font.CreateFromData(
-		pixels,
-		"Font texture",
-		texWidth * texHeight * bpp,
-		TextureInfo{ VK_FORMAT_R8G8B8A8_UNORM, (uint32_t)texWidth, (uint32_t)texHeight, 1, 1 });
-	out_Font.CreateView(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
+	out_Font.init(VK_FORMAT_R8G8B8A8_UNORM, tex_width, tex_height, false);
+	out_Font.create_from_data(im_data, "Font texture", VK_IMAGE_USAGE_SAMPLED_BIT);
+	out_Font.create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
 	io->FontDefault = Font;
-	//io->DisplayFramebufferScale = ImVec2(1, 1);
 
 	return true;
 }

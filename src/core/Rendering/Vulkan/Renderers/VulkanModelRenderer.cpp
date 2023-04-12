@@ -107,8 +107,11 @@ void VulkanModelRenderer::create_attachments()
 	VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
 
 	/* Input attachments */
-	m_default_texture.CreateFromFile("../../../data/textures/default.png", "Default Checkerboard Texture", VK_FORMAT_R8G8B8A8_UNORM);
-	m_default_texture.CreateView(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
+	Image im = load_image_from_file("../../../data/textures/default.png");
+	m_default_texture.init(VK_FORMAT_R8G8B8A8_UNORM, im.w, im.h);
+	m_default_texture.create_from_data(im.data.get(), "Default Checkerboard Texture");
+	//m_default_texture.upload_data(context.device, im.data.get());
+	m_default_texture.create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
 	m_default_texture.transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 	/* Write Attachments */
@@ -117,17 +120,17 @@ void VulkanModelRenderer::create_attachments()
 	{
 		std::string s_prefix = "Frame #" + std::to_string(i) + "G-Buffer ";
 
-		m_Albedo_Output[i].info = { m_ColorAttachmentFormats[0], render_width, render_height, 1, 1, VK_IMAGE_LAYOUT_UNDEFINED,  s_prefix.c_str() }; /* G-Buffer Color */
-		m_Normal_Output[i].info = { m_ColorAttachmentFormats[1], render_width, render_height, 1, 1, VK_IMAGE_LAYOUT_UNDEFINED,  s_prefix.c_str() }; /* G-Buffer Normal */
-		m_Depth_Output[i].info  = { m_DepthAttachmentFormat,     render_width, render_height, 1, 1, VK_IMAGE_LAYOUT_UNDEFINED,  s_prefix.c_str()  }; /* G-Buffer Depth */
+		m_Albedo_Output[i].init(m_ColorAttachmentFormats[0], render_width, render_height);	/* G-Buffer Color */
+		m_Normal_Output[i].init(m_ColorAttachmentFormats[1], render_width, render_height);	/* G-Buffer Normal */
+		m_Depth_Output[i].init(m_DepthAttachmentFormat, render_width, render_height);		/* G-Buffer Depth */
 
-		m_Albedo_Output[i].CreateImage(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-		m_Normal_Output[i].CreateImage(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-		m_Depth_Output[i].CreateImage(context.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+		m_Albedo_Output[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Albedo").c_str());
+		m_Normal_Output[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Normal").c_str());
+		m_Depth_Output[i].create(context.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Depth").c_str());
 
-		m_Albedo_Output[i].CreateView(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
-		m_Normal_Output[i].CreateView(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
-		m_Depth_Output[i].CreateView(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT });
+		m_Albedo_Output[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
+		m_Normal_Output[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
+		m_Depth_Output[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT });
 
 		m_Albedo_Output[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		m_Normal_Output[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -146,11 +149,11 @@ void VulkanModelRenderer::create_buffers()
 VulkanModelRenderer::~VulkanModelRenderer()
 {
 	vkDeviceWaitIdle(context.device);
-	m_default_texture.Destroy(context.device);
+	m_default_texture.destroy(context.device);
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
-		m_Albedo_Output[i].Destroy(context.device);
-		m_Normal_Output[i].Destroy(context.device);
-		m_Depth_Output[i].Destroy(context.device);
+		m_Albedo_Output[i].destroy(context.device);
+		m_Normal_Output[i].destroy(context.device);
+		m_Depth_Output[i].destroy(context.device);
 	}
 }

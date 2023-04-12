@@ -53,17 +53,20 @@ static uint32_t FindMemoryType(VkPhysicalDevice physDevice, uint32_t memoryTypeB
     return 0;
 }
 
-using Image = std::unique_ptr<stbi_uc, decltype(&stbi_image_free)>;
+using ImageData = std::unique_ptr<stbi_uc, decltype(&stbi_image_free)>;
+struct Image
+{
+    ImageData data;
+    int w{}, h{}, n{};
+    ~Image() { data = nullptr; }
+};
 
-static Image LoadImageFromFile(std::string_view filename, TextureInfo& info)
+static Image load_image_from_file(std::string_view filename)
 {
     int w, h, n;
     stbi_uc* data = stbi_load(filename.data(), &w, &h, &n, 0);
 
-    info.width  = (uint32_t)w;
-    info.height = (uint32_t)h;
-
-    return Image(data, stbi_image_free);
+    return { ImageData(data, free), w, h, n };
 }
 
 #define CHECK_DEREF(p) { assert(p); return *p; }

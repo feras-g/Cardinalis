@@ -7,20 +7,36 @@ static VkAccessFlags GetAccessMask(VkImageLayout layout);
 static uint32_t GetBytesPerPixelFromFormat(VkFormat format);
 static void GetSrcDstPipelineStage(VkImageLayout oldLayout, VkImageLayout newLayout, VkPipelineStageFlags& out_srcStageMask, VkPipelineStageFlags& out_dstStageMask);
 
-void Texture2D::CreateFromFile(
+static uint32_t calc_mip_levels(uint32_t width, uint32_t height)
+{
+    return std::floor(std::log2(std::max(width, height)));
+}
+
+void Texture2D::init(VkFormat format, uint32_t width, uint32_t height, bool calc_mip)
+{
+    info.imageFormat = format;
+	info.width  = width;
+	info.height = height;
+	info.mipLevels = calc_mip ? calc_mip_levels(width, height) : 1;
+    info.layerCount = 1;
+	info.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    initialized = true;
+}
+
+void Texture2D::create_from_file(
     std::string_view	filename,
 	std::string_view    debug_name,
     VkFormat			format,
     VkImageUsageFlags	imageUsage,
     VkImageLayout		layout)
 {
-    info.imageFormat = format;
-    info.debugName = debug_name.data();
-    Image rawImage = LoadImageFromFile(filename, info);
-    if (rawImage != nullptr)
+    assert(initialized);
+    Image rawImage = load_image_from_file(filename);
+    if (rawImage.data != nullptr)
     {
-		::CreateImage(context.device, false, *this, imageUsage | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
-		UpdateData(context.device, rawImage.get());
+		::create_vk_image(context.device, false, *this, imageUsage | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+		upload_data(context.device, (void*)*rawImage.data);
     }
     else
     {
@@ -28,27 +44,25 @@ void Texture2D::CreateFromFile(
     }
 }
 
-void Texture2D::CreateFromData(
-    void const* const   data,
+void Texture2D::create_from_data(
+    unsigned char*   data,
 	std::string_view    debug_name,
-    size_t				sizeInBytes,
-    TextureInfo			info,
     VkImageUsageFlags	imageUsage,
     VkImageLayout		layout)
 {
-    this->info = info;
-    ::CreateImage(context.device, false, *this, imageUsage | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
-    UpdateData(context.device, data);
+	assert(initialized);
+    ::create_vk_image(context.device, false, *this, imageUsage | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+    upload_data(context.device, data);
 }
 
-void Texture2D::CreateImage(VkDevice device, VkImageUsageFlags imageUsage, std::string_view debug_name)
+void Texture2D::create(VkDevice device, VkImageUsageFlags imageUsage, std::string_view debug_name)
 {
     if(!debug_name.empty()) info.debugName = debug_name.data();
 
-    ::CreateImage(device, false, *this, imageUsage);
+    ::create_vk_image(device, false, *this, imageUsage);
 }
 
-void CreateImage(VkDevice device, bool isCubemap, Texture& texture, VkImageUsageFlags imageUsage)
+void create_vk_image(VkDevice device, bool isCubemap, Texture& texture, VkImageUsageFlags imageUsage)
 {
     VkImageCreateFlags flags{ 0 };
     uint32_t arrayLayers = 1u;
@@ -96,7 +110,7 @@ void CreateImage(VkDevice device, bool isCubemap, Texture& texture, VkImageUsage
     set_object_name(VK_OBJECT_TYPE_IMAGE, (uint64_t)texture.image, texture.info.debugName);
 }
 
-void Texture::CopyFromBuffer(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer)
+void Texture::copy_from_buffer(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer)
 {
 	VkBufferImageCopy imageRegion =
 	{
@@ -121,7 +135,7 @@ void Texture::CopyFromBuffer(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer)
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageRegion);
 }
 
-void Texture::UpdateData(VkDevice device, void const* const data)
+void Texture::upload_data(VkDevice device, void const* const data)
 {
     uint32_t bpp = GetBytesPerPixelFromFormat(info.imageFormat);
 
@@ -136,14 +150,14 @@ void Texture::UpdateData(VkDevice device, void const* const data)
     // Copy content to image memory on GPU
     VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
     transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    CopyFromBuffer(cmd_buffer, stagingBuffer.buffer);
+    copy_from_buffer(cmd_buffer, stagingBuffer.buffer);
     transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     end_temp_cmd_buffer(cmd_buffer);
 
     DestroyBuffer(stagingBuffer);
 }
 
-void Texture::CreateView(VkDevice device, const ImageViewInitInfo& viewInfo)
+void Texture::create_view(VkDevice device, const ImageViewInitInfo& viewInfo)
 {
     VkImageViewCreateInfo createInfo =
     {
@@ -172,7 +186,7 @@ void Texture::CreateView(VkDevice device, const ImageViewInitInfo& viewInfo)
     VK_CHECK(vkCreateImageView(context.device, &createInfo, nullptr, &view));
 }
 
-void Texture::Destroy(VkDevice device)
+void Texture::destroy(VkDevice device)
 {
     if(view) vkDestroyImageView(device, view, nullptr);
     if(image) 

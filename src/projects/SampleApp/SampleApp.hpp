@@ -100,24 +100,22 @@ void SampleApp::Render()
 	VkResult result = swapchain.AcquireNextImage(currentFrame.imageAcquiredSemaphore, &context.currentBackBuffer);
 
 	// Populate command buffers
-	{	
+	{
 		VkCommandBufferBeginInfo cmdBufferBeginInfo = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 		VK_CHECK(vkResetCommandPool(context.device, currentFrame.cmd_pool, 0));
 		VK_CHECK(vkBeginCommandBuffer(currentFrame.cmd_buffer, &cmdBufferBeginInfo));
 
+		/* Transition to color attachment */
+		swapchain.color_attachments[current_frame_idx].transition_layout(currentFrame.cmd_buffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+		
 		{
-			/* Transition to color attachment */
-			swapchain.color_attachments[current_frame_idx].transition_layout(currentFrame.cmd_buffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			m_model_renderer->render(current_frame_idx, currentFrame.cmd_buffer);
+			m_deferred_renderer.render(current_frame_idx, currentFrame.cmd_buffer);
+			m_imgui_renderer->render(current_frame_idx, currentFrame.cmd_buffer);
 		}
 
-		m_model_renderer->render(current_frame_idx, currentFrame.cmd_buffer);
-		m_deferred_renderer.render(current_frame_idx, currentFrame.cmd_buffer);
-		m_imgui_renderer->render(current_frame_idx, currentFrame.cmd_buffer);
-
-		{
-			/* Present */
-			swapchain.color_attachments[current_frame_idx].transition_layout(currentFrame.cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-		}
+		/* Present */
+		swapchain.color_attachments[current_frame_idx].transition_layout(currentFrame.cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
 		VK_CHECK(vkEndCommandBuffer(currentFrame.cmd_buffer));
 	}

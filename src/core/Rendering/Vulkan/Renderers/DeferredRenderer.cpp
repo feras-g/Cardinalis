@@ -16,9 +16,9 @@ void DeferredRenderer::init(std::span<Texture2D> g_buffers_albedo, std::span<Tex
 	VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
-		m_output_attachment[i].info = { color_attachment_format, 1024, 1024, 1, 1, VK_IMAGE_LAYOUT_UNDEFINED };
-		m_output_attachment[i].CreateImage(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, "Deferred Renderer Attachment");
-		m_output_attachment[i].CreateView(context.device, {});
+		m_output_attachment[i].init(color_attachment_format, 1024, 1024);
+		m_output_attachment[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, "Deferred Renderer Attachment");
+		m_output_attachment[i].create_view(context.device, {});
 		m_output_attachment[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
 	end_temp_cmd_buffer(cmd_buffer);
@@ -31,7 +31,7 @@ void DeferredRenderer::init(std::span<Texture2D> g_buffers_albedo, std::span<Tex
 	m_light_manager.init(32, 32);
 
 	/* Create shader */
-	m_shader_deferred.LoadFromFile("Deferred.vert.spv", "Deferred.frag.spv");
+	m_shader_deferred.load_from_file("Deferred.vert.spv", "Deferred.frag.spv");
 
 	/* Create Descriptor Pool */
 	m_descriptor_pool = create_descriptor_pool(0, 0, num_descriptors);
