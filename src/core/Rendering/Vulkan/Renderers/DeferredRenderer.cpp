@@ -16,7 +16,7 @@ void DeferredRenderer::init(std::span<Texture2D> g_buffers_albedo, std::span<Tex
 	VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
-		m_output_attachment[i].init(color_attachment_format, 1024, 1024);
+		m_output_attachment[i].init(color_attachment_format, 1024, 1024, false);
 		m_output_attachment[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, "Deferred Renderer Attachment");
 		m_output_attachment[i].create_view(context.device, {});
 		m_output_attachment[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -34,7 +34,7 @@ void DeferredRenderer::init(std::span<Texture2D> g_buffers_albedo, std::span<Tex
 	m_shader_deferred.load_from_file("Deferred.vert.spv", "Deferred.frag.spv");
 
 	/* Create Descriptor Pool */
-	m_descriptor_pool = create_descriptor_pool(0, 0, num_descriptors);
+	m_descriptor_pool = create_descriptor_pool(0, 0, num_descriptors, 0);
 
 	/* Create descriptor set bindings */
 	std::vector<VkDescriptorSetLayoutBinding> desc_set_layout_bindings = {};
@@ -50,6 +50,8 @@ void DeferredRenderer::init(std::span<Texture2D> g_buffers_albedo, std::span<Tex
 	m_descriptor_set = create_descriptor_set(m_descriptor_pool, m_descriptor_set_layout);
 
 	m_pipeline_layout = create_pipeline_layout(context.device, m_descriptor_set_layout);
+
+	update_descriptor_set(0);
 
 	/* Create graphics pipeline */
 	GraphicsPipeline::Flags ppl_flags = GraphicsPipeline::NONE;
@@ -73,15 +75,14 @@ void DeferredRenderer::create_uniform_buffers()
 void DeferredRenderer::update(size_t frame_idx)
 {
 	m_light_manager.update_ubo();
-	update_descriptor_set(frame_idx);
+	//update_descriptor_set(frame_idx);
 }
 
 void DeferredRenderer::update_descriptor_set(size_t frame_idx)
 {
-	std::array<VkDescriptorImageInfo, num_gbuffers>  descriptor_image_infos = {};
-	std::vector<VkWriteDescriptorSet> write_descriptor_set = {};
 
 	/* GBuffers */
+	std::array<VkDescriptorImageInfo, num_gbuffers>  descriptor_image_infos = {};
 	descriptor_image_infos[0].imageView = m_g_buffers_albedo[frame_idx]->view;
 	descriptor_image_infos[1].imageView = m_g_buffers_normal[frame_idx]->view;
 	descriptor_image_infos[2].imageView = m_g_buffers_depth[frame_idx]->view;
@@ -92,6 +93,7 @@ void DeferredRenderer::update_descriptor_set(size_t frame_idx)
 		descriptor_image_infos[gbuffer_idx].sampler = VulkanRendererBase::s_SamplerClampNearest;
 	}
 
+	std::vector<VkWriteDescriptorSet> write_descriptor_set = {};
 	write_descriptor_set.push_back(ImageWriteDescriptorSet(m_descriptor_set, 0, &descriptor_image_infos[0]));
 	write_descriptor_set.push_back(ImageWriteDescriptorSet(m_descriptor_set, 1, &descriptor_image_infos[1]));
 	write_descriptor_set.push_back(ImageWriteDescriptorSet(m_descriptor_set, 2, &descriptor_image_infos[2]));
@@ -100,7 +102,7 @@ void DeferredRenderer::update_descriptor_set(size_t frame_idx)
 	VkDescriptorBufferInfo desc_buffer_info = {};
 	desc_buffer_info.buffer = VulkanRendererBase::m_ubo_common_framedata.buffer;
 	desc_buffer_info.offset = 0;
-	desc_buffer_info.range = sizeof(VulkanRendererBase::UniformData);
+	desc_buffer_info.range = sizeof(VulkanRendererBase::PerFrameData);
 	write_descriptor_set.push_back(BufferWriteDescriptorSet(m_descriptor_set, 3, &desc_buffer_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
 
 	/* Light data */

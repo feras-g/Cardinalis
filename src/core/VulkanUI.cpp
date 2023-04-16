@@ -228,7 +228,7 @@ VulkanUI& VulkanUI::ShowCameraSettings(Camera* camera)
 		ImGui::SetNextItemOpen(true);
 		if (ImGui::TreeNode("Camera Settings"))
 		{
-			ImGui::InputFloat("Field Of View", &camera->fov);
+			ImGui::InputFloat("FOV", &camera->fov);
 			ImGui::InputFloat2("Near-Far", glm::value_ptr(camera->near_far));
 
 			ImGui::TreePop();

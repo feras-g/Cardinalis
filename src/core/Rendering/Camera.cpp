@@ -11,7 +11,7 @@ void CameraController::UpdateRotation(const glm::vec2& mouse_pos)
 	m_rotation.x += (m_last_mouse_pos.y - mouse_pos.y) * params.mouse_speed;
 
 	//if (m_rotation.x > 89.9f)  m_rotation.x = 89.9f;
-	//if (m_rotation.y < -89.9f) m_rotation.y = -89.9f;
+	if (m_rotation.y < -89.9f) m_rotation.y = -89.9f;
 
 	m_last_mouse_pos = mouse_pos;
 }
@@ -19,37 +19,17 @@ void CameraController::UpdateRotation(const glm::vec2& mouse_pos)
 void CameraController::UpdateTranslation(float dt)
 {
 	// Translation
-	glm::vec3 acceleration(0.0f);
-	if ((m_movement & Movement::UP) == Movement::UP)			acceleration += m_up;
-	if ((m_movement & Movement::DOWN) == Movement::DOWN)		acceleration -= m_up;
+	glm::vec3 direction(0.0f);
+	if ((m_movement & Movement::UP) == Movement::UP)			 direction += m_up;
+	if ((m_movement & Movement::DOWN) == Movement::DOWN)		 direction -= m_up;
 
-	if ((m_movement & Movement::RIGHT) == Movement::RIGHT)		acceleration += m_right;
-	if ((m_movement & Movement::LEFT) == Movement::LEFT)		acceleration -= m_right;
+	if ((m_movement & Movement::RIGHT) == Movement::RIGHT)		 direction += m_right;
+	if ((m_movement & Movement::LEFT) == Movement::LEFT)		 direction -= m_right;
 
-	if ((m_movement & Movement::FORWARD) == Movement::FORWARD)   acceleration += m_forward;
-	if ((m_movement & Movement::BACKWARD) == Movement::BACKWARD) acceleration -= m_forward;
+	if ((m_movement & Movement::FORWARD) == Movement::FORWARD)   direction += m_forward;
+	if ((m_movement & Movement::BACKWARD) == Movement::BACKWARD) direction -= m_forward;
 
-	//if (glm::length(acceleration) == 0.0f)
-	//{
-	//	// Decelerate progressively
-	//	float damping_factor = (1.0f / params.damping) * dt;
-	//	m_velocity -= m_velocity * damping_factor;
-	//}
-	//else
-	//{
-	//	// Integrate velocity
-	//	m_velocity += params.accel_factor * acceleration * static_cast<float>(dt);
-	//	if (glm::length(m_velocity) > params.max_velocity)
-	//	{
-	//		m_velocity = glm::normalize(m_velocity) * params.max_velocity;
-	//	}
-	//}
-
-	//LOG_INFO("Speed: {} / Accel: {}", glm::length(m_velocity), glm::length(acceleration));
-
-	//m_position = m_position + m_velocity * dt;
-
-	m_position = m_position + (acceleration * dt);
+	m_position += direction * dt;
 
 	m_movement = Movement::NONE;
 }
@@ -70,7 +50,7 @@ glm::mat4& CameraController::GetView()
 }
 
 Camera::Camera()
-	: controller({ 0,0,-5 }, { 0,-180,0 }, { 0,0,1 }, { 0,1,0 }), fov(45.0f), aspect_ratio(ASPECT_16_9), near_far(0.0f, 1000.0f)
+	: controller({ 0,0,-5 }, { 0,-180,0 }, { 0,0,1 }, { 0,1,0 }), fov(45.0f), aspect_ratio(ASPECT_16_9), near_far(0.1f, 1000.0f)
 {
 	UpdateProjection();
 }

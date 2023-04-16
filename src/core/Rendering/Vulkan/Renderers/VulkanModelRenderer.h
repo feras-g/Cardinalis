@@ -1,8 +1,7 @@
-#ifndef VULKAN_MODEL_RENDERER_H
-#define VULKAN_MODEL_RENDERER_H
+#pragma once
 
 #include "Rendering/Vulkan/VulkanRendererBase.h"
-#include "Rendering/Vulkan/VulkanModel.h"
+#include "Rendering/Vulkan/VulkanMesh.h"
 #include "Rendering/Vulkan/RenderPass.h"
 
 class VulkanShader;
@@ -11,12 +10,11 @@ class VulkanModelRenderer
 {
 	friend class VulkanImGuiRenderer;
 public:
-	VulkanModelRenderer() = default;
-	explicit VulkanModelRenderer(const char* modelFilename);
+	explicit VulkanModelRenderer();
 	void render(size_t currentImageIdx, VkCommandBuffer cmdBuffer);
 
 	void draw_scene(VkCommandBuffer cmdBuffer);
-	void update_buffers(void* uniform_data, size_t data_size);
+	void update_buffers(const VulkanRendererBase::PerFrameData& frame_data);
 	void update_descriptor_set(VkDevice device);
 	void create_attachments();
 	void create_buffers();
@@ -36,7 +34,6 @@ public:
 
 	~VulkanModelRenderer();
 private:
-	VulkanModel m_Model;
 	std::unique_ptr<VulkanShader> m_Shader;
 
 	std::vector<VkFormat> m_ColorAttachmentFormats = { VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_R16G16B16A16_SFLOAT };
@@ -49,7 +46,6 @@ private:
 	VkDescriptorPool m_descriptor_pool;
 	VkPipelineLayout m_ppl_layout;
 	
-	VkDescriptorSetLayout m_descriptor_set_layout;
-	VkDescriptorSet m_descriptor_set;
+	VkDescriptorSetLayout m_pass_descriptor_set_layout;
+	VkDescriptorSet m_pass_descriptor_set;
 };
-#endif // !VULKAN_CLEAR_COLOR_RENDERER_H

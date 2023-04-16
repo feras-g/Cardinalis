@@ -1,7 +1,6 @@
-#ifndef VULKAN_SHADER_H
-#define VULKAN_SHADER_H
+#pragma once
 
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 #include <vector>
 
 class VulkanShader
@@ -19,4 +18,3 @@ protected:
 
 };
 
-#endif // !VULKAN_SHADER_H

@@ -1,5 +1,4 @@
-#ifndef ENGINE_WINDOW_H
-#define ENGINE_WINDOW_H
+#pragma once
 
 #include <memory>
 
@@ -31,9 +30,10 @@ public:
 
 struct WindowInfo
 {
-	const char* title;
 	uint32_t width;
 	uint32_t height;
+	const char* title;
+	uint32_t dpi;
 	float aspect;
 };
 
@@ -74,6 +74,4 @@ public:
 	void OnKeyEvent(KeyEvent event);
 	bool AsyncKeyState(Key key);
 };
-
-#endif // !WINDOW_H
 

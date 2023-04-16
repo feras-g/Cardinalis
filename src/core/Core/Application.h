@@ -1,5 +1,4 @@
-#ifndef APPLICATION_H
-#define APPLICATION_H
+#pragma once
 
 #include <memory>
 #include <vector>
@@ -71,6 +70,4 @@ protected:
 	std::unique_ptr<Window> m_Window;
 	std::unique_ptr<VulkanRenderInterface> m_RHI;
 };
-
-#endif // !APPLICATION_H
 

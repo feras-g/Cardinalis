@@ -1,7 +1,6 @@
-#ifndef VULKAN_RESOURCES_H
-#define VULKAN_RESOURCES_H
+#pragma once
 
-#include "vulkan/vulkan.h"
+#include "vulkan/vulkan.hpp"
 
 struct Buffer
 {
@@ -18,5 +17,3 @@ void CreateStagingBuffer(Buffer& result, VkDeviceSize size);
 void UploadBufferData(Buffer& buffer, const void* data, const size_t size, VkDeviceSize offset);
 void CopyBuffer(const Buffer& src, const Buffer& dst, VkDeviceSize size);
 void DestroyBuffer(const Buffer& buffer);
-
-#endif // VULKAN_RESOURCES_H

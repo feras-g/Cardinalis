@@ -1,5 +1,4 @@
-#ifndef VULKAN_IMGUI_RENDERER_H
-#define VULKAN_IMGUI_RENDERER_H
+#pragma once
 
 #include "Rendering/Vulkan/VulkanRendererBase.h"
 #include "Rendering/Vulkan/RenderPass.h"
@@ -61,4 +60,3 @@ private:
 	VkDescriptorSetLayout m_descriptor_set_layout;
 	VkDescriptorSet m_descriptor_set;
 };
-#endif // !VULKAN_IMGUI_RENDERER_H

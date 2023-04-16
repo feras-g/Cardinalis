@@ -26,7 +26,7 @@ void VulkanRenderInterface::Initialize()
 	CreateSyncStructures();
 
 	VulkanRendererBase::create_samplers();
-	VulkanRendererBase::create_common_buffers();
+	VulkanRendererBase::create_buffers();
 
 	m_InitSuccess = true;
 
@@ -106,6 +106,7 @@ void VulkanRenderInterface::CreateDevices()
 	for (uint32_t i=0; i < deviceCount; i++)
 	{
 		vkGetPhysicalDeviceProperties(vkPhysicalDevices[i], &props);
+		VulkanRenderInterface::device_limits = props.limits;
 		LOG_DEBUG("{0} {1} {2}. Driver version = {3}. API Version = {4}.{5}.{6}", 
 			string_VkPhysicalDeviceType(props.deviceType), props.deviceName, props.deviceID, props.driverVersion,
 			VK_VERSION_MAJOR(props.apiVersion), VK_VERSION_MINOR(props.apiVersion), VK_VERSION_PATCH(props.apiVersion));
@@ -227,6 +228,7 @@ struct WindowData
 void VulkanRenderInterface::CreateSurface(Window* window)
 {
 #ifdef _WIN32
+	assert(window->GetData()->hWnd);
 	VkWin32SurfaceCreateInfoKHR  surfaceInfo =
 	{
 		.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
@@ -542,30 +544,52 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colo
 	return true;
 }
 
-[[nodiscard]] VkDescriptorPool create_descriptor_pool(uint32_t numStorageBuffers, uint32_t numUniformBuffers, uint32_t numCombinedSamplers)
+
+[[nodiscard]] VkDescriptorPool create_descriptor_pool(std::span<VkDescriptorPoolSize> pool_sizes, uint32_t max_sets)
+{
+	VkDescriptorPool out;
+	VkDescriptorPoolCreateInfo poolInfo =
+	{
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+		.flags = 0,
+		.maxSets = max_sets,
+		.poolSizeCount = (uint32_t)(pool_sizes.size()),
+		.pPoolSizes = pool_sizes.data()
+	};
+
+	VK_CHECK(vkCreateDescriptorPool(context.device, &poolInfo, nullptr, &out));
+	return out;
+}
+
+
+[[nodiscard]] VkDescriptorPool create_descriptor_pool(uint32_t num_ssbo, uint32_t num_ubo, uint32_t num_combined_img_smp, uint32_t num_dynamic_ubo, uint32_t max_sets)
 {
 	VkDescriptorPool out;
 
 	std::vector<VkDescriptorPoolSize> poolSizes;
 
-	if (numStorageBuffers)	 
+	if (num_ssbo)	 
 	{ 
-		poolSizes.push_back( VkDescriptorPoolSize{.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = NUM_FRAMES * numStorageBuffers   }); 
+		poolSizes.push_back( VkDescriptorPoolSize{.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = num_ssbo   }); 
 	}
-	if (numUniformBuffers)	 
+	if (num_ubo)	 
 	{ 
-		poolSizes.push_back( VkDescriptorPoolSize{.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = NUM_FRAMES* numUniformBuffers   }); 
+		poolSizes.push_back( VkDescriptorPoolSize{.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount =  num_ubo   }); 
 	}
-	if (numCombinedSamplers) 
+	if (num_combined_img_smp) 
 	{ 
-		poolSizes.push_back( VkDescriptorPoolSize{.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = NUM_FRAMES * numCombinedSamplers }); 
+		poolSizes.push_back( VkDescriptorPoolSize{.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount =  num_combined_img_smp }); 
+	}
+	if (num_dynamic_ubo)
+	{
+		poolSizes.push_back(VkDescriptorPoolSize{ .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, .descriptorCount = num_dynamic_ubo });
 	}
 
 	VkDescriptorPoolCreateInfo poolInfo =
 	{
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 		.flags = 0,
-		.maxSets = NUM_FRAMES,
+		.maxSets = max_sets,
 		.poolSizeCount = (uint32_t)(poolSizes.size()),
 		.pPoolSizes = poolSizes.data()
 	};
@@ -869,10 +893,16 @@ void SetViewportScissor(VkCommandBuffer cmdBuffer, uint32_t width, uint32_t heig
 
 VkPipelineLayout create_pipeline_layout(VkDevice device, VkDescriptorSetLayout descSetLayout)
 {
-	return create_pipeline_layout(device, descSetLayout, 0, 0);
+	std::array<VkDescriptorSetLayout, 1> layout = { descSetLayout };
+	return create_pipeline_layout(device, layout, 0, 0);
 }
 
-VkPipelineLayout create_pipeline_layout(VkDevice device, VkDescriptorSetLayout descSetLayout, uint32_t vtxConstRangeSizeInBytes, uint32_t fragConstRangeSizeInBytes)
+VkPipelineLayout create_pipeline_layout(VkDevice device, std::span<VkDescriptorSetLayout> desc_set_layouts)
+{
+	return create_pipeline_layout(device, desc_set_layouts, 0, 0);
+}
+
+VkPipelineLayout create_pipeline_layout(VkDevice device, std::span<VkDescriptorSetLayout> desc_set_layouts, uint32_t vtxConstRangeSizeInBytes, uint32_t fragConstRangeSizeInBytes)
 {
 	VkPipelineLayout out;
 
@@ -897,8 +927,8 @@ VkPipelineLayout create_pipeline_layout(VkDevice device, VkDescriptorSetLayout d
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 		.pNext = nullptr,
 		.flags = 0,
-		.setLayoutCount = 1,
-		.pSetLayouts = &descSetLayout,
+		.setLayoutCount = (uint32_t)desc_set_layouts.size(),
+		.pSetLayouts = desc_set_layouts.data(),
 		.pushConstantRangeCount = pushConstantRangeCount,
 		.pPushConstantRanges = pushConstantRangeCount == 0 ? nullptr : (vtxConstRangeSizeInBytes > 0 ? pushConstantRanges : &pushConstantRanges[1])
 	};

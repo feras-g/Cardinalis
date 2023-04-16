@@ -12,12 +12,12 @@ void VulkanRendererBase::create_samplers()
 	CreateTextureSampler(context.device, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, s_SamplerClampNearest);
 }
 
-void VulkanRendererBase::create_common_buffers()
+void VulkanRendererBase::create_buffers()
 {
-	create_uniform_buffer(m_ubo_common_framedata, sizeof(UniformData));
+	create_uniform_buffer(m_ubo_common_framedata, sizeof(PerFrameData));
 }
 
-void VulkanRendererBase::update_common_framedata(const UniformData& data)
+void VulkanRendererBase::update_frame_data(const PerFrameData& data)
 {
 	UploadBufferData(m_ubo_common_framedata, (void*)&data, sizeof(data), 0);
 }

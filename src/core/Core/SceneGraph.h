@@ -1,5 +1,4 @@
-#ifndef SCENE_GRAPH_H
-#define SCENE_GRAPH_H
+#pragma once
 
 #include <vector>
 #include <unordered_map>
@@ -38,7 +37,3 @@ struct Scene
 	std::vector<std::string> nodeLabels;
 	std::vector<std::string> materialLabels;
 };
-
-
-
-#endif //!SCENE_GRAPH_H

@@ -37,7 +37,7 @@ project("CoreLib")
 		os.getenv("VULKAN_SDK") .. "/Include"
 	}
 	
-	links	{ "vulkan-1", "imgui", "assimp", "OptickCore" }
+	
 	
 	targetdir	(engine_root .. "build/bin/" .. outputdir )
 	objdir		(engine_root .. "build/obj/" .. outputdir )
@@ -45,7 +45,8 @@ project("CoreLib")
 	filter "system:windows"
 		systemversion "latest"
 		defines { "WIN32_LEAN_AND_MEAN" }
-
+		links	{ "vulkan-1", "imgui", "assimp", "OptickCore", "shcore" }
+		
 	filter "configurations:Debug"
 		runtime "Debug"
 		symbols "on"

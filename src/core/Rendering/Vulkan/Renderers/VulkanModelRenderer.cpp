@@ -6,33 +6,35 @@
 Buffer VulkanModelRenderer::m_uniform_buffer;
 
 const uint32_t num_storage_buffers = 2;
-const uint32_t num_uniform_buffers = 1;
-const uint32_t num_combined_image_smp = 1;
+const uint32_t num_uniform_buffers = 2;
+const uint32_t num_combined_image_smp = 0;
 
-VulkanModelRenderer::VulkanModelRenderer(const char* modelFilename)
+VulkanModelRenderer::VulkanModelRenderer()
 {
-	m_Model.CreateFromFile(modelFilename);
-
 	m_Shader.reset(new VulkanShader("Model.vert.spv", "Model.frag.spv"));
 
 	/* Render objects creation */
 	create_attachments();
-	m_descriptor_pool = create_descriptor_pool(num_storage_buffers, num_uniform_buffers, num_combined_image_smp);
+	m_descriptor_pool = create_descriptor_pool(num_storage_buffers, num_uniform_buffers, num_combined_image_smp, 0);
 	create_buffers();
 
-	constexpr uint32_t descriptor_count = num_storage_buffers + num_uniform_buffers + num_combined_image_smp;
+	/* Configure layout for descriptor set used for a Pass */
+	std::vector<VkDescriptorSetLayoutBinding> bindings = {};
+	bindings.push_back({ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT });  /* Frame data */
+	m_pass_descriptor_set_layout = create_descriptor_set_layout(bindings);
+	m_pass_descriptor_set = create_descriptor_set(m_descriptor_pool, m_pass_descriptor_set_layout);
+	VkDescriptorBufferInfo info = { VulkanRendererBase::m_ubo_common_framedata.buffer,  0, sizeof(VulkanRendererBase::PerFrameData) };
+	VkWriteDescriptorSet write_desc = BufferWriteDescriptorSet(m_pass_descriptor_set, 0, &info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 
-	std::array<VkDescriptorSetLayoutBinding, descriptor_count> bindings = {};
-	bindings[0] = { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,VK_SHADER_STAGE_VERTEX_BIT };
-	bindings[1] = { 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1,VK_SHADER_STAGE_VERTEX_BIT };
-	bindings[2] = { 2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1,VK_SHADER_STAGE_VERTEX_BIT };
-	bindings[3] = { 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerRepeatLinear };
+	VulkanRendererBase::PerFrameData frame_data = { glm::identity<glm::mat4>() };
+	UploadBufferData(VulkanRendererBase::m_ubo_common_framedata, &frame_data, sizeof(VulkanRendererBase::PerFrameData), 0);
+	vkUpdateDescriptorSets(context.device, 1, &write_desc, 0, nullptr);
 	
-	m_descriptor_set_layout = create_descriptor_set_layout(bindings);
-	m_descriptor_set = create_descriptor_set(m_descriptor_pool, m_descriptor_set_layout);
-
-	update_descriptor_set(context.device);
-	m_ppl_layout = create_pipeline_layout(context.device, m_descriptor_set_layout);
+	std::vector<VkDescriptorSetLayout> desc_set_layouts = {};
+	desc_set_layouts.push_back(RenderObjectManager::mesh_descriptor_set_layout);		/* Per mesh geometry data */
+	desc_set_layouts.push_back(RenderObjectManager::drawable_descriptor_set_layout);	/* Per object data */
+	desc_set_layouts.push_back(m_pass_descriptor_set_layout);							/* Per pass */
+	m_ppl_layout = create_pipeline_layout(context.device, desc_set_layouts);
 
 	/* Dynamic renderpass setup */
 	for (int i = 0; i < NUM_FRAMES; i++)
@@ -72,34 +74,32 @@ void VulkanModelRenderer::draw_scene(VkCommandBuffer cmdBuffer)
 
 	// Graphics pipeline
 	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline);
-	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ppl_layout, 0, 1, &m_descriptor_set, 0, nullptr);
-	m_Model.draw_indexed(cmdBuffer);
+	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ppl_layout, 2, 1, &m_pass_descriptor_set, 0, nullptr);
+
+	/* Update UBO descriptor for frame data */
+	VkDescriptorBufferInfo ubo_framedata_desc_info = { .buffer = VulkanRendererBase::m_ubo_common_framedata.buffer, .offset = 0, .range = sizeof(VulkanRendererBase::PerFrameData)};
+	
+	for (size_t i=0; i < RenderObjectManager::drawables.size(); i++)
+	{
+		const Drawable& drawable = RenderObjectManager::drawables[i];
+		//std::array<VkDescriptorSet, 2> desc_sets = { drawable.mesh_handle->descriptor_set, RenderObjectManager::drawable_descriptor_set };
+
+		vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ppl_layout, 0, 1, &drawable.mesh_handle->descriptor_set, 0, nullptr);
+		uint32_t dynamic_offset  = i * RenderObjectManager::drawable_data_dynamic_aligment;
+		vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ppl_layout, 1, 1, &RenderObjectManager::drawable_descriptor_set, 1, &dynamic_offset);
+
+		drawable.draw(cmdBuffer);
+	}
 }
 
-void VulkanModelRenderer::update_buffers(void* uniform_data, size_t data_size)
+void VulkanModelRenderer::update_buffers(const VulkanRendererBase::PerFrameData& frame_data)
 {
 	
 }
 
-
 void VulkanModelRenderer::update_descriptor_set(VkDevice device)
 {
-	// Mesh data is not modified between 2 frames
-	VkDescriptorBufferInfo sboInfo0 = { .buffer = m_Model.m_StorageBuffer.buffer, .offset = 0, .range = m_Model.m_VtxBufferSizeInBytes };
-	VkDescriptorBufferInfo sboInfo1 = { .buffer = m_Model.m_StorageBuffer.buffer, .offset = m_Model.m_VtxBufferSizeInBytes, .range = m_Model.m_IdxBufferSizeInBytes };
-	VkDescriptorImageInfo imageInfo0 = { .sampler = VulkanRendererBase::s_SamplerRepeatLinear, .imageView = m_default_texture.view, .imageLayout = m_default_texture.info.imageLayout };
 
-	VkDescriptorBufferInfo uboInfo0 = { .buffer = VulkanRendererBase::m_ubo_common_framedata.buffer, .offset = 0, .range = sizeof(VulkanRendererBase::UniformData) };
-
-	std::array<VkWriteDescriptorSet, 4> descriptorWrites =
-	{
-		BufferWriteDescriptorSet(m_descriptor_set, 0, &uboInfo0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER),
-		BufferWriteDescriptorSet(m_descriptor_set, 1, &sboInfo0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER),
-		BufferWriteDescriptorSet(m_descriptor_set, 2, &sboInfo1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER),
-		ImageWriteDescriptorSet(m_descriptor_set,  3,  &imageInfo0)
-	};
-
-	vkUpdateDescriptorSets(device, (uint32_t)(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 }
 
 void VulkanModelRenderer::create_attachments()
@@ -120,9 +120,9 @@ void VulkanModelRenderer::create_attachments()
 	{
 		std::string s_prefix = "Frame #" + std::to_string(i) + "G-Buffer ";
 
-		m_Albedo_Output[i].init(m_ColorAttachmentFormats[0], render_width, render_height);	/* G-Buffer Color */
-		m_Normal_Output[i].init(m_ColorAttachmentFormats[1], render_width, render_height);	/* G-Buffer Normal */
-		m_Depth_Output[i].init(m_DepthAttachmentFormat, render_width, render_height);		/* G-Buffer Depth */
+		m_Albedo_Output[i].init(m_ColorAttachmentFormats[0], render_width, render_height, false);	/* G-Buffer Color */
+		m_Normal_Output[i].init(m_ColorAttachmentFormats[1], render_width, render_height, false);	/* G-Buffer Normal */
+		m_Depth_Output[i].init(m_DepthAttachmentFormat, render_width, render_height, false);		/* G-Buffer Depth */
 
 		m_Albedo_Output[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Albedo").c_str());
 		m_Normal_Output[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Normal").c_str());

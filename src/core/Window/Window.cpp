@@ -5,6 +5,7 @@
 #if defined(_WIN32)	
 
 #include <Windowsx.h>
+#include <ShellScalingApi.h>
 #include "Core/Application.h"
 #include "backends/imgui_impl_win32.h"
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -70,6 +71,15 @@ Window::Impl::~Impl()
 /////////////////////////////////////////////////////////////////////////
 void Window::Impl::Create()
 {
+	SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
+
+	// Get the DPI of the primary display
+	HDC hdc = GetDC(NULL);
+	int dpiX = GetDeviceCaps(hdc, LOGPIXELSX);
+	int dpiY = GetDeviceCaps(hdc, LOGPIXELSY);
+	ReleaseDC(NULL, hdc);
+
+
 	int h = m_WinInfo.height;
 	int w = m_WinInfo.width;
 	

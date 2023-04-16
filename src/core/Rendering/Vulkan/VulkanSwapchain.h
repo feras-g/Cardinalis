@@ -1,8 +1,7 @@
-#ifndef VULKAN_SWAPCHAIN_H
-#define	VULKAN_SWAPCHAIN_H
+#pragma once
 
 #include <vector>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 struct Texture2D;
 
@@ -53,5 +52,3 @@ private:
 	PFN_vkAcquireNextImageKHR	fpAcquireNextImageKHR;
 	PFN_vkQueuePresentKHR		fpQueuePresentKHR;
 };
-
-#endif // !VULKAN_SWAPCHAIN_H

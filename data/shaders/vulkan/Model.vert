@@ -13,18 +13,23 @@ struct Vertex
     float u, v;
 };
 
-layout(binding = 0) uniform UniformData 
+layout(set = 0, binding = 0) readonly buffer VBO { Vertex data[]; } vbo;
+layout(set = 0, binding = 1) readonly buffer IBO { uint data[]; } ibo;
+
+layout(set = 1, binding = 0) uniform ObjectData 
 { 
-    mat4 model;
+    mat4 mvp;
+} object_data;
+
+layout(set = 2, binding = 0) uniform FrameData 
+{ 
     mat4 view;
     mat4 proj;
     mat4 inv_view_proj;
-    mat4 mvp;
     vec4 view_pos;
-} ubo;
+} frame_data;
 
-layout(binding = 1) readonly buffer VBO { Vertex data[]; } vbo;
-layout(binding = 2) readonly buffer IBO { uint data[]; } ibo;
+
 
 void main()
 {
@@ -34,9 +39,9 @@ void main()
     vec4 normalOS = vec4(v.nx, v.ny, v.nz, 0.0);
 
     uv.xy = vec2(v.u, v.v);
-    normalWS   = ubo.model * normalOS;
-    positionCS = ubo.model * positionOS;
+    normalWS   = normalOS;//object_data.model * normalOS;
+    positionCS = object_data.mvp * positionOS;
     depthCS.xy = positionCS.zw;
 
-    gl_Position = ubo.mvp * positionOS;
+    gl_Position = positionCS;
 }

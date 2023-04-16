@@ -1,5 +1,4 @@
-#ifndef VULKAN_TOOLS_H
-#define VULKAN_TOOLS_H
+#pragma once
 
 #include <string>
 #include <sstream>
@@ -70,5 +69,3 @@ static Image load_image_from_file(std::string_view filename)
 }
 
 #define CHECK_DEREF(p) { assert(p); return *p; }
-
-#endif // !VULKAN_TOOLS_H

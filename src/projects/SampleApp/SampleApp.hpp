@@ -46,7 +46,52 @@ protected:
 
 void SampleApp::Initialize()
 {
-	m_model_renderer.reset(new VulkanModelRenderer ("../../../data/models/plane.obj"));
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/plane.obj"), "Plane");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/suzanne.obj"), "Suzanne");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/cow.obj"), "Cow");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/bunny.obj"), "bunny");
+
+	int idx = 0;
+	for (int i = 0; i < 5; i++)
+	{
+		for (int j = 0; j < 5; j++)
+		{
+			for (int k = 0; k < 5; k++)
+			{
+
+				glm::mat4 random_rot = glm::identity<glm::mat4>();
+				{
+					std::random_device rd;
+					std::mt19937 gen(rd());
+					std::uniform_real_distribution<float> dis(-1.f, 1.f);
+
+					glm::vec3 axis(dis(gen), dis(gen), dis(gen));
+					axis = glm::normalize(axis);
+					float angle = glm::pi<float>() * dis(gen);
+
+					random_rot = glm::rotate(random_rot, angle, axis);
+				}
+
+
+
+				glm::mat4 model = glm::translate(glm::identity<glm::mat4>(), glm::vec3(i, j, k)) * glm::scale(glm::identity<glm::mat4>(), glm::vec3(0.2, 0.2, 0.2)) * random_rot;
+
+				std::string name = "Drawable" + std::to_string(idx++);
+				if ( ((i + j + k) % 2) == 0)
+				{
+					RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("Suzanne"), model), name.c_str());
+				}
+				else
+				{
+					RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("bunny"), model), name.c_str());
+				}
+			}
+		}
+
+	}
+
+	RenderObjectManager::configure();
+	m_model_renderer.reset(new VulkanModelRenderer);
 	m_imgui_renderer.reset(new VulkanImGuiRenderer(context));
 	
 	m_deferred_renderer.init(
@@ -160,41 +205,41 @@ void SampleApp::Render()
 
 inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 {
-	vkWaitForFences(context.device, 1, &context.frames[currentImageIdx].renderFence, TRUE, UINT64_MAX);
+	//vkWaitForFences(context.device, 1, &context.frames[currentImageIdx].renderFence, TRUE, UINT64_MAX);
 	
-	VulkanRendererBase::UniformData frame_data;
+	/* Update frame Data */
+	VulkanRendererBase::PerFrameData frame_data;
 	{
-		frame_data.model = glm::identity<glm::mat4>() * glm::translate(glm::identity<glm::mat4>(), m_UI.pos) * glm::scale(glm::identity<glm::mat4>(), m_UI.scale);
 		frame_data.view = m_Camera.GetView();
 		frame_data.proj = m_Camera.GetProj();
 		frame_data.inv_view_proj = glm::inverse(frame_data.proj * frame_data.view);
-		frame_data.mvp = frame_data.proj * frame_data.view * frame_data.model;
 		frame_data.view_pos = glm::vec4(
 			m_Camera.controller.m_position.x,
 			m_Camera.controller.m_position.y,
 			m_Camera.controller.m_position.z,
 			1.0);
-		VulkanRendererBase::update_common_framedata(frame_data);
+		VulkanRendererBase::update_frame_data(frame_data);
 	}
 
-	m_model_renderer->update_buffers(&frame_data, sizeof(frame_data));
+	/* Update drawables */
+	RenderObjectManager::update_drawables(frame_data);
 
 	m_deferred_renderer.update(currentImageIdx);
 
 	// ImGui composition
 	{
 		m_UI.Start();
-		m_UI.AddHierarchyPanel();
-		m_UI.ShowMenuBar();
-		m_UI.AddInspectorPanel();
+		//m_UI.AddHierarchyPanel();
+		//m_UI.ShowMenuBar();
+		//m_UI.AddInspectorPanel();
 		m_UI.ShowStatistics(m_DebugName, dt, context.frameCount);
 		m_UI.ShowSceneViewportPanel(
 			m_imgui_renderer->m_DeferredRendererOutputTextureId[currentImageIdx],
 			m_imgui_renderer->m_ModelRendererColorTextureId[currentImageIdx],
 			m_imgui_renderer->m_ModelRendererNormalTextureId[currentImageIdx],
 			m_imgui_renderer->m_ModelRendererDepthTextureId[currentImageIdx]);
-		m_UI.ShowFrameTimeGraph(FrameStats::History.data(), FrameStats::History.size());
-		m_UI.ShowCameraSettings(&m_Camera);
+		//m_UI.ShowFrameTimeGraph(FrameStats::History.data(), FrameStats::History.size());
+		//m_UI.ShowCameraSettings(&m_Camera);
 		m_UI.End();
 	}
 

@@ -32,10 +32,9 @@ void VulkanImGuiRenderer::Initialize(const VulkanModelRenderer& model_renderer, 
 	// Create font texture
 	m_Textures.push_back(Texture2D());
 
-	CreateFontTexture(&io, "../../../data/fonts/Arial-Bold.ttf", m_Textures[FONT_TEXTURE_INDEX]);
-	//m_Textures[FONT_TEXTURE_INDEX].CreateView(context.device, { .format = VK_FORMAT_R8G8B8A8_UNORM, .aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevels = 1 });
+	CreateFontTexture(&io, "../../../data/fonts/DroidSans.ttf", m_Textures[FONT_TEXTURE_INDEX]);
 	io.Fonts->TexID = (ImTextureID)FONT_TEXTURE_INDEX;
-
+	
 	// Then add other textures
 	// BY DEFAULT : 
 	// [0] : ImGui Font texture
@@ -230,12 +229,11 @@ VulkanImGuiRenderer::~VulkanImGuiRenderer()
 
 bool VulkanImGuiRenderer::CreateFontTexture(ImGuiIO* io, const char* fontPath, Texture2D& out_Font)
 {
-	ImFontConfig cfg = ImFontConfig();
-	cfg.FontDataOwnedByAtlas = false;
-	cfg.SizePixels = 16.0f;
-	
-	ImFont* Font = io->Fonts->AddFontFromFileTTF(fontPath, cfg.SizePixels, &cfg);
-	
+	ImFontConfig font_config = ImFontConfig();
+	font_config.SizePixels = 13.0f * 1.25;
+	io->Fonts->AddFontDefault(&font_config);
+
+	ImFont* Font = io->Fonts->AddFontFromFileTTF(fontPath, font_config.SizePixels, &font_config);
 	unsigned char* im_data = nullptr;
 	int tex_width = 1, tex_height = 1, bpp = 0;
 	io->Fonts->GetTexDataAsRGBA32(&im_data, &tex_width, &tex_height, &bpp);
@@ -256,7 +254,7 @@ bool VulkanImGuiRenderer::CreatePipeline(VkDevice device)
 {
 	create_buffers();
 
-	m_descriptor_pool = create_descriptor_pool(numStorageBuffers, numUniformBuffers, m_Textures.size());
+	m_descriptor_pool = create_descriptor_pool(numStorageBuffers, numUniformBuffers, m_Textures.size(), 0);
 
 	{
 		std::vector<VkDescriptorSetLayoutBinding> bindings =
@@ -273,7 +271,8 @@ bool VulkanImGuiRenderer::CreatePipeline(VkDevice device)
 	update_descriptor_set(device);
 
 	size_t fragConstRangeSizeInBytes = sizeof(uint32_t); // Size of 1 Push constant holding the texture ID passed from ImGui::Image
-	m_pipeline_layout = create_pipeline_layout(device, m_descriptor_set_layout, 0, fragConstRangeSizeInBytes);
+	std::array<VkDescriptorSetLayout, 1> layouts{ m_descriptor_set_layout };
+	m_pipeline_layout = create_pipeline_layout(device, layouts, 0, fragConstRangeSizeInBytes);
 
 	GraphicsPipeline::Flags pp_flags = GraphicsPipeline::Flags::NONE;
 	std::array<VkFormat, 1> color_formats = { ENGINE_SWAPCHAIN_COLOR_FORMAT };

@@ -1,5 +1,6 @@
-#include "VulkanModel.h"
+#include "VulkanMesh.h"
 #include "Rendering/Vulkan/VulkanRenderInterface.h"
+#include "Rendering/Vulkan/VulkanRendererBase.h"
 
 #include <vector>
 #include <span>
@@ -10,7 +11,7 @@
 #include <assimp/version.h>
 
 
-void VulkanModel::CreateFromFile(const char* filename)
+void VulkanMesh::create_from_file(const char* filename)
 {
 	const aiScene* scene = aiImportFile(filename, aiProcess_Triangulate);
 
@@ -54,22 +55,27 @@ void VulkanModel::CreateFromFile(const char* filename)
 	m_IdxBufferSizeInBytes = indices.size()  * sizeof(unsigned int);
 	m_VtxBufferSizeInBytes = vertices.size() * sizeof(VertexData);
 
-	CreateIndexVertexBuffer(m_StorageBuffer, vertices.data(), m_VtxBufferSizeInBytes, indices.data(), m_IdxBufferSizeInBytes);
+	CreateIndexVertexBuffer(m_vertex_index_buffer, vertices.data(), m_VtxBufferSizeInBytes, indices.data(), m_IdxBufferSizeInBytes);
 }
 
 
-void VulkanModel::CreateFromData(std::span<SimpleVertexData> vertices, std::span<unsigned int> indices)
+void VulkanMesh::create_from_data(std::span<SimpleVertexData> vertices, std::span<unsigned int> indices)
 {
 	m_NumVertices = vertices.size();
 	m_NumIndices = indices.size();
 	m_IdxBufferSizeInBytes = indices.size() * sizeof(unsigned int);
 	m_VtxBufferSizeInBytes = vertices.size() * sizeof(VertexData);
 
-	CreateIndexVertexBuffer(m_StorageBuffer, vertices.data(), m_VtxBufferSizeInBytes, indices.data(), m_IdxBufferSizeInBytes);
+	CreateIndexVertexBuffer(m_vertex_index_buffer, vertices.data(), m_VtxBufferSizeInBytes, indices.data(), m_IdxBufferSizeInBytes);
 }
 
-void VulkanModel::draw_indexed(VkCommandBuffer cbuf)
+void Drawable::draw(VkCommandBuffer cmd_buffer) const
 {
-	vkCmdDraw(cbuf, m_NumIndices, 1, 0, 0);
-	//vkCmdDrawIndexed(cbuf, m_NumIndices, 1, 0, 0, 0);
+	vkCmdDraw(cmd_buffer, mesh_handle->m_NumVertices, 1, 0, 0);
+}
+
+
+Drawable::Drawable(VulkanMesh* mesh, glm::mat4 model) : mesh_handle(mesh), model(model)
+{
+
 }
