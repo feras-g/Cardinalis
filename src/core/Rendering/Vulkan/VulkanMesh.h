@@ -47,16 +47,22 @@ struct Material
 {
 };
 
-struct TransformDataType
+struct TransformDataUbo
 {
 	glm::mat4* mvp = nullptr;
+};
+
+struct TransformData
+{
+	glm::vec4 translation;
+	glm::vec4 rotation;
+	glm::vec4 scale;
 };
 
 struct Drawable
 {
 	VulkanMesh* mesh_handle;
-	Drawable(VulkanMesh* mesh, glm::mat4 model);
-	glm::mat4 model;
+	Drawable(VulkanMesh* mesh);
 	void draw(VkCommandBuffer cmd_buffer) const;
 };
 

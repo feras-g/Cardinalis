@@ -1,6 +1,7 @@
 #include "Rendering/Vulkan/VulkanUI.h"
 #include "Rendering/FrameCounter.h"
 #include "Rendering/Camera.h"
+#include "Rendering/Vulkan/VulkanRendererBase.h"
 
 #include "../imgui/imgui.h"
 #include "../imgui/backends/imgui_impl_win32.h"
@@ -235,6 +236,37 @@ VulkanUI& VulkanUI::ShowCameraSettings(Camera* camera)
 		}
 	}
 
+	ImGui::End();
+
+
+	return *this;
+}
+
+VulkanUI& VulkanUI::ShowInspector()
+{
+	if (ImGui::Begin("Inspector", 0, 0))
+	{
+		if (ImGui::TreeNode("Hierarchy"))
+		{
+			for (int i = 0; i < RenderObjectManager::drawables.size(); i++)
+			{
+				// Use SetNextItemOpen() so set the default state of a node to be open. We could
+				// also use TreeNodeEx() with the ImGuiTreeNodeFlags_DefaultOpen flag to achieve the same thing!
+				if (i == 0)
+					ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+
+				if (ImGui::TreeNode((void*)(intptr_t)i, RenderObjectManager::drawable_names[i].c_str(), i))
+				{
+					
+					ImGui::DragFloat3("Translation", glm::value_ptr(RenderObjectManager::transform_datas[i].translation), 0.1f);
+					ImGui::SliderFloat4("Rotation",  glm::value_ptr(RenderObjectManager::transform_datas[i].rotation), 0.1f, 1.0f);
+					ImGui::DragFloat3("Scale", glm::value_ptr(RenderObjectManager::transform_datas[i].scale), 0.1f);
+					ImGui::TreePop();
+				}
+			}
+			ImGui::TreePop();
+		}
+	}
 	ImGui::End();
 
 

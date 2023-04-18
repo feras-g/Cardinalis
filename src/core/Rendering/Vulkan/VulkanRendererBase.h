@@ -105,7 +105,7 @@ public:
 		object_data_dynamic_ubo_size_bytes = drawables.size() * drawable_data_dynamic_aligment;
 		CreateBuffer(RenderObjectManager::object_data_dynamic_ubo, object_data_dynamic_ubo_size_bytes, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-		drawable_datas.mvp = (glm::mat4*)alignedAlloc(object_data_dynamic_ubo_size_bytes, drawable_data_dynamic_aligment);
+		drawable_ubo_datas.mvp = (glm::mat4*)alignedAlloc(object_data_dynamic_ubo_size_bytes, drawable_data_dynamic_aligment);
 		//drawable_datas.model = (glm::mat4*)alignedAlloc(object_data_dynamic_ubo_size_bytes, drawable_data_dynamic_aligment);
 
 		/* Setup descriptor set layout */
@@ -142,14 +142,15 @@ public:
 
 	}
 
-	static inline void add_drawable(const Drawable& drawable, const std::string& name)
+	static inline void add_drawable(const Drawable& drawable, const std::string& name, const TransformData& transform)
 	{ 
 		size_t drawable_idx = drawables.size();
-		//size_t drawable_data_idx = drawable_datas.size();
+		size_t transform_data_idx = transform_datas.size();
 		drawables.push_back(drawable);
-		//drawable_datas.push_back(obj_data);
-		drawable_from_name.insert({name, drawable_idx });
-		//drawable_datas_from_name.insert({ name, drawable_data_idx });
+		transform_datas.push_back(transform);
+		drawable_from_name.insert({ name, drawable_idx });
+		drawable_datas_from_name.insert({ name, transform_data_idx });
+		drawable_names.push_back(name);
 	}
 
 
@@ -212,13 +213,19 @@ public:
 		for (size_t i = 0; i < drawables.size(); i++)
 		{
 			//glm::mat4* model_ptr = (glm::mat4*)(((uint64_t)drawable_datas.model + (i * drawable_data_dynamic_aligment)));
-			glm::mat4* mvp_ptr = (glm::mat4*)(((uint64_t)drawable_datas.mvp + (i * drawable_data_dynamic_aligment)));
+			glm::mat4* mvp_ptr = (glm::mat4*)(((uint64_t)drawable_ubo_datas.mvp + (i * drawable_data_dynamic_aligment)));
 
 			//*model_ptr = drawables[i].model;
-			*mvp_ptr = frame_data.proj * frame_data.view * drawables[i].model;
+			glm::mat4 model = glm::identity<glm::mat4>(); 
+
+			model = glm::translate(model, glm::vec3(transform_datas[i].translation)); 
+			model = glm::rotate(model, transform_datas[i].rotation.w, glm::vec3(transform_datas[i].rotation));
+			model = glm::scale(model, glm::vec3(transform_datas[i].scale));
+			
+			*mvp_ptr = frame_data.proj * frame_data.view * model;
 		}
 
-		UploadBufferData(object_data_dynamic_ubo, drawable_datas.mvp, RenderObjectManager::object_data_dynamic_ubo_size_bytes, 0);
+		UploadBufferData(object_data_dynamic_ubo, drawable_ubo_datas.mvp, RenderObjectManager::object_data_dynamic_ubo_size_bytes, 0);
 		//UploadBufferData(object_data_dynamic_ubo, drawable_datas.model, RenderObjectManager::object_data_dynamic_ubo_size_bytes, 0);
 	}
 
@@ -232,7 +239,9 @@ public:
 	static inline std::vector<std::string> material_names;
 
 	static inline std::vector<Drawable> drawables;
-	static inline TransformDataType drawable_datas;
+	static inline std::vector<std::string> drawable_names;
+	static inline std::vector<TransformData> transform_datas;
+	static inline TransformDataUbo drawable_ubo_datas;
 
 	static inline std::vector<VulkanMesh> meshes;
 	static inline std::vector<std::string> mesh_names;

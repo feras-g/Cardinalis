@@ -27,8 +27,8 @@ public:
 	vk::DynamicRenderPass m_dyn_renderpass[NUM_FRAMES];
 
 	/** Size in pixels of the offscreen buffers */
-	static const uint32_t render_width = 1024;
-	static const uint32_t render_height = 1024;
+	static const uint32_t render_width  = 2048;
+	static const uint32_t render_height = 2048;
 
 	static Buffer m_uniform_buffer;
 

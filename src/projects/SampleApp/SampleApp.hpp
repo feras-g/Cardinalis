@@ -50,40 +50,47 @@ void SampleApp::Initialize()
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/suzanne.obj"), "Suzanne");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/cow.obj"), "Cow");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/bunny.obj"), "bunny");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/cube.obj"), "cube");
 
 	int idx = 0;
-	for (int i = 0; i < 5; i++)
+	for (int i = 0; i < 10; i++)
 	{
-		for (int j = 0; j < 5; j++)
+		for (int j = 0; j < 10; j++)
 		{
 			for (int k = 0; k < 5; k++)
 			{
 
-				glm::mat4 random_rot = glm::identity<glm::mat4>();
+				glm::vec4 random_rot;
 				{
 					std::random_device rd;
 					std::mt19937 gen(rd());
 					std::uniform_real_distribution<float> dis(-1.f, 1.f);
 
-					glm::vec3 axis(dis(gen), dis(gen), dis(gen));
+					glm::vec4 axis(dis(gen), dis(gen), dis(gen), 1.0f);
 					axis = glm::normalize(axis);
 					float angle = glm::pi<float>() * dis(gen);
 
-					random_rot = glm::rotate(random_rot, angle, axis);
+					random_rot.x = axis.x;
+					random_rot.y = axis.y;
+					random_rot.z = axis.z;
+					random_rot.w = angle;
 				}
 
-
-
-				glm::mat4 model = glm::translate(glm::identity<glm::mat4>(), glm::vec3(i, j, k)) * glm::scale(glm::identity<glm::mat4>(), glm::vec3(0.2, 0.2, 0.2)) * random_rot;
+				const TransformData transform
+				{
+					glm::vec4(i, j, k, 1.0f),
+					random_rot,
+					glm::vec4(0.2, 0.2, 0.2, 1.0f)
+				};
 
 				std::string name = "Drawable" + std::to_string(idx++);
 				if ( ((i + j + k) % 2) == 0)
 				{
-					RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("Suzanne"), model), name.c_str());
+					RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("Suzanne")), name.c_str(), transform);
 				}
 				else
 				{
-					RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("bunny"), model), name.c_str());
+					RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cube")), name.c_str(), transform);
 				}
 			}
 		}
@@ -240,6 +247,7 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 			m_imgui_renderer->m_ModelRendererDepthTextureId[currentImageIdx]);
 		//m_UI.ShowFrameTimeGraph(FrameStats::History.data(), FrameStats::History.size());
 		//m_UI.ShowCameraSettings(&m_Camera);
+		m_UI.ShowInspector();
 		m_UI.End();
 	}
 

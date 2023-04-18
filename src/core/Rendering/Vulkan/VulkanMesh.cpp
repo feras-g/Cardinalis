@@ -75,7 +75,7 @@ void Drawable::draw(VkCommandBuffer cmd_buffer) const
 }
 
 
-Drawable::Drawable(VulkanMesh* mesh, glm::mat4 model) : mesh_handle(mesh), model(model)
+Drawable::Drawable(VulkanMesh* mesh) : mesh_handle(mesh)
 {
 
 }

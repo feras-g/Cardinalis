@@ -32,7 +32,7 @@ void VulkanImGuiRenderer::Initialize(const VulkanModelRenderer& model_renderer, 
 	// Create font texture
 	m_Textures.push_back(Texture2D());
 
-	CreateFontTexture(&io, "../../../data/fonts/DroidSans.ttf", m_Textures[FONT_TEXTURE_INDEX]);
+	CreateFontTexture(&io, "../../../data/fonts/SSTRg.TTF", m_Textures[FONT_TEXTURE_INDEX]);
 	io.Fonts->TexID = (ImTextureID)FONT_TEXTURE_INDEX;
 	
 	// Then add other textures
