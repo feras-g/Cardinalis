@@ -27,6 +27,6 @@ layout(set = 2, binding = 0) uniform FrameData
 void main()
 {
     gbuffer_albedo   = vec4(1,0,1,1);//texture(defaultTexture, uv.xy);
-    gbuffer_normalWS = vec4(normalWS.xyz, 1.0);
+    gbuffer_normalWS = vec4(normalize(normalWS.xyz), 1.0);
     gbuffer_depthCS  = depthCS.z / depthCS.w;
 }

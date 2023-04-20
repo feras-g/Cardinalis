@@ -34,6 +34,7 @@ project("CoreLib")
 		lib_dir .. "spdlog",
 		lib_dir .. "imgui",
 		lib_dir .. "assimp/include",
+		lib_dir .. "cgltf",
 		os.getenv("VULKAN_SDK") .. "/Include"
 	}
 	

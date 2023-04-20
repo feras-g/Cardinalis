@@ -106,7 +106,7 @@ public:
 		object_data_dynamic_ubo_size_bytes = drawables.size() * drawable_data_dynamic_aligment;
 		create_uniform_buffer(RenderObjectManager::object_data_dynamic_ubo, object_data_dynamic_ubo_size_bytes);
 
-		drawable_ubo_datas   = (TransformDataUbo*)alignedAlloc(object_data_dynamic_ubo_size_bytes, drawable_data_dynamic_aligment);
+		per_object_datas   = (TransformDataUbo*)alignedAlloc(object_data_dynamic_ubo_size_bytes, drawable_data_dynamic_aligment);
 
 		/* Setup descriptor set layout */
 		std::vector<VkDescriptorSetLayoutBinding> bindings = {};
@@ -208,24 +208,21 @@ public:
 		return nullptr;
 	}
 
-	static void update_drawables(const VulkanRendererBase::PerFrameData& frame_data)
+	static void update_per_object_data(const VulkanRendererBase::PerFrameData& frame_data)
 	{
 		for (size_t i = 0; i < drawables.size(); i++)
 		{
-			glm::mat4* mvp_ptr   = &drawable_ubo_datas[i].mvp;
-			glm::mat4* model_ptr = &drawable_ubo_datas[i].model;
-
 			glm::mat4 model = glm::identity<glm::mat4>(); 
 
 			model = glm::translate(model, glm::vec3(transform_datas[i].translation)); 
 			model = glm::rotate(model, transform_datas[i].rotation.w, glm::vec3(transform_datas[i].rotation));
 			model = glm::scale(model, glm::vec3(transform_datas[i].scale));
 			
-			*mvp_ptr = frame_data.proj * frame_data.view * model;
-			*model_ptr = model;
+			per_object_datas[i].mvp = frame_data.proj * frame_data.view * model;
+			per_object_datas[i].model = model;
 		}
 
-		upload_buffer_data(object_data_dynamic_ubo, drawable_ubo_datas, RenderObjectManager::object_data_dynamic_ubo_size_bytes, 0);
+		upload_buffer_data(object_data_dynamic_ubo, per_object_datas, RenderObjectManager::object_data_dynamic_ubo_size_bytes, 0);
 	}
 
 	static void destroy()
@@ -248,7 +245,7 @@ public:
 	static inline std::vector<Drawable> drawables;
 	static inline std::vector<std::string> drawable_names;
 	static inline std::vector<TransformData> transform_datas;
-	static inline TransformDataUbo* drawable_ubo_datas;
+	static inline TransformDataUbo* per_object_datas;
 
 	static inline std::vector<VulkanMesh> meshes;
 	static inline std::vector<std::string> mesh_names;

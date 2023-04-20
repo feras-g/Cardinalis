@@ -37,7 +37,7 @@ void main()
     uint index = ibo.data[gl_VertexIndex];
     Vertex v = vbo.data[index];
     vec4 positionOS = vec4(v.px, v.py, v.pz, 1.0);
-    vec4 normalOS = vec4(v.nx, v.ny, v.nz, 0.0);
+    vec4 normalOS   = vec4(v.nx, v.ny, v.nz, 0.0);
 
     uv.xy = vec2(v.u, v.v);
     normalWS   = object_data.model * normalOS;

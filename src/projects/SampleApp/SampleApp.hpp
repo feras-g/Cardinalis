@@ -46,18 +46,23 @@ protected:
 
 void SampleApp::Initialize()
 {
+	VulkanMesh cube_gltf;
+	cube_gltf.create_from_file_gltf("../../../data/models/cube.gltf");
+
+	RenderObjectManager::add_mesh(cube_gltf, "cube");
+
+	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/cube.obj"), "cube");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/plane.obj"), "Plane");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/suzanne.obj"), "Suzanne");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/cow.obj"), "Cow");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/bunny.obj"), "bunny");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/cube.obj"), "cube");
 
 	int idx = 0;
 	for (int i = 0; i < 10; i++)
 	{
 		for (int j = 0; j < 10; j++)
 		{
-			for (int k = 0; k < 5; k++)
+			for (int k = 0; k < 10; k++)
 			{
 
 				glm::vec4 random_rot;
@@ -80,15 +85,15 @@ void SampleApp::Initialize()
 				{
 					glm::vec4(i, j, k, 1.0f),
 					random_rot,
-					glm::vec4(0.2, 0.2, 0.2, 1.0f)
+					glm::vec4(0.25,0.25, 0.25, 1.0f)
 				};
 
 				std::string name = "Drawable" + std::to_string(idx++);
-				if ( ((i + j + k) % 2) == 0)
-				{
-					RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("Suzanne")), name.c_str(), transform);
-				}
-				else
+				//if ( ((i + j + k) % 2) == 0)
+				//{
+				//	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("Suzanne")), name.c_str(), transform);
+				//}
+				//else
 				{
 					RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cube")), name.c_str(), transform);
 				}
@@ -212,8 +217,6 @@ void SampleApp::Render()
 
 inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 {
-	//vkWaitForFences(context.device, 1, &context.frames[currentImageIdx].renderFence, TRUE, UINT64_MAX);
-	
 	/* Update frame Data */
 	VulkanRendererBase::PerFrameData frame_data;
 	{
@@ -229,7 +232,7 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 	}
 
 	/* Update drawables */
-	RenderObjectManager::update_drawables(frame_data);
+	RenderObjectManager::update_per_object_data(frame_data);
 
 	m_deferred_renderer.update(currentImageIdx);
 
