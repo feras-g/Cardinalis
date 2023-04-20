@@ -1,8 +1,10 @@
 #include "VulkanResources.h"
 #include "VulkanTools.h"
 
-void CreateBuffer(Buffer& result, size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProperties)
+void create_buffer(Buffer& result, size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProperties)
 {
+	static size_t nb = 0;
+	LOG_INFO("Create buffer {}", nb++);
 	VkBufferCreateInfo info =
 	{
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -34,20 +36,20 @@ void CreateBuffer(Buffer& result, size_t size, VkBufferUsageFlags usage, VkMemor
 
 void create_uniform_buffer(Buffer& result, VkDeviceSize size)
 {
-	CreateBuffer(result, size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	create_buffer(result, size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 }
 
 void create_storage_buffer(Buffer& result, VkDeviceSize size)
 {
-	CreateBuffer(result, size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	create_buffer(result, size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 }
 
-void CreateStagingBuffer(Buffer& result, VkDeviceSize size)
+void create_staging_buffer(Buffer& result, VkDeviceSize size)
 {
-	CreateBuffer(result, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	create_buffer(result, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 }
 
-void UploadBufferData(Buffer& buffer, const void* data, const size_t size, VkDeviceSize offset)
+void upload_buffer_data(Buffer& buffer, const void* data, const size_t size, VkDeviceSize offset)
 {
 	void* pMappedData = nullptr;
 	VK_CHECK(vkMapMemory(context.device, buffer.memory, offset, size, 0, &pMappedData));
@@ -55,7 +57,7 @@ void UploadBufferData(Buffer& buffer, const void* data, const size_t size, VkDev
 	vkUnmapMemory(context.device, buffer.memory);
 }
 
-void CopyBuffer(const Buffer& src, const Buffer& dst, VkDeviceSize size)
+void copy_buffer(const Buffer& src, const Buffer& dst, VkDeviceSize size)
 {
 	VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
 	VkBufferCopy bufferRegion = { .srcOffset = 0, .dstOffset = 0, .size = size };
@@ -63,7 +65,7 @@ void CopyBuffer(const Buffer& src, const Buffer& dst, VkDeviceSize size)
 	end_temp_cmd_buffer(cmd_buffer);
 }
 
-void DestroyBuffer(const Buffer& buffer)
+void destroy_buffer(const Buffer& buffer)
 {
 	if (buffer.buffer != VK_NULL_HANDLE)
 	{

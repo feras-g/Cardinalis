@@ -19,5 +19,14 @@ void VulkanRendererBase::create_buffers()
 
 void VulkanRendererBase::update_frame_data(const PerFrameData& data)
 {
-	UploadBufferData(m_ubo_common_framedata, (void*)&data, sizeof(data), 0);
+	upload_buffer_data(m_ubo_common_framedata, (void*)&data, sizeof(data), 0);
+}
+
+void VulkanRendererBase::destroy()
+{
+	vkDeviceWaitIdle(context.device);
+	destroy_buffer(m_ubo_common_framedata);
+	vkDestroySampler(context.device, s_SamplerRepeatLinear, nullptr);
+	vkDestroySampler(context.device, s_SamplerClampLinear, nullptr);
+	vkDestroySampler(context.device, s_SamplerClampNearest, nullptr);
 }

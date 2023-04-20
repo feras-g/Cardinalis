@@ -31,6 +31,8 @@ struct LightManager
 	size_t m_total_size_bytes = 0;
 	LightData m_light_data;
 	Buffer m_uniform_buffer;
+
+	void destroy() { destroy_buffer(m_uniform_buffer); }
 };
 
 static const VkFormat color_attachment_format = VK_FORMAT_R8G8B8A8_SRGB;

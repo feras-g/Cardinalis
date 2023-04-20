@@ -27,7 +27,7 @@ VulkanModelRenderer::VulkanModelRenderer()
 	VkWriteDescriptorSet write_desc = BufferWriteDescriptorSet(m_pass_descriptor_set, 0, &info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 
 	VulkanRendererBase::PerFrameData frame_data = { glm::identity<glm::mat4>() };
-	UploadBufferData(VulkanRendererBase::m_ubo_common_framedata, &frame_data, sizeof(VulkanRendererBase::PerFrameData), 0);
+	upload_buffer_data(VulkanRendererBase::m_ubo_common_framedata, &frame_data, sizeof(VulkanRendererBase::PerFrameData), 0);
 	vkUpdateDescriptorSets(context.device, 1, &write_desc, 0, nullptr);
 	
 	std::vector<VkDescriptorSetLayout> desc_set_layouts = {};

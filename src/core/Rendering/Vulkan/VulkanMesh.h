@@ -49,7 +49,8 @@ struct Material
 
 struct TransformDataUbo
 {
-	glm::mat4* mvp = nullptr;
+	glm::mat4 mvp;
+	glm::mat4 model;
 };
 
 struct TransformData

@@ -19,6 +19,7 @@ layout(set = 0, binding = 1) readonly buffer IBO { uint data[]; } ibo;
 layout(set = 1, binding = 0) uniform ObjectData 
 { 
     mat4 mvp;
+    mat4 model;
 } object_data;
 
 layout(set = 2, binding = 0) uniform FrameData 
@@ -39,7 +40,7 @@ void main()
     vec4 normalOS = vec4(v.nx, v.ny, v.nz, 0.0);
 
     uv.xy = vec2(v.u, v.v);
-    normalWS   = normalOS;//object_data.model * normalOS;
+    normalWS   = object_data.model * normalOS;
     positionCS = object_data.mvp * positionOS;
     depthCS.xy = positionCS.zw;
 

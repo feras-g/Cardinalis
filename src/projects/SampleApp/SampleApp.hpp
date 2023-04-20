@@ -307,6 +307,8 @@ inline void SampleApp::OnKeyEvent(KeyEvent event)
 inline void SampleApp::Terminate()
 {
 	m_Window->ShutdownGUI();
+	RenderObjectManager::destroy();
+	VulkanRendererBase::destroy();
 }
 
 inline SampleApp::~SampleApp()

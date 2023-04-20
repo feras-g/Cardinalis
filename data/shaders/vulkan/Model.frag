@@ -12,6 +12,7 @@ layout(location = 3) in vec4 depthCS;
 layout(set = 1, binding = 0) uniform ObjectData 
 { 
     mat4 mvp;
+    mat4 model;
 } object_data;
 
 layout(set = 2, binding = 0) uniform FrameData 

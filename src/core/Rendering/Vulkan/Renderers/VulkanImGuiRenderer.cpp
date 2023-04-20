@@ -192,7 +192,7 @@ void VulkanImGuiRenderer::update_buffers(ImDrawData* pDrawData)
 
 	// UBO
 	const glm::mat4 inMtx = glm::ortho(L, R, T, B);
-	UploadBufferData(m_uniform_buffer, glm::value_ptr(inMtx), sizeof(glm::mat4), 0);
+	upload_buffer_data(m_uniform_buffer, glm::value_ptr(inMtx), sizeof(glm::mat4), 0);
 	
 	// SBO : Vertex/Index data
 	void* sboData = nullptr;

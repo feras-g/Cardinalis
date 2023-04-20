@@ -144,8 +144,8 @@ void Texture::upload_data(VkDevice device, void const* const data)
     
     // Create temp CPU-GPU visible buffer holding image data 
     Buffer stagingBuffer;
-    CreateStagingBuffer(stagingBuffer, imageSizeInBytes);
-    UploadBufferData(stagingBuffer, data, imageSizeInBytes, 0);
+    create_staging_buffer(stagingBuffer, imageSizeInBytes);
+    upload_buffer_data(stagingBuffer, data, imageSizeInBytes, 0);
 
     // Copy content to image memory on GPU
     VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
@@ -154,7 +154,7 @@ void Texture::upload_data(VkDevice device, void const* const data)
     transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     end_temp_cmd_buffer(cmd_buffer);
 
-    DestroyBuffer(stagingBuffer);
+    destroy_buffer(stagingBuffer);
 }
 
 void Texture::create_view(VkDevice device, const ImageViewInitInfo& viewInfo)

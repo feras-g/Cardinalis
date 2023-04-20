@@ -754,7 +754,7 @@ size_t CreateIndexVertexBuffer(Buffer& result, const void* vtxData, size_t vtxBu
 
 	// Staging buffer
 	Buffer stagingBuffer;
-	CreateStagingBuffer(stagingBuffer, totalSizeInBytes);
+	create_staging_buffer(stagingBuffer, totalSizeInBytes);
 
 	// Copy vertex + index data to staging buffer
 	void* pData;
@@ -765,9 +765,9 @@ size_t CreateIndexVertexBuffer(Buffer& result, const void* vtxData, size_t vtxBu
 
 	// Create storage buffer containing non-interleaved vertex + index data 
 	create_storage_buffer(result, totalSizeInBytes);
-	CopyBuffer(stagingBuffer, result, totalSizeInBytes);
+	copy_buffer(stagingBuffer, result, totalSizeInBytes);
 
-	DestroyBuffer(stagingBuffer);
+	destroy_buffer(stagingBuffer);
 
 	return totalSizeInBytes;
 }

@@ -185,8 +185,7 @@ void LightManager::init(size_t w, size_t h)
 
 void LightManager::init_ubo()
 {
-	CreateBuffer(m_uniform_buffer, sizeof(m_light_data.point_lights), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
+	create_uniform_buffer(m_uniform_buffer, sizeof(m_light_data.point_lights));
 	void* pMappedData = nullptr;
 	VK_CHECK(vkMapMemory(context.device, m_uniform_buffer.memory, 0, sizeof(m_light_data.point_lights), 0, &pMappedData));
 	memcpy(pMappedData, m_light_data.point_lights, sizeof(m_light_data.point_lights));
