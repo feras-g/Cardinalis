@@ -11,7 +11,7 @@ void CameraController::UpdateRotation(const glm::vec2& mouse_pos)
 	m_rotation.x += (m_last_mouse_pos.y - mouse_pos.y) * params.mouse_speed;
 
 	//if (m_rotation.x > 89.9f)  m_rotation.x = 89.9f;
-	if (m_rotation.y < -89.9f) m_rotation.y = -89.9f;
+	//if (m_rotation.y < -89.9f) m_rotation.y = -89.9f;
 
 	m_last_mouse_pos = mouse_pos;
 }

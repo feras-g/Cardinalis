@@ -318,60 +318,10 @@ void VulkanMesh::create_from_file_gltf(const char* filename)
 //	}
 //}
 
-//int LoadImageFile(GeometryData* data, const std::string& rootPath, cgltf_image* image)
-//{
-//	char* uri = image->uri;
-//
-//	std::string path = rootPath + uri;
-//
-//	auto textureIte = data->textureTable.find(uri);
-//
-//	int index = -1;
-//
-//	if (textureIte != data->textureTable.end())
-//	{
-//		index = textureIte->second;
-//	}
-//	else
-//	{
-//		int width = -1;
-//		int height = -1;
-//		int channels = -1;
-//
-//		unsigned char* imgData = ImageLoader::LoadFromFile(path, width, height, channels);
-//
-//		// Load and store new texture
-//		Texture texture
-//		{
-//			.info
-//			{
-//				.debug_name = image->name ? image->name : path.c_str(),
-//				.ID = (int)data->textures.size(),
-//				.width = width,
-//				.height = height,
-//				.channels = 4
-//			},
-//
-//			.data = imgData
-//		};
-//
-//		index = texture.info.ID;
-//		// Update texture list
-//		data->textures.push_back(texture);
-//
-//		data->textureTable[uri] = texture.info.ID;
-//
-//		////LOG_INFO("MeshLoader::LoadImageFile : Loaded {0} - {1}x{2}x{3}", path.substr(path.find_last_of('/') + 1, path.size()), width, height, channels);
-//	}
-//
-//	return index;
-//}
-//
-//
 //void LoadMaterial(cgltf_primitive* rawPrimitive, Primitive* primitive, GeometryData* data)
 //{
 //	// https://kcoley.github.io/glTF/extensions/2.0/Khronos/KHR_materials_pbrSpecularGlossiness/
-//	// Default model used in this engine is Specular-Glossiness
+//	
 //	cgltf_material* material = rawPrimitive->material;
 //
 //	MetallicRoughness  metallicRoughness;
@@ -380,16 +330,28 @@ void VulkanMesh::create_from_file_gltf(const char* filename)
 //	MaterialProperties materialProperties;
 //
 //	// Load additional textures : emissive, normal maps ...
-//	cgltf_texture* emissiveTexture = material->emissive_texture.texture;
-//	cgltf_texture* normalTexture = material->normal_texture.texture;
+//	cgltf_texture* tex_emissive = material->emissive_texture.texture;
+//	cgltf_texture* tex_normal   = material->normal_texture.texture;
 //
-//	if (emissiveTexture)
+//	struct Material
 //	{
-//		materialProperties.hEmissiveTexture = LoadImageFile(data, m_MeshRootPath, emissiveTexture->image);
-//		materialProperties.hasEmissive = true;
+//		uint32_t tex_emissive_id;
+//		uint32_t tex_normal_id;
+//	};
+//	
+//	Material material;
+//
+//	if (tex_emissive)
+//	{
+//		//Texture2D tex;
+//		//tex.init()
+//		//RenderObjectManager::add_texture( ,tex_emissive->name);
+//
+//		material.tex_emissive_id = LoadImageFile(data, m_MeshRootPath, emissiveTexture->image);
+//		material.hasEmissive = true;
 //	}
 //
-//	if (normalTexture)
+//	if (tex_normal)
 //	{
 //		materialProperties.hNormalTexture = LoadImageFile(data, m_MeshRootPath, normalTexture->image);
 //		materialProperties.hasNormalMap = true;
@@ -459,11 +421,9 @@ void VulkanMesh::create_from_file_gltf(const char* filename)
 //
 //		SetMaterial(data, primitive, material, materialProperties);
 //	}
-//
-//
 //}
 //
-
+//
 
 
 

@@ -153,6 +153,13 @@ public:
 		drawable_names.push_back(name);
 	}
 
+	static inline void add_texture(const Texture2D& texture, const std::string& name)
+	{
+		size_t texture_idx = textures.size();
+		textures.push_back(texture);
+		texture_names.push_back(name);
+		texture_from_name.insert({name, texture_idx});
+	}
 
 	static inline void add_material(const Material material, const std::string& name)
 	{ 
@@ -233,23 +240,24 @@ public:
 		vkDestroyDescriptorSetLayout(context.device, mesh_descriptor_set_layout, nullptr);
 	}
 
+	static inline std::vector<VulkanMesh> meshes;
+	static inline std::vector<Drawable> drawables;
 	static inline std::vector<Material> materials;
+	static inline std::vector<Texture2D> textures;
 
-	static inline std::unordered_map<std::string, size_t> material_from_name;
 	static inline std::unordered_map<std::string, size_t> mesh_from_name;
 	static inline std::unordered_map<std::string, size_t> drawable_from_name;
 	static inline std::unordered_map<std::string, size_t> drawable_datas_from_name;
+	static inline std::unordered_map<std::string, size_t> material_from_name;
+	static inline std::unordered_map<std::string, size_t> texture_from_name;
 
-	static inline std::vector<std::string> material_names;
-
-	static inline std::vector<Drawable> drawables;
+	static inline std::vector<std::string> mesh_names;
 	static inline std::vector<std::string> drawable_names;
+	static inline std::vector<std::string> material_names;
+	static inline std::vector<std::string> texture_names;
+
 	static inline std::vector<TransformData> transform_datas;
 	static inline TransformDataUbo* per_object_datas;
-
-	static inline std::vector<VulkanMesh> meshes;
-	static inline std::vector<std::string> mesh_names;
-
 
 
 	static inline VkDescriptorPool descriptor_pool;
