@@ -46,16 +46,24 @@ protected:
 
 void SampleApp::Initialize()
 {
-	VulkanMesh cube_gltf;
-	cube_gltf.create_from_file_gltf("../../../data/models/cube.gltf");
+	VulkanMesh sponza_gltf;
+	sponza_gltf.create_from_file_gltf("../../../data/models/local/sponza-gltf-pbr/sponza.glb");
 
-	RenderObjectManager::add_mesh(cube_gltf, "cube");
+	RenderObjectManager::add_mesh(sponza_gltf, "sponza");
 
-	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/cube.obj"), "cube");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/cube.obj"), "cube");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/plane.obj"), "Plane");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/suzanne.obj"), "Suzanne");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/cow.obj"), "Cow");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/bunny.obj"), "bunny");
+
+	const TransformData transform
+	{
+		glm::vec4(0,0,0,1),
+		glm::vec4(1,1,1,1),
+		glm::vec4(1,1,1, 1.0f)
+	};
+	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("sponza")), "Sponza", transform);
 
 	int idx = 0;
 	for (int i = 0; i < 10; i++)
@@ -85,7 +93,7 @@ void SampleApp::Initialize()
 				{
 					glm::vec4(i, j, k, 1.0f),
 					random_rot,
-					glm::vec4(0.25,0.25, 0.25, 1.0f)
+					glm::vec4(0.25,0.25,0.25, 1.0f)
 				};
 
 				std::string name = "Drawable" + std::to_string(idx++);

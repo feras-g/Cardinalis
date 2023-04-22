@@ -6,9 +6,12 @@
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
+#include <glm/gtx/hash.hpp>
+
 #include <span>
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 struct Buffer;
 
@@ -28,33 +31,18 @@ struct SimpleVertexData
 
 struct Primitive
 {
-	unsigned int NumIndices;
-	unsigned int num_vertices;
-	unsigned int StartIndexLocation;	// The location of the first index read by the GPU from the index buffer. == Number of indices before the first index of this primitive
-	int BaseVertexLocation;  // A value added to each index before reading a vertex from the vertex buffer == Number of vertices before the first vertex of this primitive
-	int MaterialId;	// To retrieve material properties is the unordered map
-	std::string MaterialName;	// To retrieve material properties is the unordered map
-
-	glm::mat4 WorldMatrix;
-
-
-	glm::vec4 bboxMin = {};
-	glm::vec4 bboxMax = {};
+	uint32_t first_index;
+	uint32_t index_count;
+	glm::mat4 mat_model;
 };
 
 struct GeometryData
 {
-	std::vector<VertexData> Vertices;
-	std::vector<unsigned int>   Indices;
-	std::vector<Primitive>  Primitives;
+	std::vector<VertexData> vertices{};
+	std::vector<unsigned int> indices{};
+	std::vector<Primitive>  primitives{};
 
 	glm::mat4 world_mat;
-
-	//std::vector<MaterialProperties> materials;
-	//std::unordered_map<const char*, int> materialTable;
-
-	//std::vector<Texture> textures;
-	//std::unordered_map<const char*, int> textureTable;
 };
 
 /* Class describing geometry */
@@ -74,9 +62,7 @@ struct VulkanMesh
 	Buffer m_vertex_index_buffer;
 	VkDescriptorSet descriptor_set;
 
-
-	/* */
-	GeometryData geometry_data;
+	GeometryData geometry_data{};
 };
 
 struct Material
@@ -103,6 +89,7 @@ struct Drawable
 	VulkanMesh* mesh_handle;
 	Drawable(VulkanMesh* mesh);
 	void draw(VkCommandBuffer cmd_buffer) const;
+	void draw_primitives(VkCommandBuffer cmd_buffer) const;
 };
 
 struct Materials

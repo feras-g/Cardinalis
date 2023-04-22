@@ -26,7 +26,7 @@ void VulkanMesh::create_from_file(const char* filename)
 	{
 		const aiMesh* mesh = scene->mMeshes[meshIdx];
 
-		/* Vertices */
+		/* vertices */
 		for (size_t i = 0; i < mesh->mNumVertices; i++)
 		{
 			const aiVector3D& p = mesh->mVertices[i];
@@ -36,7 +36,7 @@ void VulkanMesh::create_from_file(const char* filename)
 			vertices.push_back({ .pos = {p.x, p.y, p.z}, .normal = {n.x, n.y, n.z}, .uv = {uv.x,  uv.y} });
 		}
 
-		/* Indices */
+		/* indices */
 		for (size_t faceIdx = 0; faceIdx < mesh->mNumFaces; faceIdx++)
 		{
 			const aiFace& face = mesh->mFaces[faceIdx];
@@ -70,7 +70,16 @@ void VulkanMesh::create_from_data(std::span<SimpleVertexData> vertices, std::spa
 
 void Drawable::draw(VkCommandBuffer cmd_buffer) const
 {
-	vkCmdDraw(cmd_buffer, mesh_handle->m_NumVertices, 1, base_vertex, 0);
+	vkCmdDraw(cmd_buffer, mesh_handle->m_NumIndices, 1, 0, 0);
+}
+
+void Drawable::draw_primitives(VkCommandBuffer cmd_buffer) const
+{
+	for (int i = 0; i < mesh_handle->geometry_data.primitives.size(); i++)
+	{
+		const Primitive& p = mesh_handle->geometry_data.primitives[i];
+		vkCmdDraw(cmd_buffer, p.index_count, 1, p.first_index, 0);
+	}
 }
 
 Drawable::Drawable(VulkanMesh* mesh) : mesh_handle(mesh)
@@ -100,25 +109,13 @@ void LoadTransform(cgltf_node* p_Node, glm::mat4& currWorldMat, glm::mat4& local
 
 	for (int i = 0; i < 16; i += 4)
 	{
-		//LOG_DEBUG("{0}, {1}, {2}, {3}", world_mat[i], world_mat[i + 1], world_mat[i + 2], world_mat[i + 3]);
+		////LOG_DEBUG("{0}, {1}, {2}, {3}", world_mat[i], world_mat[i + 1], world_mat[i + 2], world_mat[i + 3]);
 	}
 }
 
-static void LoadIndices(cgltf_primitive* rawPrimitive, Primitive* primitive, GeometryData& geometry)
+
+static void LoadVertices(cgltf_primitive* primitive, GeometryData& geometry)
 {
-	primitive->NumIndices = (unsigned int)rawPrimitive->indices->count;
-	for (int idx = 0; idx < rawPrimitive->indices->count; ++idx)
-	{
-		geometry.Indices.push_back(cgltf_accessor_read_index(rawPrimitive->indices, idx));
-	}
-
-	////LOG_DEBUG("        Index buffer size : {0}", st_Mesh.indices.size());
-}
-
-static void LoadVertices(cgltf_primitive* primitive, Primitive& p, GeometryData& geometry, const glm::mat4& curr_world_mat, const glm::mat4& local_mat)
-{
-	size_t firstVertex = geometry.Vertices.size();
-
 	std::vector<glm::vec3> positionsBuffer;
 	std::vector<glm::vec3> normalsBuffer;
 	std::vector<glm::vec3> texCoordBuffer;
@@ -133,7 +130,7 @@ static void LoadVertices(cgltf_primitive* primitive, Primitive& p, GeometryData&
 		{
 		case cgltf_attribute_type_position:
 		{
-			////LOG_DEBUG("        Positions : {0}", attribute->data->count);
+			//////LOG_DEBUG("        Positions : {0}", attribute->data->count);
 			positionsBuffer.resize(attribute->data->count);
 			for (int i = 0; i < attribute->data->count; ++i)
 			{
@@ -143,25 +140,19 @@ static void LoadVertices(cgltf_primitive* primitive, Primitive& p, GeometryData&
 			// Also get bounding box for this primitive
 			if (attribute->data->has_min)
 			{
-				LOG_ERROR("Bbox min : [{0}, {1}, {2}]", attribute->data->min[0], attribute->data->min[1], attribute->data->min[2]);
-				//p.bboxMin = { attribute->data->min[0], attribute->data->min[1],  attribute->data->min[2], 1.0f };
-				//p.bboxMin = DirectX::XMVector3Transform(p.bboxMin, currWorldMat);
+				//LOG_ERROR("Bbox min : [{0}, {1}, {2}]", attribute->data->min[0], attribute->data->min[1], attribute->data->min[2]);
 			}
 
 			if (attribute->data->has_max)
 			{
-				LOG_ERROR("Bbox max : [{0}, {1}, {2}]", attribute->data->max[0], attribute->data->max[1], attribute->data->max[2]);
-				//p.bboxMax = { attribute->data->max[0], attribute->data->max[1],  attribute->data->max[2], 1.0f };
-				//p.bboxMax = DirectX::XMVector3Transform(p.bboxMax, currWorldMat);
-
+				//LOG_ERROR("Bbox max : [{0}, {1}, {2}]", attribute->data->max[0], attribute->data->max[1], attribute->data->max[2]);
 			}
-
 		}
 		break;
 
 		case cgltf_attribute_type_normal:
 		{
-			////LOG_DEBUG("        Normals : {0}", attribute->data->count);
+			//////LOG_DEBUG("        Normals : {0}", attribute->data->count);
 			normalsBuffer.resize(attribute->data->count);
 			for (int i = 0; i < normalsBuffer.size(); ++i)
 			{
@@ -172,7 +163,7 @@ static void LoadVertices(cgltf_primitive* primitive, Primitive& p, GeometryData&
 
 		case cgltf_attribute_type_texcoord:
 		{
-			////LOG_DEBUG("        Normals : {0}", attribute->data->count);
+			//////LOG_DEBUG("        Normals : {0}", attribute->data->count);
 			texCoordBuffer.resize(attribute->data->count);
 			for (int i = 0; i < texCoordBuffer.size(); ++i)
 			{
@@ -183,7 +174,7 @@ static void LoadVertices(cgltf_primitive* primitive, Primitive& p, GeometryData&
 
 		case cgltf_attribute_type_tangent:
 		{
-			////LOG_DEBUG("        Tangents : {0}", attribute->data->count);
+			//////LOG_DEBUG("        Tangents : {0}", attribute->data->count);
 			tangentBuffer.resize(attribute->data->count);
 			for (int i = 0; i < tangentBuffer.size(); ++i)
 			{
@@ -198,69 +189,63 @@ static void LoadVertices(cgltf_primitive* primitive, Primitive& p, GeometryData&
 	}
 
 	// Build vertices
-	p.num_vertices = positionsBuffer.size();
 	for (int i = 0; i < positionsBuffer.size(); ++i)
 	{
 		VertexData vertex;
-		{
-			vertex.pos = glm::vec4(positionsBuffer[i], 1.0);
-			vertex.normal = glm::vec4(normalsBuffer[i], 0.0);
-			//vertex.uv = glm::vec2(texCoordBuffer[i]);
-			//vertex.tangent = tangentBuffer.empty() ? DirectX::XMFLOAT3{ 0.0, 0.0, 0.0 } : tangentBuffer[i];
-		}
+		vertex.pos = positionsBuffer[i];
+		vertex.normal = normalsBuffer[i];
+		//vertex.uv = glm::vec2(texCoordBuffer[i]);
+		//vertex.tangent = tangentBuffer.empty() ? DirectX::XMFLOAT3{ 0.0, 0.0, 0.0 } : tangentBuffer[i];
 
-		geometry.Vertices.push_back(vertex);
+		geometry.vertices.push_back(vertex);
 	}
 
-	////LOG_DEBUG("        Vertex buffer size : {0}", st_Mesh.vertices.size());
+	//////LOG_DEBUG("        Vertex buffer size : {0}", st_Mesh.vertices.size());
 }
 
-static void LoadPrimitive(cgltf_primitive* primitive, GeometryData& geometry, const glm::mat4& currWorldMat, const glm::mat4& localMat)
+static void LoadPrimitive(cgltf_primitive* primitive, GeometryData& geometry)
 {
-	////LOG_DEBUG("      Primitive : {0} attributes, {1} indices", primitive->attributes_count, primitive->indices->count);
-	
-	Primitive p = { .StartIndexLocation = (unsigned int)geometry.Indices.size(), .BaseVertexLocation = (int)geometry.Vertices.size(), .WorldMatrix = currWorldMat };
-	LoadIndices(primitive, &p, geometry);
-	LoadVertices(primitive, p, geometry, currWorldMat, localMat);
-	//LoadMaterial(primitive, &p, st_Mesh);
-
-	//p.WorldMatrix = p.WorldMatrix * glm::mat4ScalingFromVector({ 1.0f, 1.0f, 1.0f });
-
-	geometry.Primitives.push_back(p);
-}
-
-static void LoadMesh(cgltf_mesh* mesh, GeometryData& geometry, const glm::mat4& currWorldMat, const glm::mat4& localMat)
-{
-	LOG_DEBUG("    Mesh '{0}': {1} primitives", mesh->name ? mesh->name : "Unnamed", mesh->primitives_count);
-
-	for (int i = 0; i < mesh->primitives_count; ++i)
+	Primitive p = {};
 	{
-		LoadPrimitive(&mesh->primitives[i], geometry, currWorldMat, localMat);
+		p.first_index = geometry.indices.size();
+		p.index_count = primitive->indices->count;
 	}
+
+	for (int idx = 0; idx < p.index_count; idx++)
+	{
+		auto index = cgltf_accessor_read_index(primitive->indices, idx);
+
+		geometry.indices.push_back(index + geometry.vertices.size());
+	}
+
+	geometry.primitives.push_back(p);
+
+	LoadVertices(primitive, geometry);
 }
 
 static void ProcessGltfNode(bool bIsChild, cgltf_node* p_Node, GeometryData& geometry)
 {
-	glm::mat4 curr_world_mat = glm::identity<glm::mat4>();
-	glm::mat4 local_mat = glm::identity<glm::mat4>();
-
-	if (bIsChild)
-	{
-		//LOG_DEBUG("    Child Node : {0}, Children : {1}", p_Node->name ? p_Node->name : "Unnamed", p_Node->children_count);
-	}
-	else
-	{
-		//LOG_DEBUG("=====================================");
-		//LOG_DEBUG("Node : {0}, Children : {1}", p_Node->name ? p_Node->name : "Unnamed", p_Node->children_count);
-	}
-
 	if (p_Node->mesh)
 	{
-		LoadTransform(p_Node, curr_world_mat, local_mat);
-		LoadMesh(p_Node->mesh, geometry, curr_world_mat, local_mat);
+		glm::mat4 mesh_world_mat;
+		cgltf_node_transform_world(p_Node, glm::value_ptr(mesh_world_mat));
+
+		glm::mat4 mesh_local_mat;
+		cgltf_node_transform_local(p_Node, glm::value_ptr(mesh_local_mat));
+
+		for (int i = 0; i < p_Node->mesh->primitives_count; ++i)
+		{
+			LoadPrimitive(&p_Node->mesh->primitives[i], geometry);
+		}
 	}
 
-	geometry.world_mat = curr_world_mat;
+	if (p_Node->children_count > 0)
+	{
+		for (size_t i = 0; i < p_Node->children_count; i++)
+		{
+			ProcessGltfNode(true, p_Node->children[i], geometry);
+		}
+	}
 }
 
 void VulkanMesh::create_from_file_gltf(const char* filename)
@@ -273,8 +258,6 @@ void VulkanMesh::create_from_file_gltf(const char* filename)
 	{
 		result = cgltf_load_buffers(&options, data, filename);
 
-		//LOG_WARN("MESH ROOT PATH : {0}", m_MeshRootPath);
-
 		if (result == cgltf_result_success)
 		{
 			for (size_t i = 0; i < data->nodes_count; ++i)
@@ -285,18 +268,18 @@ void VulkanMesh::create_from_file_gltf(const char* filename)
 			}
 		}
 
-		LOG_INFO("Loaded : {0}", filename);
-		//LOG_INFO("# Materials : {0}", geometry.materials.size());
-		//LOG_INFO("# Textures : {0}", geometry.textures.size());
-		LOG_INFO("# Primitives : {0}", geometry_data.Primitives.size());
+		//LOG_INFO("Loaded : {0}", filename);
+		////LOG_INFO("# Materials : {0}", geometry.materials.size());
+		////LOG_INFO("# Textures : {0}", geometry.textures.size());
+		//LOG_INFO("# primitives : {0}", geometry_data.primitives.size());
 
-		m_NumVertices = geometry_data.Vertices.size();
-		m_NumIndices  = geometry_data.Indices.size();
+		m_NumVertices = geometry_data.vertices.size();
+		m_NumIndices  = geometry_data.indices.size();
 
 		m_IdxBufferSizeInBytes = m_NumIndices * sizeof(unsigned int);
 		m_VtxBufferSizeInBytes = m_NumVertices * sizeof(VertexData);
 
-		CreateIndexVertexBuffer(m_vertex_index_buffer, geometry_data.Vertices.data(), m_VtxBufferSizeInBytes, geometry_data.Indices.data(), m_IdxBufferSizeInBytes);
+		CreateIndexVertexBuffer(m_vertex_index_buffer, geometry_data.vertices.data(), m_VtxBufferSizeInBytes, geometry_data.indices.data(), m_IdxBufferSizeInBytes);
 
 		cgltf_free(data);
 	}
@@ -378,7 +361,7 @@ void VulkanMesh::create_from_file_gltf(const char* filename)
 //
 //		data->textureTable[uri] = texture.info.ID;
 //
-//		//LOG_INFO("MeshLoader::LoadImageFile : Loaded {0} - {1}x{2}x{3}", path.substr(path.find_last_of('/') + 1, path.size()), width, height, channels);
+//		////LOG_INFO("MeshLoader::LoadImageFile : Loaded {0} - {1}x{2}x{3}", path.substr(path.find_last_of('/') + 1, path.size()), width, height, channels);
 //	}
 //
 //	return index;
@@ -414,7 +397,7 @@ void VulkanMesh::create_from_file_gltf(const char* filename)
 //
 //	if (material->has_pbr_specular_glossiness)
 //	{
-//		//LOG_DEBUG("MATERIAL WORKFLOW: Specular-Glossiness, Name : {0}", material->name);
+//		////LOG_DEBUG("MATERIAL WORKFLOW: Specular-Glossiness, Name : {0}", material->name);
 //
 //		materialProperties.type = MaterialWorkflowType::SpecularGlossiness;
 //		materialProperties.specularGlossiness =
@@ -447,7 +430,7 @@ void VulkanMesh::create_from_file_gltf(const char* filename)
 //
 //	else if (material->has_pbr_metallic_roughness)
 //	{
-//		LOG_DEBUG("Material Workflow: Metallic/Roughness, Name : {0}", material->name ? material->name : "Unnamed");
+//		//LOG_DEBUG("Material Workflow: Metallic/Roughness, Name : {0}", material->name ? material->name : "Unnamed");
 //
 //		materialProperties.type = MaterialWorkflowType::MetallicRoughness;
 //		materialProperties.metallicRoughness =

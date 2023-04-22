@@ -259,7 +259,7 @@ VulkanUI& VulkanUI::ShowInspector()
 				{
 					
 					ImGui::DragFloat3("Translation", glm::value_ptr(RenderObjectManager::transform_datas[i].translation), 0.1f);
-					ImGui::SliderFloat4("Rotation",  glm::value_ptr(RenderObjectManager::transform_datas[i].rotation), 0.1f, 1.0f);
+					ImGui::SliderFloat4("Rotation",  glm::value_ptr(RenderObjectManager::transform_datas[i].rotation), 0.0f, 1.0f);
 					ImGui::DragFloat3("Scale", glm::value_ptr(RenderObjectManager::transform_datas[i].scale), 0.1f);
 					ImGui::TreePop();
 				}
