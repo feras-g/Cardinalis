@@ -48,67 +48,29 @@ void SampleApp::Initialize()
 {
 	VulkanMesh sponza_gltf;
 	sponza_gltf.create_from_file_gltf("../../../data/models/local/sponza-gltf-pbr/sponza.glb");
-
 	RenderObjectManager::add_mesh(sponza_gltf, "sponza");
-
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/cube.obj"), "cube");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/plane.obj"), "Plane");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/suzanne.obj"), "Suzanne");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/cow.obj"), "Cow");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/plane.obj"), "plane");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/suzanne.obj"), "suzanne");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/cow.obj"), "cow");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/bunny.obj"), "bunny");
 
-	const TransformData transform
+	TransformData transform
 	{
 		glm::vec4(0,0,0,1),
 		glm::vec4(1,1,1,1),
 		glm::vec4(1,1,1, 1.0f)
 	};
-	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("sponza")), "Sponza", transform);
+	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("sponza"), true), "Sponza", transform);
 
-	int idx = 0;
-	for (int i = 0; i < 10; i++)
+	transform = 
 	{
-		for (int j = 0; j < 10; j++)
-		{
-			for (int k = 0; k < 10; k++)
-			{
+		glm::vec4(0,0,0,1),
+		glm::vec4(1,1,1,0),
+		glm::vec4(100,1,100, 1.0f)
+	};
+	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("plane")), "Plane", transform);
 
-				glm::vec4 random_rot;
-				{
-					std::random_device rd;
-					std::mt19937 gen(rd());
-					std::uniform_real_distribution<float> dis(-1.f, 1.f);
-
-					glm::vec4 axis(dis(gen), dis(gen), dis(gen), 1.0f);
-					axis = glm::normalize(axis);
-					float angle = glm::pi<float>() * dis(gen);
-
-					random_rot.x = axis.x;
-					random_rot.y = axis.y;
-					random_rot.z = axis.z;
-					random_rot.w = angle;
-				}
-
-				const TransformData transform
-				{
-					glm::vec4(i, j, k, 1.0f),
-					random_rot,
-					glm::vec4(0.25,0.25,0.25, 1.0f)
-				};
-
-				std::string name = "Drawable" + std::to_string(idx++);
-				//if ( ((i + j + k) % 2) == 0)
-				//{
-				//	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("Suzanne")), name.c_str(), transform);
-				//}
-				//else
-				{
-					RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cube")), name.c_str(), transform);
-				}
-			}
-		}
-
-	}
 
 	RenderObjectManager::configure();
 	m_model_renderer.reset(new VulkanModelRenderer);
@@ -117,7 +79,10 @@ void SampleApp::Initialize()
 	m_deferred_renderer.init(
 		m_model_renderer->m_Albedo_Output, 
 		m_model_renderer->m_Normal_Output, 
-		m_model_renderer->m_Depth_Output);
+		m_model_renderer->m_Depth_Output,
+		m_model_renderer->m_NormalMap_Output,
+		m_model_renderer->m_MetallicRoughness_Output
+	);
 
 	m_imgui_renderer->Initialize(*m_model_renderer.get(), m_deferred_renderer);
 
@@ -255,7 +220,10 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 			m_imgui_renderer->m_DeferredRendererOutputTextureId[currentImageIdx],
 			m_imgui_renderer->m_ModelRendererColorTextureId[currentImageIdx],
 			m_imgui_renderer->m_ModelRendererNormalTextureId[currentImageIdx],
-			m_imgui_renderer->m_ModelRendererDepthTextureId[currentImageIdx]);
+			m_imgui_renderer->m_ModelRendererDepthTextureId[currentImageIdx],
+			m_imgui_renderer->m_ModelRendererNormalMapTextureId[currentImageIdx],
+			m_imgui_renderer->m_ModelRendererMetallicRoughnessTextureId[currentImageIdx]
+		);
 		//m_UI.ShowFrameTimeGraph(FrameStats::History.data(), FrameStats::History.size());
 		//m_UI.ShowCameraSettings(&m_Camera);
 		m_UI.ShowInspector();

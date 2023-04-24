@@ -27,6 +27,7 @@ public:
 	static VkSampler s_SamplerRepeatLinear;
 	static VkSampler s_SamplerClampLinear;
 	static VkSampler s_SamplerClampNearest;
+	static VkSampler s_SamplerRepeatNearest;
 	static Buffer m_ubo_common_framedata;
 
 	/* WIP */
@@ -108,17 +109,26 @@ public:
 
 		per_object_datas   = (TransformDataUbo*)alignedAlloc(object_data_dynamic_ubo_size_bytes, drawable_data_dynamic_aligment);
 
-		/* Setup descriptor set layout */
+		/* Setup descriptor set */
 		std::vector<VkDescriptorSetLayoutBinding> bindings = {};
 		bindings.push_back({ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT });  /* Object data (transforms etc) */
-		drawable_descriptor_set_layout = create_descriptor_set_layout(bindings);
 
-		/* Setup descriptor set */
+		drawable_descriptor_set_layout = create_descriptor_set_layout(bindings);
 		drawable_descriptor_set = create_descriptor_set(RenderObjectManager::descriptor_pool, RenderObjectManager::drawable_descriptor_set_layout);
+
 		VkDescriptorBufferInfo object_ubo_desc_info = { .buffer = RenderObjectManager::object_data_dynamic_ubo.buffer, .offset = 0, .range = drawable_data_dynamic_aligment };
+
+		/* Material info */
+		create_uniform_buffer(material_data_ubo, sizeof(Material));
+		VkDescriptorBufferInfo desc_ubo_material = {};
+		desc_ubo_material.buffer = material_data_ubo.buffer;
+		desc_ubo_material.offset = 0;
+		desc_ubo_material.range = VK_WHOLE_SIZE;
+
+		VkDescriptorBufferInfo material_ubo_desc_info = { .buffer = material_data_ubo.buffer, .offset = 0, .range = VK_WHOLE_SIZE };
 		std::array<VkWriteDescriptorSet, 1> desc_writes
 		{
-			BufferWriteDescriptorSet(RenderObjectManager::drawable_descriptor_set, 0, &object_ubo_desc_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
+			BufferWriteDescriptorSet(RenderObjectManager::drawable_descriptor_set, 0, &object_ubo_desc_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC),	/* Object data */
 		};
 		vkUpdateDescriptorSets(context.device, desc_writes.size(), desc_writes.data(), 0, nullptr);
 
@@ -139,7 +149,6 @@ public:
 			write_desc.push_back(BufferWriteDescriptorSet(mesh.descriptor_set, 1, &sbo_idx_info, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
 			vkUpdateDescriptorSets(context.device, write_desc.size(), write_desc.data(), 0, nullptr);
 		}
-
 	}
 
 	static inline void add_drawable(const Drawable& drawable, const std::string& name, const TransformData& transform)
@@ -153,20 +162,27 @@ public:
 		drawable_names.push_back(name);
 	}
 
-	static inline void add_texture(const Texture2D& texture, const std::string& name)
+	static inline size_t add_texture(const Texture2D& texture, const std::string& name)
 	{
+		auto it = texture_from_name.find(name);
+		if (it != texture_from_name.end())
+		{
+			return it->second;
+		}
 		size_t texture_idx = textures.size();
 		textures.push_back(texture);
 		texture_names.push_back(name);
 		texture_from_name.insert({name, texture_idx});
+		return texture_idx;
 	}
 
-	static inline void add_material(const Material material, const std::string& name)
+	static inline size_t add_material(Material material, const std::string& name)
 	{ 
 		size_t material_idx = materials.size();
 		material_names.push_back(name);
 		materials.push_back(material);
 		material_from_name.insert({name, material_idx});
+		return material_idx;
 	}
 
 	static inline void add_mesh(VulkanMesh& mesh, const std::string& name)
@@ -213,6 +229,16 @@ public:
 			return &meshes[ite->second];
 		}
 		return nullptr;
+	}
+
+	static std::pair<size_t, Texture2D*> get_texture(const std::string& name)
+	{
+		auto ite = texture_from_name.find(name);
+		if (ite != texture_from_name.end())
+		{
+			return { ite->second, &textures[ite->second] };
+		}
+		return { 0, nullptr };
 	}
 
 	static void update_per_object_data(const VulkanRendererBase::PerFrameData& frame_data)
@@ -268,6 +294,9 @@ public:
 
 	/* Uniform array containing object data for each drawable */
 	static inline Buffer object_data_dynamic_ubo;
+
+	/* Uniform buffer containing material data for a drawable */
+	static inline Buffer material_data_ubo;
 
 	static inline uint32_t drawable_data_dynamic_aligment = 0;
 	static inline uint32_t object_data_dynamic_ubo_size_bytes = 0;

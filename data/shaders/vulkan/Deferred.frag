@@ -3,6 +3,8 @@
 layout(set = 0, binding = 0) uniform sampler2D gbuffer_color;
 layout(set = 0, binding = 1) uniform sampler2D gbuffer_WS_normal;
 layout(set = 0, binding = 2) uniform sampler2D gbuffer_depth;
+layout(set = 0, binding = 3) uniform sampler2D gbuffer_normal_map;
+layout(set = 0, binding = 4) uniform sampler2D gbuffer_metallic_roughness;
 
 //#define NUM_LIGHTS 1024
 //
@@ -32,31 +34,31 @@ layout(location = 0) out vec4 out_color;
 
 void main()
 {
-//    float d = texture(gbuffer_depth, uv).x;
-//	vec3 posWS = ws_pos_from_depth(uv, d);
-//    vec3 normalWS = normalize(texture(gbuffer_WS_normal, uv).xyz);
-//    vec3 albedo = texture(gbuffer_color, uv).xyz;
-//
-//    /* Ambiant color */
-//    vec3 ambient = vec3(0.27);
-//
-//    vec3 color = albedo * ambient;
-//
-//    for(int i=0; i < NUM_LIGHTS; i++)
-//    {
-//        vec3 L = lights.point_light[i].position.xyz - posWS;
-//        vec3 V = normalize(posWS - ubo.view_pos.xyz);
-//        float dist = length(L);
-//        float atten = lights.point_light[i].props.x / (pow(dist, 2.0) + 1.0);
-//
-//        /* Lambertian diffuse */
-//        L = normalize(L);
-//        float cos_theta = max(dot(normalWS, L), 0.0);
-//        vec3 diffuse = lights.point_light[i].color.rgb * albedo * cos_theta * atten; 
-//
-//        color += diffuse;
-//    }
-//
-//    out_color = vec4(uv, 0, 1.0);
-    out_color = texture(gbuffer_color, uv);
+    // float d = texture(gbuffer_depth, uv).x;
+    // vec3 posWS = ws_pos_from_depth(uv, d);
+    // vec3 normalWS = normalize(texture(gbuffer_WS_normal, uv).xyz);
+    // vec3 albedo = texture(gbuffer_color, uv).xyz;
+    // 
+    // /* Ambiant color */
+    // vec3 ambient = vec3(0.27);
+    // 
+    // vec3 color = albedo * ambient;
+    // 
+    // for(int i=0; i < NUM_LIGHTS; i++)
+    // {
+    //     vec3 L = lights.point_light[i].position.xyz - posWS;
+    //     vec3 V = normalize(posWS - ubo.view_pos.xyz);
+    //     float dist = length(L);
+    //     float atten = lights.point_light[i].props.x / (pow(dist, 2.0) + 1.0);
+    // 
+    //     /* Lambertian diffuse */
+    //     L = normalize(L);
+    //     float cos_theta = max(dot(normalWS, L), 0.0);
+    //     vec3 diffuse = lights.point_light[i].color.rgb * albedo * cos_theta * atten; 
+    // 
+    //     color += diffuse;
+    // }
+    // 
+    // out_color = vec4(uv, 0, 1.0);
+	out_color = texture(gbuffer_metallic_roughness, uv);
 }

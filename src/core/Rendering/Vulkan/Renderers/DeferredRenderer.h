@@ -38,9 +38,9 @@ struct LightManager
 static const VkFormat color_attachment_format = VK_FORMAT_R8G8B8A8_SRGB;
 /* 
 	Number of g-buffers to read from : 
-	0: Albedo / 1: View Space Normal / 2: Depth
+	0: Albedo / 1: View Space Normal / 2: Depth / 3: Normal map / 4: Metallic/Roughness
 */
-static constexpr uint32_t num_gbuffers = 3; 
+static constexpr uint32_t num_gbuffers = 5; 
 
 struct DeferredRenderer
 { 
@@ -48,7 +48,10 @@ struct DeferredRenderer
 	/* 
 		@param g_buffers Input attachments from model renderer 
 	*/
-	void init(std::span<Texture2D> g_buffers_albedo, std::span<Texture2D> g_buffers_normal, std::span<Texture2D> g_buffers_depth);
+	void init(
+		std::span<Texture2D> g_buffers_albedo, std::span<Texture2D> g_buffers_normal,
+		std::span<Texture2D> g_buffers_depth, std::span<Texture2D> g_buffers_normal_map,
+		std::span<Texture2D> g_buffers_metallic_roughness);
 	void render(size_t current_backbuffer_idx, VkCommandBuffer cmd_buffer);
 	void draw_scene(size_t current_backbuffer_idx, VkCommandBuffer cmd_buffer);
 	void create_uniform_buffers();
@@ -67,6 +70,10 @@ struct DeferredRenderer
 	std::array<Texture2D*, NUM_FRAMES> m_g_buffers_albedo;
 	std::array<Texture2D*, NUM_FRAMES> m_g_buffers_normal;
 	std::array<Texture2D*, NUM_FRAMES> m_g_buffers_depth;
+	std::array<Texture2D*, NUM_FRAMES> m_g_buffers_normal_map;
+	std::array<Texture2D*, NUM_FRAMES> m_g_buffers_metallic_roughness;
 
 	LightManager m_light_manager;
+
+	Buffer m_material_info_ubo;
 };

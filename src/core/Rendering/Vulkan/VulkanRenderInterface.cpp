@@ -789,7 +789,7 @@ VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptorSet, uin
 	};
 }
 
-VkWriteDescriptorSet ImageWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, const VkDescriptorImageInfo* imageInfo)
+VkWriteDescriptorSet ImageWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, const VkDescriptorImageInfo* imageInfo, VkDescriptorType type)
 {
 	return VkWriteDescriptorSet
 	{
@@ -799,7 +799,7 @@ VkWriteDescriptorSet ImageWriteDescriptorSet(VkDescriptorSet descriptorSet, uint
 		.dstBinding = bindingIndex,
 		.dstArrayElement = 0,
 		.descriptorCount = 1,
-		.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+		.descriptorType = type,
 		.pImageInfo = imageInfo,
 		.pBufferInfo = nullptr,
 		.pTexelBufferView = nullptr,

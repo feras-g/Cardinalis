@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <span>
+#include <unordered_set>
 
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
@@ -78,11 +79,12 @@ void Drawable::draw_primitives(VkCommandBuffer cmd_buffer) const
 	for (int i = 0; i < mesh_handle->geometry_data.primitives.size(); i++)
 	{
 		const Primitive& p = mesh_handle->geometry_data.primitives[i];
+		//upload_buffer_data(RenderObjectManager::material_data_ubo, &RenderObjectManager::materials[p.material_id], sizeof(Material), 0);
 		vkCmdDraw(cmd_buffer, p.index_count, 1, p.first_index, 0);
 	}
 }
 
-Drawable::Drawable(VulkanMesh* mesh) : mesh_handle(mesh)
+Drawable::Drawable(VulkanMesh* mesh, bool b_has_primitives) : mesh_handle(mesh), has_primitives(b_has_primitives)
 {
 
 }	
@@ -96,25 +98,9 @@ Drawable::Drawable(VulkanMesh* mesh) : mesh_handle(mesh)
 #define CGLTF_IMPLEMENTATION
 #include "cgltf.h"
 
-void LoadTransform(cgltf_node* p_Node, glm::mat4& currWorldMat, glm::mat4& localMat)
-{
-	glm::mat4 world_mat;
-	cgltf_node_transform_world(p_Node, glm::value_ptr(world_mat));
-	currWorldMat = world_mat;
+static std::string base_path;
 
-	glm::mat4 local_mat;
-	cgltf_node_transform_local(p_Node, glm::value_ptr(local_mat));
-	localMat = local_mat;
-
-
-	for (int i = 0; i < 16; i += 4)
-	{
-		////LOG_DEBUG("{0}, {1}, {2}, {3}", world_mat[i], world_mat[i + 1], world_mat[i + 2], world_mat[i + 3]);
-	}
-}
-
-
-static void LoadVertices(cgltf_primitive* primitive, GeometryData& geometry)
+static void load_vertices(cgltf_primitive* primitive, GeometryData& geometry)
 {
 	std::vector<glm::vec3> positionsBuffer;
 	std::vector<glm::vec3> normalsBuffer;
@@ -194,7 +180,7 @@ static void LoadVertices(cgltf_primitive* primitive, GeometryData& geometry)
 		VertexData vertex;
 		vertex.pos = positionsBuffer[i];
 		vertex.normal = normalsBuffer[i];
-		//vertex.uv = glm::vec2(texCoordBuffer[i]);
+		vertex.uv = glm::vec2(texCoordBuffer[i]);
 		//vertex.tangent = tangentBuffer.empty() ? DirectX::XMFLOAT3{ 0.0, 0.0, 0.0 } : tangentBuffer[i];
 
 		geometry.vertices.push_back(vertex);
@@ -203,27 +189,147 @@ static void LoadVertices(cgltf_primitive* primitive, GeometryData& geometry)
 	//////LOG_DEBUG("        Vertex buffer size : {0}", st_Mesh.vertices.size());
 }
 
-static void LoadPrimitive(cgltf_primitive* primitive, GeometryData& geometry)
+/* Retrieve material id from hash */
+std::unordered_set<size_t> material_hashes;
+
+static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 {
-	Primitive p = {};
+	// https://kcoley.github.io/glTF/extensions/2.0/Khronos/KHR_materials_pbrSpecularGlossiness/
+
+	cgltf_material* gltf_mat = gltf_primitive->material;
+	
+	Material material;
+
+	/*
+		Base Color
+		Normal
+		MetallicRoughness
+		Emissive
+	*/
+
+	std::function load_tex = [](cgltf_texture* tex, VkFormat format) -> size_t
 	{
-		p.first_index = geometry.indices.size();
-		p.index_count = primitive->indices->count;
+		char* name = tex->image->uri;
+		std::pair<size_t, Texture2D*> tex_object = RenderObjectManager::get_texture(name);
+		if (tex_object.second != nullptr)
+		{
+			return tex_object.first;
+		}
+		else
+		{
+			Image im = load_image_from_file(base_path + tex->image->uri);
+			Texture2D tex2D;
+			tex2D.init(format, im.w, im.h);
+			tex2D.create_from_data(im.data.get(), name);
+			tex2D.create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
+			return RenderObjectManager::add_texture(tex2D, name);
+		}
+	};
+
+	cgltf_texture* tex_normal = gltf_mat->normal_texture.texture;
+	cgltf_texture* tex_emissive = gltf_mat->emissive_texture.texture;
+
+	if (tex_normal)
+	{
+		material.tex_normal_id = load_tex(tex_normal, tex_normal_format);
 	}
 
+	if (tex_emissive)
+	{
+		material.tex_emissive_id = load_tex(tex_emissive, tex_emissive_format);
+	}
+
+	if (gltf_mat->has_pbr_metallic_roughness)
+	{
+		//LOG_DEBUG("Material Workflow: Metallic/Roughness, Name : {0}", gltf_material->name ? gltf_material->name : "Unnamed");
+
+		cgltf_texture* tex_base_color = gltf_mat->pbr_metallic_roughness.base_color_texture.texture;
+		cgltf_texture* tex_metallic_roughness = gltf_mat->pbr_metallic_roughness.metallic_roughness_texture.texture;
+
+		if (tex_base_color)
+		{
+			material.tex_base_color_id = load_tex(tex_base_color, tex_base_color_format);
+		}
+
+		if (tex_metallic_roughness)
+		{
+			material.tex_metallic_roughness_id = load_tex(tex_metallic_roughness, tex_metallic_roughness_format);
+		}
+
+		/* Factors */
+		{
+			float* v = gltf_mat->pbr_metallic_roughness.base_color_factor;
+			material.base_color_factor = glm::vec4(v[0], v[1], v[2], v[3]);
+			material.metallic_factor = gltf_mat->pbr_metallic_roughness.metallic_factor;
+			material.roughness_factor = gltf_mat->pbr_metallic_roughness.roughness_factor;
+		}
+	}
+
+	if (gltf_mat->has_pbr_specular_glossiness)
+	{
+		assert(false);
+
+		////LOG_DEBUG("MATERIAL WORKFLOW: Specular-Glossiness, Name : {0}", material->name);
+
+		//materialProperties.type = MaterialWorkflowType::SpecularGlossiness;
+		//materialProperties.specularGlossiness =
+		//{
+		//	.DiffuseFactor = DirectX::XMFLOAT4(gltf_mat->pbr_specular_glossiness.diffuse_factor),
+		//	.SpecularFactor = DirectX::XMFLOAT3(gltf_mat->pbr_specular_glossiness.specular_factor),
+		//	.GlossinessFactor = gltf_mat->pbr_specular_glossiness.glossiness_factor
+		//};
+
+		//// Texture loading
+		//cgltf_texture* diffuseTexture = gltf_mat->pbr_specular_glossiness.diffuse_texture.texture;
+		//cgltf_texture* specularGlossinessTexture = gltf_mat->pbr_specular_glossiness.specular_glossiness_texture.texture;
+
+		//if (diffuseTexture != nullptr)
+		//{
+		//	materialProperties.specularGlossiness.hDiffuseTexture = LoadImageFile(data, m_MeshRootPath, diffuseTexture->image);
+		//	materialProperties.specularGlossiness.hasDiffuse = true;
+
+		//}
+
+		//if (specularGlossinessTexture != nullptr)
+		//{
+		//	materialProperties.specularGlossiness.hSpecularGlossinessTexture = LoadImageFile(data, m_MeshRootPath, specularGlossinessTexture->image);
+		//	materialProperties.specularGlossiness.hasSpecularGlossiness = true;
+
+		//}
+
+		//SetMaterial(data, primitive, gltf_mat, materialProperties);
+	}
+
+	//std::size_t hash = std::hash<Material>{}(material);
+	//auto res = material_hashes.insert(hash);
+	//if (res.second == false)
+	{
+		std::string material_name = gltf_mat->name ? gltf_mat->name : "Unnamed Material " + std::to_string(RenderObjectManager::materials.size());
+		primitive.material_id = RenderObjectManager::add_material(material, material_name);
+		LOG_DEBUG("Loaded material named {0}, workflow : (Metallic/Roughness)", material_name);
+	}
+}
+
+static void load_primitive(cgltf_primitive* primitive, GeometryData& geometry)
+{
+	Primitive p = {};
+	p.first_index = geometry.indices.size();
+	p.index_count = primitive->indices->count;
+
+	/* Load indices */
 	for (int idx = 0; idx < p.index_count; idx++)
 	{
 		auto index = cgltf_accessor_read_index(primitive->indices, idx);
-
 		geometry.indices.push_back(index + geometry.vertices.size());
 	}
 
-	geometry.primitives.push_back(p);
+	load_vertices(primitive, geometry);
+	load_material(primitive, p);
 
-	LoadVertices(primitive, geometry);
+	geometry.primitives.push_back(p);
 }
 
-static void ProcessGltfNode(bool bIsChild, cgltf_node* p_Node, GeometryData& geometry)
+static void process_node(bool bIsChild, cgltf_node* p_Node, GeometryData& geometry)
 {
 	if (p_Node->mesh)
 	{
@@ -235,7 +341,7 @@ static void ProcessGltfNode(bool bIsChild, cgltf_node* p_Node, GeometryData& geo
 
 		for (int i = 0; i < p_Node->mesh->primitives_count; ++i)
 		{
-			LoadPrimitive(&p_Node->mesh->primitives[i], geometry);
+			load_primitive(&p_Node->mesh->primitives[i], geometry);
 		}
 	}
 
@@ -243,20 +349,25 @@ static void ProcessGltfNode(bool bIsChild, cgltf_node* p_Node, GeometryData& geo
 	{
 		for (size_t i = 0; i < p_Node->children_count; i++)
 		{
-			ProcessGltfNode(true, p_Node->children[i], geometry);
+			process_node(true, p_Node->children[i], geometry);
 		}
 	}
 }
 
-void VulkanMesh::create_from_file_gltf(const char* filename)
+
+void VulkanMesh::create_from_file_gltf(const std::string& filename)
 {
 	cgltf_options options = { };
 	cgltf_data* data = NULL;
-	cgltf_result result = cgltf_parse_file(&options, filename, &data);
+	cgltf_result result = cgltf_parse_file(&options, filename.c_str(), &data);
+
+	auto const pos = filename.find_last_of('/');
+
+	base_path = filename.substr(0, pos + 1);
 
 	if (result == cgltf_result_success)
 	{
-		result = cgltf_load_buffers(&options, data, filename);
+		result = cgltf_load_buffers(&options, data, filename.c_str());
 
 		if (result == cgltf_result_success)
 		{
@@ -264,7 +375,7 @@ void VulkanMesh::create_from_file_gltf(const char* filename)
 			{
 				cgltf_node& currNode = data->nodes[i];
 
-				ProcessGltfNode(false, &currNode, geometry_data);
+				process_node(false, &currNode, geometry_data);
 			}
 		}
 
@@ -318,112 +429,8 @@ void VulkanMesh::create_from_file_gltf(const char* filename)
 //	}
 //}
 
-//void LoadMaterial(cgltf_primitive* rawPrimitive, Primitive* primitive, GeometryData* data)
-//{
-//	// https://kcoley.github.io/glTF/extensions/2.0/Khronos/KHR_materials_pbrSpecularGlossiness/
-//	
-//	cgltf_material* material = rawPrimitive->material;
-//
-//	MetallicRoughness  metallicRoughness;
-//	SpecularGlossiness specularGlossiness;
-//
-//	MaterialProperties materialProperties;
-//
-//	// Load additional textures : emissive, normal maps ...
-//	cgltf_texture* tex_emissive = material->emissive_texture.texture;
-//	cgltf_texture* tex_normal   = material->normal_texture.texture;
-//
-//	struct Material
-//	{
-//		uint32_t tex_emissive_id;
-//		uint32_t tex_normal_id;
-//	};
-//	
-//	Material material;
-//
-//	if (tex_emissive)
-//	{
-//		//Texture2D tex;
-//		//tex.init()
-//		//RenderObjectManager::add_texture( ,tex_emissive->name);
-//
-//		material.tex_emissive_id = LoadImageFile(data, m_MeshRootPath, emissiveTexture->image);
-//		material.hasEmissive = true;
-//	}
-//
-//	if (tex_normal)
-//	{
-//		materialProperties.hNormalTexture = LoadImageFile(data, m_MeshRootPath, normalTexture->image);
-//		materialProperties.hasNormalMap = true;
-//	}
-//
-//	if (material->has_pbr_specular_glossiness)
-//	{
-//		////LOG_DEBUG("MATERIAL WORKFLOW: Specular-Glossiness, Name : {0}", material->name);
-//
-//		materialProperties.type = MaterialWorkflowType::SpecularGlossiness;
-//		materialProperties.specularGlossiness =
-//		{
-//			.DiffuseFactor = DirectX::XMFLOAT4(material->pbr_specular_glossiness.diffuse_factor),
-//			.SpecularFactor = DirectX::XMFLOAT3(material->pbr_specular_glossiness.specular_factor),
-//			.GlossinessFactor = material->pbr_specular_glossiness.glossiness_factor
-//		};
-//
-//		// Texture loading
-//		cgltf_texture* diffuseTexture = material->pbr_specular_glossiness.diffuse_texture.texture;
-//		cgltf_texture* specularGlossinessTexture = material->pbr_specular_glossiness.specular_glossiness_texture.texture;
-//
-//		if (diffuseTexture != nullptr)
-//		{
-//			materialProperties.specularGlossiness.hDiffuseTexture = LoadImageFile(data, m_MeshRootPath, diffuseTexture->image);
-//			materialProperties.specularGlossiness.hasDiffuse = true;
-//
-//		}
-//
-//		if (specularGlossinessTexture != nullptr)
-//		{
-//			materialProperties.specularGlossiness.hSpecularGlossinessTexture = LoadImageFile(data, m_MeshRootPath, specularGlossinessTexture->image);
-//			materialProperties.specularGlossiness.hasSpecularGlossiness = true;
-//
-//		}
-//
-//		SetMaterial(data, primitive, material, materialProperties);
-//	}
-//
-//	else if (material->has_pbr_metallic_roughness)
-//	{
-//		//LOG_DEBUG("Material Workflow: Metallic/Roughness, Name : {0}", material->name ? material->name : "Unnamed");
-//
-//		materialProperties.type = MaterialWorkflowType::MetallicRoughness;
-//		materialProperties.metallicRoughness =
-//		{
-//			.BaseColor = DirectX::XMFLOAT4(material->pbr_metallic_roughness.base_color_factor),
-//			.Metallic = material->pbr_metallic_roughness.metallic_factor,
-//			.Roughness = material->pbr_metallic_roughness.roughness_factor
-//		};
-//
-//		// Texture loading
-//		cgltf_texture* baseColorTexture = material->pbr_metallic_roughness.base_color_texture.texture;
-//		cgltf_texture* metallicRoughnessTexture = material->pbr_metallic_roughness.metallic_roughness_texture.texture;
-//
-//		if (baseColorTexture != nullptr)
-//		{
-//			materialProperties.metallicRoughness.BaseColorTextureId = LoadImageFile(data, m_MeshRootPath, baseColorTexture->image);
-//			materialProperties.metallicRoughness.hasBaseColorTex = true;
-//		}
-//
-//
-//		if (metallicRoughnessTexture != nullptr)
-//		{
-//			materialProperties.metallicRoughness.MetallicRoughnessTextureId = LoadImageFile(data, m_MeshRootPath, metallicRoughnessTexture->image);
-//			materialProperties.metallicRoughness.hasMetallicRoughnessTex = true;
-//		}
-//
-//		SetMaterial(data, primitive, material, materialProperties);
-//	}
-//}
-//
-//
+
+
 
 
 

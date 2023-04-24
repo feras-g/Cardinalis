@@ -31,6 +31,8 @@ public:
 	std::array<int, NUM_FRAMES> m_ModelRendererColorTextureId;
 	std::array<int, NUM_FRAMES> m_ModelRendererNormalTextureId;
 	std::array<int, NUM_FRAMES> m_ModelRendererDepthTextureId;
+	std::array<int, NUM_FRAMES> m_ModelRendererNormalMapTextureId;
+	std::array<int, NUM_FRAMES> m_ModelRendererMetallicRoughnessTextureId;
 	std::array<int, NUM_FRAMES> m_DeferredRendererOutputTextureId;
 
 	~VulkanImGuiRenderer() ;

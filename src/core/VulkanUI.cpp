@@ -25,11 +25,15 @@ void VulkanUI::End()
 	ImGui::Render();
 }
 
-VulkanUI& VulkanUI::ShowSceneViewportPanel(unsigned int texDeferred, unsigned int texColorId, unsigned int texNormalId, unsigned int texDepthId)
+VulkanUI& VulkanUI::ShowSceneViewportPanel(
+	unsigned int texDeferred, unsigned int texColorId, 
+	unsigned int texNormalId, unsigned int texDepthId,
+	unsigned int texNormalMapId, unsigned int texMetallicRoughnessId
+)
 {
 	static ImGuiComboFlags flags = 0;
 
-	const char* items[] = { "Deferred Output", "Albedo", "Normal", "Depth" };
+	const char* items[] = { "Deferred Output", "Albedo", "Normal", "Depth", "Normal map", "Metallic/Roughness" };
 	static int item_current_idx = 0; // Here we store our selection data as an index.
 	const char* combo_preview_value = items[item_current_idx];  // Pass in the preview value visible before opening the combo (it could be anything)
 
@@ -55,8 +59,6 @@ VulkanUI& VulkanUI::ShowSceneViewportPanel(unsigned int texDeferred, unsigned in
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0.0f, 0.0f });
 	if (ImGui::Begin("Scene", 0, ImGuiWindowFlags_MenuBar |  ImGuiWindowFlags_NoDecoration))
 	{
-		
-
 		ImVec2 sceneViewPanelSize = ImGui::GetContentRegionAvail();
 		const float currAspect = sceneViewPanelSize.x / sceneViewPanelSize.y;
 
@@ -81,6 +83,15 @@ VulkanUI& VulkanUI::ShowSceneViewportPanel(unsigned int texDeferred, unsigned in
 		{
 			ImGui::Image((ImTextureID)texDepthId, sceneViewPanelSize);
 		}
+		else if (combo_preview_value == "Normal map")
+		{
+			ImGui::Image((ImTextureID)texNormalMapId, sceneViewPanelSize);
+		}
+		else if (combo_preview_value == "Metallic/Roughness")
+		{
+			ImGui::Image((ImTextureID)texMetallicRoughnessId, sceneViewPanelSize);
+		}
+
 		bIsSceneViewportHovered = ImGui::IsItemHovered();
 		
 		//if (ImGui::BeginMenuBar())

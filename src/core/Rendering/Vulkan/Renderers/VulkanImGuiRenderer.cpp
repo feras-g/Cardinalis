@@ -68,6 +68,18 @@ void VulkanImGuiRenderer::Initialize(const VulkanModelRenderer& model_renderer, 
 		m_Textures.push_back(model_renderer.m_Depth_Output[i]);
 	}
 
+	for (size_t i = 0; i < model_renderer.m_NormalMap_Output.size(); i++)
+	{
+		m_ModelRendererNormalMapTextureId[i] = ++tex_id;
+		m_Textures.push_back(model_renderer.m_NormalMap_Output[i]);
+	}
+
+	for (size_t i = 0; i < model_renderer.m_MetallicRoughness_Output.size(); i++)
+	{
+		m_ModelRendererMetallicRoughnessTextureId[i] = ++tex_id;
+		m_Textures.push_back(model_renderer.m_MetallicRoughness_Output[i]);
+	}
+
 	// Shaders
 	m_Shader.reset(new VulkanShader("ImGui.vert.spv", "ImGui.frag.spv"));
 

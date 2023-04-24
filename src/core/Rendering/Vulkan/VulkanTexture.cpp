@@ -271,8 +271,11 @@ uint32_t GetBytesPerPixelFromFormat(VkFormat format)
     switch (format)
     {
     case VK_FORMAT_R8_SINT:
+        return 1;
     case VK_FORMAT_R8_UNORM:
         return 1;
+    case VK_FORMAT_R8G8_UNORM:
+        return 2;
     case VK_FORMAT_R16_SFLOAT:
         return 2;
     case VK_FORMAT_R16G16_SFLOAT:
@@ -283,14 +286,16 @@ uint32_t GetBytesPerPixelFromFormat(VkFormat format)
         return 4;
     case VK_FORMAT_R8G8B8A8_UNORM:
         return 4;
+    case VK_FORMAT_R8G8B8A8_SRGB:
+        return 4;
     case VK_FORMAT_R16G16B16A16_SFLOAT:
         return 4 * sizeof(uint16_t);
     case VK_FORMAT_R32G32B32A32_SFLOAT:
         return 4 * sizeof(float);
     default:
+        assert(false);
         break;
     }
-    return 0;
 }
 
 void GetSrcDstPipelineStage(VkImageLayout oldLayout, VkImageLayout newLayout, VkPipelineStageFlags& out_srcStageMask, VkPipelineStageFlags& out_dstStageMask)

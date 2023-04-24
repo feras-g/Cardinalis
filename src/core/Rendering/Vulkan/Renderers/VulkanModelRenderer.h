@@ -23,6 +23,9 @@ public:
 	std::array<Texture2D, NUM_FRAMES> m_Albedo_Output;
 	std::array<Texture2D, NUM_FRAMES> m_Normal_Output;
 	std::array<Texture2D, NUM_FRAMES> m_Depth_Output;
+	std::array<Texture2D, NUM_FRAMES> m_NormalMap_Output;
+	std::array<Texture2D, NUM_FRAMES> m_MetallicRoughness_Output;
+
 
 	vk::DynamicRenderPass m_dyn_renderpass[NUM_FRAMES];
 
@@ -36,7 +39,13 @@ public:
 private:
 	std::unique_ptr<VulkanShader> m_Shader;
 
-	std::vector<VkFormat> m_ColorAttachmentFormats = { VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_R16G16B16A16_SFLOAT };
+	std::vector<VkFormat> m_ColorAttachmentFormats = 
+	{ 
+		tex_base_color_format,				/* Base color / Albedo */
+		VK_FORMAT_R16G16B16A16_SFLOAT,		/* Vertex normal */
+		tex_normal_format,					/* Normal map */
+		tex_metallic_roughness_format,		/* Metallic roughness */
+	};
 	VkFormat m_DepthAttachmentFormat	= VK_FORMAT_D16_UNORM;
 
 	VkSampler m_TextureSampler;
@@ -48,4 +57,6 @@ private:
 	
 	VkDescriptorSetLayout m_pass_descriptor_set_layout;
 	VkDescriptorSet m_pass_descriptor_set;
+
+	Buffer m_material_info_ubo;
 };

@@ -5,12 +5,17 @@
 
 const uint32_t num_descriptors = 4;
 
-void DeferredRenderer::init(std::span<Texture2D> g_buffers_albedo, std::span<Texture2D> g_buffers_normal, std::span<Texture2D> g_buffers_depth)
+void DeferredRenderer::init(
+	std::span<Texture2D> g_buffers_albedo, std::span<Texture2D> g_buffers_normal, 
+	std::span<Texture2D> g_buffers_depth,  std::span<Texture2D> g_buffers_normal_map,
+	std::span<Texture2D> g_buffers_metallic_roughness)
 {
 
 	for (int i = 0; i < g_buffers_albedo.size(); i++) m_g_buffers_albedo[i] = &g_buffers_albedo[i];
 	for (int i = 0; i < g_buffers_normal.size(); i++) m_g_buffers_normal[i] = &g_buffers_normal[i];
 	for (int i = 0; i < g_buffers_depth.size(); i++) m_g_buffers_depth[i] = &g_buffers_depth[i];
+	for (int i = 0; i < g_buffers_normal_map.size(); i++) m_g_buffers_normal_map[i] = &g_buffers_normal_map[i];
+	for (int i = 0; i < g_buffers_metallic_roughness.size(); i++) m_g_buffers_metallic_roughness[i] = &g_buffers_metallic_roughness[i];
 
 	/* Create renderpass */
 	VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
@@ -38,12 +43,12 @@ void DeferredRenderer::init(std::span<Texture2D> g_buffers_albedo, std::span<Tex
 
 	/* Create descriptor set bindings */
 	std::vector<VkDescriptorSetLayoutBinding> desc_set_layout_bindings = {};
-	desc_set_layout_bindings.push_back({ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerClampNearest });
-	desc_set_layout_bindings.push_back({ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerClampNearest });
-	desc_set_layout_bindings.push_back({ 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerClampNearest });
-	desc_set_layout_bindings.push_back({ 3, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT });
-	desc_set_layout_bindings.push_back({ 4, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT });
-
+	desc_set_layout_bindings.push_back({ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerClampNearest }); /* G-Buffer Color */
+	desc_set_layout_bindings.push_back({ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerClampNearest }); /* G-Buffer Normal */
+	desc_set_layout_bindings.push_back({ 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerClampNearest }); /* G-Buffer Depth */
+	desc_set_layout_bindings.push_back({ 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerClampNearest }); /* G-Buffer Normal map */
+	desc_set_layout_bindings.push_back({ 4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerClampNearest }); /* G-Buffer Metallic/Roughness */
+	
 	/* Create Descriptor Set Layout */
 	m_descriptor_set_layout = create_descriptor_set_layout(desc_set_layout_bindings);
 
@@ -52,6 +57,7 @@ void DeferredRenderer::init(std::span<Texture2D> g_buffers_albedo, std::span<Tex
 	m_pipeline_layout = create_pipeline_layout(context.device, m_descriptor_set_layout);
 
 	update_descriptor_set(0);
+	update_descriptor_set(1);
 
 	/* Create graphics pipeline */
 	GraphicsPipeline::Flags ppl_flags = GraphicsPipeline::NONE;
@@ -80,12 +86,13 @@ void DeferredRenderer::update(size_t frame_idx)
 
 void DeferredRenderer::update_descriptor_set(size_t frame_idx)
 {
-
 	/* GBuffers */
 	std::array<VkDescriptorImageInfo, num_gbuffers>  descriptor_image_infos = {};
 	descriptor_image_infos[0].imageView = m_g_buffers_albedo[frame_idx]->view;
 	descriptor_image_infos[1].imageView = m_g_buffers_normal[frame_idx]->view;
 	descriptor_image_infos[2].imageView = m_g_buffers_depth[frame_idx]->view;
+	descriptor_image_infos[3].imageView = m_g_buffers_normal_map[frame_idx]->view;
+	descriptor_image_infos[4].imageView = m_g_buffers_metallic_roughness[frame_idx]->view;
 
 	for (int gbuffer_idx = 0; gbuffer_idx < num_gbuffers; gbuffer_idx++)
 	{
@@ -97,20 +104,22 @@ void DeferredRenderer::update_descriptor_set(size_t frame_idx)
 	write_descriptor_set.push_back(ImageWriteDescriptorSet(m_descriptor_set, 0, &descriptor_image_infos[0]));
 	write_descriptor_set.push_back(ImageWriteDescriptorSet(m_descriptor_set, 1, &descriptor_image_infos[1]));
 	write_descriptor_set.push_back(ImageWriteDescriptorSet(m_descriptor_set, 2, &descriptor_image_infos[2]));
+	write_descriptor_set.push_back(ImageWriteDescriptorSet(m_descriptor_set, 3, &descriptor_image_infos[3]));
+	write_descriptor_set.push_back(ImageWriteDescriptorSet(m_descriptor_set, 4, &descriptor_image_infos[4]));
 
 	/* Frame data : MVP matrices */
-	VkDescriptorBufferInfo desc_buffer_info = {};
-	desc_buffer_info.buffer = VulkanRendererBase::m_ubo_common_framedata.buffer;
-	desc_buffer_info.offset = 0;
-	desc_buffer_info.range = sizeof(VulkanRendererBase::PerFrameData);
-	write_descriptor_set.push_back(BufferWriteDescriptorSet(m_descriptor_set, 3, &desc_buffer_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+	//VkDescriptorBufferInfo desc_buffer_info = {};
+	//desc_buffer_info.buffer = VulkanRendererBase::m_ubo_common_framedata.buffer;
+	//desc_buffer_info.offset = 0;
+	//desc_buffer_info.range = sizeof(VulkanRendererBase::PerFrameData);
+	//write_descriptor_set.push_back(BufferWriteDescriptorSet(m_descriptor_set, 3, &desc_buffer_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
 
 	/* Light data */
-	VkDescriptorBufferInfo desc_buffer_info_ = {};
-	desc_buffer_info_.buffer = m_light_manager.m_uniform_buffer.buffer;
-	desc_buffer_info_.offset = 0;
-	desc_buffer_info_.range = sizeof(m_light_manager.m_light_data.point_lights);
-	write_descriptor_set.push_back(BufferWriteDescriptorSet(m_descriptor_set, 4, &desc_buffer_info_, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+	//VkDescriptorBufferInfo desc_buffer_info_ = {};
+	//desc_buffer_info_.buffer = m_light_manager.m_uniform_buffer.buffer;
+	//desc_buffer_info_.offset = 0;
+	//desc_buffer_info_.range = sizeof(m_light_manager.m_light_data.point_lights);
+	//write_descriptor_set.push_back(BufferWriteDescriptorSet(m_descriptor_set, 4, &desc_buffer_info_, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
 
 	vkUpdateDescriptorSets(context.device, (uint32_t)write_descriptor_set.size(), write_descriptor_set.data(), 0, nullptr);
 }
