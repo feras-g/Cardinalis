@@ -12,9 +12,15 @@ struct PointLight
 	glm::vec4 props{};
 };
 
+struct DirectionalLight
+{
+	glm::vec4 position{0, 1, 0, 1};
+	glm::vec4 color{};
+};
+
 struct LightData
 {
-	PointLight point_lights[1024];
+	DirectionalLight directional_light;
 };
 
 struct LightManager
@@ -23,12 +29,6 @@ struct LightManager
 	void init_ubo();
 	void update_ubo();
 
-	size_t m_w = 0;
-	size_t m_h = 0;
-
-	std::mt19937 rng;
-
-	size_t m_total_size_bytes = 0;
 	LightData m_light_data;
 	Buffer m_uniform_buffer;
 
@@ -64,7 +64,7 @@ struct DeferredRenderer
 
 	VkDescriptorPool m_descriptor_pool;
 	std::array <vk::DynamicRenderPass, NUM_FRAMES> m_dyn_renderpass;
-	VkDescriptorSet m_descriptor_set;
+	VkDescriptorSet m_descriptor_set[NUM_FRAMES];
 	std::array <Texture2D, NUM_FRAMES> m_output_attachment;
 
 	std::array<Texture2D*, NUM_FRAMES> m_g_buffers_albedo;

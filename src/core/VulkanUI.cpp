@@ -2,12 +2,11 @@
 #include "Rendering/FrameCounter.h"
 #include "Rendering/Camera.h"
 #include "Rendering/Vulkan/VulkanRendererBase.h"
+#include "Rendering/Vulkan/Renderers/DeferredRenderer.h"
 
 #include "../imgui/imgui.h"
 #include "../imgui/backends/imgui_impl_win32.h"
 #include "../imgui/backends/imgui_impl_vulkan.h"
-
-
 
 VulkanUI& VulkanUI::Start()
 {
@@ -218,21 +217,10 @@ VulkanUI& VulkanUI::ShowCameraSettings(Camera* camera)
 			static int vec4i[4] = { 1, 5, 100, 255 };
 
 			ImGuiSliderFlags flags = ImGuiSliderFlags_AlwaysClamp;
-
-			ImGui::SeparatorText("Physics");
-
-			ImGui::DragFloat("Damping", &camera->controller.params.damping, 0.01f, 0.01f, 1.0f);
-			ImGui::DragFloat("Acceleration Factor", &camera->controller.params.accel_factor, 0.01f, 0.01f, 15.0f);
-			ImGui::DragFloat("Max Speed", &camera->controller.params.max_velocity, 0.01f, 0.01f, 30.0f);
 			
 			ImGui::SeparatorText("Transform");
 			ImGui::DragFloat3("Location", glm::value_ptr(camera->controller.m_position), 0.1f);
 			ImGui::DragFloat3("Rotation", glm::value_ptr(camera->controller.m_rotation), 0.1f);
-
-			ImGui::SeparatorText("Transform");
-			ImGui::DragFloat3("Position",	glm::value_ptr(this->pos), 0.1f);
-			ImGui::DragFloat3("Scale",		glm::value_ptr(this->scale), 0.1f);
-			ImGui::DragFloat3("Rotation",	glm::value_ptr(this->rot), 0.1f);
 
 			ImGui::TreePop();
 		}
@@ -248,7 +236,6 @@ VulkanUI& VulkanUI::ShowCameraSettings(Camera* camera)
 	}
 
 	ImGui::End();
-
 
 	return *this;
 }
@@ -280,6 +267,21 @@ VulkanUI& VulkanUI::ShowInspector()
 	}
 	ImGui::End();
 
+
+	return *this;
+}
+
+VulkanUI& VulkanUI::ShowLightSettings(LightManager* light_manager)
+{
+	if (ImGui::Begin("Lights", 0, 0))
+	{
+		ImGui::SeparatorText("Directional Light");
+		
+		ImGui::DragFloat3("Location", glm::value_ptr(light_manager->m_light_data.directional_light.position), 0.1f);
+		ImGui::DragFloat3("Color",	  glm::value_ptr(light_manager->m_light_data.directional_light.color), 0.1f);
+	}
+
+	ImGui::End();
 
 	return *this;
 }

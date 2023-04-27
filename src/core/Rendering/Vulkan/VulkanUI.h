@@ -4,6 +4,7 @@
 #include <glm/gtc/type_ptr.hpp> // value_ptr
 
 struct Camera;
+struct LightManager;
 
 class VulkanUI
 {
@@ -22,6 +23,7 @@ public:
 	VulkanUI& ShowFrameTimeGraph(float* values, size_t nbValues);
 	VulkanUI& ShowCameraSettings(Camera* camera);
 	VulkanUI& ShowInspector();
+	VulkanUI& ShowLightSettings(LightManager* light_manager);
 	void End();
 
 	bool bIsSceneViewportHovered = false;

@@ -21,14 +21,14 @@ public:
 
 	static void create_samplers();
 	static void create_buffers();
-	static void update_frame_data(const PerFrameData& data);
+	static void update_frame_data(const PerFrameData& data, size_t current_frame_idx);
 	static void destroy();
 
 	static VkSampler s_SamplerRepeatLinear;
 	static VkSampler s_SamplerClampLinear;
 	static VkSampler s_SamplerClampNearest;
 	static VkSampler s_SamplerRepeatNearest;
-	static Buffer m_ubo_common_framedata;
+	static Buffer m_ubo_common_framedata[NUM_FRAMES];
 
 	/* WIP */
 	vk::DynamicRenderPass m_dyn_renderpass[NUM_FRAMES];

@@ -4,7 +4,7 @@ VkSampler VulkanRendererBase::s_SamplerRepeatLinear;
 VkSampler VulkanRendererBase::s_SamplerClampLinear;
 VkSampler VulkanRendererBase::s_SamplerClampNearest;
 VkSampler VulkanRendererBase::s_SamplerRepeatNearest;
-Buffer VulkanRendererBase::m_ubo_common_framedata;
+Buffer VulkanRendererBase::m_ubo_common_framedata[NUM_FRAMES];
 	
 void VulkanRendererBase::create_samplers()
 {
@@ -16,18 +16,24 @@ void VulkanRendererBase::create_samplers()
 
 void VulkanRendererBase::create_buffers()
 {
-	create_uniform_buffer(m_ubo_common_framedata, sizeof(PerFrameData));
+	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
+	{
+		create_uniform_buffer(m_ubo_common_framedata[frame_idx], sizeof(PerFrameData));
+	}
 }
 
-void VulkanRendererBase::update_frame_data(const PerFrameData& data)
+void VulkanRendererBase::update_frame_data(const PerFrameData& data, size_t current_frame_idx)
 {
-	upload_buffer_data(m_ubo_common_framedata, (void*)&data, sizeof(data), 0);
+	upload_buffer_data(m_ubo_common_framedata[current_frame_idx], (void*)&data, sizeof(data), 0);
 }
 
 void VulkanRendererBase::destroy()
 {
 	vkDeviceWaitIdle(context.device);
-	destroy_buffer(m_ubo_common_framedata);
+	for (size_t i = 0; i < NUM_FRAMES; i++)
+	{
+		destroy_buffer(m_ubo_common_framedata[i]);
+	}
 	vkDestroySampler(context.device, s_SamplerRepeatLinear, nullptr);
 	vkDestroySampler(context.device, s_SamplerClampLinear, nullptr);
 	vkDestroySampler(context.device, s_SamplerClampNearest, nullptr);

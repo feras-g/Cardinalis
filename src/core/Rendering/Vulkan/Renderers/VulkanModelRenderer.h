@@ -13,9 +13,9 @@ public:
 	explicit VulkanModelRenderer();
 	void render(size_t currentImageIdx, VkCommandBuffer cmdBuffer);
 
-	void draw_scene(VkCommandBuffer cmdBuffer);
+	void draw_scene(VkCommandBuffer cmdBuffer, size_t current_frame_idx);
 	void update_buffers(const VulkanRendererBase::PerFrameData& frame_data);
-	void update_descriptor_set(VkDevice device);
+	void update_descriptor_set(VkDevice device, size_t frame_idx);
 	void create_attachments();
 	void create_buffers();
 

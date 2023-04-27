@@ -45,8 +45,9 @@ struct VulkanContext
 	VkCommandPool temp_cmd_pool	= VK_NULL_HANDLE;
 	std::unique_ptr<VulkanSwapchain> swapchain;
 
-	uint32_t frameCount= 0;
-	uint32_t currentBackBuffer = 0; // From vkAcquireNextImageKHR
+	uint32_t frame_count= 0;
+	uint32_t curr_frame_idx = 0;
+	uint32_t curr_backbuffer_idx = 0; // From vkAcquireNextImageKHR
 	VulkanFrame frames[NUM_FRAMES];
 	uint32_t gfxQueueFamily		= 0;
 };
@@ -72,7 +73,7 @@ public:
 	VulkanFrame& GetCurrentFrame();
 	inline VulkanSwapchain* GetSwapchain() { return context.swapchain.get(); }
 
-	inline size_t GetCurrentImageIdx() { return context.frameCount % NUM_FRAMES;  }
+	inline size_t GetCurrentImageIdx() { return context.frame_count % NUM_FRAMES;  }
 
 	static inline VkPhysicalDeviceLimits device_limits = {};
 private:

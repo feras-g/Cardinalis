@@ -212,10 +212,10 @@ void VulkanRenderInterface::CreateSyncStructures()
 
 	for (uint32_t i = 0; i < NUM_FRAMES; i++)
 	{
-		VK_CHECK(vkCreateFence(context.device, &fenceInfo, nullptr, &context.frames[i].renderFence));
+		VK_CHECK(vkCreateFence(context.device, &fenceInfo, nullptr, &context.frames[i].fence_queue_submitted));
 
-		VK_CHECK(vkCreateSemaphore(context.device, &semaphoreInfo, nullptr, &context.frames[i].imageAcquiredSemaphore));
-		VK_CHECK(vkCreateSemaphore(context.device, &semaphoreInfo, nullptr, &context.frames[i].queueSubmittedSemaphore));
+		VK_CHECK(vkCreateSemaphore(context.device, &semaphoreInfo, nullptr, &context.frames[i].smp_image_acquired));
+		VK_CHECK(vkCreateSemaphore(context.device, &semaphoreInfo, nullptr, &context.frames[i].smp_queue_submitted));
 	}
 }
 
@@ -254,7 +254,7 @@ void VulkanRenderInterface::CreateSwapchain()
 
 VulkanFrame& VulkanRenderInterface::GetCurrentFrame()
 {
-	return context.frames[context.frameCount % NUM_FRAMES];
+	return context.frames[context.frame_count % NUM_FRAMES];
 }
 
 [[nodiscard]] VkCommandBuffer begin_temp_cmd_buffer()
@@ -838,7 +838,7 @@ bool CreateTextureSampler(VkDevice device, VkFilter minFilter, VkFilter magFilte
 		.compareEnable = VK_FALSE,
 		.compareOp = VK_COMPARE_OP_ALWAYS,
 		.minLod = 0.0f,
-		.maxLod = 10.0f,
+		.maxLod = 100.0f,
 		.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
 		.unnormalizedCoordinates = VK_FALSE
 	};

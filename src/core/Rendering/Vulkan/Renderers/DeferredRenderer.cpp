@@ -33,7 +33,7 @@ void DeferredRenderer::init(
 		m_dyn_renderpass[i].add_color_attachment(m_output_attachment[i].view);
 	}
 
-	m_light_manager.init(32, 32);
+	m_light_manager.init(10, 10);
 
 	/* Create shader */
 	m_shader_deferred.load_from_file("Deferred.vert.spv", "Deferred.frag.spv");
@@ -48,13 +48,16 @@ void DeferredRenderer::init(
 	desc_set_layout_bindings.push_back({ 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerClampNearest }); /* G-Buffer Depth */
 	desc_set_layout_bindings.push_back({ 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerClampNearest }); /* G-Buffer Normal map */
 	desc_set_layout_bindings.push_back({ 4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerClampNearest }); /* G-Buffer Metallic/Roughness */
-	
-	/* Create Descriptor Set Layout */
+	desc_set_layout_bindings.push_back({ 5, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT,			&VulkanRendererBase::s_SamplerClampNearest }); /* Frame data */
+	desc_set_layout_bindings.push_back({ 6, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT,			&VulkanRendererBase::s_SamplerClampNearest }); /* Light data */
 	m_descriptor_set_layout = create_descriptor_set_layout(desc_set_layout_bindings);
-
-	m_descriptor_set = create_descriptor_set(m_descriptor_pool, m_descriptor_set_layout);
-
 	m_pipeline_layout = create_pipeline_layout(context.device, m_descriptor_set_layout);
+
+	/* Create Descriptor Set Layout */
+	for (size_t frameIdx = 0; frameIdx < NUM_FRAMES; frameIdx++)
+	{
+		m_descriptor_set[frameIdx] = create_descriptor_set(m_descriptor_pool, m_descriptor_set_layout);
+	}
 
 	update_descriptor_set(0);
 	update_descriptor_set(1);
@@ -69,7 +72,7 @@ void DeferredRenderer::draw_scene(size_t current_backbuffer_idx, VkCommandBuffer
 {
 	SetViewportScissor(cmd_buffer, VulkanModelRenderer::render_width, VulkanModelRenderer::render_height);
 	vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline);
-	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_descriptor_set, 0, nullptr);
+	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_descriptor_set[current_backbuffer_idx], 0, nullptr);
 	vkCmdDraw(cmd_buffer, 3, 1, 0, 0);
 }
 
@@ -101,25 +104,25 @@ void DeferredRenderer::update_descriptor_set(size_t frame_idx)
 	}
 
 	std::vector<VkWriteDescriptorSet> write_descriptor_set = {};
-	write_descriptor_set.push_back(ImageWriteDescriptorSet(m_descriptor_set, 0, &descriptor_image_infos[0]));
-	write_descriptor_set.push_back(ImageWriteDescriptorSet(m_descriptor_set, 1, &descriptor_image_infos[1]));
-	write_descriptor_set.push_back(ImageWriteDescriptorSet(m_descriptor_set, 2, &descriptor_image_infos[2]));
-	write_descriptor_set.push_back(ImageWriteDescriptorSet(m_descriptor_set, 3, &descriptor_image_infos[3]));
-	write_descriptor_set.push_back(ImageWriteDescriptorSet(m_descriptor_set, 4, &descriptor_image_infos[4]));
+	write_descriptor_set.push_back(ImageWriteDescriptorSet(m_descriptor_set[frame_idx], 0, &descriptor_image_infos[0]));
+	write_descriptor_set.push_back(ImageWriteDescriptorSet(m_descriptor_set[frame_idx], 1, &descriptor_image_infos[1]));
+	write_descriptor_set.push_back(ImageWriteDescriptorSet(m_descriptor_set[frame_idx], 2, &descriptor_image_infos[2]));
+	write_descriptor_set.push_back(ImageWriteDescriptorSet(m_descriptor_set[frame_idx], 3, &descriptor_image_infos[3]));
+	write_descriptor_set.push_back(ImageWriteDescriptorSet(m_descriptor_set[frame_idx], 4, &descriptor_image_infos[4]));
 
 	/* Frame data : MVP matrices */
-	//VkDescriptorBufferInfo desc_buffer_info = {};
-	//desc_buffer_info.buffer = VulkanRendererBase::m_ubo_common_framedata.buffer;
-	//desc_buffer_info.offset = 0;
-	//desc_buffer_info.range = sizeof(VulkanRendererBase::PerFrameData);
-	//write_descriptor_set.push_back(BufferWriteDescriptorSet(m_descriptor_set, 3, &desc_buffer_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+	VkDescriptorBufferInfo desc_buffer_info = {};
+	desc_buffer_info.buffer = VulkanRendererBase::m_ubo_common_framedata[frame_idx].buffer;
+	desc_buffer_info.offset = 0;
+	desc_buffer_info.range = sizeof(VulkanRendererBase::PerFrameData);
+	write_descriptor_set.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], 5, &desc_buffer_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
 
 	/* Light data */
-	//VkDescriptorBufferInfo desc_buffer_info_ = {};
-	//desc_buffer_info_.buffer = m_light_manager.m_uniform_buffer.buffer;
-	//desc_buffer_info_.offset = 0;
-	//desc_buffer_info_.range = sizeof(m_light_manager.m_light_data.point_lights);
-	//write_descriptor_set.push_back(BufferWriteDescriptorSet(m_descriptor_set, 4, &desc_buffer_info_, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+	VkDescriptorBufferInfo desc_buffer_info_ = {};
+	desc_buffer_info_.buffer = m_light_manager.m_uniform_buffer.buffer;
+	desc_buffer_info_.offset = 0;
+	desc_buffer_info_.range = sizeof(m_light_manager.m_light_data);
+	write_descriptor_set.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], 6, &desc_buffer_info_, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
 
 	vkUpdateDescriptorSets(context.device, (uint32_t)write_descriptor_set.size(), write_descriptor_set.data(), 0, nullptr);
 }
@@ -174,46 +177,19 @@ glm::vec4 randomPositionPoisson(float lambda, float radius)
 /* Light manager */
 void LightManager::init(size_t w, size_t h)
 {
-	m_w = w;
-	m_h = h;
-
-	for (size_t x = 0; x < w; x++)
-	{
-		for (size_t y = 0; y < h; y++)
-		{
-			size_t idx = (y * w) + x;
-			m_light_data.point_lights[idx].position = randomPositionPoisson(1.0, 3.0f);
-			m_light_data.point_lights[idx].color	= my_colors[idx%3];
-			m_light_data.point_lights[idx].props.x	= randomFloat(0.1f, 0.13f);
-		}
-	}
-
 	/* Create and fill UBO data */
 	init_ubo();
 }
 
 void LightManager::init_ubo()
 {
-	create_uniform_buffer(m_uniform_buffer, sizeof(m_light_data.point_lights));
-	void* pMappedData = nullptr;
-	VK_CHECK(vkMapMemory(context.device, m_uniform_buffer.memory, 0, sizeof(m_light_data.point_lights), 0, &pMappedData));
-	memcpy(pMappedData, m_light_data.point_lights, sizeof(m_light_data.point_lights));
-	vkUnmapMemory(context.device, m_uniform_buffer.memory);
+	create_uniform_buffer(m_uniform_buffer, sizeof(m_light_data));
+	update_ubo();
 }
 void LightManager::update_ubo()
 {
-	float min_vel = -1.0f;
-	float max_vel = 1.0f;
-
-	for (size_t idx = 0; idx < m_w * m_h; idx++)
-	{
-		std::uniform_real_distribution<float> dist(min_vel, max_vel);
-		glm::vec4 rand_vel(dist(rng), 0 /* dist(rng) */, dist(rng), 1.0);
-		m_light_data.point_lights[idx].position += rand_vel * 0.033f;
-	}
-
 	void* pMappedData = nullptr;
-	VK_CHECK(vkMapMemory(context.device, m_uniform_buffer.memory, 0, sizeof(m_light_data.point_lights), 0, &pMappedData));
-	memcpy(pMappedData, m_light_data.point_lights, sizeof(m_light_data.point_lights));
+	VK_CHECK(vkMapMemory(context.device, m_uniform_buffer.memory, 0, sizeof(m_light_data), 0, &pMappedData));
+	memcpy(pMappedData, &m_light_data.directional_light, sizeof(m_light_data.directional_light));
 	vkUnmapMemory(context.device, m_uniform_buffer.memory);
 }

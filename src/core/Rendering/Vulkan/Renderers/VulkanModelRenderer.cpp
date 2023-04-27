@@ -37,7 +37,11 @@ VulkanModelRenderer::VulkanModelRenderer()
 	desc_set_layouts.push_back(m_pass_descriptor_set_layout);							/* Per pass */
 	m_ppl_layout = create_pipeline_layout(context.device, desc_set_layouts, 0,  /* material push constant */ sizeof(Material));
 
-	update_descriptor_set(context.device);
+	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
+	{
+		update_descriptor_set(context.device, frame_idx);
+	}
+	
 
 	/* Dynamic renderpass setup */
 	for (int i = 0; i < NUM_FRAMES; i++)
@@ -66,7 +70,7 @@ void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buf
 
 	VkRect2D render_area{ .offset {}, .extent { render_width , render_height } };
 	m_dyn_renderpass[currentImageIdx].begin(cmd_buffer, render_area);
-	draw_scene(cmd_buffer);
+	draw_scene(cmd_buffer, currentImageIdx);
 	m_dyn_renderpass[currentImageIdx].end(cmd_buffer);
 
 	/* Transition */
@@ -77,13 +81,13 @@ void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buf
 	m_MetallicRoughness_Output[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
-void VulkanModelRenderer::draw_scene(VkCommandBuffer cmdBuffer)
+void VulkanModelRenderer::draw_scene(VkCommandBuffer cmdBuffer, size_t current_frame_idx)
 {
 	SetViewportScissor(cmdBuffer, render_width, render_height, true);
 	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline);
 	
 	/* Update UBO descriptor for frame data */
-	VkDescriptorBufferInfo ubo_framedata_desc_info = { .buffer = VulkanRendererBase::m_ubo_common_framedata.buffer, .offset = 0, .range = sizeof(VulkanRendererBase::PerFrameData) };
+	VkDescriptorBufferInfo ubo_framedata_desc_info = { .buffer = VulkanRendererBase::m_ubo_common_framedata[current_frame_idx].buffer, .offset = 0, .range = sizeof(VulkanRendererBase::PerFrameData) };
 
 	/* Bind Pass descriptor set */
 	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ppl_layout, 2, 1, &m_pass_descriptor_set, 0, nullptr);
@@ -118,15 +122,15 @@ void VulkanModelRenderer::update_buffers(const VulkanRendererBase::PerFrameData&
 	
 }
 
-void VulkanModelRenderer::update_descriptor_set(VkDevice device)
+void VulkanModelRenderer::update_descriptor_set(VkDevice device, size_t frame_idx)
 {
 	std::vector<VkWriteDescriptorSet> desc_writes;
 
 	/* Frame data UBO */
 	VulkanRendererBase::PerFrameData frame_data = {};
-	upload_buffer_data(VulkanRendererBase::m_ubo_common_framedata, &frame_data, sizeof(VulkanRendererBase::PerFrameData), 0);
+	upload_buffer_data(VulkanRendererBase::m_ubo_common_framedata[frame_idx], &frame_data, sizeof(VulkanRendererBase::PerFrameData), 0);
 
-	VkDescriptorBufferInfo info = { VulkanRendererBase::m_ubo_common_framedata.buffer,  0, sizeof(VulkanRendererBase::PerFrameData) };
+	VkDescriptorBufferInfo info = { VulkanRendererBase::m_ubo_common_framedata[frame_idx].buffer,  0, sizeof(VulkanRendererBase::PerFrameData) };
 	desc_writes.push_back(BufferWriteDescriptorSet(m_pass_descriptor_set, 0, &info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
 
 	/* Textures array */

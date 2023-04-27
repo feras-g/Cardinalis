@@ -103,20 +103,12 @@ void SampleApp::Update(float dt)
 	if (EngineGetAsyncKeyState(Key::SPACE)) m_Camera.controller.m_movement =  m_Camera.controller.m_movement | Movement::UP;
 	if (EngineGetAsyncKeyState(Key::LSHIFT)) m_Camera.controller.m_movement =  m_Camera.controller.m_movement | Movement::DOWN;
 
-	if (m_UI.fSceneViewAspectRatio != m_Camera.aspect_ratio)
-	{
-		m_Camera.UpdateAspectRatio(m_UI.fSceneViewAspectRatio);
-	}
-	m_Camera.controller.deltaTime = dt;
-	m_Camera.controller.UpdateTranslation(dt);
-
-	UpdateRenderersData(dt, context.currentBackBuffer);
+	UpdateRenderersData(dt, context.curr_frame_idx);
 }
 
 void SampleApp::Render()
 {
-	static uint32_t current_frame_idx = 0;
-	VulkanFrame currentFrame = context.frames[current_frame_idx];
+	VulkanFrame current_frame = context.frames[context.curr_frame_idx];
 
 	VulkanSwapchain& swapchain = *m_RHI->GetSwapchain();
 
@@ -124,72 +116,80 @@ void SampleApp::Render()
 	// PRE-RENDER
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	VK_CHECK(vkWaitForFences(context.device, 1, &currentFrame.renderFence, true, OneSecondInNanoSeconds));
-	VK_CHECK(vkResetFences(context.device, 1, &currentFrame.renderFence));
+	VK_CHECK(vkWaitForFences(context.device, 1, &current_frame.fence_queue_submitted, true, OneSecondInNanoSeconds));
+	VK_CHECK(vkResetFences(context.device, 1, &current_frame.fence_queue_submitted));
 
-	VkResult result = swapchain.AcquireNextImage(currentFrame.imageAcquiredSemaphore, &context.currentBackBuffer);
+	uint32_t swapchain_buffer_idx = 0;
+	VkResult result = swapchain.AcquireNextImage(current_frame.smp_image_acquired, &swapchain_buffer_idx);
 
 	// Populate command buffers
 	{
 		VkCommandBufferBeginInfo cmdBufferBeginInfo = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-		VK_CHECK(vkResetCommandPool(context.device, currentFrame.cmd_pool, 0));
-		VK_CHECK(vkBeginCommandBuffer(currentFrame.cmd_buffer, &cmdBufferBeginInfo));
+		VK_CHECK(vkResetCommandPool(context.device, current_frame.cmd_pool, 0));
+		VK_CHECK(vkBeginCommandBuffer(current_frame.cmd_buffer, &cmdBufferBeginInfo));
 
 		/* Transition to color attachment */
-		swapchain.color_attachments[current_frame_idx].transition_layout(currentFrame.cmd_buffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-		
+		swapchain.color_attachments[context.curr_frame_idx].transition_layout(current_frame.cmd_buffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
 		{
-			m_model_renderer->render(current_frame_idx, currentFrame.cmd_buffer);
-			m_deferred_renderer.render(current_frame_idx, currentFrame.cmd_buffer);
-			m_imgui_renderer->render(current_frame_idx, currentFrame.cmd_buffer);
+			m_model_renderer->render(context.curr_frame_idx, current_frame.cmd_buffer);
+			m_deferred_renderer.render(context.curr_frame_idx, current_frame.cmd_buffer);
+			m_imgui_renderer->render(context.curr_frame_idx, current_frame.cmd_buffer);
 		}
 
 		/* Present */
-		swapchain.color_attachments[current_frame_idx].transition_layout(currentFrame.cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+		swapchain.color_attachments[context.curr_frame_idx].transition_layout(current_frame.cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
-		VK_CHECK(vkEndCommandBuffer(currentFrame.cmd_buffer));
+		VK_CHECK(vkEndCommandBuffer(current_frame.cmd_buffer));
 	}
-	
+
 	// Submit commands for the GPU to work on the current backbuffer
 	// Has to wait for the swapchain image to be acquired before beginning, we wait on imageAcquired semaphore.
 	// Signals a renderComplete semaphore to let the next operation know that it finished
 
 
 	VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	VkSubmitInfo submitInfo =
+	VkSubmitInfo submit_info =
 	{
 		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
 		.waitSemaphoreCount = 1,
-		.pWaitSemaphores = &currentFrame.imageAcquiredSemaphore,
+		.pWaitSemaphores = &current_frame.smp_image_acquired,
 		.pWaitDstStageMask = &waitDstStageMask,
 		.commandBufferCount = 1,
-		.pCommandBuffers = &currentFrame.cmd_buffer,
+		.pCommandBuffers = &current_frame.cmd_buffer,
 		.signalSemaphoreCount = 1,
-		.pSignalSemaphores = &currentFrame.queueSubmittedSemaphore
+		.pSignalSemaphores = &current_frame.smp_queue_submitted
 	};
-	vkQueueSubmit(context.queue, 1, &submitInfo, currentFrame.renderFence);
+	vkQueueSubmit(context.queue, 1, &submit_info, current_frame.fence_queue_submitted);
 
 	// Present work
 	// Waits for the GPU queue to finish execution before presenting, we wait on renderComplete semaphore
-	
+
 	VkPresentInfoKHR presentInfo =
 	{
 		.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
 		.waitSemaphoreCount = 1,
-		.pWaitSemaphores = &currentFrame.queueSubmittedSemaphore,
+		.pWaitSemaphores = &current_frame.smp_queue_submitted,
 		.swapchainCount = 1,
 		.pSwapchains = &swapchain.swapchain,
-		.pImageIndices = &context.currentBackBuffer
+		.pImageIndices = &swapchain_buffer_idx
 	};
-	
+
 	vkQueuePresentKHR(context.queue, &presentInfo);
 
-	context.frameCount++;
-	current_frame_idx = (current_frame_idx + 1) % NUM_FRAMES;
+	context.frame_count++;
+	context.curr_frame_idx = (context.curr_frame_idx + 1) % NUM_FRAMES;
 }
 
 inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 {
+	if (m_UI.fSceneViewAspectRatio != m_Camera.aspect_ratio)
+	{
+		m_Camera.UpdateAspectRatio(m_UI.fSceneViewAspectRatio);
+	}
+	m_Camera.controller.deltaTime = dt;
+	m_Camera.controller.UpdateTranslation(dt);
+
 	/* Update frame Data */
 	VulkanRendererBase::PerFrameData frame_data;
 	{
@@ -201,7 +201,7 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 			m_Camera.controller.m_position.y,
 			m_Camera.controller.m_position.z,
 			1.0);
-		VulkanRendererBase::update_frame_data(frame_data);
+		VulkanRendererBase::update_frame_data(frame_data, currentImageIdx);
 	}
 
 	/* Update drawables */
@@ -215,7 +215,7 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 		//m_UI.AddHierarchyPanel();
 		//m_UI.ShowMenuBar();
 		//m_UI.AddInspectorPanel();
-		m_UI.ShowStatistics(m_DebugName, dt, context.frameCount);
+		m_UI.ShowStatistics(m_DebugName, dt, context.frame_count);
 		m_UI.ShowSceneViewportPanel(
 			m_imgui_renderer->m_DeferredRendererOutputTextureId[currentImageIdx],
 			m_imgui_renderer->m_ModelRendererColorTextureId[currentImageIdx],
@@ -227,6 +227,7 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 		//m_UI.ShowFrameTimeGraph(FrameStats::History.data(), FrameStats::History.size());
 		m_UI.ShowCameraSettings(&m_Camera);
 		m_UI.ShowInspector();
+		m_UI.ShowLightSettings(&m_deferred_renderer.m_light_manager);
 		m_UI.End();
 	}
 
