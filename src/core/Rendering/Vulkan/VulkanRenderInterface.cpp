@@ -833,12 +833,12 @@ bool CreateTextureSampler(VkDevice device, VkFilter minFilter, VkFilter magFilte
 		.addressModeV = addressMode,
 		.addressModeW = addressMode,
 		.mipLodBias = 0.0f,
-		.anisotropyEnable = VK_FALSE,
+		.anisotropyEnable = VK_TRUE,
 		.maxAnisotropy = 1,
 		.compareEnable = VK_FALSE,
 		.compareOp = VK_COMPARE_OP_ALWAYS,
 		.minLod = 0.0f,
-		.maxLod = 0.0f,
+		.maxLod = 10.0f,
 		.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
 		.unnormalizedCoordinates = VK_FALSE
 	};

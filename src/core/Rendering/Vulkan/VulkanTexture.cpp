@@ -9,7 +9,7 @@ static void GetSrcDstPipelineStage(VkImageLayout oldLayout, VkImageLayout newLay
 
 static uint32_t calc_mip_levels(uint32_t width, uint32_t height)
 {
-    return std::floor(std::log2(std::max(width, height)));
+    return std::floor(std::log2(std::max(width, height))) + 1;
 }
 
 void Texture2D::init(VkFormat format, uint32_t width, uint32_t height, bool calc_mip)
@@ -33,15 +33,7 @@ void Texture2D::create_from_file(
 {
     assert(initialized);
     Image rawImage = load_image_from_file(filename);
-    if (rawImage.data != nullptr)
-    {
-		::create_vk_image(context.device, false, *this, imageUsage | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
-		upload_data(context.device, (void*)*rawImage.data);
-    }
-    else
-    {
-        assert(false);
-    }
+    create_from_data(rawImage.data.get(), debug_name, imageUsage, layout);
 }
 
 void Texture2D::create_from_data(
@@ -51,8 +43,25 @@ void Texture2D::create_from_data(
     VkImageLayout		layout)
 {
 	assert(initialized);
-    ::create_vk_image(context.device, false, *this, imageUsage | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+    ::create_vk_image(context.device, false, *this, imageUsage);
+    
+    VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
+    transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    end_temp_cmd_buffer(cmd_buffer);
+
     upload_data(context.device, data);
+    if (info.mipLevels > 1)
+    {
+        generate_mipmaps();
+    }
+    else
+    {
+        cmd_buffer = begin_temp_cmd_buffer();
+        transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        end_temp_cmd_buffer(cmd_buffer);
+    }
+    
+
 }
 
 void Texture2D::create(VkDevice device, VkImageUsageFlags imageUsage, std::string_view debug_name)
@@ -83,7 +92,7 @@ void create_vk_image(VkDevice device, bool isCubemap, Texture& texture, VkImageU
         .arrayLayers            { arrayLayers },
         .samples                { VK_SAMPLE_COUNT_1_BIT },
         .tiling                 { VK_IMAGE_TILING_OPTIMAL },
-        .usage                  { imageUsage },
+        .usage                  { imageUsage | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT },
         .sharingMode            { VK_SHARING_MODE_EXCLUSIVE },
         .queueFamilyIndexCount  { 0 },
         .pQueueFamilyIndices    { nullptr },
@@ -138,20 +147,15 @@ void Texture::copy_from_buffer(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer)
 void Texture::upload_data(VkDevice device, void const* const data)
 {
     uint32_t bpp = GetBytesPerPixelFromFormat(info.imageFormat);
-
     VkDeviceSize layerSizeInBytes = info.width * info.height * bpp;
     VkDeviceSize imageSizeInBytes = layerSizeInBytes * info.layerCount;
-    
     // Create temp CPU-GPU visible buffer holding image data 
     Buffer stagingBuffer;
     create_staging_buffer(stagingBuffer, imageSizeInBytes);
     upload_buffer_data(stagingBuffer, data, imageSizeInBytes, 0);
 
-    // Copy content to image memory on GPU
     VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
-    transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     copy_from_buffer(cmd_buffer, stagingBuffer.buffer);
-    transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     end_temp_cmd_buffer(cmd_buffer);
 
     destroy_buffer(stagingBuffer);
@@ -197,8 +201,86 @@ void Texture::destroy(VkDevice device)
     *this = {};
 }
 
+void Texture::generate_mipmaps()
+{
+    VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
+
+    int32_t mip_height = info.height;
+    int32_t mip_width  = info.width;
+    for (uint32_t mip_level = 1; mip_level < info.mipLevels; mip_level++)
+    {
+        /* Transition source mip-level */
+        uint32_t src_mip_level = mip_level - 1;
+        uint32_t dst_mip_level = mip_level;
+        VkImageSubresourceRange src_subresouce_range =
+        {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = mip_level-1,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        };
+        transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, &src_subresouce_range);
+
+        /* Blit from mip level N to N-1 */
+        VkImageBlit blit =
+        {
+            /* source */
+            .srcSubresource = 
+            {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .mipLevel = src_mip_level,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+            .srcOffsets =   /* bounds of the source region */
+            {
+                { 0, 0, 0 },
+                { mip_width, mip_height, 1 }
+            },
+            /* destination */
+            .dstSubresource = 
+            {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .mipLevel = dst_mip_level,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+            .dstOffsets = /* bounds of the destination region */
+            {
+                { 0, 0, 0 },
+                { mip_width > 1 ? mip_width / 2 : 1, mip_height > 1 ? mip_height / 2 : 1, 1 }
+            }
+        };
+        vkCmdBlitImage(cmd_buffer,
+            this->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,  /* source */
+            this->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,  /* destination */
+            1, &blit, VK_FILTER_LINEAR);
+
+        /* Transition source to final state */
+        transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, &src_subresouce_range);
+
+        /* Prepare for next blit. */
+        mip_width  = mip_width > 1 ? mip_width / 2 : 1;
+        mip_height = mip_height > 1 ? mip_height / 2 : 1;
+    }
+
+    /* Transition last mip level */
+    VkImageSubresourceRange subresouce_range =
+    {
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .baseMipLevel = info.mipLevels - 1,
+        .levelCount = 1,
+        .baseArrayLayer = 0,
+        .layerCount = 1,
+    };
+    transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, &subresouce_range);
+
+    end_temp_cmd_buffer(cmd_buffer);
+}
+
 // Helper to transition images and remember the current layout
-void Texture::transition_layout(VkCommandBuffer cmdBuffer, VkImageLayout old_layout, VkImageLayout new_layout)
+void Texture::transition_layout(VkCommandBuffer cmdBuffer, VkImageLayout old_layout, VkImageLayout new_layout, VkImageSubresourceRange* subresourceRange)
 {
     
     VkImageMemoryBarrier barrier =
@@ -211,7 +293,8 @@ void Texture::transition_layout(VkCommandBuffer cmdBuffer, VkImageLayout old_lay
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .image = image,
-        .subresourceRange =
+        .subresourceRange = subresourceRange ? *subresourceRange :
+        VkImageSubresourceRange
         {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .baseMipLevel = 0,
@@ -311,6 +394,9 @@ void GetSrcDstPipelineStage(VkImageLayout oldLayout, VkImageLayout newLayout, Vk
 	case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
         out_srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 		break;
+    case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+        out_srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        break;
 	case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
 		out_srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
 		break;
@@ -349,8 +435,9 @@ void GetSrcDstPipelineStage(VkImageLayout oldLayout, VkImageLayout newLayout, Vk
     case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
 		out_dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
         break;
-    //case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-    //    break;
+    case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+        out_dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        break;
     case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
         out_dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
         break;
@@ -369,8 +456,9 @@ void GetSrcDstPipelineStage(VkImageLayout oldLayout, VkImageLayout newLayout, Vk
     //    break;
     //case VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL:
     //    break;
-    //case VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL:
-    //    break;
+    case VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL:
+        out_dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        break;
     //case VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL:
     //    break;
     case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:

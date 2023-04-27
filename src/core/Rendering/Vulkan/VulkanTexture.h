@@ -37,8 +37,9 @@ struct Texture
 	void create_view(VkDevice device, const ImageViewInitInfo& info);
 	void copy_from_buffer(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer);
 	void upload_data(VkDevice device, void const* const data);
-	void transition_layout(VkCommandBuffer cmdBuffer, VkImageLayout old_layout, VkImageLayout new_layout);
+	void transition_layout(VkCommandBuffer cmdBuffer, VkImageLayout old_layout, VkImageLayout new_layout, VkImageSubresourceRange* subresourceRange = nullptr);
 	void destroy(VkDevice device);
+	void generate_mipmaps();
 };
 
 /* Create and allocated memory for a Vulkan image */

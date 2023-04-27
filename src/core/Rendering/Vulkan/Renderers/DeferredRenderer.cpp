@@ -97,7 +97,7 @@ void DeferredRenderer::update_descriptor_set(size_t frame_idx)
 	for (int gbuffer_idx = 0; gbuffer_idx < num_gbuffers; gbuffer_idx++)
 	{
 		descriptor_image_infos[gbuffer_idx].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		descriptor_image_infos[gbuffer_idx].sampler = VulkanRendererBase::s_SamplerClampNearest;
+		descriptor_image_infos[gbuffer_idx].sampler = VulkanRendererBase::s_SamplerClampLinear;
 	}
 
 	std::vector<VkWriteDescriptorSet> write_descriptor_set = {};

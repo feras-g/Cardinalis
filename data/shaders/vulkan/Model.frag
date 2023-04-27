@@ -49,9 +49,9 @@ layout(set = 2, binding = 5) uniform sampler smp_repeat_linear;
 
 void main()
 {
-    gbuffer_base_color     = texture(sampler2D(textures[material.tex_base_color_id], smp_clamp_nearest), uv.xy) * material.base_color_factor;
-    gbuffer_normalWS   = vec4(normalize(normalWS.xyz), 1.0);
+    gbuffer_base_color     = texture(sampler2D(textures[material.tex_base_color_id], smp_clamp_linear), uv.xy) * material.base_color_factor;
+    gbuffer_normalWS    = vec4(normalize(normalWS.xyz), 1.0);
     gbuffer_depthCS    = depthCS.z / depthCS.w;
-    gbuffer_normal_map = vec4(texture(sampler2D(textures[material.tex_normal_id], smp_clamp_nearest), uv.xy).rgb * 2 - 1, 1); // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#additional-textures
-    gbuffer_metallic_roughness = vec4(texture(sampler2D(textures[material.tex_metallic_roughness_id], smp_clamp_nearest), uv.xy).yz, material.metallic_factor, material.roughness_factor);
+    gbuffer_normal_map = vec4(texture(sampler2D(textures[material.tex_normal_id], smp_clamp_linear), uv.xy).rg * 2 - 1, 0, 1); // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#additional-textures
+    gbuffer_metallic_roughness = vec4(texture(sampler2D(textures[material.tex_metallic_roughness_id], smp_clamp_linear), uv.xy).yz, material.metallic_factor, material.roughness_factor);
 }

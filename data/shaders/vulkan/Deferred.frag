@@ -60,5 +60,5 @@ void main()
     // }
     // 
     // out_color = vec4(uv, 0, 1.0);
-	out_color = texture(gbuffer_metallic_roughness, uv);
+	out_color = texture(gbuffer_color, uv);
 }

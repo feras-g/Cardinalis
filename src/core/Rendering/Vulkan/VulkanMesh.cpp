@@ -221,7 +221,7 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 			Texture2D tex2D;
 			tex2D.init(format, im.w, im.h);
 			tex2D.create_from_data(im.data.get(), name);
-			tex2D.create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
+			tex2D.create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, tex2D.info.mipLevels });
 			return RenderObjectManager::add_texture(tex2D, name);
 		}
 	};

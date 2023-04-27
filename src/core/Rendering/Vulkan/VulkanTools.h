@@ -64,7 +64,7 @@ static Image load_image_from_file(std::string_view filename)
 {
     int w, h, n;
     stbi_uc* data = stbi_load(filename.data(), &w, &h, &n, 0);
-
+    assert(data);
     return { ImageData(data, free), w, h, n };
 }
 

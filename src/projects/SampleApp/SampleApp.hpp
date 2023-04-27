@@ -225,7 +225,7 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 			m_imgui_renderer->m_ModelRendererMetallicRoughnessTextureId[currentImageIdx]
 		);
 		//m_UI.ShowFrameTimeGraph(FrameStats::History.data(), FrameStats::History.size());
-		//m_UI.ShowCameraSettings(&m_Camera);
+		m_UI.ShowCameraSettings(&m_Camera);
 		m_UI.ShowInspector();
 		m_UI.End();
 	}
