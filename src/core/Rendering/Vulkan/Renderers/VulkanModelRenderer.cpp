@@ -173,14 +173,6 @@ void VulkanModelRenderer::create_attachments()
 {
 	VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
 
-	/* Input attachments */
-	Image im = load_image_from_file("../../../data/textures/default.png");
-	m_default_texture.init(VK_FORMAT_R8G8B8A8_UNORM, im.w, im.h);
-	m_default_texture.create_from_data(im.data.get(), "Default Checkerboard Texture");
-	//m_default_texture.upload_data(context.device, im.data.get());
-	m_default_texture.create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
-	m_default_texture.transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
 	/* Write Attachments */
 	/* Create G-Buffers for Albedo, Normal, Depth for each Frame */
 	for (int i = 0; i < NUM_FRAMES; i++)
@@ -224,7 +216,7 @@ void VulkanModelRenderer::create_buffers()
 VulkanModelRenderer::~VulkanModelRenderer()
 {
 	vkDeviceWaitIdle(context.device);
-	m_default_texture.destroy(context.device);
+	
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
 		m_Albedo_Output[i].destroy(context.device);

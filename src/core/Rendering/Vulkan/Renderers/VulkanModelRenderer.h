@@ -49,7 +49,6 @@ private:
 	VkFormat m_DepthAttachmentFormat	= VK_FORMAT_D16_UNORM;
 
 	VkSampler m_TextureSampler;
-	Texture2D m_default_texture;
 
 	VkPipeline			m_gfx_pipeline = VK_NULL_HANDLE;
 	VkDescriptorPool m_descriptor_pool;

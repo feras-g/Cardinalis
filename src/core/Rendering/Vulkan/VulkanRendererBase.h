@@ -141,8 +141,8 @@ public:
 		/* Setup descriptor set */
 		for (VulkanMesh& mesh : meshes)
 		{
-			VkDescriptorBufferInfo sbo_vtx_info = { .buffer = mesh.m_vertex_index_buffer.buffer, .offset = 0, .range = mesh.m_VtxBufferSizeInBytes };
-			VkDescriptorBufferInfo sbo_idx_info = { .buffer = mesh.m_vertex_index_buffer.buffer, .offset = mesh.m_VtxBufferSizeInBytes, .range = mesh.m_IdxBufferSizeInBytes };
+			VkDescriptorBufferInfo sbo_vtx_info = { .buffer = mesh.m_vertex_index_buffer.buffer, .offset = 0, .range = mesh.m_vertex_buf_size_bytes };
+			VkDescriptorBufferInfo sbo_idx_info = { .buffer = mesh.m_vertex_index_buffer.buffer, .offset = mesh.m_vertex_buf_size_bytes, .range = mesh.m_index_buf_size_bytes };
 			mesh.descriptor_set = create_descriptor_set(RenderObjectManager::descriptor_pool, RenderObjectManager::mesh_descriptor_set_layout);
 			std::vector<VkWriteDescriptorSet> write_desc = {};
 			write_desc.push_back(BufferWriteDescriptorSet(mesh.descriptor_set, 0, &sbo_vtx_info, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
@@ -160,6 +160,18 @@ public:
 		drawable_from_name.insert({ name, drawable_idx });
 		drawable_datas_from_name.insert({ name, transform_data_idx });
 		drawable_names.push_back(name);
+	}
+
+	static inline size_t add_texture(const std::string& filename, VkFormat format = VK_FORMAT_R8G8B8A8_UNORM)
+	{
+		std::string name = filename.substr(filename.find_last_of('/') + 1);
+		Image im = load_image_from_file(filename);
+		Texture2D tex2D;
+		tex2D.init(format, im.w, im.h);
+		tex2D.create_from_data(im.data.get(), name);
+		tex2D.create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, tex2D.info.mipLevels });
+
+		return add_texture(tex2D, name);
 	}
 
 	static inline size_t add_texture(const Texture2D& texture, const std::string& name)

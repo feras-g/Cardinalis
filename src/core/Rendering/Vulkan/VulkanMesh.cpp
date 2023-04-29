@@ -11,67 +11,82 @@
 #include <assimp/cimport.h>
 #include <assimp/version.h>
 
+#define CGLTF_IMPLEMENTATION
+#include "cgltf.h"
 
-void VulkanMesh::create_from_file(const char* filename)
+static std::string base_path;
+
+void VulkanMesh::create_from_file(const std::string& filename)
 {
-	const aiScene* scene = aiImportFile(filename, aiProcess_Triangulate);
-
-	assert(scene->HasMeshes());
+	std::string ext = filename.substr(filename.find_last_of('.') + 1);
+	LOG_INFO("Filename extension: {}", ext);
 	
-	// Load vertices
-	std::vector<VertexData> vertices;
-	std::vector<unsigned int> indices;
-
-	const aiVector3D vec3_zero { 0.0f, 0.0f, 0.0f };
-	for (size_t meshIdx = 0; meshIdx < scene->mNumMeshes; meshIdx++)
+	if (ext == "glb" || ext == "gltf")
 	{
-		const aiMesh* mesh = scene->mMeshes[meshIdx];
+		create_from_file_gltf(filename);
+	}
+	else
+	{
+		const aiScene* scene = aiImportFile(filename.data(), aiProcess_Triangulate);
 
-		/* vertices */
-		for (size_t i = 0; i < mesh->mNumVertices; i++)
+		assert(scene->HasMeshes());
+
+		// Load vertices
+		std::vector<VertexData> vertices;
+		std::vector<unsigned int> indices;
+
+		const aiVector3D vec3_zero{ 0.0f, 0.0f, 0.0f };
+		for (size_t meshIdx = 0; meshIdx < scene->mNumMeshes; meshIdx++)
 		{
-			const aiVector3D& p = mesh->mVertices[i];
-			const aiVector3D& n = mesh->HasNormals() ? mesh->mNormals[i] : vec3_zero;
-			const aiVector3D& uv = mesh->HasTextureCoords(i) ? mesh->mTextureCoords[0][i] : p; 
+			const aiMesh* mesh = scene->mMeshes[meshIdx];
 
-			vertices.push_back({ .pos = {p.x, p.y, p.z}, .normal = {n.x, n.y, n.z}, .uv = {uv.x,  uv.y} });
+			/* vertices */
+			for (size_t i = 0; i < mesh->mNumVertices; i++)
+			{
+				const aiVector3D& p = mesh->mVertices[i];
+				const aiVector3D& n = mesh->HasNormals() ? mesh->mNormals[i] : vec3_zero;
+				const aiVector3D& uv = mesh->HasTextureCoords(i) ? mesh->mTextureCoords[0][i] : p;
+
+				vertices.push_back({ .pos = {p.x, p.y, p.z}, .normal = {n.x, n.y, n.z}, .uv = {uv.x,  uv.y} });
+			}
+
+			/* indices */
+			for (size_t faceIdx = 0; faceIdx < mesh->mNumFaces; faceIdx++)
+			{
+				const aiFace& face = mesh->mFaces[faceIdx];
+
+				indices.push_back(face.mIndices[0]);
+				indices.push_back(face.mIndices[1]);
+				indices.push_back(face.mIndices[2]);
+			}
 		}
 
-		/* indices */
-		for (size_t faceIdx = 0; faceIdx < mesh->mNumFaces; faceIdx++)
-		{
-			const aiFace& face = mesh->mFaces[faceIdx];
+		m_num_vertices = vertices.size();
+		m_num_indices = indices.size();
 
-			indices.push_back(face.mIndices[0]);
-			indices.push_back(face.mIndices[1]);
-			indices.push_back(face.mIndices[2]);
-		}
+		aiReleaseImport(scene);
+
+		m_index_buf_size_bytes = indices.size() * sizeof(unsigned int);
+		m_vertex_buf_size_bytes = vertices.size() * sizeof(VertexData);
+
+		CreateIndexVertexBuffer(m_vertex_index_buffer, vertices.data(), m_vertex_buf_size_bytes, indices.data(), m_index_buf_size_bytes);
 	}
 
-	m_NumVertices = vertices.size();
-	m_NumIndices = indices.size();
-
-	aiReleaseImport(scene);
-
-	m_IdxBufferSizeInBytes = indices.size()  * sizeof(unsigned int);
-	m_VtxBufferSizeInBytes = vertices.size() * sizeof(VertexData);
-
-	CreateIndexVertexBuffer(m_vertex_index_buffer, vertices.data(), m_VtxBufferSizeInBytes, indices.data(), m_IdxBufferSizeInBytes);
 }
 
 void VulkanMesh::create_from_data(std::span<SimpleVertexData> vertices, std::span<unsigned int> indices)
 {
-	m_NumVertices = vertices.size();
-	m_NumIndices = indices.size();
-	m_IdxBufferSizeInBytes = indices.size() * sizeof(unsigned int);
-	m_VtxBufferSizeInBytes = vertices.size() * sizeof(VertexData);
+	m_num_vertices = vertices.size();
+	m_num_indices = indices.size();
+	m_index_buf_size_bytes = indices.size() * sizeof(unsigned int);
+	m_vertex_buf_size_bytes = vertices.size() * sizeof(VertexData);
 
-	CreateIndexVertexBuffer(m_vertex_index_buffer, vertices.data(), m_VtxBufferSizeInBytes, indices.data(), m_IdxBufferSizeInBytes);
+	CreateIndexVertexBuffer(m_vertex_index_buffer, vertices.data(), m_vertex_buf_size_bytes, indices.data(), m_index_buf_size_bytes);
 }
 
 void Drawable::draw(VkCommandBuffer cmd_buffer) const
 {
-	vkCmdDraw(cmd_buffer, mesh_handle->m_NumIndices, 1, 0, 0);
+	vkCmdDraw(cmd_buffer, mesh_handle->m_num_indices, 1, 0, 0);
 }
 
 void Drawable::draw_primitives(VkCommandBuffer cmd_buffer) const
@@ -88,17 +103,6 @@ Drawable::Drawable(VulkanMesh* mesh, bool b_has_primitives) : mesh_handle(mesh),
 {
 
 }	
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-#define CGLTF_IMPLEMENTATION
-#include "cgltf.h"
-
-static std::string base_path;
 
 static void load_vertices(cgltf_primitive* primitive, GeometryData& geometry)
 {
@@ -196,118 +200,134 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 {
 	// https://kcoley.github.io/glTF/extensions/2.0/Khronos/KHR_materials_pbrSpecularGlossiness/
 
-	cgltf_material* gltf_mat = gltf_primitive->material;
-	
-	Material material;
-
-	/*
-		Base Color
-		Normal
-		MetallicRoughness
-		Emissive
-	*/
-
-	std::function load_tex = [](cgltf_texture* tex, VkFormat format) -> size_t
+	uint32_t placeholder_tex_id = (uint32_t)RenderObjectManager::get_texture("placeholder.png").first;
+	std::string material_name = "Unnamed Material " + std::to_string(RenderObjectManager::materials.size());
+	static const Material default_material
 	{
-		char* name = tex->image->uri;
-		std::pair<size_t, Texture2D*> tex_object = RenderObjectManager::get_texture(name);
-		if (tex_object.second != nullptr)
-		{
-			return tex_object.first;
-		}
-		else
-		{
-			Image im = load_image_from_file(base_path + tex->image->uri);
-			Texture2D tex2D;
-			tex2D.init(format, im.w, im.h);
-			tex2D.create_from_data(im.data.get(), name);
-			tex2D.create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, tex2D.info.mipLevels });
-			return RenderObjectManager::add_texture(tex2D, name);
-		}
+		.tex_base_color_id = (uint32_t)RenderObjectManager::get_texture("albedo_default.png").first,
+		.tex_metallic_roughness_id = placeholder_tex_id,
+		.tex_normal_id = placeholder_tex_id,
+		.tex_emissive_id = placeholder_tex_id,
+		.base_color_factor = glm::vec4(1.0f),
+		.metallic_factor = 0.0f,
+		.roughness_factor = 1.0f,
 	};
 
-	cgltf_texture* tex_normal = gltf_mat->normal_texture.texture;
-	cgltf_texture* tex_emissive = gltf_mat->emissive_texture.texture;
+	cgltf_material* gltf_mat = gltf_primitive->material;
 
-	if (tex_normal)
+	Material material;
+	if (!gltf_mat)
 	{
-		material.tex_normal_id = load_tex(tex_normal, tex_normal_format);
+		material = default_material;
 	}
-
-	if (tex_emissive)
+	else
 	{
-		material.tex_emissive_id = load_tex(tex_emissive, tex_emissive_format);
-	}
+		/*
+			Base Color
+			Normal
+			MetallicRoughness
+			Emissive
+		*/
 
-	if (gltf_mat->has_pbr_metallic_roughness)
-	{
-		//LOG_DEBUG("Material Workflow: Metallic/Roughness, Name : {0}", gltf_material->name ? gltf_material->name : "Unnamed");
-
-		cgltf_texture* tex_base_color = gltf_mat->pbr_metallic_roughness.base_color_texture.texture;
-		cgltf_texture* tex_metallic_roughness = gltf_mat->pbr_metallic_roughness.metallic_roughness_texture.texture;
-
-		if (tex_base_color)
+		std::function load_tex = [](cgltf_texture* tex, VkFormat format) -> size_t
 		{
-			material.tex_base_color_id = load_tex(tex_base_color, tex_base_color_format);
+			char* name = tex->image->uri;
+			std::pair<size_t, Texture2D*> tex_object = RenderObjectManager::get_texture(name);
+			if (tex_object.second != nullptr)
+			{
+				return tex_object.first;
+			}
+			else
+			{
+				return RenderObjectManager::add_texture(base_path + tex->image->uri, format);
+			}
+		};
+
+		cgltf_texture* tex_normal = gltf_mat->normal_texture.texture;
+		cgltf_texture* tex_emissive = gltf_mat->emissive_texture.texture;
+
+		if (tex_normal)
+		{
+			material.tex_normal_id = load_tex(tex_normal, tex_normal_format);
 		}
 
-		if (tex_metallic_roughness)
+		if (tex_emissive)
 		{
-			material.tex_metallic_roughness_id = load_tex(tex_metallic_roughness, tex_metallic_roughness_format);
+			material.tex_emissive_id = load_tex(tex_emissive, tex_emissive_format);
 		}
 
-		/* Factors */
+		if (gltf_mat->has_pbr_metallic_roughness)
 		{
-			float* v = gltf_mat->pbr_metallic_roughness.base_color_factor;
-			material.base_color_factor = glm::vec4(v[0], v[1], v[2], v[3]);
-			material.metallic_factor = gltf_mat->pbr_metallic_roughness.metallic_factor;
-			material.roughness_factor = gltf_mat->pbr_metallic_roughness.roughness_factor;
+			//LOG_DEBUG("Material Workflow: Metallic/Roughness, Name : {0}", gltf_material->name ? gltf_material->name : "Unnamed");
+
+			cgltf_texture* tex_base_color = gltf_mat->pbr_metallic_roughness.base_color_texture.texture;
+			cgltf_texture* tex_metallic_roughness = gltf_mat->pbr_metallic_roughness.metallic_roughness_texture.texture;
+
+			if (tex_base_color)
+			{
+				material.tex_base_color_id = load_tex(tex_base_color, tex_base_color_format);
+			}
+
+			if (tex_metallic_roughness)
+			{
+				material.tex_metallic_roughness_id = load_tex(tex_metallic_roughness, tex_metallic_roughness_format);
+			}
+
+			/* Factors */
+			{
+				float* v = gltf_mat->pbr_metallic_roughness.base_color_factor;
+				material.base_color_factor = glm::vec4(v[0], v[1], v[2], v[3]);
+				material.metallic_factor = gltf_mat->pbr_metallic_roughness.metallic_factor;
+				material.roughness_factor = gltf_mat->pbr_metallic_roughness.roughness_factor;
+			}
+		}
+
+		if (gltf_mat->has_pbr_specular_glossiness)
+		{
+			assert(false);
+
+			////LOG_DEBUG("MATERIAL WORKFLOW: Specular-Glossiness, Name : {0}", material->name);
+
+			//materialProperties.type = MaterialWorkflowType::SpecularGlossiness;
+			//materialProperties.specularGlossiness =
+			//{
+			//	.DiffuseFactor = DirectX::XMFLOAT4(gltf_mat->pbr_specular_glossiness.diffuse_factor),
+			//	.SpecularFactor = DirectX::XMFLOAT3(gltf_mat->pbr_specular_glossiness.specular_factor),
+			//	.GlossinessFactor = gltf_mat->pbr_specular_glossiness.glossiness_factor
+			//};
+
+			//// Texture loading
+			//cgltf_texture* diffuseTexture = gltf_mat->pbr_specular_glossiness.diffuse_texture.texture;
+			//cgltf_texture* specularGlossinessTexture = gltf_mat->pbr_specular_glossiness.specular_glossiness_texture.texture;
+
+			//if (diffuseTexture != nullptr)
+			//{
+			//	materialProperties.specularGlossiness.hDiffuseTexture = LoadImageFile(data, m_MeshRootPath, diffuseTexture->image);
+			//	materialProperties.specularGlossiness.hasDiffuse = true;
+
+			//}
+
+			//if (specularGlossinessTexture != nullptr)
+			//{
+			//	materialProperties.specularGlossiness.hSpecularGlossinessTexture = LoadImageFile(data, m_MeshRootPath, specularGlossinessTexture->image);
+			//	materialProperties.specularGlossiness.hasSpecularGlossiness = true;
+
+			//}
+
+			//SetMaterial(data, primitive, gltf_mat, materialProperties);
+		}
+
+		//std::size_t hash = std::hash<Material>{}(material);
+		//auto res = material_hashes.insert(hash);
+		//if (res.second == false)
+		if (gltf_mat->name)
+		{
+			material_name = gltf_mat->name;
 		}
 	}
 
-	if (gltf_mat->has_pbr_specular_glossiness)
-	{
-		assert(false);
-
-		////LOG_DEBUG("MATERIAL WORKFLOW: Specular-Glossiness, Name : {0}", material->name);
-
-		//materialProperties.type = MaterialWorkflowType::SpecularGlossiness;
-		//materialProperties.specularGlossiness =
-		//{
-		//	.DiffuseFactor = DirectX::XMFLOAT4(gltf_mat->pbr_specular_glossiness.diffuse_factor),
-		//	.SpecularFactor = DirectX::XMFLOAT3(gltf_mat->pbr_specular_glossiness.specular_factor),
-		//	.GlossinessFactor = gltf_mat->pbr_specular_glossiness.glossiness_factor
-		//};
-
-		//// Texture loading
-		//cgltf_texture* diffuseTexture = gltf_mat->pbr_specular_glossiness.diffuse_texture.texture;
-		//cgltf_texture* specularGlossinessTexture = gltf_mat->pbr_specular_glossiness.specular_glossiness_texture.texture;
-
-		//if (diffuseTexture != nullptr)
-		//{
-		//	materialProperties.specularGlossiness.hDiffuseTexture = LoadImageFile(data, m_MeshRootPath, diffuseTexture->image);
-		//	materialProperties.specularGlossiness.hasDiffuse = true;
-
-		//}
-
-		//if (specularGlossinessTexture != nullptr)
-		//{
-		//	materialProperties.specularGlossiness.hSpecularGlossinessTexture = LoadImageFile(data, m_MeshRootPath, specularGlossinessTexture->image);
-		//	materialProperties.specularGlossiness.hasSpecularGlossiness = true;
-
-		//}
-
-		//SetMaterial(data, primitive, gltf_mat, materialProperties);
-	}
-
-	//std::size_t hash = std::hash<Material>{}(material);
-	//auto res = material_hashes.insert(hash);
-	//if (res.second == false)
-	{
-		std::string material_name = gltf_mat->name ? gltf_mat->name : "Unnamed Material " + std::to_string(RenderObjectManager::materials.size());
-		primitive.material_id = RenderObjectManager::add_material(material, material_name);
-		LOG_DEBUG("Loaded material named {0}, workflow : (Metallic/Roughness)", material_name);
-	}
+	primitive.material_id = RenderObjectManager::add_material(material, material_name);
+	LOG_DEBUG("Loaded material named {0}, workflow : (Metallic/Roughness)", material_name);
 }
 
 static void load_primitive(cgltf_primitive* primitive, GeometryData& geometry)
@@ -335,6 +355,7 @@ static void process_node(bool bIsChild, cgltf_node* p_Node, GeometryData& geomet
 	{
 		glm::mat4 mesh_world_mat;
 		cgltf_node_transform_world(p_Node, glm::value_ptr(mesh_world_mat));
+		geometry.world_mat *= mesh_world_mat;
 
 		glm::mat4 mesh_local_mat;
 		cgltf_node_transform_local(p_Node, glm::value_ptr(mesh_local_mat));
@@ -384,13 +405,13 @@ void VulkanMesh::create_from_file_gltf(const std::string& filename)
 		////LOG_INFO("# Textures : {0}", geometry.textures.size());
 		//LOG_INFO("# primitives : {0}", geometry_data.primitives.size());
 
-		m_NumVertices = geometry_data.vertices.size();
-		m_NumIndices  = geometry_data.indices.size();
+		m_num_vertices = geometry_data.vertices.size();
+		m_num_indices  = geometry_data.indices.size();
 
-		m_IdxBufferSizeInBytes = m_NumIndices * sizeof(unsigned int);
-		m_VtxBufferSizeInBytes = m_NumVertices * sizeof(VertexData);
+		m_index_buf_size_bytes = m_num_indices * sizeof(unsigned int);
+		m_vertex_buf_size_bytes = m_num_vertices * sizeof(VertexData);
 
-		CreateIndexVertexBuffer(m_vertex_index_buffer, geometry_data.vertices.data(), m_VtxBufferSizeInBytes, geometry_data.indices.data(), m_IdxBufferSizeInBytes);
+		CreateIndexVertexBuffer(m_vertex_index_buffer, geometry_data.vertices.data(), m_vertex_buf_size_bytes, geometry_data.indices.data(), m_index_buf_size_bytes);
 
 		cgltf_free(data);
 	}

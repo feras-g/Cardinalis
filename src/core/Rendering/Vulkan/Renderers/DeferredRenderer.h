@@ -3,44 +3,7 @@
 #include "Rendering/Vulkan/RenderPass.h"
 #include "Rendering/Vulkan/VulkanMesh.h"
 #include "Rendering/Vulkan/VulkanRenderInterface.h"
-#include <random>
-
-struct PointLight
-{
-	glm::vec4 position{};
-	glm::vec4 color{};
-	glm::vec4 props{};
-};
-
-struct DirectionalLight
-{
-	glm::vec4 position{0, 1, 0, 1};
-	glm::vec4 color{};
-};
-
-struct LightData
-{
-	DirectionalLight directional_light;
-};
-
-struct LightManager
-{
-	void init(size_t x, size_t y);
-	void init_ubo();
-	void update_ubo();
-
-	LightData m_light_data;
-	Buffer m_uniform_buffer;
-
-	void destroy() { destroy_buffer(m_uniform_buffer); }
-};
-
-static const VkFormat color_attachment_format = VK_FORMAT_R8G8B8A8_SRGB;
-/* 
-	Number of g-buffers to read from : 
-	0: Albedo / 1: View Space Normal / 2: Depth / 3: Normal map / 4: Metallic/Roughness
-*/
-static constexpr uint32_t num_gbuffers = 5; 
+#include "Rendering/LightManager.h"
 
 struct DeferredRenderer
 { 

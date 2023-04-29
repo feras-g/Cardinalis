@@ -51,13 +51,13 @@ struct VulkanMesh
 {
 	VulkanMesh() = default;
 	VulkanMesh(const char* filename) { create_from_file(filename); }
-	void create_from_file(const char* filename);
+	void create_from_file(const std::string& filename);
 	void create_from_file_gltf(const std::string& filename);
 	void create_from_data(std::span<SimpleVertexData> vertices, std::span<unsigned int> indices);
-	size_t m_VtxBufferSizeInBytes;
-	size_t m_IdxBufferSizeInBytes;
-	size_t m_NumVertices;
-	size_t m_NumIndices;
+	size_t m_vertex_buf_size_bytes;
+	size_t m_index_buf_size_bytes;
+	size_t m_num_vertices;
+	size_t m_num_indices;
 
 	/* Non-interleaved vertex and index data. Used for vertex pulling. */
 	Buffer m_vertex_index_buffer;

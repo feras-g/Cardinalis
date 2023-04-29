@@ -3,6 +3,8 @@
 #include "Rendering/Vulkan/VulkanRendererBase.h"
 #include "Rendering/Vulkan/VulkanDebugUtils.h"
 
+static const VkFormat color_attachment_format = VK_FORMAT_R8G8B8A8_SRGB;
+
 const uint32_t num_descriptors = 4;
 
 void DeferredRenderer::init(
@@ -33,7 +35,7 @@ void DeferredRenderer::init(
 		m_dyn_renderpass[i].add_color_attachment(m_output_attachment[i].view);
 	}
 
-	m_light_manager.init(10, 10);
+	m_light_manager.init();
 
 	/* Create shader */
 	m_shader_deferred.load_from_file("Deferred.vert.spv", "Deferred.frag.spv");
@@ -83,25 +85,22 @@ void DeferredRenderer::create_uniform_buffers()
 
 void DeferredRenderer::update(size_t frame_idx)
 {
-	m_light_manager.update_ubo();
+	m_light_manager.update_ubo(nullptr);
 	//update_descriptor_set(frame_idx);
 }
 
 void DeferredRenderer::update_descriptor_set(size_t frame_idx)
 {
-	/* GBuffers */
-	std::array<VkDescriptorImageInfo, num_gbuffers>  descriptor_image_infos = {};
-	descriptor_image_infos[0].imageView = m_g_buffers_albedo[frame_idx]->view;
-	descriptor_image_infos[1].imageView = m_g_buffers_normal[frame_idx]->view;
-	descriptor_image_infos[2].imageView = m_g_buffers_depth[frame_idx]->view;
-	descriptor_image_infos[3].imageView = m_g_buffers_normal_map[frame_idx]->view;
-	descriptor_image_infos[4].imageView = m_g_buffers_metallic_roughness[frame_idx]->view;
-
-	for (int gbuffer_idx = 0; gbuffer_idx < num_gbuffers; gbuffer_idx++)
-	{
-		descriptor_image_infos[gbuffer_idx].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		descriptor_image_infos[gbuffer_idx].sampler = VulkanRendererBase::s_SamplerClampLinear;
-	}
+	/*
+		Number of g-buffers to read from :
+		0: Albedo / 1: View Space Normal / 2: Depth / 3: Normal map / 4: Metallic/Roughness
+	*/
+	std::vector<VkDescriptorImageInfo>  descriptor_image_infos = {};
+	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampLinear, m_g_buffers_albedo[frame_idx]->view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampLinear, m_g_buffers_normal[frame_idx]->view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampLinear, m_g_buffers_depth[frame_idx]->view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampLinear, m_g_buffers_normal_map[frame_idx]->view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampLinear, m_g_buffers_metallic_roughness[frame_idx]->view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
 
 	std::vector<VkWriteDescriptorSet> write_descriptor_set = {};
 	write_descriptor_set.push_back(ImageWriteDescriptorSet(m_descriptor_set[frame_idx], 0, &descriptor_image_infos[0]));
@@ -139,57 +138,4 @@ void DeferredRenderer::render(size_t current_backbuffer_idx, VkCommandBuffer cmd
 	m_dyn_renderpass[current_backbuffer_idx].end(cmd_buffer);
 
 	m_output_attachment[current_backbuffer_idx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-}
-
-float randomFloat(float a, float b) 
-{
-	return a + (b - a) * ((float)rand() / RAND_MAX);
-}
-
-static glm::vec4 my_colors[3] = { glm::vec4(1,0,0,1),  glm::vec4(0,1,0,1), glm::vec4(0,0,1,1) };
-
-glm::vec4 randomPosition(glm::vec3 min, glm::vec3 max) 
-{
-	glm::vec4 out;
-	out.x = randomFloat(min.x, max.x);
-	out.y = randomFloat(min.y, max.y);
-	out.z = randomFloat(min.z, max.z);
-	out.w = 1.0;
-	return out;
-}
-
-glm::vec4 randomPositionPoisson(float lambda, float radius)
-{
-	std::random_device rd;
-	std::mt19937 gen(rd());
-	std::poisson_distribution<int> poisson(lambda);
-
-	float x = poisson(gen);
-	float y = poisson(gen);
-	float z = poisson(gen);
-
-	glm::vec4 position(x, 0.25, z, 1.0);
-	position *= radius;
-
-	return position;
-}
-
-/* Light manager */
-void LightManager::init(size_t w, size_t h)
-{
-	/* Create and fill UBO data */
-	init_ubo();
-}
-
-void LightManager::init_ubo()
-{
-	create_uniform_buffer(m_uniform_buffer, sizeof(m_light_data));
-	update_ubo();
-}
-void LightManager::update_ubo()
-{
-	void* pMappedData = nullptr;
-	VK_CHECK(vkMapMemory(context.device, m_uniform_buffer.memory, 0, sizeof(m_light_data), 0, &pMappedData));
-	memcpy(pMappedData, &m_light_data.directional_light, sizeof(m_light_data.directional_light));
-	vkUnmapMemory(context.device, m_uniform_buffer.memory);
 }

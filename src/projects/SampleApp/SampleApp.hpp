@@ -46,11 +46,12 @@ protected:
 
 void SampleApp::Initialize()
 {
-	VulkanMesh sponza_gltf;
-	sponza_gltf.create_from_file_gltf("../../../data/models/local/sponza-gltf-pbr/sponza.glb");
-	RenderObjectManager::add_mesh(sponza_gltf, "sponza");
+	RenderObjectManager::add_texture("../../../data/textures/albedo_default.png");
+	RenderObjectManager::add_texture("../../../data/textures/placeholder.png");
+
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/sponza-gltf-pbr/sponza.glb"), "sponza");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/cube.obj"), "cube");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/plane.obj"), "plane");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/plane.glb"), "plane");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/suzanne.obj"), "suzanne");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/cow.obj"), "cow");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/bunny.obj"), "bunny");
@@ -59,7 +60,7 @@ void SampleApp::Initialize()
 	{
 		glm::vec4(0,0,0,1),
 		glm::vec4(1,1,1,1),
-		glm::vec4(1,1,1, 1.0f)
+		glm::vec4(1,1,1, 0.0f)
 	};
 	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("sponza"), true), "Sponza", transform);
 
