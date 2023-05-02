@@ -5,7 +5,7 @@
 
 #define SPIRV_FOURCC 0x07230203
 
-static std::string baseSpirvFolder("../../../data/shaders/vulkan/spirv/");
+static std::string base_spirv_folder("../../../data/shaders/vulkan/spirv/");
 VulkanShader::VulkanShader(const char* vertexShader, const char* fragShader)
 {
 	load_from_file(vertexShader, fragShader);
@@ -26,7 +26,7 @@ bool VulkanShader::LoadModule(const VkShaderStageFlagBits stage, const char* fil
 	}
 
 	FILE* fp;
-	errno_t fopenresult = fopen_s(&fp, (baseSpirvFolder + filename).c_str(), "rb");
+	errno_t fopenresult = fopen_s(&fp, (base_spirv_folder + filename).c_str(), "rb");
 	
 	if (fp == nullptr)
 	{

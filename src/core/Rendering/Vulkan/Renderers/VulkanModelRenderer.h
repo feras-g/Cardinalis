@@ -3,6 +3,7 @@
 #include "Rendering/Vulkan/VulkanRendererBase.h"
 #include "Rendering/Vulkan/VulkanMesh.h"
 #include "Rendering/Vulkan/RenderPass.h"
+#include "Rendering/LightManager.h"
 
 class VulkanShader;
 
@@ -11,42 +12,37 @@ class VulkanModelRenderer
 	friend class VulkanImGuiRenderer;
 public:
 	explicit VulkanModelRenderer();
-	void render(size_t currentImageIdx, VkCommandBuffer cmdBuffer);
+	void render(size_t currentImageIdx, VkCommandBuffer cmd_buffer);
 
-	void draw_scene(VkCommandBuffer cmdBuffer, size_t current_frame_idx);
-	void update_buffers(const VulkanRendererBase::PerFrameData& frame_data);
+	void draw_scene(VkCommandBuffer cmdBuffer, size_t current_frame_idx, const Drawable& drawable);
+	void update(size_t frame_idx, const VulkanRendererBase::PerFrameData& frame_data);
 	void update_descriptor_set(VkDevice device, size_t frame_idx);
 	void create_attachments();
 	void create_buffers();
 
-	// Offscreen images
-	std::array<Texture2D, NUM_FRAMES> m_Albedo_Output;
-	std::array<Texture2D, NUM_FRAMES> m_Normal_Output;
-	std::array<Texture2D, NUM_FRAMES> m_Depth_Output;
-	std::array<Texture2D, NUM_FRAMES> m_NormalMap_Output;
-	std::array<Texture2D, NUM_FRAMES> m_MetallicRoughness_Output;
-
+	/* G-Buffers for Deferred rendering */
+	std::array<Texture2D, NUM_FRAMES> m_gbuffer_albdedo;
+	std::array<Texture2D, NUM_FRAMES> m_gbuffer_normal;
+	std::array<Texture2D, NUM_FRAMES> m_gbuffer_depth;
+	std::array<Texture2D, NUM_FRAMES> m_gbuffer_directional_shadow;
+	std::array<Texture2D, NUM_FRAMES> m_gbuffer_metallic_roughness;
 
 	vk::DynamicRenderPass m_dyn_renderpass[NUM_FRAMES];
-	
-	/** Size in pixels of the offscreen buffers */
-	static const uint32_t render_width  = 2048;
-	static const uint32_t render_height = 2048;
 
-	static Buffer m_uniform_buffer;
+	static uint32_t render_width;
+	static uint32_t render_height;
 
 	~VulkanModelRenderer();
 private:
-	std::unique_ptr<VulkanShader> m_Shader;
+	std::unique_ptr<VulkanShader> m_shader;
 
-	std::vector<VkFormat> m_ColorAttachmentFormats = 
+	std::vector<VkFormat> m_formats = 
 	{ 
 		tex_base_color_format,				/* Base color / Albedo */
 		VK_FORMAT_R16G16B16A16_SFLOAT,		/* Vertex normal */
-		tex_normal_format,					/* Normal map */
 		tex_metallic_roughness_format,		/* Metallic roughness */
 	};
-	VkFormat m_DepthAttachmentFormat	= VK_FORMAT_D16_UNORM;
+	VkFormat m_depth_format	= VK_FORMAT_D16_UNORM;
 
 	VkSampler m_TextureSampler;
 

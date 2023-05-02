@@ -1,10 +1,10 @@
 #version 460
+#include "Headers/LightDefinitions.glsl"
 
 layout(location = 0) out vec4 uv;
 layout(location = 1) out vec4 normalWS;
 layout(location = 2) out vec4 positionCS;
 layout(location = 3) out vec4 depthCS;
-
     
 struct Vertex
 {
@@ -29,8 +29,6 @@ layout(set = 2, binding = 0) uniform FrameData
     mat4 inv_view_proj;
     vec4 view_pos;
 } frame_data;
-
-
 
 void main()
 {

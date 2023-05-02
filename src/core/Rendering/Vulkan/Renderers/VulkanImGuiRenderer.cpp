@@ -3,6 +3,7 @@
 #include "Rendering/Vulkan/VulkanRenderInterface.h"
 #include "Rendering/Vulkan/Renderers/VulkanModelRenderer.h"
 #include "Rendering/Vulkan/Renderers/DeferredRenderer.h"
+#include "Rendering/Vulkan/Renderers/ShadowRenderer.h"
 #include "Rendering/Vulkan/VulkanShader.h"
 #include "glm/mat4x4.hpp"
 #include "glm/gtc/matrix_transform.hpp"
@@ -23,7 +24,10 @@ constexpr uint32_t numStorageBuffers   = 2;
 constexpr uint32_t numUniformBuffers   = 1;
 constexpr uint32_t numCombinedSamplers = 1;
 
-void VulkanImGuiRenderer::Initialize(const VulkanModelRenderer& model_renderer, const DeferredRenderer& deferred_renderer)
+void VulkanImGuiRenderer::init(
+	const VulkanModelRenderer& model_renderer, const DeferredRenderer& deferred_renderer,
+	const ShadowRenderer& shadow_renderer
+)
 {
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -42,6 +46,7 @@ void VulkanImGuiRenderer::Initialize(const VulkanModelRenderer& model_renderer, 
 	// [3] [4] : Color output of model's renderer for Frame 0 / Frame 1
 	// [5] [6] : Normal output of model's renderer for Frame 0 / Frame 1
 	// [7] [8] : Depth output of model's renderer for Frame 0 / Frame 1
+	// [9] [10] : Shadow map output of shadow renderer for Frame 0 / Frame 1
 
 	int tex_id = 0;
 	for (size_t i = 0; i < deferred_renderer.m_output_attachment.size(); i++)
@@ -50,34 +55,40 @@ void VulkanImGuiRenderer::Initialize(const VulkanModelRenderer& model_renderer, 
 		m_Textures.push_back(deferred_renderer.m_output_attachment[i]);
 	}
 
-	for (size_t i = 0; i < model_renderer.m_Albedo_Output.size(); i++)
+	for (size_t i = 0; i < model_renderer.m_gbuffer_albdedo.size(); i++)
 	{
 		m_ModelRendererColorTextureId[i] = ++tex_id;
-		m_Textures.push_back(model_renderer.m_Albedo_Output[i]);
+		m_Textures.push_back(model_renderer.m_gbuffer_albdedo[i]);
 	}
 
-	for (size_t i = 0; i < model_renderer.m_Normal_Output.size(); i++)
+	for (size_t i = 0; i < model_renderer.m_gbuffer_normal.size(); i++)
 	{
 		m_ModelRendererNormalTextureId[i] = ++tex_id;
-		m_Textures.push_back(model_renderer.m_Normal_Output[i]);
+		m_Textures.push_back(model_renderer.m_gbuffer_normal[i]);
 	}
 
-	for (size_t i = 0; i < model_renderer.m_Depth_Output.size(); i++)
+	for (size_t i = 0; i < model_renderer.m_gbuffer_depth.size(); i++)
 	{
 		m_ModelRendererDepthTextureId[i] = ++tex_id;
-		m_Textures.push_back(model_renderer.m_Depth_Output[i]);
+		m_Textures.push_back(model_renderer.m_gbuffer_depth[i]);
 	}
 
-	for (size_t i = 0; i < model_renderer.m_NormalMap_Output.size(); i++)
+	for (size_t i = 0; i < model_renderer.m_gbuffer_directional_shadow.size(); i++)
 	{
 		m_ModelRendererNormalMapTextureId[i] = ++tex_id;
-		m_Textures.push_back(model_renderer.m_NormalMap_Output[i]);
+		m_Textures.push_back(model_renderer.m_gbuffer_directional_shadow[i]);
 	}
 
-	for (size_t i = 0; i < model_renderer.m_MetallicRoughness_Output.size(); i++)
+	for (size_t i = 0; i < model_renderer.m_gbuffer_metallic_roughness.size(); i++)
 	{
 		m_ModelRendererMetallicRoughnessTextureId[i] = ++tex_id;
-		m_Textures.push_back(model_renderer.m_MetallicRoughness_Output[i]);
+		m_Textures.push_back(model_renderer.m_gbuffer_metallic_roughness[i]);
+	}
+	
+	for (size_t i = 0; i < NUM_FRAMES; i++)
+	{
+		m_ShadowRendererTextureId[i] = ++tex_id;
+		m_Textures.push_back(shadow_renderer.m_shadow_maps[i]);
 	}
 
 	// Shaders
@@ -117,7 +128,7 @@ void VulkanImGuiRenderer::render(size_t currentImageIdx, VkCommandBuffer cmdBuff
 	VkRect2D renderArea{ .offset {0, 0}, .extent { width, height } };
 
 	// Set viewport/scissor dynamically
-	SetViewportScissor(cmdBuffer, width, height);
+	set_viewport_scissor(cmdBuffer, width, height);
 
 	m_dyn_renderpass[currentImageIdx].begin(cmdBuffer, renderArea);
 
@@ -286,9 +297,9 @@ bool VulkanImGuiRenderer::CreatePipeline(VkDevice device)
 	std::array<VkDescriptorSetLayout, 1> layouts{ m_descriptor_set_layout };
 	m_pipeline_layout = create_pipeline_layout(device, layouts, 0, fragConstRangeSizeInBytes);
 
-	GraphicsPipeline::Flags pp_flags = GraphicsPipeline::Flags::NONE;
+	GfxPipeline::Flags pp_flags = GfxPipeline::Flags::NONE;
 	std::array<VkFormat, 1> color_formats = { ENGINE_SWAPCHAIN_COLOR_FORMAT };
-	GraphicsPipeline::CreateDynamic(*m_Shader.get(), color_formats, {}, pp_flags, m_pipeline_layout, &m_gfx_pipeline, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
+	GfxPipeline::CreateDynamic(*m_Shader.get(), color_formats, {}, pp_flags, m_pipeline_layout, &m_gfx_pipeline, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
 
 	return true;
 }

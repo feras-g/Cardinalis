@@ -14,7 +14,7 @@ struct DeferredRenderer
 	void init(
 		std::span<Texture2D> g_buffers_albedo, std::span<Texture2D> g_buffers_normal,
 		std::span<Texture2D> g_buffers_depth, std::span<Texture2D> g_buffers_normal_map,
-		std::span<Texture2D> g_buffers_metallic_roughness);
+		std::span<Texture2D> g_buffers_metallic_roughness, std::span<Texture2D> g_buffers_shadow_map, const LightManager& light_manager);
 	void render(size_t current_backbuffer_idx, VkCommandBuffer cmd_buffer);
 	void draw_scene(size_t current_backbuffer_idx, VkCommandBuffer cmd_buffer);
 	void create_uniform_buffers();
@@ -35,8 +35,7 @@ struct DeferredRenderer
 	std::array<Texture2D*, NUM_FRAMES> m_g_buffers_depth;
 	std::array<Texture2D*, NUM_FRAMES> m_g_buffers_normal_map;
 	std::array<Texture2D*, NUM_FRAMES> m_g_buffers_metallic_roughness;
-
-	LightManager m_light_manager;
-
+	std::array<Texture2D*, NUM_FRAMES> m_g_buffers_shadow_map;
+	LightManager const *h_light_manager;
 	Buffer m_material_info_ubo;
 };

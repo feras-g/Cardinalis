@@ -1,6 +1,12 @@
 #pragma once
 #include "Vulkan/VulkanResources.h"
+#include "Vulkan/VulkanRenderInterface.h"
+#include <glm/mat4x4.hpp>
+#include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
+
+/* Compute view proj matrix for directional light */
+static glm::mat4 compute_view_proj(glm::vec3 eye, glm::vec3 direction, glm::vec3 up, glm::vec3 view_volume_bbox_min, glm::vec3 view_volume_bbox_max);
 
 struct PointLight
 {
@@ -11,8 +17,9 @@ struct PointLight
 
 struct DirectionalLight
 {
-	glm::vec4 position{ 0, 1, 0, 1 };
+	glm::vec4 direction{ 0, 1, 0, 1 };
 	glm::vec4 color{};
+	glm::mat4 view_proj{};
 };
 
 struct LightData
@@ -23,9 +30,18 @@ struct LightData
 struct LightManager
 {
 	void init();
+	void update(LightData* data);
 	void update_ubo(LightData* data);
 	void destroy();
+	void update_view_proj();
 
 	LightData m_light_data;
-	Buffer m_uniform_buffer;
+	Buffer m_ubo[NUM_FRAMES];
+
+	/* */
+	glm::vec3 eye = { 0,0,0 };
+	glm::vec3 up  = { 0,0,1 };
+	glm::vec3 view_volume_bbox_min = { -5.0f, -5.0f,   0.1f };
+	glm::vec3 view_volume_bbox_max = {  5.0f,  5.0f,   75.0f };
+
 };

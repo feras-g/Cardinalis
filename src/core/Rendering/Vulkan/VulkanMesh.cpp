@@ -69,7 +69,7 @@ void VulkanMesh::create_from_file(const std::string& filename)
 		m_index_buf_size_bytes = indices.size() * sizeof(unsigned int);
 		m_vertex_buf_size_bytes = vertices.size() * sizeof(VertexData);
 
-		CreateIndexVertexBuffer(m_vertex_index_buffer, vertices.data(), m_vertex_buf_size_bytes, indices.data(), m_index_buf_size_bytes);
+		create_vertex_index_buffer(m_vertex_index_buffer, vertices.data(), m_vertex_buf_size_bytes, indices.data(), m_index_buf_size_bytes);
 	}
 
 }
@@ -81,7 +81,7 @@ void VulkanMesh::create_from_data(std::span<SimpleVertexData> vertices, std::spa
 	m_index_buf_size_bytes = indices.size() * sizeof(unsigned int);
 	m_vertex_buf_size_bytes = vertices.size() * sizeof(VertexData);
 
-	CreateIndexVertexBuffer(m_vertex_index_buffer, vertices.data(), m_vertex_buf_size_bytes, indices.data(), m_index_buf_size_bytes);
+	create_vertex_index_buffer(m_vertex_index_buffer, vertices.data(), m_vertex_buf_size_bytes, indices.data(), m_index_buf_size_bytes);
 }
 
 void Drawable::draw(VkCommandBuffer cmd_buffer) const
@@ -99,9 +99,9 @@ void Drawable::draw_primitives(VkCommandBuffer cmd_buffer) const
 	}
 }
 
-Drawable::Drawable(VulkanMesh* mesh, bool b_has_primitives) : mesh_handle(mesh), has_primitives(b_has_primitives)
+Drawable::Drawable(VulkanMesh* mesh, bool b_has_primitives) : mesh_handle(mesh)
 {
-
+	has_primitives = mesh->geometry_data.primitives.size() > 0;
 }	
 
 static void load_vertices(cgltf_primitive* primitive, GeometryData& geometry)
@@ -193,35 +193,20 @@ static void load_vertices(cgltf_primitive* primitive, GeometryData& geometry)
 	//////LOG_DEBUG("        Vertex buffer size : {0}", st_Mesh.vertices.size());
 }
 
-/* Retrieve material id from hash */
-std::unordered_set<size_t> material_hashes;
-
 static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 {
 	// https://kcoley.github.io/glTF/extensions/2.0/Khronos/KHR_materials_pbrSpecularGlossiness/
-
-	uint32_t placeholder_tex_id = (uint32_t)RenderObjectManager::get_texture("placeholder.png").first;
-	std::string material_name = "Unnamed Material " + std::to_string(RenderObjectManager::materials.size());
-	static const Material default_material
-	{
-		.tex_base_color_id = (uint32_t)RenderObjectManager::get_texture("albedo_default.png").first,
-		.tex_metallic_roughness_id = placeholder_tex_id,
-		.tex_normal_id = placeholder_tex_id,
-		.tex_emissive_id = placeholder_tex_id,
-		.base_color_factor = glm::vec4(1.0f),
-		.metallic_factor = 0.0f,
-		.roughness_factor = 1.0f,
-	};
 
 	cgltf_material* gltf_mat = gltf_primitive->material;
 
 	Material material;
 	if (!gltf_mat)
 	{
-		material = default_material;
+		primitive.material_id = RenderObjectManager::get_material("Default Material").first;
 	}
 	else
 	{
+		std::string material_name = "Unnamed Material " + std::to_string(RenderObjectManager::materials.size());
 		/*
 			Base Color
 			Normal
@@ -324,10 +309,11 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 		{
 			material_name = gltf_mat->name;
 		}
-	}
 
-	primitive.material_id = RenderObjectManager::add_material(material, material_name);
-	LOG_DEBUG("Loaded material named {0}, workflow : (Metallic/Roughness)", material_name);
+		primitive.material_id = RenderObjectManager::add_material(material, material_name);
+		LOG_DEBUG("Loaded material named {0}, workflow : (Metallic/Roughness)", material_name);
+	}
+	
 }
 
 static void load_primitive(cgltf_primitive* primitive, GeometryData& geometry)
@@ -359,7 +345,7 @@ static void process_node(bool bIsChild, cgltf_node* p_Node, GeometryData& geomet
 
 		glm::mat4 mesh_local_mat;
 		cgltf_node_transform_local(p_Node, glm::value_ptr(mesh_local_mat));
-
+		
 		for (int i = 0; i < p_Node->mesh->primitives_count; ++i)
 		{
 			load_primitive(&p_Node->mesh->primitives[i], geometry);
@@ -411,7 +397,7 @@ void VulkanMesh::create_from_file_gltf(const std::string& filename)
 		m_index_buf_size_bytes = m_num_indices * sizeof(unsigned int);
 		m_vertex_buf_size_bytes = m_num_vertices * sizeof(VertexData);
 
-		CreateIndexVertexBuffer(m_vertex_index_buffer, geometry_data.vertices.data(), m_vertex_buf_size_bytes, geometry_data.indices.data(), m_index_buf_size_bytes);
+		create_vertex_index_buffer(m_vertex_index_buffer, geometry_data.vertices.data(), m_vertex_buf_size_bytes, geometry_data.indices.data(), m_index_buf_size_bytes);
 
 		cgltf_free(data);
 	}

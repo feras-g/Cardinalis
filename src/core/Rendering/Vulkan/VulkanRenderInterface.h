@@ -26,7 +26,7 @@
 
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
-static constexpr VkFormat ENGINE_SWAPCHAIN_COLOR_FORMAT = VK_FORMAT_R8G8B8A8_SRGB;
+static constexpr VkFormat ENGINE_SWAPCHAIN_COLOR_FORMAT = VK_FORMAT_B8G8R8A8_SRGB;
 static constexpr VkFormat ENGINE_SWAPCHAIN_DS_FORMAT = VK_FORMAT_D32_SFLOAT;
 static constexpr VkColorSpaceKHR ENGINE_SWAPCHAIN_COLOR_SPACE = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 
@@ -132,7 +132,7 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colo
 VkDescriptorPool create_descriptor_pool(uint32_t num_ssbo, uint32_t num_ubo, uint32_t num_combined_img_smp, uint32_t num_dynamic_ubo, uint32_t max_sets = NUM_FRAMES);
 VkDescriptorPool create_descriptor_pool(std::span<VkDescriptorPoolSize> pool_sizes, uint32_t max_sets);
 
-struct GraphicsPipeline
+struct GfxPipeline
 {
 	enum Flags
 	{
@@ -150,7 +150,7 @@ struct GraphicsPipeline
 
 // Create a storage buffer containing non-interleaved vertex and index data
 // Return the created buffer's size 
-size_t CreateIndexVertexBuffer(Buffer& result, const void* vtxData, size_t vtxBufferSizeInBytes, const void* idxData, size_t idxBufferSizeInBytes);
+size_t create_vertex_index_buffer(Buffer& result, const void* vtxData, size_t vtxBufferSizeInBytes, const void* idxData, size_t idxBufferSizeInBytes);
 
 VkPipelineShaderStageCreateInfo PipelineShaderStageCreateInfo(VkShaderModule shaderModule, VkShaderStageFlagBits shaderStage, const char* entryPoint);
 VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, const VkDescriptorBufferInfo* bufferInfo, VkDescriptorType descriptorType);
@@ -160,7 +160,7 @@ bool CreateTextureSampler(VkDevice device, VkFilter minFilter, VkFilter magFilte
 void BeginRenderpass(VkCommandBuffer cmdBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer, VkRect2D renderArea, const VkClearValue* clearValues, uint32_t clearValueCount);
 
 void EndRenderPass(VkCommandBuffer cmdBuffer);
-void SetViewportScissor(VkCommandBuffer cmdBuffer, uint32_t width, uint32_t height, bool invertViewportY = false);
+void set_viewport_scissor(VkCommandBuffer cmdBuffer, uint32_t width, uint32_t height, bool invertViewportY = false);
 
 VkPipelineLayout create_pipeline_layout(VkDevice device, std::span<VkDescriptorSetLayout> descSetLayout);
 VkPipelineLayout create_pipeline_layout(VkDevice device, VkDescriptorSetLayout descSetLayout);

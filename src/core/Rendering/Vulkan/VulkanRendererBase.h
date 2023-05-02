@@ -103,11 +103,11 @@ public:
 
 		/* Drawables */
 		/* Setup buffers */
-		drawable_data_dynamic_aligment = calc_dynamic_ubo_alignment(2 * sizeof(glm::mat4));
-		object_data_dynamic_ubo_size_bytes = drawables.size() * drawable_data_dynamic_aligment;
+		per_object_data_dynamic_aligment = calc_dynamic_ubo_alignment(2 * sizeof(glm::mat4));
+		object_data_dynamic_ubo_size_bytes = drawables.size() * per_object_data_dynamic_aligment;
 		create_uniform_buffer(RenderObjectManager::object_data_dynamic_ubo, object_data_dynamic_ubo_size_bytes);
 
-		per_object_datas   = (TransformDataUbo*)alignedAlloc(object_data_dynamic_ubo_size_bytes, drawable_data_dynamic_aligment);
+		per_object_datas   = (TransformDataUbo*)alignedAlloc(object_data_dynamic_ubo_size_bytes, per_object_data_dynamic_aligment);
 
 		/* Setup descriptor set */
 		std::vector<VkDescriptorSetLayoutBinding> bindings = {};
@@ -116,7 +116,7 @@ public:
 		drawable_descriptor_set_layout = create_descriptor_set_layout(bindings);
 		drawable_descriptor_set = create_descriptor_set(RenderObjectManager::descriptor_pool, RenderObjectManager::drawable_descriptor_set_layout);
 
-		VkDescriptorBufferInfo object_ubo_desc_info = { .buffer = RenderObjectManager::object_data_dynamic_ubo.buffer, .offset = 0, .range = drawable_data_dynamic_aligment };
+		VkDescriptorBufferInfo object_ubo_desc_info = { .buffer = RenderObjectManager::object_data_dynamic_ubo.buffer, .offset = 0, .range = per_object_data_dynamic_aligment };
 
 		/* Material info */
 		create_uniform_buffer(material_data_ubo, sizeof(Material));
@@ -151,13 +151,15 @@ public:
 		}
 	}
 
-	static inline void add_drawable(const Drawable& drawable, const std::string& name, const TransformData& transform)
+	static inline void add_drawable(Drawable drawable, const std::string& name, const TransformData& transform)
 	{ 
-		size_t drawable_idx = drawables.size();
+		assert(drawable.mesh_handle);
+		if (!drawable.has_primitives) drawable.material_id = RenderObjectManager::get_material("Default Material").first;
+		drawable.id = drawables.size();
 		size_t transform_data_idx = transform_datas.size();
 		drawables.push_back(drawable);
 		transform_datas.push_back(transform);
-		drawable_from_name.insert({ name, drawable_idx });
+		drawable_from_name.insert({ name, drawable.id });
 		drawable_datas_from_name.insert({ name, transform_data_idx });
 		drawable_names.push_back(name);
 	}
@@ -223,14 +225,14 @@ public:
 		return nullptr;
 	}
 
-	static Material* get_material(const std::string& name)
+	static std::pair<size_t, Material*> get_material(const std::string& name)
 	{
 		auto ite = material_from_name.find(name);
 		if (ite != material_from_name.end())
 		{
-			return &materials[ite->second];
+			return { ite->second, &materials[ite->second] };
 		}
-		return nullptr;
+		return {};
 	}
 
 	static VulkanMesh* get_mesh(const std::string& name)
@@ -310,7 +312,7 @@ public:
 	/* Uniform buffer containing material data for a drawable */
 	static inline Buffer material_data_ubo;
 
-	static inline uint32_t drawable_data_dynamic_aligment = 0;
+	static inline uint32_t per_object_data_dynamic_aligment = 0;
 	static inline uint32_t object_data_dynamic_ubo_size_bytes = 0;
 private:
 };

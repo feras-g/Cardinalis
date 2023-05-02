@@ -27,12 +27,12 @@ void VulkanUI::End()
 VulkanUI& VulkanUI::ShowSceneViewportPanel(
 	unsigned int texDeferred, unsigned int texColorId, 
 	unsigned int texNormalId, unsigned int texDepthId,
-	unsigned int texNormalMapId, unsigned int texMetallicRoughnessId
+	unsigned int texNormalMapId, unsigned int texMetallicRoughnessId, unsigned int texShadowMapId
 )
 {
 	static ImGuiComboFlags flags = 0;
 
-	const char* items[] = { "Deferred Output", "Albedo", "Normal", "Depth", "Normal map", "Metallic/Roughness" };
+	const char* items[] = { "Deferred Output", "Albedo", "Normal", "Depth", "Metallic/Roughness", "Directional Shadow Map" };
 	static int item_current_idx = 0; // Here we store our selection data as an index.
 	const char* combo_preview_value = items[item_current_idx];  // Pass in the preview value visible before opening the combo (it could be anything)
 
@@ -82,9 +82,9 @@ VulkanUI& VulkanUI::ShowSceneViewportPanel(
 		{
 			ImGui::Image((ImTextureID)texDepthId, sceneViewPanelSize);
 		}
-		else if (combo_preview_value == "Normal map")
+		else if (combo_preview_value == "Directional Shadow Map")
 		{
-			ImGui::Image((ImTextureID)texNormalMapId, sceneViewPanelSize);
+			ImGui::Image((ImTextureID)texShadowMapId, sceneViewPanelSize);
 		}
 		else if (combo_preview_value == "Metallic/Roughness")
 		{
@@ -277,7 +277,11 @@ VulkanUI& VulkanUI::ShowLightSettings(LightManager* light_manager)
 	{
 		ImGui::SeparatorText("Directional Light");
 		
-		ImGui::DragFloat3("Location", glm::value_ptr(light_manager->m_light_data.directional_light.position), 0.1f);
+		ImGui::DragFloat3("Direction", glm::value_ptr(light_manager->m_light_data.directional_light.direction), 0.001f);
+		ImGui::DragFloat3("Eye", glm::value_ptr(light_manager->eye), 0.01f);
+		ImGui::DragFloat3("Up", glm::value_ptr(light_manager->up), 0.01f);
+		ImGui::DragFloat3("Bbox min", glm::value_ptr(light_manager->view_volume_bbox_min), 0.001f);
+		ImGui::DragFloat3("Bbox max", glm::value_ptr(light_manager->view_volume_bbox_max), 0.001f);
 		ImGui::DragFloat3("Color",	  glm::value_ptr(light_manager->m_light_data.directional_light.color), 0.1f);
 	}
 

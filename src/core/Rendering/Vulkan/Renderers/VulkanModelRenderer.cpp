@@ -3,16 +3,18 @@
 
 #include <glm/mat4x4.hpp>
 
-Buffer VulkanModelRenderer::m_uniform_buffer;
-
 const uint32_t num_storage_buffers = 2;
 const uint32_t num_uniform_buffers = 2;
 const uint32_t num_combined_image_smp = 0;
 
+/** Size in pixels of the offscreen buffers */
+uint32_t VulkanModelRenderer::render_width  = 2048;
+uint32_t VulkanModelRenderer::render_height = 2048;
+
 VulkanModelRenderer::VulkanModelRenderer()
 {
-	m_Shader.reset(new VulkanShader("Model.vert.spv", "Model.frag.spv"));
-
+	m_shader.reset(new VulkanShader("Model.vert.spv", "Model.frag.spv"));
+	
 	/* Render objects creation */
 	create_attachments();
 	m_descriptor_pool = create_descriptor_pool(num_storage_buffers, num_uniform_buffers, num_combined_image_smp, 0);
@@ -42,19 +44,17 @@ VulkanModelRenderer::VulkanModelRenderer()
 		update_descriptor_set(context.device, frame_idx);
 	}
 	
-
 	/* Dynamic renderpass setup */
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
-		m_dyn_renderpass[i].add_color_attachment(m_Albedo_Output[i].view);
-		m_dyn_renderpass[i].add_color_attachment(m_Normal_Output[i].view);
-		m_dyn_renderpass[i].add_color_attachment(m_MetallicRoughness_Output[i].view);
-		m_dyn_renderpass[i].add_color_attachment(m_NormalMap_Output[i].view);
-		m_dyn_renderpass[i].add_depth_attachment(m_Depth_Output[i].view);
+		m_dyn_renderpass[i].add_color_attachment(m_gbuffer_albdedo[i].view);
+		m_dyn_renderpass[i].add_color_attachment(m_gbuffer_normal[i].view);
+		m_dyn_renderpass[i].add_color_attachment(m_gbuffer_metallic_roughness[i].view);
+		m_dyn_renderpass[i].add_depth_attachment(m_gbuffer_depth[i].view);
 	}
 
-	GraphicsPipeline::Flags ppl_flags = GraphicsPipeline::Flags::ENABLE_DEPTH_STATE;
-	GraphicsPipeline::CreateDynamic(*m_Shader.get(), m_ColorAttachmentFormats, m_DepthAttachmentFormat, ppl_flags, m_ppl_layout, &m_gfx_pipeline, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+	GfxPipeline::Flags ppl_flags = GfxPipeline::Flags::ENABLE_DEPTH_STATE;
+	GfxPipeline::CreateDynamic(*m_shader.get(), m_formats, m_depth_format, ppl_flags, m_ppl_layout, &m_gfx_pipeline, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
 }
 
 void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buffer)
@@ -62,64 +62,64 @@ void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buf
 	VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Deferred G-Buffer Pass");
 
 	/* Transition */
-	m_Albedo_Output[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-	m_Normal_Output[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-	m_Depth_Output[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-	m_NormalMap_Output[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-	m_MetallicRoughness_Output[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	m_gbuffer_albdedo[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	m_gbuffer_normal[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	m_gbuffer_depth[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+	m_gbuffer_metallic_roughness[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 	VkRect2D render_area{ .offset {}, .extent { render_width , render_height } };
 	m_dyn_renderpass[currentImageIdx].begin(cmd_buffer, render_area);
-	draw_scene(cmd_buffer, currentImageIdx);
+
+	set_viewport_scissor(cmd_buffer, render_width, render_height, true);
+	vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline);
+
+	/* Frame descriptor set */
+	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ppl_layout, 2, 1, &m_pass_descriptor_set, 0, nullptr);
+
+	for (size_t i = 0; i < RenderObjectManager::drawables.size(); i++)
+	{
+		const Drawable& drawable = RenderObjectManager::drawables[i];
+		draw_scene(cmd_buffer, currentImageIdx, RenderObjectManager::drawables[i]);
+	}
+	
 	m_dyn_renderpass[currentImageIdx].end(cmd_buffer);
 
 	/* Transition */
-	m_Albedo_Output[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-	m_Normal_Output[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-	m_Depth_Output[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-	m_NormalMap_Output[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-	m_MetallicRoughness_Output[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	m_gbuffer_albdedo[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	m_gbuffer_normal[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	m_gbuffer_depth[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	m_gbuffer_metallic_roughness[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
-void VulkanModelRenderer::draw_scene(VkCommandBuffer cmdBuffer, size_t current_frame_idx)
+void VulkanModelRenderer::draw_scene(VkCommandBuffer cmdBuffer, size_t current_frame_idx, const Drawable& drawable)
 {
-	SetViewportScissor(cmdBuffer, render_width, render_height, true);
-	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline);
-	
-	/* Update UBO descriptor for frame data */
-	VkDescriptorBufferInfo ubo_framedata_desc_info = { .buffer = VulkanRendererBase::m_ubo_common_framedata[current_frame_idx].buffer, .offset = 0, .range = sizeof(VulkanRendererBase::PerFrameData) };
+	/* Mesh descriptor set : per mesh geometry data */
+	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ppl_layout, 0, 1, &drawable.mesh_handle->descriptor_set, 0, nullptr);
 
-	/* Bind Pass descriptor set */
-	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ppl_layout, 2, 1, &m_pass_descriptor_set, 0, nullptr);
-	
-	for (size_t i=0; i < RenderObjectManager::drawables.size(); i++)
+	/* Object descriptor set : per instance data */
+	uint32_t dynamic_offset  = drawable.id * RenderObjectManager::per_object_data_dynamic_aligment;
+	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ppl_layout, 1, 1, &RenderObjectManager::drawable_descriptor_set, 1, &dynamic_offset);
+
+	if (drawable.has_primitives)
 	{
-		const Drawable& drawable = RenderObjectManager::drawables[i];
-
-		vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ppl_layout, 0, 1, &drawable.mesh_handle->descriptor_set, 0, nullptr);
-		uint32_t dynamic_offset  = i * RenderObjectManager::drawable_data_dynamic_aligment;
-		vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ppl_layout, 1, 1, &RenderObjectManager::drawable_descriptor_set, 1, &dynamic_offset);
-
-		if (drawable.has_primitives)
+		for (int prim_idx = 0; prim_idx < drawable.mesh_handle->geometry_data.primitives.size(); prim_idx++)
 		{
-			for (int i = 0; i < drawable.mesh_handle->geometry_data.primitives.size(); i++)
-			{
-				const Primitive& p = drawable.mesh_handle->geometry_data.primitives[i];
-				vkCmdPushConstants(cmdBuffer, m_ppl_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Material), &RenderObjectManager::materials[p.material_id]);
-				//upload_buffer_data(RenderObjectManager::material_data_ubo, &RenderObjectManager::materials[p.material_id], sizeof(Material), 0);
-				vkCmdDraw(cmdBuffer, p.index_count, 1, p.first_index, 0);
-			}
+			const Primitive& p = drawable.mesh_handle->geometry_data.primitives[prim_idx];
+			/* Material ID push constant */
+			vkCmdPushConstants(cmdBuffer, m_ppl_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Material), &RenderObjectManager::materials[p.material_id]);
+			vkCmdDraw(cmdBuffer, p.index_count, 1, p.first_index, 0);
 		}
-		else
-		{
-			drawable.draw(cmdBuffer);
-		}
+	}
+	else
+	{
+		vkCmdPushConstants(cmdBuffer, m_ppl_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Material), &RenderObjectManager::materials[drawable.material_id]);
+		drawable.draw(cmdBuffer);
 	}
 }
 
-void VulkanModelRenderer::update_buffers(const VulkanRendererBase::PerFrameData& frame_data)
+void VulkanModelRenderer::update(size_t frame_idx, const VulkanRendererBase::PerFrameData& frame_data)
 {
-	
+	upload_buffer_data(VulkanRendererBase::m_ubo_common_framedata[frame_idx], &frame_data, sizeof(VulkanRendererBase::PerFrameData), 0);
 }
 
 void VulkanModelRenderer::update_descriptor_set(VkDevice device, size_t frame_idx)
@@ -127,9 +127,6 @@ void VulkanModelRenderer::update_descriptor_set(VkDevice device, size_t frame_id
 	std::vector<VkWriteDescriptorSet> desc_writes;
 
 	/* Frame data UBO */
-	VulkanRendererBase::PerFrameData frame_data = {};
-	upload_buffer_data(VulkanRendererBase::m_ubo_common_framedata[frame_idx], &frame_data, sizeof(VulkanRendererBase::PerFrameData), 0);
-
 	VkDescriptorBufferInfo info = { VulkanRendererBase::m_ubo_common_framedata[frame_idx].buffer,  0, sizeof(VulkanRendererBase::PerFrameData) };
 	desc_writes.push_back(BufferWriteDescriptorSet(m_pass_descriptor_set, 0, &info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
 
@@ -179,29 +176,29 @@ void VulkanModelRenderer::create_attachments()
 	{
 		std::string s_prefix = "Frame #" + std::to_string(i) + "G-Buffer ";
 
-		m_Albedo_Output[i].init(m_ColorAttachmentFormats[0], render_width, render_height, false);	/* G-Buffer Color */
-		m_Normal_Output[i].init(m_ColorAttachmentFormats[1], render_width, render_height, false);	/* G-Buffer Normal */
-		m_Depth_Output[i].init(m_DepthAttachmentFormat, render_width, render_height, false);		/* G-Buffer Depth */
-		m_NormalMap_Output[i].init(m_ColorAttachmentFormats[2], render_width, render_height, false);			/* G-Buffer Normal map */
-		m_MetallicRoughness_Output[i].init(m_ColorAttachmentFormats[3], render_width, render_height, false);	/* G-Buffer Metallic/Roughness */
+		m_gbuffer_albdedo[i].init(m_formats[0], render_width, render_height, false);	/* G-Buffer Color */
+		m_gbuffer_normal[i].init(m_formats[1], render_width, render_height, false);	/* G-Buffer Normal */
+		m_gbuffer_depth[i].init(m_depth_format, render_width, render_height, false);		/* G-Buffer Depth */
+		m_gbuffer_directional_shadow[i].init(m_depth_format, render_width, render_height, false);			/* G-Buffer Shadow map */
+		m_gbuffer_metallic_roughness[i].init(m_formats[2], render_width, render_height, false);			/* G-Buffer Metallic/Roughness */
 
-		m_Albedo_Output[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Albedo").c_str());
-		m_Normal_Output[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Normal").c_str());
-		m_Depth_Output[i].create(context.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Depth").c_str());
-		m_NormalMap_Output[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Normal map").c_str());
-		m_MetallicRoughness_Output[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Metallic roughness").c_str());
+		m_gbuffer_albdedo[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Albedo").c_str());
+		m_gbuffer_normal[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Normal").c_str());
+		m_gbuffer_depth[i].create(context.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Depth").c_str());
+		m_gbuffer_directional_shadow[i].create(context.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Directional Shadow Map").c_str());
+		m_gbuffer_metallic_roughness[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Metallic roughness").c_str());
 
-		m_Albedo_Output[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
-		m_Normal_Output[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
-		m_Depth_Output[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT });
-		m_NormalMap_Output[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
-		m_MetallicRoughness_Output[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
+		m_gbuffer_albdedo[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
+		m_gbuffer_normal[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
+		m_gbuffer_depth[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT });
+		m_gbuffer_directional_shadow[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT });
+		m_gbuffer_metallic_roughness[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
 
-		m_Albedo_Output[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		m_Normal_Output[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		m_Depth_Output[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		m_NormalMap_Output[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		m_MetallicRoughness_Output[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		m_gbuffer_albdedo[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		m_gbuffer_normal[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		m_gbuffer_depth[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		m_gbuffer_directional_shadow[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		m_gbuffer_metallic_roughness[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
 	
 	end_temp_cmd_buffer(cmd_buffer);
@@ -219,8 +216,8 @@ VulkanModelRenderer::~VulkanModelRenderer()
 	
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
-		m_Albedo_Output[i].destroy(context.device);
-		m_Normal_Output[i].destroy(context.device);
-		m_Depth_Output[i].destroy(context.device);
+		m_gbuffer_albdedo[i].destroy(context.device);
+		m_gbuffer_normal[i].destroy(context.device);
+		m_gbuffer_depth[i].destroy(context.device);
 	}
 }

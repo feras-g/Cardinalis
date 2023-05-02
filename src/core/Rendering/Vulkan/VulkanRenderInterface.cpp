@@ -599,21 +599,25 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colo
 	return out;
 }
 
-bool GraphicsPipeline::CreateDynamic(const VulkanShader& shader, std::span<VkFormat> colorAttachmentFormats, VkFormat depthAttachmentFormat, Flags flags, VkPipelineLayout pipelineLayout,
+bool GfxPipeline::CreateDynamic(const VulkanShader& shader, std::span<VkFormat> colorAttachmentFormats, VkFormat depth_format, Flags flags, VkPipelineLayout pipelineLayout,
 	VkPipeline* out_GraphicsPipeline, VkCullModeFlags cullMode, VkFrontFace frontFace, glm::vec2 customViewport)
 {
 	VkPipelineRenderingCreateInfoKHR pipeline_create{ VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR };
 	pipeline_create.pNext = VK_NULL_HANDLE;
 	pipeline_create.colorAttachmentCount = colorAttachmentFormats.size();
 	pipeline_create.pColorAttachmentFormats = colorAttachmentFormats.data();
-	pipeline_create.depthAttachmentFormat = depthAttachmentFormat;
+	pipeline_create.depthAttachmentFormat = depth_format;
 	//pipeline_create.stencilAttachmentFormat = VK_NULL_HANDLE;
 	
+	if (depth_format != VK_FORMAT_UNDEFINED)
+	{
+		flags = Flags(( (int)flags | (int)Flags::ENABLE_DEPTH_STATE));
+	}
 
 	return Create(shader, colorAttachmentFormats.size(), flags, nullptr, pipelineLayout, out_GraphicsPipeline, cullMode, frontFace, &pipeline_create, customViewport);
 }
 
-bool GraphicsPipeline::Create(const VulkanShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPipeline* out_GraphicsPipeline,
+bool GfxPipeline::Create(const VulkanShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPipeline* out_GraphicsPipeline,
 	VkCullModeFlags cullMode, VkFrontFace frontFace, VkPipelineRenderingCreateInfoKHR* dynamic_pipeline_create, glm::vec2 customViewport)
 {
 	// Pipeline stages
@@ -748,7 +752,7 @@ bool GraphicsPipeline::Create(const VulkanShader& shader, uint32_t numColorAttac
 	return true;
 }
 
-size_t CreateIndexVertexBuffer(Buffer& result, const void* vtxData, size_t vtxBufferSizeInBytes, const void* idxData, size_t idxBufferSizeInBytes)
+size_t create_vertex_index_buffer(Buffer& result, const void* vtxData, size_t vtxBufferSizeInBytes, const void* idxData, size_t idxBufferSizeInBytes)
 {
 	size_t totalSizeInBytes = vtxBufferSizeInBytes + idxBufferSizeInBytes;
 
@@ -866,7 +870,7 @@ void EndRenderPass(VkCommandBuffer cmdBuffer)
 	vkCmdEndRenderPass(cmdBuffer);
 }
 
-void SetViewportScissor(VkCommandBuffer cmdBuffer, uint32_t width, uint32_t height, bool invertViewportY)
+void set_viewport_scissor(VkCommandBuffer cmdBuffer, uint32_t width, uint32_t height, bool invertViewportY)
 {
 	
 	VkViewport viewport =

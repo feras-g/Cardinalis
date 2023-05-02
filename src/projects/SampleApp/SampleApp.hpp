@@ -8,9 +8,11 @@
 #include "Rendering/Vulkan/Renderers/VulkanImGuiRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanModelRenderer.h"
 #include "Rendering/Vulkan/Renderers/DeferredRenderer.h"
+#include "Rendering/Vulkan/Renderers/ShadowRenderer.h"
 #include "Rendering/Vulkan/VulkanUI.h"
 #include "Rendering/Camera.h"
 #include "Rendering/FrameCounter.h"
+#include "Rendering/LightManager.h"
 
 class SampleApp final : public Application
 {
@@ -35,6 +37,7 @@ public:
 protected:
 	VulkanUI m_UI;
 	Camera m_Camera;
+	LightManager m_light_manager;
 
 	bool b_IsSceneViewportHovered = false;
 
@@ -42,50 +45,85 @@ protected:
 	std::unique_ptr<VulkanImGuiRenderer>		m_imgui_renderer;
 	std::unique_ptr<VulkanModelRenderer>		m_model_renderer;
 	DeferredRenderer							m_deferred_renderer;
+	ShadowRenderer							    m_shadow_renderer;
 };
 
 void SampleApp::Initialize()
 {
-	RenderObjectManager::add_texture("../../../data/textures/albedo_default.png");
-	RenderObjectManager::add_texture("../../../data/textures/placeholder.png");
+	uint32_t default_tex_id = (uint32_t)RenderObjectManager::get_texture("albedo_default.png").first;
+	uint32_t placeholder_tex_id = (uint32_t)RenderObjectManager::get_texture("placeholder.png").first;
+	static Material default_material
+	{
+		.tex_base_color_id			= default_tex_id,
+		.tex_metallic_roughness_id	= placeholder_tex_id,
+		.tex_normal_id				= placeholder_tex_id,
+		.tex_emissive_id			= placeholder_tex_id,
+		.base_color_factor			= glm::vec4(1.0f),
+		.metallic_factor			= 0.0f,
+		.roughness_factor			= 1.0f,
+	};
+	RenderObjectManager::add_material(default_material, "Default Material");
 
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/sponza-gltf-pbr/sponza.glb"), "sponza");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/cube.obj"), "cube");
+	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/MetalRoughSpheres.gltf"), "spheres");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/duck.gltf"), "duck");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/plane.glb"), "plane");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/suzanne.obj"), "suzanne");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/cow.obj"), "cow");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/bunny.obj"), "bunny");
+
+	m_light_manager.init();
 
 	TransformData transform
 	{
-		glm::vec4(0,0,0,1),
-		glm::vec4(1,1,1,1),
-		glm::vec4(1,1,1, 0.0f)
+		.translation = glm::vec4(0,0,0,1),
+		.rotation	 = glm::vec4(1.0f, 1.0f, 1.0f, 0.0f),
+		.scale		 = glm::vec4(0.0005,0.0005,0.0005, 1.0f)
 	};
-	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("sponza"), true), "Sponza", transform);
+
+	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("sponza"), true), "sponza", transform);
 
 	transform = 
 	{
 		glm::vec4(0,0,0,1),
 		glm::vec4(1,1,1,0),
-		glm::vec4(100,1,100, 1.0f)
+		glm::vec4(1,1,1, 1.0f)
 	};
 	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("plane")), "Plane", transform);
+
+
+	//for (int i = -15; i < 15; i++)
+	//{
+	//	for (int j = -15; j < 15; j++)
+	//	{
+	//		transform =
+	//		{
+	//			glm::vec4(i,2,j,1),
+	//			glm::vec4(1,1,1,0),
+	//			glm::vec4(0.0005,0.0005,0.0005, 1.0f)
+	//		};
+
+	//		RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("duck")), "duck" + std::to_string(i+j), transform);
+	//	}
+	//}
 
 
 	RenderObjectManager::configure();
 	m_model_renderer.reset(new VulkanModelRenderer);
 	m_imgui_renderer.reset(new VulkanImGuiRenderer(context));
 	
+	m_shadow_renderer.init(2048, 2048, m_light_manager);
+
 	m_deferred_renderer.init(
-		m_model_renderer->m_Albedo_Output, 
-		m_model_renderer->m_Normal_Output, 
-		m_model_renderer->m_Depth_Output,
-		m_model_renderer->m_NormalMap_Output,
-		m_model_renderer->m_MetallicRoughness_Output
+		m_model_renderer->m_gbuffer_albdedo, 
+		m_model_renderer->m_gbuffer_normal, 
+		m_model_renderer->m_gbuffer_depth,
+		m_model_renderer->m_gbuffer_directional_shadow,
+		m_model_renderer->m_gbuffer_metallic_roughness,
+		m_shadow_renderer.m_shadow_maps,
+		m_light_manager
 	);
 
-	m_imgui_renderer->Initialize(*m_model_renderer.get(), m_deferred_renderer);
+	m_shadow_renderer.update_desc_sets(m_deferred_renderer.m_g_buffers_depth);
+
+	m_imgui_renderer->init(*m_model_renderer.get(), m_deferred_renderer, m_shadow_renderer);
 
 	CameraController fpsController = CameraController({ 0,0,5 }, { 0,-180,0 }, { 0,0,1 }, { 0,1,0 });
 
@@ -103,6 +141,8 @@ void SampleApp::Update(float dt)
 	if (EngineGetAsyncKeyState(Key::D))     m_Camera.controller.m_movement =  m_Camera.controller.m_movement | Movement::RIGHT;
 	if (EngineGetAsyncKeyState(Key::SPACE)) m_Camera.controller.m_movement =  m_Camera.controller.m_movement | Movement::UP;
 	if (EngineGetAsyncKeyState(Key::LSHIFT)) m_Camera.controller.m_movement =  m_Camera.controller.m_movement | Movement::DOWN;
+
+	m_light_manager.update(nullptr);
 
 	UpdateRenderersData(dt, context.curr_frame_idx);
 }
@@ -133,7 +173,11 @@ void SampleApp::Render()
 		swapchain.color_attachments[context.curr_frame_idx].transition_layout(current_frame.cmd_buffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 		{
-			m_model_renderer->render(context.curr_frame_idx, current_frame.cmd_buffer);
+			{
+				m_model_renderer->render(context.curr_frame_idx, current_frame.cmd_buffer);
+				m_shadow_renderer.render(context.curr_frame_idx, current_frame.cmd_buffer);
+			}
+
 			m_deferred_renderer.render(context.curr_frame_idx, current_frame.cmd_buffer);
 			m_imgui_renderer->render(context.curr_frame_idx, current_frame.cmd_buffer);
 		}
@@ -209,6 +253,7 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 	RenderObjectManager::update_per_object_data(frame_data);
 
 	m_deferred_renderer.update(currentImageIdx);
+	m_model_renderer->update(currentImageIdx, frame_data);
 
 	// ImGui composition
 	{
@@ -223,12 +268,13 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 			m_imgui_renderer->m_ModelRendererNormalTextureId[currentImageIdx],
 			m_imgui_renderer->m_ModelRendererDepthTextureId[currentImageIdx],
 			m_imgui_renderer->m_ModelRendererNormalMapTextureId[currentImageIdx],
-			m_imgui_renderer->m_ModelRendererMetallicRoughnessTextureId[currentImageIdx]
+			m_imgui_renderer->m_ModelRendererMetallicRoughnessTextureId[currentImageIdx],
+			m_imgui_renderer->m_ShadowRendererTextureId[currentImageIdx]
 		);
 		//m_UI.ShowFrameTimeGraph(FrameStats::History.data(), FrameStats::History.size());
 		m_UI.ShowCameraSettings(&m_Camera);
 		m_UI.ShowInspector();
-		m_UI.ShowLightSettings(&m_deferred_renderer.m_light_manager);
+		m_UI.ShowLightSettings(&m_light_manager);
 		m_UI.End();
 	}
 

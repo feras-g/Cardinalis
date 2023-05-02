@@ -15,7 +15,7 @@ public:
 	VulkanUI& ShowSceneViewportPanel(
 		unsigned int texDeferred, unsigned int texColorId,
 		unsigned int texNormalId, unsigned int texDepthId,
-		unsigned int texNormalMapId, unsigned int texMetallicRoughnessId);
+		unsigned int texNormalMapId, unsigned int texMetallicRoughnessId, unsigned int texShadowMapId);
 	VulkanUI& ShowMenuBar();
 	VulkanUI& AddHierarchyPanel();
 	VulkanUI& AddInspectorPanel();

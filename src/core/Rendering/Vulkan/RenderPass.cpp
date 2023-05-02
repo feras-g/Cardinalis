@@ -64,7 +64,7 @@ void DynamicRenderPass::add_color_attachment(VkImageView view)
 
 void DynamicRenderPass::add_depth_attachment(VkImageView view)
 {
-	add_attachment(view, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+	add_attachment(view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
 }
 
 void DynamicRenderPass::add_stencil_attachment(VkImageView view)

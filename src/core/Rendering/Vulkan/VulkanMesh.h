@@ -59,6 +59,8 @@ struct VulkanMesh
 	size_t m_num_vertices;
 	size_t m_num_indices;
 
+	size_t material_id = 0;
+
 	/* Non-interleaved vertex and index data. Used for vertex pulling. */
 	Buffer m_vertex_index_buffer;
 	VkDescriptorSet descriptor_set;
@@ -90,27 +92,6 @@ struct Material
 	float roughness_factor;
 };
 
-template<>
-struct std::hash<Material> 
-{
-	std::size_t operator()(const Material& s, std::size_t seed = 0) const
-	{
-		std::hash<unsigned int> hash0;
-		std::hash<float> hash1;
-		std::hash<glm::vec4> hash2;
-
-		seed ^= hash0(s.tex_base_color_id) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-		seed ^= hash0(s.tex_metallic_roughness_id) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-		seed ^= hash0(s.tex_normal_id) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-		seed ^= hash0(s.tex_emissive_id) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-		seed ^= hash1(s.metallic_factor) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-		seed ^= hash1(s.roughness_factor) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-		seed ^= hash2(s.base_color_factor) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-
-		return seed;
-	}
-};
-
 struct TransformDataUbo
 {
 	glm::mat4 mvp;
@@ -126,6 +107,8 @@ struct TransformData
 
 struct Drawable
 {
+	uint32_t id = 0;
+	uint32_t material_id = 0;
 	uint32_t base_vertex = 0;
 	bool has_primitives = false;
 	VulkanMesh* mesh_handle;

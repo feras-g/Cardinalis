@@ -12,13 +12,14 @@ struct ImGuiIO;
 class VulkanShader;
 class VulkanModelRenderer;
 class DeferredRenderer;
+class ShadowRenderer;
 
 class VulkanImGuiRenderer
 {
 public:
 	VulkanImGuiRenderer() = default;
 	VulkanImGuiRenderer(const VulkanContext& vkContext);
-	void Initialize(const VulkanModelRenderer& model_renderer, const DeferredRenderer& deferred_renderer);
+	void init(const VulkanModelRenderer& model_renderer, const DeferredRenderer& deferred_renderer, const ShadowRenderer& shadow_renderer);
 	void draw_scene(VkCommandBuffer cmd_buffer);
 	void render(size_t currentImageIdx, VkCommandBuffer cmd_buffer);
 	void create_buffers();
@@ -34,6 +35,7 @@ public:
 	std::array<int, NUM_FRAMES> m_ModelRendererNormalMapTextureId;
 	std::array<int, NUM_FRAMES> m_ModelRendererMetallicRoughnessTextureId;
 	std::array<int, NUM_FRAMES> m_DeferredRendererOutputTextureId;
+	std::array<int, NUM_FRAMES> m_ShadowRendererTextureId;
 
 	~VulkanImGuiRenderer() ;
 private:
