@@ -68,9 +68,9 @@ void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buf
 	m_gbuffer_metallic_roughness[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 	VkRect2D render_area{ .offset {}, .extent { render_width , render_height } };
+	set_viewport_scissor(cmd_buffer, render_width, render_height, true);
 	m_dyn_renderpass[currentImageIdx].begin(cmd_buffer, render_area);
 
-	set_viewport_scissor(cmd_buffer, render_width, render_height, true);
 	vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline);
 
 	/* Frame descriptor set */

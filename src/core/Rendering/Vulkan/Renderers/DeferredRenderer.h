@@ -2,7 +2,6 @@
 
 #include "Rendering/Vulkan/RenderPass.h"
 #include "Rendering/Vulkan/VulkanMesh.h"
-#include "Rendering/Vulkan/VulkanRenderInterface.h"
 #include "Rendering/LightManager.h"
 
 struct DeferredRenderer

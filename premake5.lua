@@ -11,7 +11,7 @@ workspace "Cardinalis"
 -- Generate projects based on a list of scripts
 	scripts = 
 	{
-		"assimp-lib.lua",
+		--"assimp-lib.lua",
 		"imgui-lib.lua",
 		"core.lua",
 		"projects.lua"

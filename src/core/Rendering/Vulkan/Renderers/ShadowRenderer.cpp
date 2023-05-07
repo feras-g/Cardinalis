@@ -3,7 +3,7 @@
 #include "Rendering/Vulkan/VulkanMesh.h"
 #include "Rendering/Vulkan/VulkanRendererBase.h"
 
-static constexpr VkFormat shadow_map_format = VK_FORMAT_D16_UNORM;
+static constexpr VkFormat shadow_map_format = VK_FORMAT_D32_SFLOAT;
 
 void ShadowRenderer::init(unsigned int width, unsigned int height, const LightManager& lightmanager)
 {
@@ -84,8 +84,8 @@ void ShadowRenderer::render(size_t current_frame_idx, VkCommandBuffer cmd_buffer
 	m_shadow_maps[current_frame_idx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
 
 	VkRect2D render_area{ .offset {}, .extent { m_shadow_map_size.x , m_shadow_map_size.y } };
-	m_shadow_pass[current_frame_idx].begin(cmd_buffer, render_area);
 	set_viewport_scissor(cmd_buffer, m_shadow_map_size.x, m_shadow_map_size.y, true);
+	m_shadow_pass[current_frame_idx].begin(cmd_buffer, render_area);
 
 	/* Bind pipeline */
 	vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline);

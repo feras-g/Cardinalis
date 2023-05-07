@@ -50,8 +50,11 @@ protected:
 
 void SampleApp::Initialize()
 {
-	uint32_t default_tex_id = (uint32_t)RenderObjectManager::get_texture("albedo_default.png").first;
-	uint32_t placeholder_tex_id = (uint32_t)RenderObjectManager::get_texture("placeholder.png").first;
+	CameraController fpsController = CameraController({ 0,0,5 }, { 0,-180,0 }, { 0,0,1 }, { 0,1,0 });
+	m_Camera = Camera(fpsController, 45.0f, 1.0f, 0.1f, 1000.0f);
+	
+	uint32_t default_tex_id = RenderObjectManager::add_texture("../../../data/textures/albedo_default.png", "Default Albedo");
+	uint32_t placeholder_tex_id = RenderObjectManager::add_texture("../../../data/textures/placeholder.png", "Placeholder Texture");
 	static Material default_material
 	{
 		.tex_base_color_id			= default_tex_id,
@@ -64,41 +67,48 @@ void SampleApp::Initialize()
 	};
 	RenderObjectManager::add_material(default_material, "Default Material");
 
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/sponza-gltf-pbr/sponza.glb"), "sponza");
-	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/MetalRoughSpheres.gltf"), "spheres");
+	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/bistro-gltf/bistro.gltf"), "bistro");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/MetalRoughSpheres.gltf"), "spheres");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/duck.gltf"), "duck");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/plane.glb"), "plane");
+
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/sponza-gltf-pbr/sponza.glb"), "sponza");
+	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/bistro-gltf/bistro.gltf"), "bistro");
+	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/suntemple-gltf/suntemple.gltf"), "sun_temple");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/plane.glb"), "plane");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/cube.glb"), "cube");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/cone.glb"), "cone");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/cylinder.glb"), "cylinder");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/icosphere.glb"), "icosphere");
 
 	m_light_manager.init();
 
-	TransformData transform
+	TransformData transform =
 	{
-		.translation = glm::vec4(0,0,0,1),
-		.rotation	 = glm::vec4(1.0f, 1.0f, 1.0f, 0.0f),
-		.scale		 = glm::vec4(0.0005,0.0005,0.0005, 1.0f)
+		glm::scale(glm::identity<glm::mat4>(), glm::vec3(1,1,1))
 	};
 
-	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("sponza"), true), "sponza", transform);
+	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("spheres")), "spheres", transform);
 
-	transform = 
-	{
-		glm::vec4(0,0,0,1),
-		glm::vec4(1,1,1,0),
-		glm::vec4(1,1,1, 1.0f)
-	};
-	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("plane")), "Plane", transform);
+	transform.model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0f));
+	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("sponza")), "sponza", transform);
 
+	transform.model = glm::translate(glm::identity<glm::mat4>(), glm::vec3(0, 1, 3));
+	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cone")), "cone", transform);
+	transform.model = glm::translate(glm::identity<glm::mat4>(), glm::vec3(0, 1, -3));
+	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cylinder")), "cylinder", transform);
+	transform.model = glm::translate(glm::identity<glm::mat4>(), glm::vec3(3, 1, 0));
+	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("icosphere")), "icosphere", transform);
+
+	transform.model = glm::inverse(m_light_manager.proj * m_light_manager.view);
+	transform.model = glm::translate(transform.model, m_light_manager.eye);
+	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cube")), "frustum", transform);
 
 	//for (int i = -15; i < 15; i++)
 	//{
 	//	for (int j = -15; j < 15; j++)
 	//	{
-	//		transform =
-	//		{
-	//			glm::vec4(i,2,j,1),
-	//			glm::vec4(1,1,1,0),
-	//			glm::vec4(0.0005,0.0005,0.0005, 1.0f)
-	//		};
+	//		TransformData transform;
+	//		transform.model = glm::translate(transform.model, { 0, 0, 0 });
 
 	//		RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("duck")), "duck" + std::to_string(i+j), transform);
 	//	}
@@ -125,9 +135,6 @@ void SampleApp::Initialize()
 
 	m_imgui_renderer->init(*m_model_renderer.get(), m_deferred_renderer, m_shadow_renderer);
 
-	CameraController fpsController = CameraController({ 0,0,5 }, { 0,-180,0 }, { 0,0,1 }, { 0,1,0 });
-
-	m_Camera = Camera(fpsController, 45.0f, m_imgui_renderer->m_SceneViewAspectRatio, 0.1f, 1000.0f);
 }
 
 void SampleApp::Update(float dt)
@@ -142,8 +149,8 @@ void SampleApp::Update(float dt)
 	if (EngineGetAsyncKeyState(Key::SPACE)) m_Camera.controller.m_movement =  m_Camera.controller.m_movement | Movement::UP;
 	if (EngineGetAsyncKeyState(Key::LSHIFT)) m_Camera.controller.m_movement =  m_Camera.controller.m_movement | Movement::DOWN;
 
-	m_light_manager.update(nullptr);
-
+	m_light_manager.update(nullptr, m_light_manager.view_volume_bbox_min, m_light_manager.view_volume_bbox_max);
+	
 	UpdateRenderersData(dt, context.curr_frame_idx);
 }
 
@@ -281,6 +288,9 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 	{
 		m_imgui_renderer->update_buffers(ImGui::GetDrawData());
 	}
+
+	/* Temp */
+	RenderObjectManager::get_drawable_data("frustum").second->model = glm::inverse(m_light_manager.proj * m_light_manager.view);
 }
 
 inline void SampleApp::OnWindowResize()

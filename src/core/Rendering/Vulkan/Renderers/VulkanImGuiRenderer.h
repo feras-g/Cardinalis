@@ -62,5 +62,5 @@ private:
 	VkDescriptorPool m_descriptor_pool;
 	VkPipelineLayout m_pipeline_layout;
 	VkDescriptorSetLayout m_descriptor_set_layout;
-	VkDescriptorSet m_descriptor_set;
+	VkDescriptorSet m_descriptor_set[NUM_FRAMES];
 };

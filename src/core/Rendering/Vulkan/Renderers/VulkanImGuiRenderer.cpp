@@ -133,7 +133,7 @@ void VulkanImGuiRenderer::render(size_t currentImageIdx, VkCommandBuffer cmdBuff
 	m_dyn_renderpass[currentImageIdx].begin(cmdBuffer, renderArea);
 
 	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline);
-	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_descriptor_set, 0, nullptr);
+	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_descriptor_set[currentImageIdx], 0, nullptr);
 
 	draw_scene(cmdBuffer);
 
@@ -290,7 +290,10 @@ bool VulkanImGuiRenderer::CreatePipeline(VkDevice device)
 		m_descriptor_set_layout = create_descriptor_set_layout(bindings);
 	}
 
-	m_descriptor_set = create_descriptor_set(m_descriptor_pool, m_descriptor_set_layout);
+	for(size_t i=0; i < NUM_FRAMES; i++)
+	{
+		m_descriptor_set[i] = create_descriptor_set(m_descriptor_pool, m_descriptor_set_layout);
+	}
 	update_descriptor_set(device);
 
 	size_t fragConstRangeSizeInBytes = sizeof(uint32_t); // Size of 1 Push constant holding the texture ID passed from ImGui::Image
@@ -306,34 +309,38 @@ bool VulkanImGuiRenderer::CreatePipeline(VkDevice device)
 
 void VulkanImGuiRenderer::update_descriptor_set(VkDevice device)
 {
-	// Create descriptors for each texture used in ImGui 
-	std::vector<VkDescriptorImageInfo> textureDescriptors;
-	for (size_t i = 0; i < m_Textures.size(); i++)
+	for (size_t i = 0; i < NUM_FRAMES; i++)
 	{
-		m_Textures[i].descriptor = { .sampler = VulkanRendererBase::s_SamplerClampNearest, .imageView = m_Textures[i].view, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
-		textureDescriptors.push_back(m_Textures[i].descriptor);
+		// Create descriptors for each texture used in ImGui 
+		std::vector<VkDescriptorImageInfo> textureDescriptors;
+		for (size_t i = 0; i < m_Textures.size(); i++)
+		{
+			m_Textures[i].descriptor = { .sampler = VulkanRendererBase::s_SamplerClampNearest, .imageView = m_Textures[i].view, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+			textureDescriptors.push_back(m_Textures[i].descriptor);
+		}
+
+		VkDescriptorBufferInfo uboInfo0{ .buffer = m_uniform_buffer.buffer, .offset = 0, .range = sizeof(glm::mat4) };
+		VkDescriptorBufferInfo sboInfo0{ .buffer = m_storage_buffer.buffer, .offset = 0, .range = ImGuiVtxBufferSize };
+		VkDescriptorBufferInfo sboInfo1{ .buffer = m_storage_buffer.buffer, .offset = ImGuiVtxBufferSize, .range = ImGuiIdxBufferSize };
+
+		std::array<VkWriteDescriptorSet, 4> descriptorWrites
+		{
+			BufferWriteDescriptorSet(m_descriptor_set[i], 0, &uboInfo0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER),
+			BufferWriteDescriptorSet(m_descriptor_set[i], 1, &sboInfo0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER),
+			BufferWriteDescriptorSet(m_descriptor_set[i], 2, &sboInfo1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER),
+			// Descriptor array
+			VkWriteDescriptorSet{
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = m_descriptor_set[i],
+				.dstBinding = 3,
+				.dstArrayElement = 0,
+				.descriptorCount = static_cast<uint32_t>(m_Textures.size()),
+				.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.pImageInfo = textureDescriptors.data()
+			}
+		};
+
+		vkUpdateDescriptorSets(device, (uint32_t)(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 	}
 
-	VkDescriptorBufferInfo uboInfo0{ .buffer = m_uniform_buffer.buffer, .offset = 0, .range = sizeof(glm::mat4) };
-	VkDescriptorBufferInfo sboInfo0{ .buffer = m_storage_buffer.buffer, .offset = 0, .range = ImGuiVtxBufferSize };
-	VkDescriptorBufferInfo sboInfo1{ .buffer = m_storage_buffer.buffer, .offset = ImGuiVtxBufferSize, .range = ImGuiIdxBufferSize };
-
-	std::array<VkWriteDescriptorSet, 4> descriptorWrites
-	{
-		BufferWriteDescriptorSet(m_descriptor_set, 0, &uboInfo0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER),
-		BufferWriteDescriptorSet(m_descriptor_set, 1, &sboInfo0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER),
-		BufferWriteDescriptorSet(m_descriptor_set, 2, &sboInfo1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER),
-		// Descriptor array
-		VkWriteDescriptorSet{
-			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			.dstSet = m_descriptor_set,
-			.dstBinding = 3,
-			.dstArrayElement = 0,
-			.descriptorCount = static_cast<uint32_t>(m_Textures.size()),
-			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			.pImageInfo = textureDescriptors.data()
-		}
-	};
-
-	vkUpdateDescriptorSets(device, (uint32_t)(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 }

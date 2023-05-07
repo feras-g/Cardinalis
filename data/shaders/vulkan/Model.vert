@@ -5,6 +5,7 @@ layout(location = 0) out vec4 uv;
 layout(location = 1) out vec4 normalWS;
 layout(location = 2) out vec4 positionCS;
 layout(location = 3) out vec4 depthCS;
+layout(location = 4) out vec4 positionWS;
     
 struct Vertex
 {
@@ -20,6 +21,8 @@ layout(set = 1, binding = 0) uniform ObjectData
 { 
     mat4 mvp;
     mat4 model;
+    vec4 bbox_min_WS;
+    vec4 bbox_max_WS;
 } object_data;
 
 layout(set = 2, binding = 0) uniform FrameData 
@@ -41,6 +44,6 @@ void main()
     normalWS   = object_data.model * normalOS;
     positionCS = object_data.mvp * positionOS;
     depthCS.xy = positionCS.zw;
-
+    positionWS = object_data.model * positionOS;
     gl_Position = positionCS;
 }

@@ -103,7 +103,7 @@ public:
 
 		/* Drawables */
 		/* Setup buffers */
-		per_object_data_dynamic_aligment = calc_dynamic_ubo_alignment(2 * sizeof(glm::mat4));
+		per_object_data_dynamic_aligment = calc_dynamic_ubo_alignment(sizeof(TransformDataUbo));
 		object_data_dynamic_ubo_size_bytes = drawables.size() * per_object_data_dynamic_aligment;
 		create_uniform_buffer(RenderObjectManager::object_data_dynamic_ubo, object_data_dynamic_ubo_size_bytes);
 
@@ -151,22 +151,44 @@ public:
 		}
 	}
 
-	static inline void add_drawable(Drawable drawable, const std::string& name, const TransformData& transform)
+	static inline void add_drawable(Drawable drawable, const std::string& name, TransformData& transform)
 	{ 
 		assert(drawable.mesh_handle);
-		if (!drawable.has_primitives) drawable.material_id = RenderObjectManager::get_material("Default Material").first;
+		if (!drawable.has_primitives)
+		{
+			drawable.material_id = RenderObjectManager::get_material("Default Material").first;
+		}
 		drawable.id = drawables.size();
 		size_t transform_data_idx = transform_datas.size();
 		drawables.push_back(drawable);
+
+		transform.model = drawable.mesh_handle->model * transform.model;
+		/* Update scene bounding box */
+		{
+			glm::vec3 drawable_bbox_min_WS = drawable.mesh_handle->geometry_data.bbox_min_WS * transform.model;
+			glm::vec3 drawable_bbox_max_WS = drawable.mesh_handle->geometry_data.bbox_max_WS * transform.model;
+
+			global_bbox_min_WS.x = std::min(global_bbox_min_WS.x, drawable_bbox_min_WS.x);
+			global_bbox_min_WS.y = std::min(global_bbox_min_WS.y, drawable_bbox_min_WS.y);
+			global_bbox_min_WS.z = std::min(global_bbox_min_WS.z, drawable_bbox_min_WS.z);
+
+			global_bbox_max_WS.x = std::max(global_bbox_max_WS.x, drawable_bbox_max_WS.x);
+			global_bbox_max_WS.y = std::max(global_bbox_max_WS.y, drawable_bbox_max_WS.y);
+			global_bbox_max_WS.z = std::max(global_bbox_max_WS.z, drawable_bbox_max_WS.z);
+
+			LOG_ERROR("Updated scene bbox : min ({},{},{}),  max ({},{},{}))", global_bbox_min_WS.x, global_bbox_min_WS.y, global_bbox_min_WS.z, global_bbox_max_WS.x, global_bbox_max_WS.y, global_bbox_max_WS.z);
+		}
+
+
 		transform_datas.push_back(transform);
 		drawable_from_name.insert({ name, drawable.id });
 		drawable_datas_from_name.insert({ name, transform_data_idx });
 		drawable_names.push_back(name);
 	}
 
-	static inline size_t add_texture(const std::string& filename, VkFormat format = VK_FORMAT_R8G8B8A8_UNORM)
+	static inline size_t add_texture(const std::string& filename, const std::string& name, VkFormat format = VK_FORMAT_R8G8B8A8_UNORM)
 	{
-		std::string name = filename.substr(filename.find_last_of('/') + 1);
+		//std::string name = filename.substr(filename.find_last_of('/') + 1);
 		Image im = load_image_from_file(filename);
 		Texture2D tex2D;
 		tex2D.init(format, im.w, im.h);
@@ -232,6 +254,16 @@ public:
 		{
 			return { ite->second, &materials[ite->second] };
 		}
+		return {0, nullptr};
+	}
+
+	static std::pair<size_t, TransformData*> get_drawable_data(const std::string& name)
+	{
+		auto ite = drawable_datas_from_name.find(name);
+		if (ite != drawable_datas_from_name.end())
+		{
+			return { ite->second, &transform_datas[ite->second] };
+		}
 		return {};
 	}
 
@@ -259,14 +291,10 @@ public:
 	{
 		for (size_t i = 0; i < drawables.size(); i++)
 		{
-			glm::mat4 model = glm::identity<glm::mat4>(); 
-
-			model = glm::translate(model, glm::vec3(transform_datas[i].translation)); 
-			model = glm::rotate(model, transform_datas[i].rotation.w, glm::vec3(transform_datas[i].rotation));
-			model = glm::scale(model, glm::vec3(transform_datas[i].scale));
-			
-			per_object_datas[i].mvp = frame_data.proj * frame_data.view * model;
-			per_object_datas[i].model = model;
+			per_object_datas[i].model = transform_datas[i].model;
+			per_object_datas[i].mvp = frame_data.proj *frame_data.view * transform_datas[i].model ;
+			per_object_datas[i].bbox_min_WS = per_object_datas[i].model * drawables[i].mesh_handle->geometry_data.bbox_min_WS;
+			per_object_datas[i].bbox_max_WS = per_object_datas[i].model * drawables[i].mesh_handle->geometry_data.bbox_max_WS ;
 		}
 
 		upload_buffer_data(object_data_dynamic_ubo, per_object_datas, RenderObjectManager::object_data_dynamic_ubo_size_bytes, 0);
@@ -314,6 +342,10 @@ public:
 
 	static inline uint32_t per_object_data_dynamic_aligment = 0;
 	static inline uint32_t object_data_dynamic_ubo_size_bytes = 0;
+
+	/* Bounding-box encompassing all the rendered drawables */
+	static inline glm::vec3 global_bbox_min_WS { FLT_MAX };
+	static inline glm::vec3 global_bbox_max_WS { FLT_MIN };
 private:
 };
 

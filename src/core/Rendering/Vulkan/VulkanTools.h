@@ -1,11 +1,8 @@
 #pragma once
-
 #include <string>
 #include <sstream>
 #include "Core/EngineLogger.h"
-#include "Rendering/Vulkan/VulkanRenderInterface.h"
-
-#include "stb_image.h"
+#include <vulkan/vulkan.h>
 
 static constexpr uint64_t OneSecondInNanoSeconds = 1000000000;
 
@@ -34,25 +31,9 @@ static constexpr uint64_t OneSecondInNanoSeconds = 1000000000;
     EXIT_ON_ERROR("vkGetDeviceProcAddr failed to find vk" #entry);  \
 }
 
-static uint32_t FindMemoryType(VkPhysicalDevice physDevice, uint32_t memoryTypeBits, VkMemoryPropertyFlags memoryProperties)
-{
-    // Query available types of memory
-    VkPhysicalDeviceMemoryProperties deviceMemProperties;
-    vkGetPhysicalDeviceMemoryProperties(physDevice, &deviceMemProperties);
+uint32_t FindMemoryType(VkPhysicalDevice physDevice, uint32_t memoryTypeBits, VkMemoryPropertyFlags memoryProperties);
 
-    // Find the most suitable memory type 
-    for (uint32_t i = 0; i < deviceMemProperties.memoryTypeCount; i++)
-    {
-        if ((memoryTypeBits & (1 << i) && (deviceMemProperties.memoryTypes[i].propertyFlags & memoryProperties) == memoryProperties))
-        {
-            return i;
-        }
-    }
-
-    return 0;
-}
-
-using ImageData = std::unique_ptr<stbi_uc, decltype(&stbi_image_free)>;
+using ImageData = std::unique_ptr<unsigned char, decltype(&free)>;
 struct Image
 {
     ImageData data;
@@ -60,12 +41,6 @@ struct Image
     ~Image() { data = nullptr; }
 };
 
-static Image load_image_from_file(std::string_view filename)
-{
-    int w, h, n;
-    stbi_uc* data = stbi_load(filename.data(), &w, &h, &n, 0);
-    assert(data);
-    return { ImageData(data, free), w, h, n };
-}
+Image load_image_from_file(std::string_view filename);
 
 #define CHECK_DEREF(p) { assert(p); return *p; }

@@ -1,5 +1,6 @@
 #include "VulkanResources.h"
 #include "VulkanTools.h"
+#include "VulkanRenderInterface.h"
 
 void create_buffer(Buffer& result, size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProperties)
 {
@@ -52,7 +53,7 @@ void create_staging_buffer(Buffer& result, VkDeviceSize size)
 void upload_buffer_data(Buffer& buffer, const void* data, const size_t size, VkDeviceSize offset)
 {
 	void* pMappedData = nullptr;
-	VK_CHECK(vkMapMemory(context.device, buffer.memory, offset, size, 0, &pMappedData));
+	VK_CHECK(vkMapMemory(context.device, buffer.memory, offset, buffer.size_bytes, 0, &pMappedData));
 	memcpy(pMappedData, data, size);
 	vkUnmapMemory(context.device, buffer.memory);
 }

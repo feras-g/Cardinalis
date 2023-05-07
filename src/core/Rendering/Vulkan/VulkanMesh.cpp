@@ -6,10 +6,10 @@
 #include <span>
 #include <unordered_set>
 
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
-#include <assimp/cimport.h>
-#include <assimp/version.h>
+//#include <assimp/scene.h>
+//#include <assimp/postprocess.h>
+//#include <assimp/cimport.h>
+//#include <assimp/version.h>
 
 #define CGLTF_IMPLEMENTATION
 #include "cgltf.h"
@@ -27,51 +27,55 @@ void VulkanMesh::create_from_file(const std::string& filename)
 	}
 	else
 	{
-		const aiScene* scene = aiImportFile(filename.data(), aiProcess_Triangulate);
-
-		assert(scene->HasMeshes());
-
-		// Load vertices
-		std::vector<VertexData> vertices;
-		std::vector<unsigned int> indices;
-
-		const aiVector3D vec3_zero{ 0.0f, 0.0f, 0.0f };
-		for (size_t meshIdx = 0; meshIdx < scene->mNumMeshes; meshIdx++)
-		{
-			const aiMesh* mesh = scene->mMeshes[meshIdx];
-
-			/* vertices */
-			for (size_t i = 0; i < mesh->mNumVertices; i++)
-			{
-				const aiVector3D& p = mesh->mVertices[i];
-				const aiVector3D& n = mesh->HasNormals() ? mesh->mNormals[i] : vec3_zero;
-				const aiVector3D& uv = mesh->HasTextureCoords(i) ? mesh->mTextureCoords[0][i] : p;
-
-				vertices.push_back({ .pos = {p.x, p.y, p.z}, .normal = {n.x, n.y, n.z}, .uv = {uv.x,  uv.y} });
-			}
-
-			/* indices */
-			for (size_t faceIdx = 0; faceIdx < mesh->mNumFaces; faceIdx++)
-			{
-				const aiFace& face = mesh->mFaces[faceIdx];
-
-				indices.push_back(face.mIndices[0]);
-				indices.push_back(face.mIndices[1]);
-				indices.push_back(face.mIndices[2]);
-			}
-		}
-
-		m_num_vertices = vertices.size();
-		m_num_indices = indices.size();
-
-		aiReleaseImport(scene);
-
-		m_index_buf_size_bytes = indices.size() * sizeof(unsigned int);
-		m_vertex_buf_size_bytes = vertices.size() * sizeof(VertexData);
-
-		create_vertex_index_buffer(m_vertex_index_buffer, vertices.data(), m_vertex_buf_size_bytes, indices.data(), m_index_buf_size_bytes);
+		assert(false);
 	}
-
+//	else
+//	{
+//		const aiScene* scene = aiImportFile(filename.data(), aiProcess_Triangulate);
+//
+//		assert(scene->HasMeshes());
+//
+//		// Load vertices
+//		std::vector<VertexData> vertices;
+//		std::vector<unsigned int> indices;
+//
+//		const aiVector3D vec3_zero{ 0.0f, 0.0f, 0.0f };
+//		for (size_t meshIdx = 0; meshIdx < scene->mNumMeshes; meshIdx++)
+//		{
+//			const aiMesh* mesh = scene->mMeshes[meshIdx];
+//
+//			/* vertices */
+//			for (size_t i = 0; i < mesh->mNumVertices; i++)
+//			{
+//				const aiVector3D& p = mesh->mVertices[i];
+//				const aiVector3D& n = mesh->HasNormals() ? mesh->mNormals[i] : vec3_zero;
+//				const aiVector3D& uv = mesh->HasTextureCoords(i) ? mesh->mTextureCoords[0][i] : p;
+//
+//				vertices.push_back({ .pos = {p.x, p.y, p.z}, .normal = {n.x, n.y, n.z}, .uv = {uv.x,  uv.y} });
+//			}
+//
+//			/* indices */
+//			for (size_t faceIdx = 0; faceIdx < mesh->mNumFaces; faceIdx++)
+//			{
+//				const aiFace& face = mesh->mFaces[faceIdx];
+//
+//				indices.push_back(face.mIndices[0]);
+//				indices.push_back(face.mIndices[1]);
+//				indices.push_back(face.mIndices[2]);
+//			}
+//		}
+//
+//		m_num_vertices = vertices.size();
+//		m_num_indices = indices.size();
+//
+//		aiReleaseImport(scene);
+//
+//		m_index_buf_size_bytes = indices.size() * sizeof(unsigned int);
+//		m_vertex_buf_size_bytes = vertices.size() * sizeof(VertexData);
+//
+//		create_vertex_index_buffer(m_vertex_index_buffer, vertices.data(), m_vertex_buf_size_bytes, indices.data(), m_index_buf_size_bytes);
+//	}
+//
 }
 
 void VulkanMesh::create_from_data(std::span<SimpleVertexData> vertices, std::span<unsigned int> indices)
@@ -104,7 +108,7 @@ Drawable::Drawable(VulkanMesh* mesh, bool b_has_primitives) : mesh_handle(mesh)
 	has_primitives = mesh->geometry_data.primitives.size() > 0;
 }	
 
-static void load_vertices(cgltf_primitive* primitive, GeometryData& geometry)
+static void load_vertices(Primitive p, cgltf_primitive* primitive, GeometryData& geometry)
 {
 	std::vector<glm::vec3> positionsBuffer;
 	std::vector<glm::vec3> normalsBuffer;
@@ -125,17 +129,22 @@ static void load_vertices(cgltf_primitive* primitive, GeometryData& geometry)
 			for (int i = 0; i < attribute->data->count; ++i)
 			{
 				cgltf_accessor_read_float(attribute->data, i, &positionsBuffer[i].x, 3);
+				positionsBuffer[i] = glm::vec3(p.mat_model * glm::vec4(positionsBuffer[i], 1.0));
 			}
 
 			// Also get bounding box for this primitive
 			if (attribute->data->has_min)
 			{
-				//LOG_ERROR("Bbox min : [{0}, {1}, {2}]", attribute->data->min[0], attribute->data->min[1], attribute->data->min[2]);
+				glm::vec4 bbox_min_OS (attribute->data->min[0], attribute->data->min[1], attribute->data->min[2], 1.0f);
+				geometry.bbox_min_WS = bbox_min_OS * geometry.world_mat;
+				LOG_ERROR("Bbox min : [{0}, {1}, {2}]", geometry.bbox_min_WS[0], geometry.bbox_min_WS[1], geometry.bbox_min_WS[2]);
 			}
 
 			if (attribute->data->has_max)
 			{
-				//LOG_ERROR("Bbox max : [{0}, {1}, {2}]", attribute->data->max[0], attribute->data->max[1], attribute->data->max[2]);
+				glm::vec4 bbox_max_OS(attribute->data->max[0], attribute->data->max[1], attribute->data->max[2], 1.0f);
+				geometry.bbox_max_WS = bbox_max_OS * geometry.world_mat;
+				LOG_ERROR("Bbox max : [{0}, {1}, {2}]", geometry.bbox_max_WS[0], geometry.bbox_max_WS[1], geometry.bbox_max_WS[2]);
 			}
 		}
 		break;
@@ -154,11 +163,13 @@ static void load_vertices(cgltf_primitive* primitive, GeometryData& geometry)
 		case cgltf_attribute_type_texcoord:
 		{
 			//////LOG_DEBUG("        Normals : {0}", attribute->data->count);
-			texCoordBuffer.resize(attribute->data->count);
-			for (int i = 0; i < texCoordBuffer.size(); ++i)
+			for (int i = 0; i < attribute->data->count; i++)
 			{
-				cgltf_accessor_read_float(attribute->data, i, &texCoordBuffer[i].x, 2);
+				glm::vec2 texcoord;
+				cgltf_accessor_read_float(attribute->data, i, &texcoord.x, 2);
+				texCoordBuffer.push_back(glm::vec3(texcoord, 0.0f));
 			}
+
 		}
 		break;
 
@@ -206,7 +217,7 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 	}
 	else
 	{
-		std::string material_name = "Unnamed Material " + std::to_string(RenderObjectManager::materials.size());
+		//std::string material_name = "Unnamed Material " + std::to_string(RenderObjectManager::materials.size());
 		/*
 			Base Color
 			Normal
@@ -216,15 +227,27 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 
 		std::function load_tex = [](cgltf_texture* tex, VkFormat format) -> size_t
 		{
-			char* name = tex->image->uri;
+			const char* uri = tex->image->uri;
+			const char* name = uri ? uri : tex->image->name;
+
 			std::pair<size_t, Texture2D*> tex_object = RenderObjectManager::get_texture(name);
-			if (tex_object.second != nullptr)
+
+			if (tex_object.second == nullptr)
 			{
-				return tex_object.first;
+				if (uri)
+				{
+					/* Load from file path */
+					return RenderObjectManager::add_texture(base_path + uri, name, format);
+				}
+				else
+				{
+					/* Load from buffer */
+					assert(false);
+				}
 			}
 			else
 			{
-				return RenderObjectManager::add_texture(base_path + tex->image->uri, format);
+				return tex_object.first;
 			}
 		};
 
@@ -233,7 +256,7 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 
 		if (tex_normal)
 		{
-			material.tex_normal_id = load_tex(tex_normal, tex_normal_format);
+			material.tex_normal_id = 0;// load_tex(tex_normal, tex_normal_format);
 		}
 
 		if (tex_emissive)
@@ -302,25 +325,48 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 			//SetMaterial(data, primitive, gltf_mat, materialProperties);
 		}
 
-		//std::size_t hash = std::hash<Material>{}(material);
+		std::size_t hash = MyHash<Material>{}(material);
 		//auto res = material_hashes.insert(hash);
 		//if (res.second == false)
-		if (gltf_mat->name)
+		/*if (gltf_mat->name)
 		{
 			material_name = gltf_mat->name;
 		}
+		else
+		{
+			assert(false);
+		}*/
+		
+		std::string material_name = std::to_string(hash);
+		LOG_DEBUG("Loaded new material named {0}, workflow : (Metallic/Roughness)", material_name);
 
-		primitive.material_id = RenderObjectManager::add_material(material, material_name);
-		LOG_DEBUG("Loaded material named {0}, workflow : (Metallic/Roughness)", material_name);
+		std::pair<size_t, Material*> mat_object = RenderObjectManager::get_material(material_name);
+		if (mat_object.second == nullptr)
+		{
+			primitive.material_id = RenderObjectManager::add_material(material, material_name);
+		}
+		else
+		{
+			primitive.material_id = mat_object.first;
+		}
+		
 	}
 	
 }
 
-static void load_primitive(cgltf_primitive* primitive, GeometryData& geometry)
+static void load_primitive(cgltf_node* node, cgltf_primitive* primitive, GeometryData& geometry)
 {
 	Primitive p = {};
 	p.first_index = geometry.indices.size();
 	p.index_count = primitive->indices->count;
+	 
+	//glm::mat4 mesh_world_mat;
+	//cgltf_node_transform_world(node, glm::value_ptr(mesh_world_mat));
+	//p.mat_model *= mesh_world_mat;
+
+	glm::mat4 mesh_local_mat;
+	cgltf_node_transform_world(node, glm::value_ptr(mesh_local_mat));
+	p.mat_model = mesh_local_mat;
 
 	/* Load indices */
 	for (int idx = 0; idx < p.index_count; idx++)
@@ -329,26 +375,19 @@ static void load_primitive(cgltf_primitive* primitive, GeometryData& geometry)
 		geometry.indices.push_back(index + geometry.vertices.size());
 	}
 
-	load_vertices(primitive, geometry);
+	load_vertices(p, primitive, geometry);
 	load_material(primitive, p);
-
+	//p.material_id = 0;
 	geometry.primitives.push_back(p);
 }
 
 static void process_node(bool bIsChild, cgltf_node* p_Node, GeometryData& geometry)
 {
 	if (p_Node->mesh)
-	{
-		glm::mat4 mesh_world_mat;
-		cgltf_node_transform_world(p_Node, glm::value_ptr(mesh_world_mat));
-		geometry.world_mat *= mesh_world_mat;
-
-		glm::mat4 mesh_local_mat;
-		cgltf_node_transform_local(p_Node, glm::value_ptr(mesh_local_mat));
-		
+	{		
 		for (int i = 0; i < p_Node->mesh->primitives_count; ++i)
 		{
-			load_primitive(&p_Node->mesh->primitives[i], geometry);
+			load_primitive(p_Node, &p_Node->mesh->primitives[i], geometry);
 		}
 	}
 
@@ -376,6 +415,12 @@ void VulkanMesh::create_from_file_gltf(const std::string& filename)
 	{
 		result = cgltf_load_buffers(&options, data, filename.c_str());
 
+		
+		LOG_INFO("Start loading {}", filename);
+		LOG_INFO("# Materials : {}", data->materials_count);
+		LOG_INFO("# Textures : {}",  data->textures_count);
+		LOG_INFO("# Meshes : {}", data->meshes_count);
+
 		if (result == cgltf_result_success)
 		{
 			for (size_t i = 0; i < data->nodes_count; ++i)
@@ -386,16 +431,15 @@ void VulkanMesh::create_from_file_gltf(const std::string& filename)
 			}
 		}
 
-		//LOG_INFO("Loaded : {0}", filename);
-		////LOG_INFO("# Materials : {0}", geometry.materials.size());
-		////LOG_INFO("# Textures : {0}", geometry.textures.size());
-		//LOG_INFO("# primitives : {0}", geometry_data.primitives.size());
+
 
 		m_num_vertices = geometry_data.vertices.size();
 		m_num_indices  = geometry_data.indices.size();
 
 		m_index_buf_size_bytes = m_num_indices * sizeof(unsigned int);
 		m_vertex_buf_size_bytes = m_num_vertices * sizeof(VertexData);
+
+		model = geometry_data.world_mat;
 
 		create_vertex_index_buffer(m_vertex_index_buffer, geometry_data.vertices.data(), m_vertex_buf_size_bytes, geometry_data.indices.data(), m_index_buf_size_bytes);
 

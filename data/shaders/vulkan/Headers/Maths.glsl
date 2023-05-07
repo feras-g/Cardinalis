@@ -12,7 +12,7 @@ vec3 ws_pos_from_depth(vec2 uv, float z, mat4 inv_view_proj)
     // After applying inverse view proj, vector is still in projective space,
     // this is why we divide by W
     vec4 ws_pos = inv_view_proj * ndc_pos; 
-    ws_pos.xyz /= ws_pos.w;
+    ws_pos /= ws_pos.w;
 
     return ws_pos.xyz;
 }

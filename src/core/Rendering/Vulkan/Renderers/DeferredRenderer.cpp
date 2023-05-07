@@ -2,6 +2,8 @@
 #include "Rendering/Vulkan/Renderers/VulkanModelRenderer.h"
 #include "Rendering/Vulkan/VulkanRendererBase.h"
 #include "Rendering/Vulkan/VulkanDebugUtils.h"
+#include "Rendering/Vulkan/VulkanRenderInterface.h"
+
 
 static const VkFormat color_attachment_format = VK_FORMAT_R8G8B8A8_SRGB;
 
@@ -99,11 +101,11 @@ void DeferredRenderer::update_descriptor_set(size_t frame_idx)
 	*/
 	std::vector<VkDescriptorImageInfo>  descriptor_image_infos = {};
 	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampLinear, m_g_buffers_albedo[frame_idx]->view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
-	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampLinear, m_g_buffers_normal[frame_idx]->view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
-	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampLinear, m_g_buffers_depth[frame_idx]->view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
-	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampLinear, m_g_buffers_normal_map[frame_idx]->view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
-	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampLinear, m_g_buffers_metallic_roughness[frame_idx]->view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
-	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampLinear, m_g_buffers_shadow_map[frame_idx]->view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampNearest, m_g_buffers_normal[frame_idx]->view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampNearest, m_g_buffers_depth[frame_idx]->view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampNearest, m_g_buffers_normal_map[frame_idx]->view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampNearest, m_g_buffers_metallic_roughness[frame_idx]->view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampNearest, m_g_buffers_shadow_map[frame_idx]->view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
 
 	std::vector<VkWriteDescriptorSet> write_descriptor_set = {};
 	write_descriptor_set.push_back(ImageWriteDescriptorSet(m_descriptor_set[frame_idx], 0, &descriptor_image_infos[0]));

@@ -33,7 +33,7 @@ project("CoreLib")
 		lib_dir .. "optick/include",
 		lib_dir .. "spdlog",
 		lib_dir .. "imgui",
-		lib_dir .. "assimp/include",
+		--lib_dir .. "assimp/include",
 		lib_dir .. "cgltf",
 		os.getenv("VULKAN_SDK") .. "/Include"
 	}
@@ -45,18 +45,18 @@ project("CoreLib")
 
 	filter "system:windows"
 		systemversion "latest"
-		defines { "WIN32_LEAN_AND_MEAN" }
-		links	{ "vulkan-1", "imgui", "assimp", "OptickCore", "shcore" }
+		defines { "WIN32_LEAN_AND_MEAN", "GLM_DEPTH_ZERO_TO_ONE" }
+		links	{ "vulkan-1", "imgui", "OptickCore", "shcore" }
 		
 	filter "configurations:Debug"
 		runtime "Debug"
 		symbols "on"
 		buildoptions {"/Od"}
-		defines { "DEBUG", "ENABLE_VALIDATION_LAYERS" }
+		defines { "DEBUG", "ENABLE_VALIDATION_LAYERS", "GLM_DEPTH_ZERO_TO_ONE" }
 		libdirs { lib_list, lib_dir .. "optick/lib/x64/debug/" }
 		
 	filter "configurations:Release"
 		runtime "Release"
 		optimize "on"
-		defines { "RELEASE" }
+		defines { "RELEASE", "GLM_DEPTH_ZERO_TO_ONE" }
 		libdirs { lib_list, lib_dir .. "optick/lib/x64/release/" }

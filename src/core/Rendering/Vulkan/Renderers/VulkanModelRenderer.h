@@ -39,7 +39,7 @@ private:
 	std::vector<VkFormat> m_formats = 
 	{ 
 		tex_base_color_format,				/* Base color / Albedo */
-		VK_FORMAT_R16G16B16A16_SFLOAT,		/* Vertex normal */
+		tex_normal_format,		/* Vertex normal */
 		tex_metallic_roughness_format,		/* Metallic roughness */
 	};
 	VkFormat m_depth_format	= VK_FORMAT_D16_UNORM;

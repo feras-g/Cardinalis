@@ -65,49 +65,58 @@ VulkanUI& VulkanUI::ShowSceneViewportPanel(
 		{
 			fSceneViewAspectRatio = currAspect;
 		}
+		
 
-		if (combo_preview_value == "Deferred Output")
+		//if (combo_preview_value == "Deferred Output")
 		{
-			ImGui::Image((ImTextureID)texDeferred, sceneViewPanelSize);
+			ImGui::Image((ImTextureID)texDeferred, sceneViewPanelSize );
 		}
-		else if (combo_preview_value == "Albedo")
-		{
-			ImGui::Image((ImTextureID)texColorId, sceneViewPanelSize);
-		}
-		else if (combo_preview_value == "Normal")
-		{
-			ImGui::Image((ImTextureID)texNormalId, sceneViewPanelSize);
-		}
-		else if (combo_preview_value == "Depth")
-		{
-			ImGui::Image((ImTextureID)texDepthId, sceneViewPanelSize);
-		}
-		else if (combo_preview_value == "Directional Shadow Map")
-		{
-			ImGui::Image((ImTextureID)texShadowMapId, sceneViewPanelSize);
-		}
-		else if (combo_preview_value == "Metallic/Roughness")
-		{
-			ImGui::Image((ImTextureID)texMetallicRoughnessId, sceneViewPanelSize);
-		}
+
 
 		bIsSceneViewportHovered = ImGui::IsItemHovered();
-		
-		//if (ImGui::BeginMenuBar())
-		//{
-		//	if (ImGui::BeginMenu("Display"))
-		//	{
-		//		if (ImGui::MenuItem("Wireframe")) {}
-		//		ImGui::EndMenu();
-		//	}
-		//	ImGui::EndMenuBar();
-		//}
-
-
 	}
 	ImGui::PopStyleVar();
 
 	ImGui::End();
+
+
+	if (ImGui::Begin("GBuffers", 0, 0))
+	{
+		ImVec2 thumbnail_size{ 512, 512 };
+		//ImGui::SetWindowSize({ thumbnail_size.x * 5, thumbnail_size.y });
+		
+		{
+			ImGui::Text("Albedo");
+			ImGui::Image((ImTextureID)texColorId, thumbnail_size);
+		}
+
+		{
+			ImGui::Text("WS Normal");
+			ImGui::Image((ImTextureID)texNormalId, thumbnail_size);
+		}
+
+		{
+			ImGui::Text("Depth");
+			ImGui::Image((ImTextureID)texDepthId, thumbnail_size);
+
+		}
+
+		{
+			ImGui::Text("Metallic/Roughness");
+			ImGui::Image((ImTextureID)texMetallicRoughnessId, thumbnail_size);
+
+		}
+
+		{
+			ImGui::Text("Depth (Directional Light)");
+			ImGui::Image((ImTextureID)texShadowMapId, thumbnail_size);
+		}
+		
+	}
+	ImGui::End();
+
+
+
 
 
 	return *this;
@@ -255,10 +264,9 @@ VulkanUI& VulkanUI::ShowInspector()
 
 				if (ImGui::TreeNode((void*)(intptr_t)i, RenderObjectManager::drawable_names[i].c_str(), i))
 				{
-					
-					ImGui::DragFloat3("Translation", glm::value_ptr(RenderObjectManager::transform_datas[i].translation), 0.1f);
-					ImGui::SliderFloat4("Rotation",  glm::value_ptr(RenderObjectManager::transform_datas[i].rotation), 0.0f, 1.0f);
-					ImGui::DragFloat3("Scale", glm::value_ptr(RenderObjectManager::transform_datas[i].scale), 0.1f);
+					//ImGui::DragFloat3("Translation", glm::value_ptr(RenderObjectManager::transform_datas[i].translation), 0.1f);
+					//ImGui::SliderFloat4("Rotation",  glm::value_ptr(RenderObjectManager::transform_datas[i].rotation), 0.0f, 1.0f);
+					//ImGui::DragFloat3("Scale", glm::value_ptr(RenderObjectManager::transform_datas[i].scale), 0.1f);
 					ImGui::TreePop();
 				}
 			}
@@ -277,11 +285,11 @@ VulkanUI& VulkanUI::ShowLightSettings(LightManager* light_manager)
 	{
 		ImGui::SeparatorText("Directional Light");
 		
-		ImGui::DragFloat3("Direction", glm::value_ptr(light_manager->m_light_data.directional_light.direction), 0.001f);
+		ImGui::DragFloat3("Direction", glm::value_ptr(light_manager->m_light_data.directional_light.direction), 0.01f);
 		ImGui::DragFloat3("Eye", glm::value_ptr(light_manager->eye), 0.01f);
 		ImGui::DragFloat3("Up", glm::value_ptr(light_manager->up), 0.01f);
-		ImGui::DragFloat3("Bbox min", glm::value_ptr(light_manager->view_volume_bbox_min), 0.001f);
-		ImGui::DragFloat3("Bbox max", glm::value_ptr(light_manager->view_volume_bbox_max), 0.001f);
+		ImGui::DragFloat3("Bbox min", glm::value_ptr(light_manager->view_volume_bbox_min), 0.1f);
+		ImGui::DragFloat3("Bbox max", glm::value_ptr(light_manager->view_volume_bbox_max), 0.1f);
 		ImGui::DragFloat3("Color",	  glm::value_ptr(light_manager->m_light_data.directional_light.color), 0.1f);
 	}
 

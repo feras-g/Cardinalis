@@ -30,18 +30,19 @@ struct LightData
 struct LightManager
 {
 	void init();
-	void update(LightData* data);
+	void update(LightData* data, glm::vec3 bbox_min, glm::vec3 bbox_max);
 	void update_ubo(LightData* data);
 	void destroy();
-	void update_view_proj();
+	void update_view_proj(glm::vec3 bbox_min, glm::vec3 bbox_max);
 
 	LightData m_light_data;
 	Buffer m_ubo[NUM_FRAMES];
 
 	/* */
 	glm::vec3 eye = { 0,0,0 };
-	glm::vec3 up  = { 0,0,1 };
-	glm::vec3 view_volume_bbox_min = { -5.0f, -5.0f,   0.1f };
-	glm::vec3 view_volume_bbox_max = {  5.0f,  5.0f,   75.0f };
-
+	glm::vec3 up  = { 0,1,0 };
+	glm::vec3 view_volume_bbox_min = { -20.0f, -20.0f, -100.0f };
+	glm::vec3 view_volume_bbox_max = { 20.0f,  20.0f,   20.0f  };
+	static inline glm::mat4 view;
+	static inline glm::mat4 proj;
 };

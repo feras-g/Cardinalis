@@ -152,6 +152,7 @@ void Texture::upload_data(VkDevice device, void const* const data)
     // Create temp CPU-GPU visible buffer holding image data 
     Buffer stagingBuffer;
     create_staging_buffer(stagingBuffer, imageSizeInBytes);
+    
     upload_buffer_data(stagingBuffer, data, imageSizeInBytes, 0);
 
     VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
@@ -372,9 +373,11 @@ uint32_t GetBytesPerPixelFromFormat(VkFormat format)
     case VK_FORMAT_R8G8B8A8_SRGB:
         return 4;
     case VK_FORMAT_R16G16B16A16_SFLOAT:
-        return 4 * sizeof(uint16_t);
+        return 8;
+    case VK_FORMAT_R16G16B16A16_UNORM:
+        return 8;
     case VK_FORMAT_R32G32B32A32_SFLOAT:
-        return 4 * sizeof(float);
+        return 16;
     default:
         assert(false);
         break;
