@@ -54,5 +54,7 @@ void main()
     gbuffer_base_color         = texture(sampler2D(textures[material.tex_base_color_id], smp_repeat_nearest), uv.xy) * material.base_color_factor;
     gbuffer_normalWS           = vec4(normalize(normalWS.xyz), 1.0);
     gbuffer_depthCS            = depthCS.z / depthCS.w;
-    gbuffer_metallic_roughness = vec4(texture(sampler2D(textures[material.tex_metallic_roughness_id], smp_repeat_nearest), uv.xy).xy, material.metallic_factor, material.roughness_factor);
+    /* https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#metallic-roughness-material */
+    /* Metallic : G, Roughness: B */
+    gbuffer_metallic_roughness = vec4(texture(sampler2D(textures[material.tex_metallic_roughness_id], smp_repeat_nearest), uv.xy).bg, material.metallic_factor, material.roughness_factor);
 }

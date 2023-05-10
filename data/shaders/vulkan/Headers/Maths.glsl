@@ -1,4 +1,10 @@
-/* Function computing world space position from depth */
+/* Returns the component-wise maximum */
+float maxVec3 (vec3 v) 
+{
+  return max (max (v.x, v.y), v.z);
+}
+
+/* Returns world space position from depth */
 vec3 ws_pos_from_depth(vec2 uv, float z, mat4 inv_view_proj)
 {
     // z is NDC depth

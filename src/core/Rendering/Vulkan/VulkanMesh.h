@@ -80,7 +80,7 @@ struct VulkanMesh
 
 constexpr VkFormat tex_base_color_format         = VK_FORMAT_R8G8B8A8_SRGB;
 constexpr VkFormat tex_metallic_roughness_format = VK_FORMAT_R8G8B8A8_UNORM;
-constexpr VkFormat tex_normal_format             = VK_FORMAT_R16G16B16A16_UNORM;
+constexpr VkFormat tex_normal_format             = VK_FORMAT_R16G16B16A16_SFLOAT;
 constexpr VkFormat tex_emissive_format           = VK_FORMAT_R8G8B8A8_SRGB;
 
 struct MaterialFactors

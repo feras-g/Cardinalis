@@ -59,26 +59,23 @@ float get_shadow_factor(vec3 p_ws, mat4 light_view_proj)
 void main()
 {
     vec3 p_ws = ws_pos_from_depth(uv, texture(gbuffer_depth, uv).x, frame_data.inv_view_proj);
-    vec3 n_ws = normalize(texture(gbuffer_WS_normal, uv).xyz);
-    vec3 l = normalize(-lights.dir_light.direction.xyz);
+    vec3 n_ws = (texture(gbuffer_WS_normal, uv).xyz);
+    vec3 l = normalize(lights.dir_light.direction.xyz);
     vec3 v = normalize(p_ws - frame_data.view_pos.xyz);
     vec3 h = normalize(v+l);
-
-    float NoV = abs(dot(n_ws, v)) + 1e-5;
-    float NoL = clamp(dot(n_ws, l), 0.0, 1.0);
-    float NoH = clamp(dot(n_ws, h), 0.0, 1.0);
-    float LoH = clamp(dot(l, h), 0.0, 1.0);
     
     vec3 ambient = vec3(0.27);
     vec3 albedo = texture(gbuffer_color, uv).xyz;
     vec4 metallic_roughness = texture(gbuffer_metallic_roughness, uv);
 
-    float metallic  = metallic_roughness.y;
-    float roughness = metallic_roughness.x;
+    float metallic  = metallic_roughness.x *  metallic_roughness.z;
+    float roughness = metallic_roughness.y * metallic_roughness.w;
     
     float shadow = get_shadow_factor(p_ws, lights.dir_light.view_proj);
 
     vec3 color = BRDF(n_ws, v, l, h, lights.dir_light.color.rgb, albedo, metallic, roughness);
+    // vec3 color = BRDF_OGL(n_ws, v, l, h, lights.dir_light.color.rgb, albedo, metallic, roughness);
+
         // float dist = length(l);
 //    for(int i=0; i < NUM_LIGHTS; i++)
 //    {

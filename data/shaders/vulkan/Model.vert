@@ -41,7 +41,7 @@ void main()
     vec4 normalOS   = vec4(v.nx, v.ny, v.nz, 0.0);
 
     uv.xy = vec2(v.u, v.v);
-    normalWS   = object_data.model * normalOS;
+    normalWS   =  normalOS;
     positionCS = object_data.mvp * positionOS;
     depthCS.xy = positionCS.zw;
     positionWS = object_data.model * positionOS;

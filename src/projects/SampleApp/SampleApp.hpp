@@ -68,8 +68,8 @@ void SampleApp::Initialize()
 	RenderObjectManager::add_material(default_material, "Default Material");
 
 	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/bistro-gltf/bistro.gltf"), "bistro");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/MetalRoughSpheres.gltf"), "spheres");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/duck.gltf"), "duck");
+	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/MetalRoughSpheres.gltf"), "spheres");
+	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/duck.gltf"), "duck");
 
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/sponza-gltf-pbr/sponza.glb"), "sponza");
 	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/bistro-gltf/bistro.gltf"), "bistro");
@@ -79,6 +79,7 @@ void SampleApp::Initialize()
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/cone.glb"), "cone");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/cylinder.glb"), "cylinder");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/icosphere.glb"), "icosphere");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf"), "damaged_helmet");
 
 	m_light_manager.init();
 
@@ -87,10 +88,10 @@ void SampleApp::Initialize()
 		glm::scale(glm::identity<glm::mat4>(), glm::vec3(1,1,1))
 	};
 
-	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("spheres")), "spheres", transform);
+	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("sponza")), "sponza", transform);
 
 	transform.model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0f));
-	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("sponza")), "sponza", transform);
+	//RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("sponza")), "sponza", transform);
 
 	transform.model = glm::translate(glm::identity<glm::mat4>(), glm::vec3(0, 1, 3));
 	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cone")), "cone", transform);
