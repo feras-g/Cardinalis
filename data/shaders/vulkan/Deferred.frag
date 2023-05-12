@@ -24,20 +24,6 @@ layout(set = 0, binding = 7) uniform LightData
     DirectionalLight dir_light;
 } lights;
 
-float textureProj(vec4 shadowCoord, vec2 off)
-{
-	float shadow = 1.0;
-	if ( shadowCoord.z > -1.0 && shadowCoord.z < 1.0 ) 
-	{
-		float dist = texture( gbuffer_shadow_map, shadowCoord.st + off ).r;
-		if ( shadowCoord.w > 0.0 && dist < shadowCoord.z ) 
-		{
-			shadow = 0.27f;
-		}
-	}
-	return shadow;
-}
-
 const mat4 bias_matrix = mat4( 
 	0.5, 0.0, 0.0, 0.0,
 	0.0, 0.5, 0.0, 0.0,
@@ -47,11 +33,11 @@ const mat4 bias_matrix = mat4(
 float get_shadow_factor(vec3 p_ws, mat4 light_view_proj)
 {
     vec4 shadow_coord = bias_matrix * light_view_proj * vec4(p_ws, 1.0f);
-    float bias = 0.0001;
+    float bias = 0.0005;
     float shadow = 1.0;
-    if( texture( gbuffer_shadow_map, shadow_coord.xy ).r < shadow_coord.z - bias)
+    if( texture( gbuffer_shadow_map, vec2(shadow_coord.x, 1-shadow_coord.y) ).r < shadow_coord.z - bias)
     {
-        shadow = 0.0;
+        shadow = 0.27;
     }
     return shadow;
 }
@@ -60,7 +46,7 @@ void main()
 {
     vec3 p_ws = ws_pos_from_depth(uv, texture(gbuffer_depth, uv).x, frame_data.inv_view_proj);
     vec3 n_ws = (texture(gbuffer_WS_normal, uv).xyz);
-    vec3 l = normalize(lights.dir_light.direction.xyz);
+    vec3 l = normalize(-lights.dir_light.direction.xyz);
     vec3 v = normalize(p_ws - frame_data.view_pos.xyz);
     vec3 h = normalize(v+l);
     
@@ -73,7 +59,7 @@ void main()
     
     float shadow = get_shadow_factor(p_ws, lights.dir_light.view_proj);
 
-    vec3 color = BRDF(n_ws, v, l, h, lights.dir_light.color.rgb, albedo, metallic, roughness);
+    vec3 color = BRDF(n_ws, v, l, h, lights.dir_light.color.rgb, albedo, metallic, roughness, shadow);
     // vec3 color = BRDF_OGL(n_ws, v, l, h, lights.dir_light.color.rgb, albedo, metallic, roughness);
 
         // float dist = length(l);
@@ -94,5 +80,5 @@ void main()
 
     // p_ws.z *= -1; // why ?
     
-    out_color = vec4(color, 1) ;
+    out_color = vec4(0.01 * albedo + color.rgb, 1) ;
 }

@@ -71,27 +71,31 @@ void SampleApp::Initialize()
 	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/MetalRoughSpheres.gltf"), "spheres");
 	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/duck.gltf"), "duck");
 
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/sponza-gltf-pbr/sponza.glb"), "sponza");
-	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/bistro-gltf/bistro.gltf"), "bistro");
+	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/sponza-gltf-pbr/sponza.glb"), "sponza");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/bistro-gltf/bistro.gltf"), "bistro");
 	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/suntemple-gltf/suntemple.gltf"), "sun_temple");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/plane.glb"), "plane");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/cube.glb"), "cube");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/cone.glb"), "cone");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/cylinder.glb"), "cylinder");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/icosphere.glb"), "icosphere");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf"), "damaged_helmet");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/DamagedHelmet/glTF/DamagedHelmet.gltf"), "damaged_helmet");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/robot/scene.gltf"), "robot");
+
 
 	m_light_manager.init();
 
 	TransformData transform =
 	{
-		glm::scale(glm::identity<glm::mat4>(), glm::vec3(1,1,1))
+		glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0))
 	};
+	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("bistro")), "bistro", transform);
 
-	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("sponza")), "sponza", transform);
+	transform.model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(0.01f));
+	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("robot")), "robot", transform);
 
-	transform.model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0f));
-	//RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("sponza")), "sponza", transform);
+	transform.model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(25.0f));
+	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("plane")), "plane", transform);
 
 	transform.model = glm::translate(glm::identity<glm::mat4>(), glm::vec3(0, 1, 3));
 	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cone")), "cone", transform);
