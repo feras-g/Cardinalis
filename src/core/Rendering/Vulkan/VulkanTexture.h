@@ -3,6 +3,8 @@
 #include <vulkan/vulkan.hpp>
 #include <string_view>
 
+struct Image;
+
 struct TextureInfo
 {
 	VkFormat imageFormat		{ VK_FORMAT_UNDEFINED };
@@ -36,7 +38,7 @@ struct Texture
 
 	void create_view(VkDevice device, const ImageViewInitInfo& info);
 	void copy_from_buffer(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer);
-	void upload_data(VkDevice device, void const* const data);
+	void upload_data(VkDevice device, Image* pImage);
 	void transition_layout(VkCommandBuffer cmdBuffer, VkImageLayout old_layout, VkImageLayout new_layout, VkImageSubresourceRange* subresourceRange = nullptr);
 	void destroy(VkDevice device);
 	void generate_mipmaps();
@@ -58,7 +60,7 @@ public:
 		VkImageLayout		layout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 	void create_from_data(
-		unsigned char*		data,
+		Image*				pImage,
 		std::string_view    debug_name,
 		VkImageUsageFlags	imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT,
 		VkImageLayout		layout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);

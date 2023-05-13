@@ -1,6 +1,7 @@
 #include "VulkanMesh.h"
 #include "Rendering/Vulkan/VulkanRenderInterface.h"
 #include "Rendering/Vulkan/VulkanRendererBase.h"
+#include "VulkanTools.h"
 
 #include <vector>
 #include <span>
@@ -18,7 +19,7 @@ static std::string base_path;
 
 void VulkanMesh::create_from_file(const std::string& filename)
 {
-	std::string ext = filename.substr(filename.find_last_of('.') + 1);
+	std::string_view ext = get_extension(filename);
 	LOG_INFO("Filename extension: {}", ext);
 	
 	if (ext == "glb" || ext == "gltf")

@@ -266,7 +266,8 @@ bool VulkanImGuiRenderer::CreateFontTexture(ImGuiIO* io, const char* fontPath, T
 		return false;
 	}
 	out_Font.init(VK_FORMAT_R8G8B8A8_UNORM, tex_width, tex_height, false);
-	out_Font.create_from_data(im_data, "Font texture", VK_IMAGE_USAGE_SAMPLED_BIT);
+	Image im(im_data, false);
+	out_Font.create_from_data(&im, "Font texture", VK_IMAGE_USAGE_SAMPLED_BIT);
 	out_Font.create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
 	io->FontDefault = Font;
 

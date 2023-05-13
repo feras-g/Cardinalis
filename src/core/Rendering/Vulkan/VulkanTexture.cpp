@@ -33,11 +33,11 @@ void Texture2D::create_from_file(
 {
     assert(initialized);
     Image rawImage = load_image_from_file(filename);
-    create_from_data(rawImage.data.get(), debug_name, imageUsage, layout);
+    create_from_data(&rawImage, debug_name, imageUsage, layout);
 }
 
 void Texture2D::create_from_data(
-    unsigned char*   data,
+    Image*               image,
 	std::string_view    debug_name,
     VkImageUsageFlags	imageUsage,
     VkImageLayout		layout)
@@ -49,7 +49,7 @@ void Texture2D::create_from_data(
     transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     end_temp_cmd_buffer(cmd_buffer);
 
-    upload_data(context.device, data);
+    upload_data(context.device, image);
     if (info.mipLevels > 1)
     {
         generate_mipmaps();
@@ -60,8 +60,6 @@ void Texture2D::create_from_data(
         transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         end_temp_cmd_buffer(cmd_buffer);
     }
-    
-
 }
 
 void Texture2D::create(VkDevice device, VkImageUsageFlags imageUsage, std::string_view debug_name)
@@ -144,7 +142,7 @@ void Texture::copy_from_buffer(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer)
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageRegion);
 }
 
-void Texture::upload_data(VkDevice device, void const* const data)
+void Texture::upload_data(VkDevice device, Image* pImage)
 {
     uint32_t bpp = GetBytesPerPixelFromFormat(info.imageFormat);
     VkDeviceSize layerSizeInBytes = info.width * info.height * bpp;
@@ -153,6 +151,16 @@ void Texture::upload_data(VkDevice device, void const* const data)
     Buffer stagingBuffer;
     create_staging_buffer(stagingBuffer, imageSizeInBytes);
     
+    void* data = pImage->get_data();
+    if (pImage->is_float)
+    {
+        static_cast<float*>(data);
+    }
+    else
+    {
+        static_cast<unsigned char*>(data);
+    }
+
     upload_buffer_data(stagingBuffer, data, imageSizeInBytes, 0);
 
     VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();

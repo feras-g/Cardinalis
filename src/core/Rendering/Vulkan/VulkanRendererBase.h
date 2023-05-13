@@ -192,7 +192,7 @@ public:
 		Image im = load_image_from_file(filename);
 		Texture2D tex2D;
 		tex2D.init(format, im.w, im.h);
-		tex2D.create_from_data(im.data.get(), name);
+		tex2D.create_from_data(&im, name);
 		tex2D.create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, tex2D.info.mipLevels });
 
 		return add_texture(tex2D, name);

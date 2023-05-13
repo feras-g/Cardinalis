@@ -33,12 +33,40 @@ static constexpr uint64_t OneSecondInNanoSeconds = 1000000000;
 
 uint32_t FindMemoryType(VkPhysicalDevice physDevice, uint32_t memoryTypeBits, VkMemoryPropertyFlags memoryProperties);
 
-using ImageData = std::unique_ptr<unsigned char, decltype(&free)>;
+std::string_view get_extension(std::string_view filename);
+
 struct Image
 {
-    ImageData data;
-    int w{}, h{}, n{};
-    ~Image() { data = nullptr; }
+	Image(void* data, bool b_is_float);
+	Image(void* data, int _w, int _h, int _n, bool b_is_float);
+	float* float_data = nullptr;
+	unsigned char* uchar_data = nullptr;
+	inline void* get_data()
+	{
+		if (is_float)
+		{
+			return float_data;
+		}
+		else
+		{
+			return uchar_data;
+		}
+	}
+
+	int w{}, h{}, n{};
+	bool is_float = false;
+
+	~Image() 
+	{
+		if (uchar_data) {
+			delete uchar_data; 
+			uchar_data = nullptr;
+		}
+		if (float_data) {
+			delete float_data;
+			float_data = nullptr;
+		}
+	}
 };
 
 Image load_image_from_file(std::string_view filename);
