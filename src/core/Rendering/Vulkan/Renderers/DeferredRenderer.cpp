@@ -42,7 +42,7 @@ void DeferredRenderer::init(
 	}
 
 	/* Create shader */
-	m_shader_deferred.load_from_file("Deferred.vert.spv", "Deferred.frag.spv");
+	m_shader_deferred.load_from_file("DeferredLightingPass.vert.spv", "DeferredLightingPass.frag.spv");
 
 	/* Create Descriptor Pool */
 	m_descriptor_pool = create_descriptor_pool(0, 0, num_descriptors, 0);

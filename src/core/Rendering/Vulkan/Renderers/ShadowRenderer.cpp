@@ -49,7 +49,7 @@ void ShadowRenderer::init(unsigned int width, unsigned int height, const LightMa
 	m_gfx_pipeline_layout   = create_pipeline_layout(context.device, desc_set_layouts);
 
 	/* Create graphics pipeline */
-	m_shadow_shader.load_from_file("ShadowMapping.vert.spv", "ShadowMapping.frag.spv");
+	m_shadow_shader.load_from_file("GenShadowMap.vert.spv", "GenShadowMap.frag.spv");
 	GfxPipeline::Flags flags = GfxPipeline::Flags::ENABLE_DEPTH_STATE;
 	GfxPipeline::CreateDynamic(m_shadow_shader, {}, shadow_map_format, flags, m_gfx_pipeline_layout, &m_gfx_pipeline, VK_CULL_MODE_FRONT_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
 }

@@ -13,7 +13,7 @@ uint32_t VulkanModelRenderer::render_height = 2048;
 
 VulkanModelRenderer::VulkanModelRenderer()
 {
-	m_shader.reset(new VulkanShader("Model.vert.spv", "Model.frag.spv"));
+	m_shader.reset(new VulkanShader("DeferrredGeometryPass.vert.spv", "DeferrredGeometryPass.frag.spv"));
 	
 	/* Render objects creation */
 	create_attachments();
