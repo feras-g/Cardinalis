@@ -50,10 +50,10 @@ void create_staging_buffer(Buffer& result, VkDeviceSize size)
 	create_buffer(result, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 }
 
-void upload_buffer_data(Buffer& buffer, const void* data, const size_t size, VkDeviceSize offset)
+void upload_buffer_data(Buffer& buffer, const void* data, const size_t size, VkDeviceSize offset)	
 {
 	void* pMappedData = nullptr;
-	VK_CHECK(vkMapMemory(context.device, buffer.memory, offset, buffer.size_bytes, 0, &pMappedData));
+	VK_CHECK(vkMapMemory(context.device, buffer.memory, offset, size, 0, (void**)&pMappedData));
 	memcpy(pMappedData, data, size);
 	vkUnmapMemory(context.device, buffer.memory);
 }

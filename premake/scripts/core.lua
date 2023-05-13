@@ -45,13 +45,13 @@ project("CoreLib")
 
 	filter "system:windows"
 		systemversion "latest"
-		defines { "WIN32_LEAN_AND_MEAN", "GLM_DEPTH_ZERO_TO_ONE" }
+		defines { "WIN32_LEAN_AND_MEAN", "GLM_DEPTH_ZERO_TO_ONE", "_CRT_SECURE_NO_WARNINGS"}
 		links	{ "vulkan-1", "imgui", "OptickCore", "shcore" }
 		
 	filter "configurations:Debug"
 		runtime "Debug"
 		symbols "on"
-		buildoptions {"/Od"}
+		buildoptions {"/Od", "/WX", "/permissive-"}
 		defines { "DEBUG", "ENABLE_VALIDATION_LAYERS", "GLM_DEPTH_ZERO_TO_ONE" }
 		libdirs { lib_list, lib_dir .. "optick/lib/x64/debug/" }
 		

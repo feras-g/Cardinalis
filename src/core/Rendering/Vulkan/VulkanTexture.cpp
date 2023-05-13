@@ -43,12 +43,12 @@ void Texture2D::create_from_data(
     VkImageLayout		layout)
 {
 	assert(initialized);
-    ::create_vk_image(context.device, false, *this, imageUsage);
+    create_vk_image(context.device, false, imageUsage);
     
     VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
     transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     end_temp_cmd_buffer(cmd_buffer);
-
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
     upload_data(context.device, image);
     if (info.mipLevels > 1)
     {
@@ -66,28 +66,27 @@ void Texture2D::create(VkDevice device, VkImageUsageFlags imageUsage, std::strin
 {
     if(!debug_name.empty()) info.debugName = debug_name.data();
 
-    ::create_vk_image(device, false, *this, imageUsage);
+    create_vk_image(device, false, imageUsage);
 }
-
-void create_vk_image(VkDevice device, bool isCubemap, Texture& texture, VkImageUsageFlags imageUsage)
+void Texture::create_vk_image_cube(VkDevice device, VkImageUsageFlags imageUsage)
+{
+    create_vk_image(device, true, imageUsage);
+}
+void Texture::create_vk_image(VkDevice device, bool isCubemap, VkImageUsageFlags imageUsage)
 {
     VkImageCreateFlags flags{ 0 };
     uint32_t arrayLayers = 1u;
-    if (isCubemap)
-    {
-        flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-        arrayLayers = 6u;
-    }
+
 
     VkImageCreateInfo createInfo =
     {
         .sType                  { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO },
         .flags                  { 0 },
         .imageType              { VK_IMAGE_TYPE_2D },
-        .format                 { texture.info.imageFormat },
-        .extent                 { texture.info.width, texture.info.height, 1 },
-        .mipLevels              { texture.info.mipLevels },
-        .arrayLayers            { arrayLayers },
+        .format                 { info.imageFormat },
+        .extent                 { info.width, info.height, 1 },
+        .mipLevels              { info.mipLevels },
+        .arrayLayers            { info.layerCount },
         .samples                { VK_SAMPLE_COUNT_1_BIT },
         .tiling                 { VK_IMAGE_TILING_OPTIMAL },
         .usage                  { imageUsage | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT },
@@ -97,12 +96,17 @@ void create_vk_image(VkDevice device, bool isCubemap, Texture& texture, VkImageU
         .initialLayout          { VK_IMAGE_LAYOUT_UNDEFINED }
     };
 
-    VK_CHECK(vkCreateImage(device, &createInfo, nullptr, &texture.image));
+    if (isCubemap)
+    {
+        flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+    }
+
+    VK_CHECK(vkCreateImage(device, &createInfo, nullptr, &image));
 
     // Image memory
     VkMemoryRequirements imageMemReq;
-    vkGetImageMemoryRequirements(device, texture.image, &imageMemReq);
-
+    vkGetImageMemoryRequirements(device, image, &imageMemReq);
+    
     VkMemoryAllocateInfo allocInfo =
     {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -110,11 +114,11 @@ void create_vk_image(VkDevice device, bool isCubemap, Texture& texture, VkImageU
         .memoryTypeIndex = FindMemoryType(context.physicalDevice, imageMemReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
     };
     
-    VK_CHECK(vkAllocateMemory(device, &allocInfo, nullptr, &texture.deviceMemory));
-    VK_CHECK(vkBindImageMemory(device, texture.image, texture.deviceMemory, 0));
+    VK_CHECK(vkAllocateMemory(device, &allocInfo, nullptr, &deviceMemory));
+    VK_CHECK(vkBindImageMemory(device, image, deviceMemory, 0));
 
     /* Debug name */
-    set_object_name(VK_OBJECT_TYPE_IMAGE, (uint64_t)texture.image, texture.info.debugName);
+    set_object_name(VK_OBJECT_TYPE_IMAGE, (uint64_t)image, info.debugName);
 }
 
 void Texture::copy_from_buffer(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer)
@@ -151,16 +155,7 @@ void Texture::upload_data(VkDevice device, Image* pImage)
     Buffer stagingBuffer;
     create_staging_buffer(stagingBuffer, imageSizeInBytes);
     
-    if (pImage->is_float)
-    {
-        float* data = static_cast<float*>(pImage->get_data());
-        upload_buffer_data(stagingBuffer, data, imageSizeInBytes, 0);
-    }
-    else
-    {
-        unsigned char* data = static_cast<unsigned char*>(pImage->get_data());
-        upload_buffer_data(stagingBuffer, data, imageSizeInBytes, 0);
-    }
+    upload_buffer_data(stagingBuffer, pImage->get_data(), imageSizeInBytes, 0);
 
     VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
     copy_from_buffer(cmd_buffer, stagingBuffer.buffer);
@@ -176,7 +171,7 @@ void Texture::create_view(VkDevice device, const ImageViewInitInfo& viewInfo)
         .sType      { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO },
         .flags      { 0 },
         .image      { image },
-        .viewType   { VK_IMAGE_VIEW_TYPE_2D },
+        .viewType   { viewInfo.viewType },
         .format     { info.imageFormat },
         .components 
         {
@@ -191,7 +186,7 @@ void Texture::create_view(VkDevice device, const ImageViewInitInfo& viewInfo)
             .baseMipLevel   { viewInfo.baseMipLevel },
             .levelCount     { viewInfo.levelCount },
             .baseArrayLayer { viewInfo.baseArrayLayer },
-            .layerCount     { viewInfo.layerCount },
+            .layerCount     { (viewInfo.viewType == VK_IMAGE_VIEW_TYPE_CUBE) ? 6 : viewInfo.layerCount },
         }
     };
 
@@ -308,7 +303,7 @@ void Texture::transition_layout(VkCommandBuffer cmdBuffer, VkImageLayout old_lay
             .baseMipLevel = 0,
             .levelCount = info.mipLevels, // Transition all mip levels by default
             .baseArrayLayer = 0,
-            .layerCount = 1,
+            .layerCount = info.layerCount,
         }
     };
 

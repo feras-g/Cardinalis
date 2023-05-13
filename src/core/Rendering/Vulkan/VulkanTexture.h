@@ -26,6 +26,11 @@ struct ImageViewInitInfo
 	uint32_t		   layerCount		{ 1 };
 };
 
+static constexpr ImageViewInitInfo ImageViewCubeTexture
+{
+	VK_IMAGE_VIEW_TYPE_CUBE, VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 6
+};
+
 struct Texture
 {
 	VkImage               image			{ nullptr };
@@ -42,10 +47,13 @@ struct Texture
 	void transition_layout(VkCommandBuffer cmdBuffer, VkImageLayout old_layout, VkImageLayout new_layout, VkImageSubresourceRange* subresourceRange = nullptr);
 	void destroy(VkDevice device);
 	void generate_mipmaps();
+
+	/* Create and allocated memory for a Vulkan image */
+	void create_vk_image(VkDevice device, bool isCubemap, VkImageUsageFlags imageUsage);
+	void create_vk_image_cube(VkDevice device, VkImageUsageFlags imageUsage);
 };
 
-/* Create and allocated memory for a Vulkan image */
-void create_vk_image(VkDevice device, bool isCubemap, Texture& texture, VkImageUsageFlags imageUsage);
+
 
 struct Texture2D : public Texture
 {
