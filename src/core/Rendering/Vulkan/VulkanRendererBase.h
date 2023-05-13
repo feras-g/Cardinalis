@@ -88,7 +88,7 @@ public:
 	{
 		/* Setup descriptor pool */
 		uint32_t num_ssbo_per_mesh = 2;
-		uint32_t num_mesh_descriptor_sets = meshes.size();
+		uint32_t num_mesh_descriptor_sets = (uint32_t)meshes.size();
 		uint32_t num_drawable_data_descriptor_sets = NUM_FRAMES;
 
 		std::vector<VkDescriptorPoolSize> pool_sizes;
@@ -103,8 +103,8 @@ public:
 
 		/* Drawables */
 		/* Setup buffers */
-		per_object_data_dynamic_aligment = calc_dynamic_ubo_alignment(sizeof(TransformDataUbo));
-		object_data_dynamic_ubo_size_bytes = drawables.size() * per_object_data_dynamic_aligment;
+		per_object_data_dynamic_aligment = (uint32_t)calc_dynamic_ubo_alignment(sizeof(TransformDataUbo));
+		object_data_dynamic_ubo_size_bytes = (uint32_t)drawables.size() * per_object_data_dynamic_aligment;
 		create_uniform_buffer(RenderObjectManager::object_data_dynamic_ubo, object_data_dynamic_ubo_size_bytes);
 
 		per_object_datas   = (TransformDataUbo*)alignedAlloc(object_data_dynamic_ubo_size_bytes, per_object_data_dynamic_aligment);
@@ -130,7 +130,7 @@ public:
 		{
 			BufferWriteDescriptorSet(RenderObjectManager::drawable_descriptor_set, 0, &object_ubo_desc_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC),	/* Object data */
 		};
-		vkUpdateDescriptorSets(context.device, desc_writes.size(), desc_writes.data(), 0, nullptr);
+		vkUpdateDescriptorSets(context.device, (uint32_t)desc_writes.size(), desc_writes.data(), 0, nullptr);
 
 		/* Meshes */
 		/* Setup descriptor set layout */
@@ -147,7 +147,7 @@ public:
 			std::vector<VkWriteDescriptorSet> write_desc = {};
 			write_desc.push_back(BufferWriteDescriptorSet(mesh.descriptor_set, 0, &sbo_vtx_info, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
 			write_desc.push_back(BufferWriteDescriptorSet(mesh.descriptor_set, 1, &sbo_idx_info, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
-			vkUpdateDescriptorSets(context.device, write_desc.size(), write_desc.data(), 0, nullptr);
+			vkUpdateDescriptorSets(context.device, (uint32_t)write_desc.size(), write_desc.data(), 0, nullptr);
 		}
 	}
 
@@ -156,9 +156,9 @@ public:
 		assert(drawable.mesh_handle);
 		if (!drawable.has_primitives)
 		{
-			drawable.material_id = RenderObjectManager::get_material("Default Material").first;
+			drawable.material_id = (uint32_t)RenderObjectManager::get_material("Default Material").first;
 		}
-		drawable.id = drawables.size();
+		drawable.id = (uint32_t)drawables.size();
 		size_t transform_data_idx = transform_datas.size();
 		drawables.push_back(drawable);
 
@@ -191,7 +191,7 @@ public:
 		//std::string name = filename.substr(filename.find_last_of('/') + 1);
 		Image im = load_image_from_file(filename);
 		Texture2D tex2D;
-		tex2D.init(format, im.w, im.h);
+		tex2D.init(format, im.w, im.h, 1, true);
 		tex2D.create_from_data(&im, name);
 		tex2D.create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, tex2D.info.mipLevels });
 

@@ -11,8 +11,8 @@ struct ImDrawData;
 struct ImGuiIO;
 class VulkanShader;
 class VulkanModelRenderer;
-class DeferredRenderer;
-class ShadowRenderer;
+struct DeferredRenderer;
+struct ShadowRenderer;
 
 class VulkanImGuiRenderer
 {

@@ -29,7 +29,7 @@ void DeferredRenderer::init(
 	VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
-		m_output_attachment[i].init(color_attachment_format, 2048, 2048, false);
+		m_output_attachment[i].init(color_attachment_format, 2048, 2048, 1, false);
 		m_output_attachment[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, "Deferred Renderer Attachment");
 		m_output_attachment[i].create_view(context.device, {});
 		m_output_attachment[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);

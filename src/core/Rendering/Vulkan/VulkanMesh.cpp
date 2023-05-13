@@ -91,7 +91,7 @@ void VulkanMesh::create_from_data(std::span<SimpleVertexData> vertices, std::spa
 
 void Drawable::draw(VkCommandBuffer cmd_buffer) const
 {
-	vkCmdDraw(cmd_buffer, mesh_handle->m_num_indices, 1, 0, 0);
+	vkCmdDraw(cmd_buffer, (uint32_t)mesh_handle->m_num_indices, 1, 0, 0);
 }
 
 void Drawable::draw_primitives(VkCommandBuffer cmd_buffer) const
@@ -244,6 +244,7 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 				{
 					/* Load from buffer */
 					assert(false);
+					return 0;
 				}
 			}
 			else
@@ -262,7 +263,7 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 
 		if (tex_emissive)
 		{
-			material.tex_emissive_id = load_tex(tex_emissive, tex_emissive_format);
+			material.tex_emissive_id = (unsigned int)load_tex(tex_emissive, tex_emissive_format);
 		}
 
 		if (gltf_mat->has_pbr_metallic_roughness)
@@ -274,12 +275,12 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 
 			if (tex_base_color)
 			{
-				material.tex_base_color_id = load_tex(tex_base_color, tex_base_color_format);
+				material.tex_base_color_id = (unsigned int)load_tex(tex_base_color, tex_base_color_format);
 			}
 
 			if (tex_metallic_roughness)
 			{
-				material.tex_metallic_roughness_id = load_tex(tex_metallic_roughness, tex_metallic_roughness_format);
+				material.tex_metallic_roughness_id = (unsigned int)load_tex(tex_metallic_roughness, tex_metallic_roughness_format);
 			}
 
 			/* Factors */
@@ -358,8 +359,8 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 static void load_primitive(cgltf_node* node, cgltf_primitive* primitive, GeometryData& geometry)
 {
 	Primitive p = {};
-	p.first_index = geometry.indices.size();
-	p.index_count = primitive->indices->count;
+	p.first_index = (uint32_t)geometry.indices.size();
+	p.index_count = (uint32_t)primitive->indices->count;
 	 
 	//glm::mat4 mesh_world_mat;
 	//cgltf_node_transform_world(node, glm::value_ptr(mesh_world_mat));
@@ -370,10 +371,10 @@ static void load_primitive(cgltf_node* node, cgltf_primitive* primitive, Geometr
 	p.mat_model = mesh_local_mat;
 
 	/* Load indices */
-	for (int idx = 0; idx < p.index_count; idx++)
+	for (uint32_t idx = 0; idx < p.index_count; idx++)
 	{
-		auto index = cgltf_accessor_read_index(primitive->indices, idx);
-		geometry.indices.push_back(index + geometry.vertices.size());
+		size_t index = cgltf_accessor_read_index(primitive->indices, idx);
+		geometry.indices.push_back((unsigned int)(index + geometry.vertices.size()));
 	}
 
 	load_vertices(p, primitive, geometry);

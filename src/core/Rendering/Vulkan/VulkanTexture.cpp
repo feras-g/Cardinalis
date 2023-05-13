@@ -9,16 +9,16 @@ static void GetSrcDstPipelineStage(VkImageLayout oldLayout, VkImageLayout newLay
 
 static uint32_t calc_mip_levels(uint32_t width, uint32_t height)
 {
-    return std::floor(std::log2(std::max(width, height))) + 1;
+    return uint32_t(std::floor(std::log2(std::max(width, height))) + 1);
 }
 
-void Texture2D::init(VkFormat format, uint32_t width, uint32_t height, bool calc_mip)
+void Texture2D::init(VkFormat format, uint32_t width, uint32_t height, uint32_t layers, bool calc_mip)
 {
     info.imageFormat = format;
 	info.width  = width;
 	info.height = height;
 	info.mipLevels = calc_mip ? calc_mip_levels(width, height) : 1;
-    info.layerCount = 1;
+    info.layerCount = layers;
 	info.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
     initialized = true;
@@ -151,17 +151,16 @@ void Texture::upload_data(VkDevice device, Image* pImage)
     Buffer stagingBuffer;
     create_staging_buffer(stagingBuffer, imageSizeInBytes);
     
-    void* data = pImage->get_data();
     if (pImage->is_float)
     {
-        static_cast<float*>(data);
+        float* data = static_cast<float*>(pImage->get_data());
+        upload_buffer_data(stagingBuffer, data, imageSizeInBytes, 0);
     }
     else
     {
-        static_cast<unsigned char*>(data);
+        unsigned char* data = static_cast<unsigned char*>(pImage->get_data());
+        upload_buffer_data(stagingBuffer, data, imageSizeInBytes, 0);
     }
-
-    upload_buffer_data(stagingBuffer, data, imageSizeInBytes, 0);
 
     VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
     copy_from_buffer(cmd_buffer, stagingBuffer.buffer);
@@ -388,6 +387,7 @@ uint32_t GetBytesPerPixelFromFormat(VkFormat format)
         return 16;
     default:
         assert(false);
+        return 0;
         break;
     }
 }

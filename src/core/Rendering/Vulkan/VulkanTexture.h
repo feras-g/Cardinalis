@@ -50,7 +50,7 @@ void create_vk_image(VkDevice device, bool isCubemap, Texture& texture, VkImageU
 struct Texture2D : public Texture
 {
 public:
-	void init(VkFormat format, uint32_t width, uint32_t height, bool calc_mip = true);
+	void init(VkFormat format, uint32_t width, uint32_t height, uint32_t layers, bool calc_mip);
 
 	void create_from_file(
 		std::string_view	filename,

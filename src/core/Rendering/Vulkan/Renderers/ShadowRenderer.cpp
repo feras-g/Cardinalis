@@ -16,7 +16,7 @@ void ShadowRenderer::init(unsigned int width, unsigned int height, const LightMa
 	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
 		/* Create shadow map */
-		m_shadow_maps[frame_idx].init(shadow_map_format, width, height, false);
+		m_shadow_maps[frame_idx].init(shadow_map_format, width, height,1, false);
 		m_shadow_maps[frame_idx].create(context.device, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
 		m_shadow_maps[frame_idx].create_view(context.device, { .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT });
 		m_shadow_maps[frame_idx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -75,7 +75,7 @@ void ShadowRenderer::update_desc_sets(std::span<Texture2D*> gbuffers_depth)
 		VkDescriptorBufferInfo info2 = { VulkanRendererBase::m_ubo_common_framedata[frame_idx].buffer,  0, sizeof(VulkanRendererBase::PerFrameData) };
 		desc_writes.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], 2, &info2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
 
-		vkUpdateDescriptorSets(context.device, desc_writes.size(), desc_writes.data(), 0, nullptr);
+		vkUpdateDescriptorSets(context.device, (uint32_t)desc_writes.size(), desc_writes.data(), 0, nullptr);
 	}
 }
 

@@ -5,14 +5,17 @@
 #include "Window/Window.h"
 #include "Rendering/Vulkan/VulkanRenderInterface.h"
 #include "Rendering/Vulkan/VulkanShader.h"
-#include "Rendering/Vulkan/Renderers/VulkanImGuiRenderer.h"
-#include "Rendering/Vulkan/Renderers/VulkanModelRenderer.h"
-#include "Rendering/Vulkan/Renderers/DeferredRenderer.h"
-#include "Rendering/Vulkan/Renderers/ShadowRenderer.h"
+
 #include "Rendering/Vulkan/VulkanUI.h"
 #include "Rendering/Camera.h"
 #include "Rendering/FrameCounter.h"
 #include "Rendering/LightManager.h"
+
+#include "Rendering/Vulkan/Renderers/VulkanImGuiRenderer.h"
+#include "Rendering/Vulkan/Renderers/VulkanModelRenderer.h"
+#include "Rendering/Vulkan/Renderers/DeferredRenderer.h"
+#include "Rendering/Vulkan/Renderers/ShadowRenderer.h"
+#include "Rendering/Vulkan/Renderers/CubemapRenderer.h"
 
 class SampleApp final : public Application
 {
@@ -23,6 +26,7 @@ public:
 	}
 	~SampleApp();
 	void Initialize()	override;
+	void InitSceneResources();
 	void Update(float dt)		override;
 	void Render() override;
 	void UpdateRenderersData(float dt, size_t currentImageIdx) override;
@@ -46,24 +50,26 @@ protected:
 	std::unique_ptr<VulkanModelRenderer>		m_model_renderer;
 	DeferredRenderer							m_deferred_renderer;
 	ShadowRenderer							    m_shadow_renderer;
+	CubemapRenderer							    m_cubemap_renderer;
+
 };
 
-void SampleApp::Initialize()
+void SampleApp::InitSceneResources()
 {
 	CameraController fpsController = CameraController({ 0,0,5 }, { 0,-180,0 }, { 0,0,1 }, { 0,1,0 });
 	m_Camera = Camera(fpsController, 45.0f, 1.0f, 0.1f, 1000.0f);
-	
-	uint32_t default_tex_id = RenderObjectManager::add_texture("../../../data/textures/albedo_default.png", "Default Albedo");
-	uint32_t placeholder_tex_id = RenderObjectManager::add_texture("../../../data/textures/placeholder.png", "Placeholder Texture");
+
+	uint32_t default_tex_id = (uint32_t)RenderObjectManager::add_texture("../../../data/textures/albedo_default.png", "Default Albedo");
+	uint32_t placeholder_tex_id = (uint32_t)RenderObjectManager::add_texture("../../../data/textures/placeholder.png", "Placeholder Texture");
 	static Material default_material
 	{
-		.tex_base_color_id			= default_tex_id,
-		.tex_metallic_roughness_id	= placeholder_tex_id,
-		.tex_normal_id				= placeholder_tex_id,
-		.tex_emissive_id			= placeholder_tex_id,
-		.base_color_factor			= glm::vec4(1.0f),
-		.metallic_factor			= 0.0f,
-		.roughness_factor			= 1.0f,
+		.tex_base_color_id = default_tex_id,
+		.tex_metallic_roughness_id = placeholder_tex_id,
+		.tex_normal_id = placeholder_tex_id,
+		.tex_emissive_id = placeholder_tex_id,
+		.base_color_factor = glm::vec4(1.0f),
+		.metallic_factor = 0.0f,
+		.roughness_factor = 1.0f,
 	};
 	RenderObjectManager::add_material(default_material, "Default Material");
 
@@ -119,9 +125,13 @@ void SampleApp::Initialize()
 	//		RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("duck")), "duck" + std::to_string(i+j), transform);
 	//	}
 	//}
-
-
 	RenderObjectManager::configure();
+}
+
+void SampleApp::Initialize()
+{
+	InitSceneResources();
+
 	m_model_renderer.reset(new VulkanModelRenderer);
 	m_imgui_renderer.reset(new VulkanImGuiRenderer(context));
 	
@@ -140,7 +150,7 @@ void SampleApp::Initialize()
 	m_shadow_renderer.update_desc_sets(m_deferred_renderer.m_g_buffers_depth);
 
 	m_imgui_renderer->init(*m_model_renderer.get(), m_deferred_renderer, m_shadow_renderer);
-
+	m_cubemap_renderer.init();
 }
 
 void SampleApp::Update(float dt)

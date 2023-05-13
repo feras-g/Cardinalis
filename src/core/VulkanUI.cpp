@@ -25,9 +25,9 @@ void VulkanUI::End()
 }
 
 VulkanUI& VulkanUI::ShowSceneViewportPanel(
-	unsigned int texDeferred, unsigned int texColorId, 
-	unsigned int texNormalId, unsigned int texDepthId,
-	unsigned int texNormalMapId, unsigned int texMetallicRoughnessId, unsigned int texShadowMapId
+	size_t texDeferred, size_t texColorId,
+	size_t texNormalId, size_t texDepthId,
+	size_t texNormalMapId, size_t texMetallicRoughnessId, size_t texShadowMapId
 )
 {
 	static ImGuiComboFlags flags = 0;
@@ -69,7 +69,7 @@ VulkanUI& VulkanUI::ShowSceneViewportPanel(
 
 		//if (combo_preview_value == "Deferred Output")
 		{
-			ImGui::Image((ImTextureID)texDeferred, sceneViewPanelSize );
+			ImGui::Image(reinterpret_cast<ImTextureID>(texDeferred), sceneViewPanelSize );
 		}
 
 
@@ -87,29 +87,29 @@ VulkanUI& VulkanUI::ShowSceneViewportPanel(
 		
 		{
 			ImGui::Text("Albedo");
-			ImGui::Image((ImTextureID)texColorId, thumbnail_size);
+			ImGui::Image(reinterpret_cast<ImTextureID>(texColorId), thumbnail_size);
 		}
 
 		{
 			ImGui::Text("WS Normal");
-			ImGui::Image((ImTextureID)texNormalId, thumbnail_size);
+			ImGui::Image(reinterpret_cast<ImTextureID>(texNormalId), thumbnail_size);
 		}
 
 		{
 			ImGui::Text("Depth");
-			ImGui::Image((ImTextureID)texDepthId, thumbnail_size);
+			ImGui::Image(reinterpret_cast<ImTextureID>(texDepthId), thumbnail_size);
 
 		}
 
 		{
 			ImGui::Text("Metallic/Roughness");
-			ImGui::Image((ImTextureID)texMetallicRoughnessId, thumbnail_size);
+			ImGui::Image(reinterpret_cast<ImTextureID>(texMetallicRoughnessId), thumbnail_size);
 
 		}
 
 		{
 			ImGui::Text("Depth (Directional Light)");
-			ImGui::Image((ImTextureID)texShadowMapId, thumbnail_size);
+			ImGui::Image(reinterpret_cast<ImTextureID>(texShadowMapId), thumbnail_size);
 		}
 		
 	}
@@ -208,7 +208,7 @@ VulkanUI& VulkanUI::ShowFrameTimeGraph(float* values, size_t nbValues)
 
 	if (ImGui::Begin("Statistics", 0, 0))
 	{
-		ImGui::PlotLines("CPU Time", values, nbValues, 0, 0, 0, 33);
+		//ImGui::PlotLines("CPU Time", values, nbValues, 0, 0, 0, 33);
 	}
 	ImGui::End();
 

@@ -265,7 +265,7 @@ bool VulkanImGuiRenderer::CreateFontTexture(ImGuiIO* io, const char* fontPath, T
 		LOG_ERROR("Failed to load texture\n"); 
 		return false;
 	}
-	out_Font.init(VK_FORMAT_R8G8B8A8_UNORM, tex_width, tex_height, false);
+	out_Font.init(VK_FORMAT_R8G8B8A8_UNORM, tex_width, tex_height, 1, false);
 	Image im(im_data, false);
 	out_Font.create_from_data(&im, "Font texture", VK_IMAGE_USAGE_SAMPLED_BIT);
 	out_Font.create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
@@ -278,7 +278,7 @@ bool VulkanImGuiRenderer::CreatePipeline(VkDevice device)
 {
 	create_buffers();
 
-	m_descriptor_pool = create_descriptor_pool(numStorageBuffers, numUniformBuffers, m_Textures.size(), 0);
+	m_descriptor_pool = create_descriptor_pool(numStorageBuffers, numUniformBuffers, (uint32_t)m_Textures.size(), 0);
 
 	{
 		std::vector<VkDescriptorSetLayoutBinding> bindings =
@@ -297,7 +297,7 @@ bool VulkanImGuiRenderer::CreatePipeline(VkDevice device)
 	}
 	update_descriptor_set(device);
 
-	size_t fragConstRangeSizeInBytes = sizeof(uint32_t); // Size of 1 Push constant holding the texture ID passed from ImGui::Image
+	uint32_t fragConstRangeSizeInBytes = sizeof(uint32_t); // Size of 1 Push constant holding the texture ID passed from ImGui::Image
 	std::array<VkDescriptorSetLayout, 1> layouts{ m_descriptor_set_layout };
 	m_pipeline_layout = create_pipeline_layout(device, layouts, 0, fragConstRangeSizeInBytes);
 

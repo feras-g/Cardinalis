@@ -10,7 +10,7 @@ void DynamicRenderPass::begin(VkCommandBuffer cmd_buffer, VkRect2D render_area)
 	render_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
 	render_info.renderArea = render_area;
 	render_info.layerCount = 1;
-	render_info.colorAttachmentCount = color_attachments.size();
+	render_info.colorAttachmentCount = (uint32_t)color_attachments.size();
 	render_info.pColorAttachments = color_attachments.data();
 	render_info.pDepthAttachment = has_depth_attachment ? &depth_attachment : VK_NULL_HANDLE;
 	render_info.pStencilAttachment = has_stencil_attachment ? &stencil_attachment : VK_NULL_HANDLE;

@@ -604,7 +604,7 @@ bool GfxPipeline::CreateDynamic(const VulkanShader& shader, std::span<VkFormat> 
 {
 	VkPipelineRenderingCreateInfoKHR pipeline_create{ VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR };
 	pipeline_create.pNext = VK_NULL_HANDLE;
-	pipeline_create.colorAttachmentCount = colorAttachmentFormats.size();
+	pipeline_create.colorAttachmentCount = (uint32_t)colorAttachmentFormats.size();
 	pipeline_create.pColorAttachmentFormats = colorAttachmentFormats.data();
 	pipeline_create.depthAttachmentFormat = depth_format;
 	//pipeline_create.stencilAttachmentFormat = VK_NULL_HANDLE;
@@ -614,7 +614,7 @@ bool GfxPipeline::CreateDynamic(const VulkanShader& shader, std::span<VkFormat> 
 		flags = Flags(( (int)flags | (int)Flags::ENABLE_DEPTH_STATE));
 	}
 
-	return Create(shader, colorAttachmentFormats.size(), flags, nullptr, pipelineLayout, out_GraphicsPipeline, cullMode, frontFace, &pipeline_create, customViewport);
+	return Create(shader, (uint32_t)colorAttachmentFormats.size(), flags, nullptr, pipelineLayout, out_GraphicsPipeline, cullMode, frontFace, &pipeline_create, customViewport);
 }
 
 bool GfxPipeline::Create(const VulkanShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPipeline* out_GraphicsPipeline,
@@ -687,7 +687,7 @@ bool GfxPipeline::Create(const VulkanShader& shader, uint32_t numColorAttachment
 
 
 	std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments = {};
-	for (int i = 0; i < numColorAttachments; i++)
+	for (uint32_t i = 0; i < numColorAttachments; i++)
 	{
 		colorBlendAttachments.push_back(
 			{
@@ -885,7 +885,7 @@ void set_viewport_scissor(VkCommandBuffer cmdBuffer, uint32_t width, uint32_t he
 
 	if (invertViewportY)
 	{
-		viewport.y = height;
+		viewport.y = (float)height;
 		viewport.height *= -1;	// Flip viewport origin to bottom left corner 
 	}
 

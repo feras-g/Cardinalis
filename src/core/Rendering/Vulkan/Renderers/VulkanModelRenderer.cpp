@@ -163,7 +163,7 @@ void VulkanModelRenderer::update_descriptor_set(VkDevice device, size_t frame_id
 	desc_writes.push_back(ImageWriteDescriptorSet(m_pass_descriptor_set, 5, &sampler_info, VK_DESCRIPTOR_TYPE_SAMPLER));
 
 
-	vkUpdateDescriptorSets(context.device, desc_writes.size(), desc_writes.data(), 0, nullptr);
+	vkUpdateDescriptorSets(context.device, (uint32_t)desc_writes.size(), desc_writes.data(), 0, nullptr);
 }
 
 void VulkanModelRenderer::create_attachments()
@@ -176,11 +176,11 @@ void VulkanModelRenderer::create_attachments()
 	{
 		std::string s_prefix = "Frame #" + std::to_string(i) + "G-Buffer ";
 
-		m_gbuffer_albdedo[i].init(m_formats[0], render_width, render_height, false);	/* G-Buffer Color */
-		m_gbuffer_normal[i].init(m_formats[1], render_width, render_height, false);	/* G-Buffer Normal */
-		m_gbuffer_depth[i].init(m_depth_format, render_width, render_height, false);		/* G-Buffer Depth */
-		m_gbuffer_directional_shadow[i].init(m_depth_format, render_width, render_height, false);			/* G-Buffer Shadow map */
-		m_gbuffer_metallic_roughness[i].init(m_formats[2], render_width, render_height, false);			/* G-Buffer Metallic/Roughness */
+		m_gbuffer_albdedo[i].init(m_formats[0], render_width, render_height, 1, false);	/* G-Buffer Color */
+		m_gbuffer_normal[i].init(m_formats[1], render_width, render_height, 1, false);	/* G-Buffer Normal */
+		m_gbuffer_depth[i].init(m_depth_format, render_width, render_height, 1, false);		/* G-Buffer Depth */
+		m_gbuffer_directional_shadow[i].init(m_depth_format, render_width, render_height, 1, false);			/* G-Buffer Shadow map */
+		m_gbuffer_metallic_roughness[i].init(m_formats[2], render_width, render_height, 1, false);			/* G-Buffer Metallic/Roughness */
 
 		m_gbuffer_albdedo[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Albedo").c_str());
 		m_gbuffer_normal[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Normal").c_str());

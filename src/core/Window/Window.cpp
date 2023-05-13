@@ -121,7 +121,7 @@ void Window::Impl::Create()
 	// Init performance counter
 	LARGE_INTEGER perfCountFreq;
 	QueryPerformanceFrequency(&perfCountFreq);
-	m_PerfCounterFreq = perfCountFreq.QuadPart;
+	m_PerfCounterFreq = (double)perfCountFreq.QuadPart;
 
 	// Initialize ImGui
 	ImGui::CreateContext();

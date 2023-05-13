@@ -3,7 +3,7 @@
 #include "glm/gtx/log_base.hpp"
 #include <glm/gtc/type_ptr.hpp> // value_ptr
 
-struct Camera;
+class Camera;
 struct LightManager;
 
 class VulkanUI
@@ -13,9 +13,9 @@ public:
 
 	VulkanUI& Start();
 	VulkanUI& ShowSceneViewportPanel(
-		unsigned int texDeferred, unsigned int texColorId,
-		unsigned int texNormalId, unsigned int texDepthId,
-		unsigned int texNormalMapId, unsigned int texMetallicRoughnessId, unsigned int texShadowMapId);
+		size_t texDeferred, size_t texColorId,
+		size_t texNormalId, size_t texDepthId,
+		size_t texNormalMapId, size_t texMetallicRoughnessId, size_t texShadowMapId);
 	VulkanUI& ShowMenuBar();
 	VulkanUI& AddHierarchyPanel();
 	VulkanUI& AddInspectorPanel();
