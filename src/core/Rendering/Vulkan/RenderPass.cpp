@@ -4,7 +4,7 @@
 
 using namespace vk;
 
-void DynamicRenderPass::begin(VkCommandBuffer cmd_buffer, VkRect2D render_area)
+void DynamicRenderPass::begin(VkCommandBuffer cmd_buffer, VkRect2D render_area, uint32_t viewMask)
 {
 	VkRenderingInfo render_info = {};
 	render_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
@@ -14,6 +14,7 @@ void DynamicRenderPass::begin(VkCommandBuffer cmd_buffer, VkRect2D render_area)
 	render_info.pColorAttachments = color_attachments.data();
 	render_info.pDepthAttachment = has_depth_attachment ? &depth_attachment : VK_NULL_HANDLE;
 	render_info.pStencilAttachment = has_stencil_attachment ? &stencil_attachment : VK_NULL_HANDLE;
+	render_info.viewMask = viewMask;
 	
 	fpCmdBeginRenderingKHR(cmd_buffer, &render_info);
 }

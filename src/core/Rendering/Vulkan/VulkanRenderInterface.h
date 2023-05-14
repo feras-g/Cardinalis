@@ -30,6 +30,14 @@ static constexpr VkFormat ENGINE_SWAPCHAIN_COLOR_FORMAT = VK_FORMAT_B8G8R8A8_SRG
 static constexpr VkFormat ENGINE_SWAPCHAIN_DS_FORMAT = VK_FORMAT_D32_SFLOAT;
 static constexpr VkColorSpaceKHR ENGINE_SWAPCHAIN_COLOR_SPACE = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 
+/* Function pointers*/
+inline PFN_vkCmdBeginDebugUtilsLabelEXT		fpCmdBeginDebugUtilsLabelEXT;
+inline PFN_vkCmdEndDebugUtilsLabelEXT		fpCmdEndDebugUtilsLabelEXT;
+inline PFN_vkCmdInsertDebugUtilsLabelEXT	fpCmdInsertDebugUtilsLabelEXT;
+inline PFN_vkSetDebugUtilsObjectNameEXT		fpSetDebugUtilsObjectNameEXT;
+inline PFN_vkCmdBeginRenderingKHR			fpCmdBeginRenderingKHR;
+inline PFN_vkCmdEndRenderingKHR				fpCmdEndRenderingKHR;
+
 class Window;
 
 // Number of frames to work on 
@@ -90,13 +98,7 @@ private:
 	int minVer, majVer, patchVer;
 };
 
-/* Function pointers*/
-inline PFN_vkCmdBeginDebugUtilsLabelEXT		fpCmdBeginDebugUtilsLabelEXT;
-inline PFN_vkCmdEndDebugUtilsLabelEXT		fpCmdEndDebugUtilsLabelEXT;
-inline PFN_vkCmdInsertDebugUtilsLabelEXT	fpCmdInsertDebugUtilsLabelEXT;
-inline PFN_vkSetDebugUtilsObjectNameEXT		fpSetDebugUtilsObjectNameEXT;
-inline PFN_vkCmdBeginRenderingKHR			fpCmdBeginRenderingKHR;
-inline PFN_vkCmdEndRenderingKHR				fpCmdEndRenderingKHR;
+
 
 // Render pass description
 enum RenderPassFlags
@@ -143,7 +145,7 @@ struct GfxPipeline
 	};
 
 	static bool CreateDynamic(const VulkanShader& shader, std::span<VkFormat> colorAttachmentFormats, VkFormat depthAttachmentFormat, Flags flags, VkPipelineLayout pipelineLayout,
-		VkPipeline* out_GraphicsPipeline, VkCullModeFlags cullMode, VkFrontFace frontFace, glm::vec2 customViewport = {});
+		VkPipeline* out_GraphicsPipeline, VkCullModeFlags cullMode, VkFrontFace frontFace, glm::vec2 customViewport = {}, uint32_t viewMask = 0);
 	static bool Create(const VulkanShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPipeline* out_GraphicsPipeline,
 		VkCullModeFlags cullMode, VkFrontFace frontFace, VkPipelineRenderingCreateInfoKHR* dynamic_pipeline_create = nullptr, glm::vec2 customViewport = {});
 };
@@ -168,6 +170,3 @@ VkPipelineLayout create_pipeline_layout(VkDevice device, std::span<VkDescriptorS
 
 VkDescriptorSetLayout create_descriptor_set_layout(std::span<VkDescriptorSetLayoutBinding> layout_bindings);
 VkDescriptorSet create_descriptor_set(VkDescriptorPool pool, VkDescriptorSetLayout layout);
-
-void StartInstantUseCmdBuffer();
-void EndInstantUseCmdBuffer();

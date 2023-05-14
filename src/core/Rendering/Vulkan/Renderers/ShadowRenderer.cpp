@@ -2,6 +2,7 @@
 #include "Rendering/LightManager.h"
 #include "Rendering/Vulkan/VulkanMesh.h"
 #include "Rendering/Vulkan/VulkanRendererBase.h"
+#include "Rendering/Vulkan/VulkanDebugUtils.h"
 
 static constexpr VkFormat shadow_map_format = VK_FORMAT_D32_SFLOAT;
 
@@ -104,6 +105,8 @@ void ShadowRenderer::render(size_t current_frame_idx, VkCommandBuffer cmd_buffer
 
 void ShadowRenderer::draw_scene(VkCommandBuffer cmd_buffer)
 {
+	VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Directional Shadow Map Render Pass");
+
 	for (size_t i = 0; i < RenderObjectManager::drawables.size(); i++)
 	{
 		const Drawable& d = RenderObjectManager::drawables[i];

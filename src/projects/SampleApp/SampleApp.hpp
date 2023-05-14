@@ -96,6 +96,11 @@ void SampleApp::InitSceneResources()
 	{
 		glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0))
 	};
+
+
+	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cube")), "unit_cube", transform);
+
+
 	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("spheres")), "spheres", transform);
 
 	transform.model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(0.01f));
@@ -114,6 +119,9 @@ void SampleApp::InitSceneResources()
 	transform.model = glm::inverse(m_light_manager.proj * m_light_manager.view);
 	transform.model = glm::translate(transform.model, m_light_manager.eye);
 	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cube")), "frustum", transform);
+
+
+
 
 	//for (int i = -15; i < 15; i++)
 	//{

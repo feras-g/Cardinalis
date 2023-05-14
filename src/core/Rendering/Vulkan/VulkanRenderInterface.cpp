@@ -123,7 +123,10 @@ void VulkanRenderInterface::CreateDevices()
 		.pQueuePriorities = queuePriorities
 	};
 
-	deviceExtensions = { "VK_KHR_swapchain", "VK_KHR_shader_draw_parameters", "VK_EXT_descriptor_indexing", "VK_KHR_dynamic_rendering"};
+	deviceExtensions = { "VK_KHR_swapchain", "VK_KHR_shader_draw_parameters", "VK_EXT_descriptor_indexing", "VK_KHR_dynamic_rendering", "VK_KHR_multiview"};
+
+
+	
 
 	// Enable runtime descriptor indexing
 	VkPhysicalDeviceDescriptorIndexingFeaturesEXT indexingFeatures
@@ -143,10 +146,16 @@ void VulkanRenderInterface::CreateDevices()
 		.dynamicRendering = VK_TRUE,
 	};
 
+	// Enable mutiview
+	VkPhysicalDeviceMultiviewFeaturesKHR multiview_feature{};
+	multiview_feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHR;
+	multiview_feature.multiview = VK_TRUE;
+	multiview_feature.pNext = &dynamic_rendering_feature;
+
 	VkDeviceCreateInfo deviceInfo = 
 	{
 		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-		.pNext = &dynamic_rendering_feature,
+		.pNext = &multiview_feature,
 		.flags = NULL,
 		.queueCreateInfoCount = 1,
 		.pQueueCreateInfos = &queueInfo,
@@ -600,13 +609,14 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colo
 }
 
 bool GfxPipeline::CreateDynamic(const VulkanShader& shader, std::span<VkFormat> colorAttachmentFormats, VkFormat depth_format, Flags flags, VkPipelineLayout pipelineLayout,
-	VkPipeline* out_GraphicsPipeline, VkCullModeFlags cullMode, VkFrontFace frontFace, glm::vec2 customViewport)
+	VkPipeline* out_GraphicsPipeline, VkCullModeFlags cullMode, VkFrontFace frontFace, glm::vec2 customViewport, uint32_t viewMask)
 {
 	VkPipelineRenderingCreateInfoKHR pipeline_create{ VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR };
 	pipeline_create.pNext = VK_NULL_HANDLE;
 	pipeline_create.colorAttachmentCount = (uint32_t)colorAttachmentFormats.size();
 	pipeline_create.pColorAttachmentFormats = colorAttachmentFormats.data();
 	pipeline_create.depthAttachmentFormat = depth_format;
+	pipeline_create.viewMask = viewMask;
 	//pipeline_create.stencilAttachmentFormat = VK_NULL_HANDLE;
 	
 	if (depth_format != VK_FORMAT_UNDEFINED)
@@ -895,18 +905,18 @@ void set_viewport_scissor(VkCommandBuffer cmdBuffer, uint32_t width, uint32_t he
 	vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
 }
 
-VkPipelineLayout create_pipeline_layout(VkDevice device, VkDescriptorSetLayout descSetLayout)
+[[nodiscard]] VkPipelineLayout create_pipeline_layout(VkDevice device, VkDescriptorSetLayout descSetLayout)
 {
 	std::array<VkDescriptorSetLayout, 1> layout = { descSetLayout };
 	return create_pipeline_layout(device, layout, 0, 0);
 }
 
-VkPipelineLayout create_pipeline_layout(VkDevice device, std::span<VkDescriptorSetLayout> desc_set_layouts)
+[[nodiscard]] VkPipelineLayout create_pipeline_layout(VkDevice device, std::span<VkDescriptorSetLayout> desc_set_layouts)
 {
 	return create_pipeline_layout(device, desc_set_layouts, 0, 0);
 }
 
-VkPipelineLayout create_pipeline_layout(VkDevice device, std::span<VkDescriptorSetLayout> desc_set_layouts, uint32_t vtxConstRangeSizeInBytes, uint32_t fragConstRangeSizeInBytes)
+[[nodiscard]] VkPipelineLayout create_pipeline_layout(VkDevice device, std::span<VkDescriptorSetLayout> desc_set_layouts, uint32_t vtxConstRangeSizeInBytes, uint32_t fragConstRangeSizeInBytes)
 {
 	VkPipelineLayout out;
 

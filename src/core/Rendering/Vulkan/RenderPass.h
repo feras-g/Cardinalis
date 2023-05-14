@@ -8,7 +8,7 @@ namespace vk
 {
 	struct DynamicRenderPass
 	{
-		void begin(VkCommandBuffer cmd_buffer, VkRect2D render_area);
+		void begin(VkCommandBuffer cmd_buffer, VkRect2D render_area, uint32_t viewMask = 0);
 		void end(VkCommandBuffer cmd_buffer) const;
 
 		void add_attachment(VkImageView view, VkImageLayout layout);
