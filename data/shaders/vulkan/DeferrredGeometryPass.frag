@@ -33,20 +33,20 @@ layout(push_constant) uniform Material
 	float roughness_factor;
 } material;
 
-layout(set = 2, binding = 0) uniform FrameData 
+/* texture & Samplers */
+layout(set = 2, binding = 0) uniform texture2D textures[];
+layout(set = 2, binding = 1) uniform sampler smp_clamp_nearest;
+layout(set = 2, binding = 2) uniform sampler smp_clamp_linear;
+layout(set = 2, binding = 3) uniform sampler smp_repeat_nearest;
+layout(set = 2, binding = 4) uniform sampler smp_repeat_linear;
+
+layout(set = 3, binding = 0) uniform FrameData 
 { 
     mat4 view;
     mat4 proj;
     mat4 inv_view_proj;
     vec4 view_pos;
 } frame_data;
-layout(set = 2, binding = 1) uniform texture2D textures[];
-
-/* Samplers */
-layout(set = 2, binding = 2) uniform sampler smp_clamp_nearest;
-layout(set = 2, binding = 3) uniform sampler smp_clamp_linear;
-layout(set = 2, binding = 4) uniform sampler smp_repeat_nearest;
-layout(set = 2, binding = 5) uniform sampler smp_repeat_linear;
 
 void main()
 {

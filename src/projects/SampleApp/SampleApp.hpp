@@ -73,7 +73,7 @@ void SampleApp::InitSceneResources()
 	};
 	RenderObjectManager::add_material(default_material, "Default Material");
 
-	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/bistro-gltf/bistro.gltf"), "bistro");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/bistro-gltf/bistro.gltf"), "bistro");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/MetalRoughSpheres.gltf"), "spheres");
 	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/duck.gltf"), "duck");
 
@@ -82,7 +82,7 @@ void SampleApp::InitSceneResources()
 	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/bistro-gltf/bistro.gltf"), "bistro");
 	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/suntemple-gltf/suntemple.gltf"), "sun_temple");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/plane.glb"), "plane");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/cube.glb"), "cube");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/Cube.gltf"), "cube");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/cone.glb"), "cone");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/cylinder.glb"), "cylinder");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/icosphere.glb"), "icosphere");
@@ -97,9 +97,9 @@ void SampleApp::InitSceneResources()
 		glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0))
 	};
 
+	//RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("bistro")), "bistro", transform);
 
 	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cube")), "unit_cube", transform);
-
 
 	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("spheres")), "spheres", transform);
 
@@ -143,22 +143,16 @@ void SampleApp::Initialize()
 	m_model_renderer.reset(new VulkanModelRenderer);
 	m_imgui_renderer.reset(new VulkanImGuiRenderer(context));
 	
-	m_shadow_renderer.init(2048, 2048, m_light_manager);
+	m_shadow_renderer.init(2048, 2048, m_light_manager); 
+	m_cubemap_renderer.init(); //!\ Before deferred renderer
 
 	m_deferred_renderer.init(
-		m_model_renderer->m_gbuffer_albdedo, 
-		m_model_renderer->m_gbuffer_normal, 
-		m_model_renderer->m_gbuffer_depth,
-		m_model_renderer->m_gbuffer_directional_shadow,
-		m_model_renderer->m_gbuffer_metallic_roughness,
 		m_shadow_renderer.m_shadow_maps,
 		m_light_manager
 	);
 
-	m_shadow_renderer.update_desc_sets(m_deferred_renderer.m_g_buffers_depth);
-
-	m_imgui_renderer->init(*m_model_renderer.get(), m_deferred_renderer, m_shadow_renderer);
-	m_cubemap_renderer.init();
+	m_imgui_renderer->init(m_shadow_renderer);
+	
 }
 
 void SampleApp::Update(float dt)
@@ -203,15 +197,11 @@ void SampleApp::Render()
 		/* Transition to color attachment */
 		swapchain.color_attachments[context.curr_frame_idx].transition_layout(current_frame.cmd_buffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
-		{
-			{
-				m_model_renderer->render(context.curr_frame_idx, current_frame.cmd_buffer);
-				m_shadow_renderer.render(context.curr_frame_idx, current_frame.cmd_buffer);
-			}
-
-			m_deferred_renderer.render(context.curr_frame_idx, current_frame.cmd_buffer);
-			m_imgui_renderer->render(context.curr_frame_idx, current_frame.cmd_buffer);
-		}
+		m_model_renderer->render(context.curr_frame_idx, current_frame.cmd_buffer);
+		m_shadow_renderer.render(context.curr_frame_idx, current_frame.cmd_buffer);
+		m_deferred_renderer.render(context.curr_frame_idx, current_frame.cmd_buffer);
+		m_cubemap_renderer.render_skybox(context.curr_frame_idx, current_frame.cmd_buffer);
+		m_imgui_renderer->render(context.curr_frame_idx, current_frame.cmd_buffer);
 
 		/* Present */
 		swapchain.color_attachments[context.curr_frame_idx].transition_layout(current_frame.cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);

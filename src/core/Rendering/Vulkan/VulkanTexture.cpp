@@ -81,7 +81,7 @@ void Texture::create_vk_image(VkDevice device, bool isCubemap, VkImageUsageFlags
     VkImageCreateInfo createInfo =
     {
         .sType                  { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO },
-        .flags                  { 0 },
+        .flags                  { },
         .imageType              { VK_IMAGE_TYPE_2D },
         .format                 { info.imageFormat },
         .extent                 { info.width, info.height, 1 },
@@ -98,7 +98,7 @@ void Texture::create_vk_image(VkDevice device, bool isCubemap, VkImageUsageFlags
 
     if (isCubemap)
     {
-        flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+        createInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
     }
 
     VK_CHECK(vkCreateImage(device, &createInfo, nullptr, &image));
@@ -491,4 +491,36 @@ void GetSrcDstPipelineStage(VkImageLayout oldLayout, VkImageLayout newLayout, Vk
 		assert(false);
         break;
     }
+}
+
+VkImageView Texture2D::create_texture_cube_view(Texture2D texture)
+{
+    VkImageViewCreateInfo createInfo =
+    {
+        .sType      { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO },
+        .flags      {  },
+        .image      { texture.image },
+        .viewType   { VK_IMAGE_VIEW_TYPE_CUBE },
+        .format     { texture.info.imageFormat },
+        .components
+        {
+            .r = VK_COMPONENT_SWIZZLE_R,
+            .g = VK_COMPONENT_SWIZZLE_G,
+            .b = VK_COMPONENT_SWIZZLE_B,
+            .a = VK_COMPONENT_SWIZZLE_A
+        },
+        .subresourceRange
+        {
+            .aspectMask     { VK_IMAGE_ASPECT_COLOR_BIT },
+            .baseMipLevel   { 0 },
+            .levelCount     { texture.info.mipLevels },
+            .baseArrayLayer { 0 },
+            .layerCount     { 6 },
+        }
+    };
+
+    VkImageView out_view;
+    vkCreateImageView(context.device, &createInfo, nullptr, &out_view);
+
+    return out_view;
 }

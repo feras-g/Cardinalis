@@ -64,12 +64,12 @@ Camera::Camera(CameraController controller, float fov, float aspect_ratio, float
 
 void Camera::UpdateProjection()
 {
-	projection = glm::perspective(fov, aspect_ratio, near_far.x, near_far.y);
+	projection = glm::perspective(glm::radians(fov), aspect_ratio, near_far.x, near_far.y);
 }
 
 void Camera::UpdateAspectRatio(float aspect)
 {
-	projection = glm::perspective(fov, aspect, near_far.x, near_far.y);
+	projection = glm::perspective(glm::radians(fov), aspect, near_far.x, near_far.y);
 }
 
 glm::mat4& Camera::GetProj()

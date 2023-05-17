@@ -45,7 +45,7 @@ project("CoreLib")
 
 	filter "system:windows"
 		systemversion "latest"
-		defines { "WIN32_LEAN_AND_MEAN", "GLM_DEPTH_ZERO_TO_ONE", "_CRT_SECURE_NO_WARNINGS"}
+		defines { "WIN32_LEAN_AND_MEAN", "GLM_FORCE_DEPTH_ZERO_TO_ONE", "_CRT_SECURE_NO_WARNINGS"}
 		links	{ "vulkan-1", "imgui", "OptickCore", "shcore" }
 		
 	filter "configurations:Debug"

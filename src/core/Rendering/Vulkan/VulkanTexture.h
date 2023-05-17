@@ -51,6 +51,8 @@ struct Texture
 	/* Create and allocated memory for a Vulkan image */
 	void create_vk_image(VkDevice device, bool isCubemap, VkImageUsageFlags imageUsage);
 	void create_vk_image_cube(VkDevice device, VkImageUsageFlags imageUsage);
+
+
 };
 
 
@@ -74,4 +76,8 @@ public:
 		VkImageLayout		layout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 	void create(VkDevice device, VkImageUsageFlags imageUsage, std::string_view debug_name = "");
+
+	/* Temporary */
+	static VkImageView create_texture_cube_view(Texture2D texture);
 };
+

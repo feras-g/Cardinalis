@@ -11,10 +11,10 @@ namespace vk
 		void begin(VkCommandBuffer cmd_buffer, VkRect2D render_area, uint32_t viewMask = 0);
 		void end(VkCommandBuffer cmd_buffer) const;
 
-		void add_attachment(VkImageView view, VkImageLayout layout);
-		void add_color_attachment(VkImageView view);
-		void add_depth_attachment(VkImageView view);
-		void add_stencil_attachment(VkImageView view);
+		void add_attachment(VkImageView view, VkImageLayout layout, VkAttachmentLoadOp loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR);
+		void add_color_attachment(VkImageView view, VkAttachmentLoadOp loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR);
+		void add_depth_attachment(VkImageView view, VkAttachmentLoadOp loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR);
+		void add_stencil_attachment(VkImageView view, VkAttachmentLoadOp loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR);
 
 		std::vector<VkRenderingAttachmentInfoKHR> color_attachments;
 

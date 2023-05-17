@@ -50,7 +50,7 @@ float Fd_Lambert()
     return 1.0 / PI;
 }
 
-vec3 BRDF(vec3 n, vec3 v, vec3 l, vec3 h, vec3 light_color, vec3 albedo, float metallic, float perceptual_roughness, float shadow)
+vec3 BRDF(vec3 n, vec3 v, vec3 l, vec3 h, vec3 light_color, vec3 irradiance, vec3 albedo, float metallic, float perceptual_roughness, float shadow)
 {
     float NoV = clamp(abs(dot(n, v)), 0.00390625, 1.0);
     float NoL = clamp(dot(n, l), 0.00390625, 1.0);
@@ -67,7 +67,7 @@ vec3 BRDF(vec3 n, vec3 v, vec3 l, vec3 h, vec3 light_color, vec3 albedo, float m
     // float reflectance = maxVec3(specular_color);
     // vec3 reflectance90 = vec3(1.0,1.0,1.0) * clamp(reflectance * 25.0, 0.0, 1.0);
 
-    vec3 diffuse_color  = albedo * (1 - F0_Dielectric) * (1.0 - metallic);
+    vec3 diffuse_color  = irradiance * albedo * (1 - F0_Dielectric) * (1.0 - metallic);
 
     float D = D_GGX(NoH, roughness);
     vec3  F = F_Schlick(LoH, F0_Material);
@@ -75,8 +75,8 @@ vec3 BRDF(vec3 n, vec3 v, vec3 l, vec3 h, vec3 light_color, vec3 albedo, float m
 
     vec3 Fd = diffuse_color * Fd_Lambert();
     vec3 Fr = (D * V) * F;
-
-    vec3 color = shadow * NoL * light_color * (Fd + Fr);
+    vec3 ambient = (1 - F) * diffuse_color;
+    vec3 color = Fd;
 
     return color;
 }

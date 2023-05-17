@@ -12,17 +12,19 @@ layout(set = 0, binding = 2) uniform sampler2D gbuffer_depth;
 layout(set = 0, binding = 3) uniform sampler2D gbuffer_normal_map;
 layout(set = 0, binding = 4) uniform sampler2D gbuffer_metallic_roughness;
 layout(set = 0, binding = 5) uniform sampler2D gbuffer_shadow_map;
-layout(set = 0, binding = 6) uniform FrameData
+layout(set = 0, binding = 6) uniform samplerCube irradiance_map;
+layout(set = 0, binding = 7) uniform LightData
+{
+    DirectionalLight dir_light;
+} lights;
+
+layout(set = 1, binding = 0) uniform FrameData
 {
     mat4 view;
     mat4 proj;
     mat4 inv_view_proj;
     vec4 view_pos;
 } frame_data;
-layout(set = 0, binding = 7) uniform LightData
-{
-    DirectionalLight dir_light;
-} lights;
 
 const mat4 bias_matrix = mat4( 
 	0.5, 0.0, 0.0, 0.0,
@@ -50,7 +52,8 @@ void main()
     vec3 v = normalize(p_ws - frame_data.view_pos.xyz);
     vec3 h = normalize(v+l);
     
-    vec3 ambient = vec3(0.27);
+    vec3 irradiance = texture(irradiance_map, n_ws).rgb;
+
     vec3 albedo = texture(gbuffer_color, uv).xyz;
     vec4 metallic_roughness = texture(gbuffer_metallic_roughness, uv);
 
@@ -59,7 +62,7 @@ void main()
     
     float shadow = get_shadow_factor(p_ws, lights.dir_light.view_proj);
 
-    vec3 color = BRDF(n_ws, v, l, h, lights.dir_light.color.rgb, albedo, metallic, roughness, shadow);
+    vec3 color = BRDF(n_ws, v, l, h, lights.dir_light.color.rgb, irradiance, albedo, metallic, roughness, shadow);
     // vec3 color = BRDF_OGL(n_ws, v, l, h, lights.dir_light.color.rgb, albedo, metallic, roughness);
 
         // float dist = length(l);
@@ -80,5 +83,5 @@ void main()
 
     // p_ws.z *= -1; // why ?
     
-    out_color = vec4(0.01 * albedo + color.rgb, 1) ;
+    out_color = vec4(color.rgb, 1) ;
 }

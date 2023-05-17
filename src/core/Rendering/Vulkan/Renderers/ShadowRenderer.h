@@ -13,7 +13,7 @@ struct ShadowRenderer
 	void init(unsigned int width, unsigned int height, const LightManager& lightmanager);
 	void render(size_t current_frame_idx, VkCommandBuffer cmd_buffer);
 	void draw_scene(VkCommandBuffer cmd_buffer);
-	void update_desc_sets(std::span<Texture2D*> gbuffers_depth);
+	void update_desc_sets();
 	glm::uvec2 m_shadow_map_size;
 
 	Texture2D m_shadow_maps[NUM_FRAMES];

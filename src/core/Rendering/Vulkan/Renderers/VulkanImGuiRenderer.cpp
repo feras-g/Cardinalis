@@ -24,10 +24,7 @@ constexpr uint32_t numStorageBuffers   = 2;
 constexpr uint32_t numUniformBuffers   = 1;
 constexpr uint32_t numCombinedSamplers = 1;
 
-void VulkanImGuiRenderer::init(
-	const VulkanModelRenderer& model_renderer, const DeferredRenderer& deferred_renderer,
-	const ShadowRenderer& shadow_renderer
-)
+void VulkanImGuiRenderer::init(const ShadowRenderer& shadow_renderer)
 {
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -49,44 +46,26 @@ void VulkanImGuiRenderer::init(
 	// [9] [10] : Shadow map output of shadow renderer for Frame 0 / Frame 1
 
 	int tex_id = 0;
-	for (size_t i = 0; i < deferred_renderer.m_output_attachment.size(); i++)
-	{
-		m_DeferredRendererOutputTextureId[i] = ++tex_id;
-		m_Textures.push_back(deferred_renderer.m_output_attachment[i]);
-	}
-
-	for (size_t i = 0; i < model_renderer.m_gbuffer_albdedo.size(); i++)
-	{
-		m_ModelRendererColorTextureId[i] = ++tex_id;
-		m_Textures.push_back(model_renderer.m_gbuffer_albdedo[i]);
-	}
-
-	for (size_t i = 0; i < model_renderer.m_gbuffer_normal.size(); i++)
-	{
-		m_ModelRendererNormalTextureId[i] = ++tex_id;
-		m_Textures.push_back(model_renderer.m_gbuffer_normal[i]);
-	}
-
-	for (size_t i = 0; i < model_renderer.m_gbuffer_depth.size(); i++)
-	{
-		m_ModelRendererDepthTextureId[i] = ++tex_id;
-		m_Textures.push_back(model_renderer.m_gbuffer_depth[i]);
-	}
-
-	for (size_t i = 0; i < model_renderer.m_gbuffer_directional_shadow.size(); i++)
-	{
-		m_ModelRendererNormalMapTextureId[i] = ++tex_id;
-		m_Textures.push_back(model_renderer.m_gbuffer_directional_shadow[i]);
-	}
-
-	for (size_t i = 0; i < model_renderer.m_gbuffer_metallic_roughness.size(); i++)
-	{
-		m_ModelRendererMetallicRoughnessTextureId[i] = ++tex_id;
-		m_Textures.push_back(model_renderer.m_gbuffer_metallic_roughness[i]);
-	}
-	
 	for (size_t i = 0; i < NUM_FRAMES; i++)
 	{
+		m_DeferredRendererOutputTextureId[i] = ++tex_id;
+		m_Textures.push_back(VulkanRendererBase::m_output_attachment[i]);
+
+		m_ModelRendererColorTextureId[i] = ++tex_id;
+		m_Textures.push_back(VulkanRendererBase::m_gbuffer_albdedo[i]);
+	
+		m_ModelRendererNormalTextureId[i] = ++tex_id;
+		m_Textures.push_back(VulkanRendererBase::m_gbuffer_normal[i]);
+
+		m_ModelRendererDepthTextureId[i] = ++tex_id;
+		m_Textures.push_back(VulkanRendererBase::m_gbuffer_depth[i]);
+	
+		m_ModelRendererNormalMapTextureId[i] = ++tex_id;
+		m_Textures.push_back(VulkanRendererBase::m_gbuffer_directional_shadow[i]);
+
+		m_ModelRendererMetallicRoughnessTextureId[i] = ++tex_id;
+		m_Textures.push_back(VulkanRendererBase::m_gbuffer_metallic_roughness[i]);
+
 		m_ShadowRendererTextureId[i] = ++tex_id;
 		m_Textures.push_back(shadow_renderer.m_shadow_maps[i]);
 	}

@@ -15,7 +15,7 @@ void DynamicRenderPass::begin(VkCommandBuffer cmd_buffer, VkRect2D render_area, 
 	render_info.pDepthAttachment = has_depth_attachment ? &depth_attachment : VK_NULL_HANDLE;
 	render_info.pStencilAttachment = has_stencil_attachment ? &stencil_attachment : VK_NULL_HANDLE;
 	render_info.viewMask = viewMask;
-	
+
 	fpCmdBeginRenderingKHR(cmd_buffer, &render_info);
 }
 
@@ -24,7 +24,7 @@ void DynamicRenderPass::end(VkCommandBuffer cmd_buffer) const
 	fpCmdEndRenderingKHR(cmd_buffer);
 }
 
-void DynamicRenderPass::add_attachment(VkImageView view, VkImageLayout layout)
+void DynamicRenderPass::add_attachment(VkImageView view, VkImageLayout layout, VkAttachmentLoadOp loadOp)
 {
 	assert(view);
 
@@ -32,7 +32,7 @@ void DynamicRenderPass::add_attachment(VkImageView view, VkImageLayout layout)
 	attachment_info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
 	attachment_info.imageLayout = layout;
 	attachment_info.imageView = view;
-	attachment_info.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	attachment_info.loadOp = loadOp;
 	attachment_info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	
 	if (layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
@@ -58,17 +58,17 @@ void DynamicRenderPass::add_attachment(VkImageView view, VkImageLayout layout)
 		assert(false);
 	}
 }
-void DynamicRenderPass::add_color_attachment(VkImageView view)
+void DynamicRenderPass::add_color_attachment(VkImageView view, VkAttachmentLoadOp loadOp)
 {
-	add_attachment(view, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	add_attachment(view, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, loadOp);
 }
 
-void DynamicRenderPass::add_depth_attachment(VkImageView view)
+void DynamicRenderPass::add_depth_attachment(VkImageView view, VkAttachmentLoadOp loadOp)
 {
-	add_attachment(view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+	add_attachment(view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, loadOp);
 }
 
-void DynamicRenderPass::add_stencil_attachment(VkImageView view)
+void DynamicRenderPass::add_stencil_attachment(VkImageView view, VkAttachmentLoadOp loadOp)
 {
-	add_attachment(view, VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL);
+	add_attachment(view, VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL, loadOp);
 }

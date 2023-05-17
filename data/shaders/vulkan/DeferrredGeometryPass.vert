@@ -25,7 +25,7 @@ layout(set = 1, binding = 0) uniform ObjectData
     vec4 bbox_max_WS;
 } object_data;
 
-layout(set = 2, binding = 0) uniform FrameData 
+layout(set = 3, binding = 0) uniform FrameData 
 { 
     mat4 view;
     mat4 proj;

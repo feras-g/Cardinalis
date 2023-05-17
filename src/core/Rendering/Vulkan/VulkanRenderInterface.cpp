@@ -27,6 +27,8 @@ void VulkanRenderInterface::Initialize()
 
 	VulkanRendererBase::create_samplers();
 	VulkanRendererBase::create_buffers();
+	VulkanRendererBase::create_attachments();
+	VulkanRendererBase::create_descriptor_sets();
 
 	m_InitSuccess = true;
 
@@ -689,10 +691,10 @@ bool GfxPipeline::Create(const VulkanShader& shader, uint32_t numColorAttachment
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 		.depthTestEnable = VK_TRUE,
 		.depthWriteEnable = VK_TRUE,
-		.depthCompareOp = VK_COMPARE_OP_LESS,
+		.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL,// VK_COMPARE_OP_LESS,
 		.depthBoundsTestEnable = VK_FALSE,
 		.minDepthBounds = 0.0f,
-		.maxDepthBounds = 1.0f
+		.maxDepthBounds = 1.0f,
 	};
 
 
@@ -847,7 +849,7 @@ bool CreateTextureSampler(VkDevice device, VkFilter minFilter, VkFilter magFilte
 		.addressModeV = addressMode,
 		.addressModeW = addressMode,
 		.mipLodBias = 0.0f,
-		.anisotropyEnable = VK_TRUE,
+		.anisotropyEnable = VK_FALSE,
 		.maxAnisotropy = 1,
 		.compareEnable = VK_FALSE,
 		.compareOp = VK_COMPARE_OP_ALWAYS,

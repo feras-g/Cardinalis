@@ -7,6 +7,7 @@
 #include <Rendering/Vulkan/VulkanRenderInterface.h>
 #include <Rendering/Vulkan/RenderPass.h>
 #include <Rendering/Vulkan/VulkanMesh.h>
+#include "DescriptorSet.h"
 
 class VulkanRendererBase
 {
@@ -18,17 +19,22 @@ public:
 		glm::mat4 inv_view_proj{};
 		glm::vec4 view_pos{};
 	};
+	
+	static inline DescriptorSetLayout m_framedata_desc_set_layout;
+	static inline DescriptorSet m_framedata_desc_set[NUM_FRAMES];
 
+	static void create_descriptor_sets();
 	static void create_samplers();
 	static void create_buffers();
 	static void update_frame_data(const PerFrameData& data, size_t current_frame_idx);
 	static void destroy();
 
+
 	static VkSampler s_SamplerRepeatLinear;
 	static VkSampler s_SamplerClampLinear;
 	static VkSampler s_SamplerClampNearest;
 	static VkSampler s_SamplerRepeatNearest;
-	static Buffer m_ubo_common_framedata[NUM_FRAMES];
+	static Buffer m_ubo_framedata[NUM_FRAMES];
 
 	/* WIP */
 	vk::DynamicRenderPass m_dyn_renderpass[NUM_FRAMES];
@@ -37,6 +43,31 @@ public:
 	VkPipelineLayout m_pipeline_layout;
 	VkDescriptorSetLayout m_descriptor_set_layout;
 	VkDescriptorSet m_descriptor_set;
+
+
+	static void create_attachments();
+
+	static uint32_t render_width;
+	static uint32_t render_height;
+
+	/* G-Buffers for Deferred rendering */
+	static inline std::array<Texture2D, NUM_FRAMES> m_gbuffer_albdedo;
+	static inline std::array<Texture2D, NUM_FRAMES> m_gbuffer_normal;
+	static inline std::array<Texture2D, NUM_FRAMES> m_gbuffer_depth;
+	static inline std::array<Texture2D, NUM_FRAMES> m_gbuffer_directional_shadow;
+	static inline std::array<Texture2D, NUM_FRAMES> m_gbuffer_metallic_roughness;
+	static inline std::array <Texture2D, NUM_FRAMES> m_output_attachment;
+
+	/* Formats */
+	static const VkFormat color_attachment_format = VK_FORMAT_R8G8B8A8_SRGB; /* Format of the final render attachment */
+
+	static inline std::vector<VkFormat> m_formats =
+	{
+		tex_base_color_format,				/* Base color / Albedo */
+		tex_normal_format,		/* Vertex normal */
+		tex_metallic_roughness_format,		/* Metallic roughness */
+	};
+	static inline VkFormat m_depth_format = VK_FORMAT_D16_UNORM;
 
 	// void init();
 	// void render();
@@ -186,12 +217,12 @@ public:
 		drawable_names.push_back(name);
 	}
 
-	static inline size_t add_texture(const std::string& filename, const std::string& name, VkFormat format = VK_FORMAT_R8G8B8A8_UNORM)
+	static inline size_t add_texture(const std::string& filename, const std::string& name, VkFormat format = VK_FORMAT_R8G8B8A8_UNORM, bool calc_mip = true)
 	{
 		//std::string name = filename.substr(filename.find_last_of('/') + 1);
 		Image im = load_image_from_file(filename);
 		Texture2D tex2D;
-		tex2D.init(format, im.w, im.h, 1, true);
+		tex2D.init(format, im.w, im.h, 1, calc_mip);
 		tex2D.create_from_data(&im, name);
 		tex2D.create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, tex2D.info.mipLevels });
 

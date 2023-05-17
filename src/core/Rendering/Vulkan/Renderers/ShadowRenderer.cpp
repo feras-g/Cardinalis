@@ -40,12 +40,15 @@ void ShadowRenderer::init(unsigned int width, unsigned int height, const LightMa
 	desc_set_layouts.push_back(m_descriptor_set_layout);								/* Shadow pass descriptor set */
 	desc_set_layouts.push_back(RenderObjectManager::mesh_descriptor_set_layout);		/* Mesh geometry descriptor set*/
 	desc_set_layouts.push_back(RenderObjectManager::drawable_descriptor_set_layout);	/* Drawable data descriptor set */
+	desc_set_layouts.push_back(VulkanRendererBase::m_framedata_desc_set_layout.layout);		/* Frame data */
 
 	m_descriptor_pool       = create_descriptor_pool(0, 2, 1, 0);
 	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
 		m_descriptor_set[frame_idx] = create_descriptor_set(m_descriptor_pool, m_descriptor_set_layout);
 	}
+
+	update_desc_sets();
 
 	m_gfx_pipeline_layout   = create_pipeline_layout(context.device, desc_set_layouts);
 
@@ -55,11 +58,11 @@ void ShadowRenderer::init(unsigned int width, unsigned int height, const LightMa
 	GfxPipeline::CreateDynamic(m_shadow_shader, {}, shadow_map_format, flags, m_gfx_pipeline_layout, &m_gfx_pipeline, VK_CULL_MODE_FRONT_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
 }
 
-void ShadowRenderer::update_desc_sets(std::span<Texture2D*> gbuffers_depth)
+void ShadowRenderer::update_desc_sets()
 {
 	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
-		h_gbuffers_depth[frame_idx] = gbuffers_depth[frame_idx];
+		h_gbuffers_depth[frame_idx] = &VulkanRendererBase::m_gbuffer_depth[frame_idx];
 
 		std::vector<VkWriteDescriptorSet> desc_writes = {};
 
@@ -73,7 +76,7 @@ void ShadowRenderer::update_desc_sets(std::span<Texture2D*> gbuffers_depth)
 		desc_writes.push_back(ImageWriteDescriptorSet(m_descriptor_set[frame_idx], 1, &descriptor_image_info));
 
 		/* Frame data UBO */
-		VkDescriptorBufferInfo info2 = { VulkanRendererBase::m_ubo_common_framedata[frame_idx].buffer,  0, sizeof(VulkanRendererBase::PerFrameData) };
+		VkDescriptorBufferInfo info2 = { VulkanRendererBase::m_ubo_framedata[frame_idx].buffer,  0, sizeof(VulkanRendererBase::PerFrameData) };
 		desc_writes.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], 2, &info2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
 
 		vkUpdateDescriptorSets(context.device, (uint32_t)desc_writes.size(), desc_writes.data(), 0, nullptr);
@@ -91,10 +94,8 @@ void ShadowRenderer::render(size_t current_frame_idx, VkCommandBuffer cmd_buffer
 	/* Bind pipeline */
 	vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline);
 
-
 	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 0, 1, &m_descriptor_set[current_frame_idx], 0, nullptr);
-
-
+	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 3, 1, &VulkanRendererBase::m_framedata_desc_set[current_frame_idx].set, 0, nullptr);
 
 	draw_scene(cmd_buffer);
 
