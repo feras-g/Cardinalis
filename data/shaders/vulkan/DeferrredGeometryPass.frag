@@ -24,6 +24,7 @@ layout(set = 1, binding = 0) uniform ObjectData
 
 layout(push_constant) uniform Material
 {
+    mat4 mat;
     uint tex_base_color_id;
 	uint tex_metallic_roughness_id;
 	uint tex_normal_id;
@@ -31,6 +32,7 @@ layout(push_constant) uniform Material
 	vec4 base_color_factor;
 	float metallic_factor;
 	float roughness_factor;
+   
 } material;
 
 /* texture & Samplers */

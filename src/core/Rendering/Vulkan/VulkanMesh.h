@@ -154,6 +154,7 @@ struct Drawable
 	Drawable(VulkanMesh* mesh, bool b_has_primitives = false);
 	void draw(VkCommandBuffer cmd_buffer) const;
 	void draw_primitives(VkCommandBuffer cmd_buffer) const;
+	TransformData transform;
 };
 
 struct Materials

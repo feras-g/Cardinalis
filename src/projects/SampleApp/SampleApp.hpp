@@ -73,8 +73,8 @@ void SampleApp::InitSceneResources()
 	};
 	RenderObjectManager::add_material(default_material, "Default Material");
 
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/bistro-gltf/bistro.gltf"), "bistro");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/MetalRoughSpheres.gltf"), "spheres");
+	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/bistro-gltf/bistro.gltf"), "bistro");
+	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/MetalRoughSpheres.gltf"), "spheres");
 	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/duck.gltf"), "duck");
 
 	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/sponza-gltf-pbr/sponza.glb"), "sponza");
@@ -97,13 +97,13 @@ void SampleApp::InitSceneResources()
 		glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0))
 	};
 
-	//RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("bistro")), "bistro", transform);
+	//RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("sponza")), "sponza", transform);
 
 	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cube")), "unit_cube", transform);
 
-	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("spheres")), "spheres", transform);
+	//RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("spheres")), "spheres", transform);
 
-	transform.model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(0.01f));
+	transform.model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(0.05f));
 	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("robot")), "robot", transform);
 
 	transform.model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(25.0f));

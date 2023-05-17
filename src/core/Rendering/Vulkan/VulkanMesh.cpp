@@ -130,7 +130,6 @@ static void load_vertices(Primitive p, cgltf_primitive* primitive, GeometryData&
 			for (int i = 0; i < attribute->data->count; ++i)
 			{
 				cgltf_accessor_read_float(attribute->data, i, &positionsBuffer[i].x, 3);
-				positionsBuffer[i] = glm::vec3(p.mat_model * glm::vec4(positionsBuffer[i], 1.0));
 			}
 
 			// Also get bounding box for this primitive

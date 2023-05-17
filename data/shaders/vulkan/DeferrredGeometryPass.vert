@@ -33,6 +33,11 @@ layout(set = 3, binding = 0) uniform FrameData
     vec4 view_pos;
 } frame_data;
 
+layout(push_constant) uniform PushConstant
+{
+    mat4 model;
+} pushConstant;
+
 void main()
 {
     uint index = ibo.data[gl_VertexIndex];
@@ -41,9 +46,9 @@ void main()
     vec4 normalOS   = vec4(v.nx, v.ny, v.nz, 0.0);
 
     uv.xy = vec2(v.u, v.v);
-    normalWS   =  normalOS;
-    positionCS = object_data.mvp * positionOS;
+    normalWS   = pushConstant.model *  normalOS;
+    positionCS =  frame_data.proj * frame_data.view * pushConstant.model * positionOS;
     depthCS.xy = positionCS.zw;
-    positionWS = object_data.model * positionOS;
+    positionWS = pushConstant.model * positionOS;
     gl_Position = positionCS;
 }

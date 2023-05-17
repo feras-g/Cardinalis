@@ -191,6 +191,7 @@ public:
 		}
 		drawable.id = (uint32_t)drawables.size();
 		size_t transform_data_idx = transform_datas.size();
+		drawable.transform = transform;
 		drawables.push_back(drawable);
 
 		transform.model = drawable.mesh_handle->model * transform.model;

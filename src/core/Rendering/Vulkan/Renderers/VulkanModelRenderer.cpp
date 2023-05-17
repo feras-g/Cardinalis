@@ -32,7 +32,7 @@ VulkanModelRenderer::VulkanModelRenderer()
 	desc_set_layouts.push_back(m_pass_descriptor_set_layout);							/* Per pass */
 	desc_set_layouts.push_back(VulkanRendererBase::m_framedata_desc_set_layout.layout);	/* Per frame */
 
-	m_ppl_layout = create_pipeline_layout(context.device, desc_set_layouts, 0,  /* material push constant */ sizeof(Material));
+	m_ppl_layout = create_pipeline_layout(context.device, desc_set_layouts, sizeof(glm::mat4), /* material push constant */ sizeof(Material));
 
 	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
@@ -100,14 +100,18 @@ void VulkanModelRenderer::draw_scene(VkCommandBuffer cmdBuffer, size_t current_f
 		for (int prim_idx = 0; prim_idx < drawable.mesh_handle->geometry_data.primitives.size(); prim_idx++)
 		{
 			const Primitive& p = drawable.mesh_handle->geometry_data.primitives[prim_idx];
+
 			/* Material ID push constant */
-			vkCmdPushConstants(cmdBuffer, m_ppl_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Material), &RenderObjectManager::materials[p.material_id]);
+			glm::mat4 model_mat = drawable.transform.model * p.mat_model;
+			vkCmdPushConstants(cmdBuffer, m_ppl_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &model_mat);
+			vkCmdPushConstants(cmdBuffer, m_ppl_layout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), sizeof(Material), &RenderObjectManager::materials[p.material_id]);
 			vkCmdDraw(cmdBuffer, p.index_count, 1, p.first_index, 0);
 		}
 	}
 	else
 	{
-		vkCmdPushConstants(cmdBuffer, m_ppl_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Material), &RenderObjectManager::materials[drawable.material_id]);
+		vkCmdPushConstants(cmdBuffer, m_ppl_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &drawable.mesh_handle->model);
+		vkCmdPushConstants(cmdBuffer, m_ppl_layout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), sizeof(Material), &RenderObjectManager::materials[drawable.material_id]);
 		drawable.draw(cmdBuffer);
 	}
 }
