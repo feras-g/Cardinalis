@@ -7,6 +7,7 @@
 struct Drawable;
 struct LightManager;
 struct Texture2D;
+class Camera;
 
 struct ShadowRenderer
 { 
@@ -28,4 +29,13 @@ struct ShadowRenderer
 	VkPipelineLayout m_gfx_pipeline_layout;
 	VkPipeline m_gfx_pipeline;
 	const LightManager* h_light_manager;
+};
+
+struct CascadedShadowRenderer
+{
+	/* Orthographic projection matrices for each cascade */
+	std::vector<glm::mat4> proj_matrices;
+	void compute_cascade_ortho_proj();
+	const LightManager* h_light_manager;
+	const Camera* h_camera;
 };

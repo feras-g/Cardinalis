@@ -77,7 +77,7 @@ class Camera
 {
   public:
     Camera();
-    Camera(CameraController controller, float fov, float aspect_ratio, float near, float far);
+    Camera(CameraController controller, float fov, float aspect_ratio, float n, float f);
 
     glm::mat4& GetProj();
     glm::mat4& GetView();

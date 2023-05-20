@@ -3,6 +3,7 @@
 #include "Rendering/Vulkan/VulkanMesh.h"
 #include "Rendering/Vulkan/VulkanRendererBase.h"
 #include "Rendering/Vulkan/VulkanDebugUtils.h"
+#include "Rendering/Camera.h"
 
 static constexpr VkFormat shadow_map_format = VK_FORMAT_D32_SFLOAT;
 
@@ -137,3 +138,134 @@ void ShadowRenderer::draw_scene(VkCommandBuffer cmd_buffer)
 
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+struct Cascade
+{
+	float z_near;
+	float z_far;
+};
+
+struct Plane
+{
+	glm::vec4 bottom_left;
+	glm::vec4 bottom_right;
+	glm::vec4 top_left;
+	glm::vec4 top_right;
+
+	Plane& transform(glm::mat4 matrix)
+	{
+		bottom_left		= matrix * bottom_left;
+		bottom_right	= matrix * bottom_right;
+		top_left		= matrix * top_left;
+		top_right		= matrix * top_right;
+
+		return *this;
+	}
+
+	glm::vec3 get_min()
+	{
+		glm::vec3 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max() , std::numeric_limits<float>::max() };
+
+		min.x = std::min(min.x, bottom_left.x);
+		min.x = std::min(min.x, bottom_right.x);
+		min.x = std::min(min.x, top_left.x);
+		min.x = std::min(min.x, top_right.x);
+
+		min.y = std::min(min.y, bottom_left.y);
+		min.y = std::min(min.y, bottom_right.y);
+		min.y = std::min(min.y, top_left.y);
+		min.y = std::min(min.y, top_right.y);
+
+		min.z = std::min(min.z, bottom_left.z);
+		min.z = std::min(min.z, bottom_right.z);
+		min.z = std::min(min.z, top_left.z);
+		min.z = std::min(min.z, top_right.z);
+
+		return min;
+	}
+
+	glm::vec3 get_max()
+	{
+		glm::vec3 max{ std::numeric_limits<float>::min(), std::numeric_limits<float>::min() , std::numeric_limits<float>::min() };
+
+		max.x = std::max(max.x, bottom_left.x);
+		max.x = std::max(max.x, bottom_right.x);
+		max.x = std::max(max.x, top_left.x);
+		max.x = std::max(max.x, top_right.x);
+
+		max.y = std::max(max.y, bottom_left.y);
+		max.y = std::max(max.y, bottom_right.y);
+		max.y = std::max(max.y, top_left.y);
+		max.y = std::max(max.y, top_right.y);
+
+		max.z = std::max(max.z, bottom_left.z);
+		max.z = std::max(max.z, bottom_right.z);
+		max.z = std::max(max.z, top_left.z);
+		max.z = std::max(max.z, top_right.z);
+
+		return max;
+	}
+};
+
+constexpr int num_cascades = 3;
+
+void CascadedShadowRenderer::compute_cascade_ortho_proj()
+{
+	float n = h_camera->near_far.x;
+	float f = h_camera->near_far.y;
+
+	/* Compute cascade start and end points */
+	std::array<Cascade, num_cascades> cascades;
+	float cascade_length = (f - n) / num_cascades;
+	cascades[0].z_near   = n;
+	cascades[0].z_far   = cascades[0].z_near + cascade_length;
+	for (size_t i = 1; i < cascades.size(); i++)
+	{
+		cascades[i].z_near = cascades[i - 1].z_far;
+		cascades[i].z_far = cascades[i].z_near + cascade_length;
+	}
+
+	float ar = h_camera->aspect_ratio;
+
+	/* Compute cascade corners in view space */
+	float tanHalfFovX = tan(glm::radians((h_camera->fov * ar) / 2));
+	float tanHalfFovY = tan(glm::radians(h_camera->fov / 2));
+
+	glm::mat4 cam_inv_view_mat     = glm::inverse(h_camera->controller.m_view);
+	glm::mat4 dir_light_view_mat   = h_light_manager->view;
+
+	for (int i = 0; i < num_cascades; i++)
+	{
+		float xn { cascades[i].z_near * tanHalfFovX };
+		float yn { cascades[i].z_near * tanHalfFovY };
+		float xf { cascades[i].z_far * tanHalfFovX  };
+		float yf { cascades[i].z_far * tanHalfFovY  };
+
+		/* Calculate near and far planes for this cascade in view space */
+		Plane near_plane_vs
+		{
+			.bottom_left   { -xn, -yn, cascades[i].z_near, 1.0f },
+			.bottom_right  {  xn, -yn, cascades[i].z_near, 1.0f },
+			.top_left      { -xn,  yn, cascades[i].z_near, 1.0f },
+			.top_right     {  xn,  yn, cascades[i].z_near, 1.0f },
+		};
+
+		Plane far_plane_vs
+		{
+			.bottom_left   { -xf, -yf, cascades[i].z_far, 1.0f },
+			.bottom_right  {  xf, -yf, cascades[i].z_far, 1.0f },
+			.top_left      { -xf,  yf, cascades[i].z_far, 1.0f },
+			.top_right     {  xf,  yf, cascades[i].z_far, 1.0f },
+		};
+
+		/* Calculate the bounding box in light space */
+		near_plane_vs.transform(cam_inv_view_mat);   // World space
+		near_plane_vs.transform(dir_light_view_mat); // Light space
+
+		glm::vec3 min = near_plane_vs.get_min();
+		glm::vec3 max = near_plane_vs.get_max();
+
+		/* Orthographics projection */
+		proj_matrices.push_back(glm::ortho(min.x, max.x, min.y, max.y, min.z, max.z));
+	}
+}

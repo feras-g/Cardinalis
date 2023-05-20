@@ -42,7 +42,8 @@ struct LightManager
 	glm::vec3 eye = { 0,0,0 };
 	glm::vec3 up  = { 0,1,0 };
 	glm::vec3 view_volume_bbox_min = { -20.0f, -20.0f, -20.0f };
-	glm::vec3 view_volume_bbox_max = { 20.0f,  20.0f,   20.0f  };
-	static inline glm::mat4 view;
+	glm::vec3 view_volume_bbox_max = { 20.0f,  20.0f,   20.0f };
+	/* Directional Light view / proj*/
+	static inline glm::mat4 view; 
 	static inline glm::mat4 proj;
 };
