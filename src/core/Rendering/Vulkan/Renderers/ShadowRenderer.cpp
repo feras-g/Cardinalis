@@ -50,7 +50,8 @@ void ShadowRenderer::init(unsigned int width, unsigned int height, const LightMa
 
 	update_desc_sets();
 
-	m_gfx_pipeline_layout   = create_pipeline_layout(context.device, desc_set_layouts);
+	size_t vtx_pushconstantsize = sizeof(glm::mat4);
+	m_gfx_pipeline_layout   = create_pipeline_layout(context.device, desc_set_layouts, (uint32_t)vtx_pushconstantsize, 0);
 
 	/* Create graphics pipeline */
 	m_shadow_shader.load_from_file("GenShadowMap.vert.spv", "GenShadowMap.frag.spv");
@@ -110,24 +111,27 @@ void ShadowRenderer::draw_scene(VkCommandBuffer cmd_buffer)
 
 	for (size_t i = 0; i < RenderObjectManager::drawables.size(); i++)
 	{
-		const Drawable& d = RenderObjectManager::drawables[i];
-		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 1, 1, &d.mesh_handle->descriptor_set, 0, nullptr);
+		const Drawable& drawable = RenderObjectManager::drawables[i];
+		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 1, 1, &drawable.mesh_handle->descriptor_set, 0, nullptr);
 
 		/* Object descriptor set : per instance data */
-		uint32_t dynamic_offset = d.id * RenderObjectManager::per_object_data_dynamic_aligment;
+		uint32_t dynamic_offset = drawable.id * RenderObjectManager::per_object_data_dynamic_aligment;
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 2, 1, &RenderObjectManager::drawable_descriptor_set, 1, &dynamic_offset);
 
-		if (d.has_primitives)
+		if (drawable.has_primitives)
 		{
-			for (int prim_idx = 0; prim_idx < d.mesh_handle->geometry_data.primitives.size(); prim_idx++)
+			for (int prim_idx = 0; prim_idx < drawable.mesh_handle->geometry_data.primitives.size(); prim_idx++)
 			{
-				const Primitive& p = d.mesh_handle->geometry_data.primitives[prim_idx];
+				const Primitive& p = drawable.mesh_handle->geometry_data.primitives[prim_idx];
+				/* Model matrix push constant */
+				glm::mat4 model_mat = drawable.transform.model * p.mat_model;
+				vkCmdPushConstants(cmd_buffer, m_gfx_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &model_mat);
 				vkCmdDraw(cmd_buffer, p.index_count, 1, p.first_index, 0);
 			}
 		}
 		else
 		{
-			d.draw(cmd_buffer);
+			drawable.draw(cmd_buffer);
 		}
 	}
 

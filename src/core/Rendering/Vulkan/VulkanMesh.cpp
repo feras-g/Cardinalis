@@ -104,7 +104,7 @@ void Drawable::draw_primitives(VkCommandBuffer cmd_buffer) const
 	}
 }
 
-Drawable::Drawable(VulkanMesh* mesh, bool b_has_primitives) : mesh_handle(mesh)
+Drawable::Drawable(VulkanMesh* mesh, bool b_render, bool b_has_primitives) : mesh_handle(mesh), render(b_render)
 {
 	has_primitives = mesh->geometry_data.primitives.size() > 0;
 }	
@@ -126,10 +126,12 @@ static void load_vertices(Primitive p, cgltf_primitive* primitive, GeometryData&
 		case cgltf_attribute_type_position:
 		{
 			//////LOG_DEBUG("        Positions : {0}", attribute->data->count);
-			positionsBuffer.resize(attribute->data->count);
+			//positionsBuffer.resize(attribute->data->count);
 			for (int i = 0; i < attribute->data->count; ++i)
 			{
-				cgltf_accessor_read_float(attribute->data, i, &positionsBuffer[i].x, 3);
+				glm::vec3 pos;
+				cgltf_accessor_read_float(attribute->data, i, &pos.x, 3);
+				positionsBuffer.push_back(pos);
 			}
 
 			// Also get bounding box for this primitive
@@ -152,10 +154,12 @@ static void load_vertices(Primitive p, cgltf_primitive* primitive, GeometryData&
 		case cgltf_attribute_type_normal:
 		{
 			//////LOG_DEBUG("        Normals : {0}", attribute->data->count);
-			normalsBuffer.resize(attribute->data->count);
-			for (int i = 0; i < normalsBuffer.size(); ++i)
+			//normalsBuffer.resize(attribute->data->count);
+			glm::vec3 normal;
+			for (int i = 0; i < attribute->data->count; ++i)
 			{
-				cgltf_accessor_read_float(attribute->data, i, &normalsBuffer[i].x, 3);
+				cgltf_accessor_read_float(attribute->data, i, &normal.x, 3);
+				normalsBuffer.push_back(normal);
 			}
 		}
 		break;
@@ -225,7 +229,7 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 			Emissive
 		*/
 
-		std::function load_tex = [](cgltf_texture* tex, VkFormat format) -> size_t
+		std::function load_tex = [](cgltf_texture* tex, VkFormat format, bool calc_mip) -> size_t
 		{
 			const char* uri = tex->image->uri;
 			const char* name = uri ? uri : tex->image->name;
@@ -237,7 +241,7 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 				if (uri)
 				{
 					/* Load from file path */
-					return RenderObjectManager::add_texture(base_path + uri, name, format);
+					return RenderObjectManager::add_texture(base_path + uri, name, format, calc_mip);
 				}
 				else
 				{
@@ -262,7 +266,7 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 
 		if (tex_emissive)
 		{
-			material.tex_emissive_id = (unsigned int)load_tex(tex_emissive, tex_emissive_format);
+			material.tex_emissive_id = (unsigned int)load_tex(tex_emissive, tex_emissive_format, true);
 		}
 
 		if (gltf_mat->has_pbr_metallic_roughness)
@@ -274,12 +278,12 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 
 			if (tex_base_color)
 			{
-				material.tex_base_color_id = (unsigned int)load_tex(tex_base_color, tex_base_color_format);
+				material.tex_base_color_id = (unsigned int)load_tex(tex_base_color, tex_base_color_format, true);
 			}
 
 			if (tex_metallic_roughness)
 			{
-				material.tex_metallic_roughness_id = (unsigned int)load_tex(tex_metallic_roughness, tex_metallic_roughness_format);
+				material.tex_metallic_roughness_id = (unsigned int)load_tex(tex_metallic_roughness, tex_metallic_roughness_format, false);
 			}
 
 			/* Factors */

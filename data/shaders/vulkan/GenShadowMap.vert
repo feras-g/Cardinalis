@@ -29,11 +29,16 @@ layout(set = 3, binding = 0) uniform FrameData
     vec4 view_pos;
 } frame_data;
 
+layout(push_constant) uniform PushConstants
+{
+    mat4 model;
+} mat;
+
 void main()
 {
     uint index = ibo.data[gl_VertexIndex];
     Vertex v = vbo.data[index];
     vec4 positionOS = vec4(v.px, v.py, v.pz, 1.0);
-    pos_LS = lights.dir_light.view_proj * object_data.model * positionOS;
+    pos_LS = lights.dir_light.view_proj * mat.model * positionOS;
     gl_Position = pos_LS;
 }

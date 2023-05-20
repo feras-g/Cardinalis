@@ -74,7 +74,10 @@ void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buf
 	for (size_t i = 0; i < RenderObjectManager::drawables.size(); i++)
 	{
 		const Drawable& drawable = RenderObjectManager::drawables[i];
-		draw_scene(cmd_buffer, currentImageIdx, RenderObjectManager::drawables[i]);
+		if (drawable.render)
+		{
+			draw_scene(cmd_buffer, currentImageIdx, RenderObjectManager::drawables[i]);
+		}
 	}
 	
 	m_dyn_renderpass[currentImageIdx].end(cmd_buffer);
@@ -101,9 +104,10 @@ void VulkanModelRenderer::draw_scene(VkCommandBuffer cmdBuffer, size_t current_f
 		{
 			const Primitive& p = drawable.mesh_handle->geometry_data.primitives[prim_idx];
 
-			/* Material ID push constant */
+			/* Model matrix push constant */
 			glm::mat4 model_mat = drawable.transform.model * p.mat_model;
 			vkCmdPushConstants(cmdBuffer, m_ppl_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &model_mat);
+			/* Material ID push constant */
 			vkCmdPushConstants(cmdBuffer, m_ppl_layout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), sizeof(Material), &RenderObjectManager::materials[p.material_id]);
 			vkCmdDraw(cmdBuffer, p.index_count, 1, p.first_index, 0);
 		}

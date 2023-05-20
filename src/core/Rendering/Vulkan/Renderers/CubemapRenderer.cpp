@@ -72,7 +72,6 @@ DescriptorSetLayout render_skybox_desc_layout;
 DescriptorSet render_skybox_desc_set;
 VkPipeline			render_skybox_gfx_ppl;
 VkPipelineLayout    render_skybox_ppl_layout;
-VkImageView tex_cubemap_view;
 
 /* Drawable */
 Drawable* unit_cube;

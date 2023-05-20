@@ -12,8 +12,9 @@ layout(set = 0, binding = 2) uniform sampler2D gbuffer_depth;
 layout(set = 0, binding = 3) uniform sampler2D gbuffer_normal_map;
 layout(set = 0, binding = 4) uniform sampler2D gbuffer_metallic_roughness;
 layout(set = 0, binding = 5) uniform sampler2D gbuffer_shadow_map;
-layout(set = 0, binding = 6) uniform samplerCube irradiance_map;
-layout(set = 0, binding = 7) uniform LightData
+layout(set = 0, binding = 6) uniform samplerCube cubemap;
+layout(set = 0, binding = 7) uniform samplerCube irradiance_map;
+layout(set = 0, binding = 8) uniform LightData
 {
     DirectionalLight dir_light;
 } lights;
@@ -51,8 +52,12 @@ void main()
     vec3 l = normalize(lights.dir_light.direction.xyz);
     vec3 v = normalize(frame_data.view_pos.xyz - P_WS);
     vec3 h = normalize(v+l);
+    vec3 R = reflect(-v, N_WS);
+
+    float light_dist = length(frame_data.view_pos.xyz - P_WS);
     
     vec3 irradiance = texture(irradiance_map, N_WS).rgb;
+    vec3 sky_reflection = texture(cubemap, R).rgb * irradiance;
 
     vec3 albedo = texture(gbuffer_color, uv).xyz;
     vec4 metallic_roughness = texture(gbuffer_metallic_roughness, uv);
@@ -62,7 +67,7 @@ void main()
     
     float shadow = get_shadow_factor(P_WS, lights.dir_light.view_proj);
 
-    vec3 color = BRDF(N_WS, v, l, h, lights.dir_light.color.rgb, irradiance, albedo, metallic, roughness, shadow);
+    vec3 color = BRDF(N_WS, v, l, h, lights.dir_light.color.rgb + sky_reflection, irradiance, albedo, metallic, roughness, shadow);
     
     out_color = vec4(color.rgb, 1) ;
 }

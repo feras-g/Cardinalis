@@ -150,8 +150,9 @@ struct Drawable
 	uint32_t material_id = 0;
 	uint32_t base_vertex = 0;
 	bool has_primitives = false;
+	bool render = true;
 	VulkanMesh* mesh_handle;
-	Drawable(VulkanMesh* mesh, bool b_has_primitives = false);
+	Drawable(VulkanMesh* mesh, bool b_render = true, bool b_has_primitives = false);
 	void draw(VkCommandBuffer cmd_buffer) const;
 	void draw_primitives(VkCommandBuffer cmd_buffer) const;
 	TransformData transform;

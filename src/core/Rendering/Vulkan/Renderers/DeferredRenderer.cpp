@@ -34,8 +34,9 @@ void DeferredRenderer::init(std::span<Texture2D> g_buffers_shadow_map, const Lig
 	bindings.push_back({ 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerClampNearest }); /* Normal map */
 	bindings.push_back({ 4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerClampNearest }); /* Metallic/Roughness */
 	bindings.push_back({ 5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerClampNearest }); /* Shadow Map */
-	bindings.push_back({ 6, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerClampLinear }); /*  Irradiance map */
-	bindings.push_back({ 7, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT }); /* Light data */
+	bindings.push_back({ 6, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerClampLinear }); /*  Cube map */
+	bindings.push_back({ 7, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerClampLinear }); /*  Irradiance map */
+	bindings.push_back({ 8, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT }); /* Light data */
 
 	m_descriptor_set_layout = create_descriptor_set_layout(bindings);
 
@@ -93,6 +94,7 @@ void DeferredRenderer::update_descriptor_set(size_t frame_idx)
 	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampNearest, VulkanRendererBase::m_gbuffer_normal[frame_idx].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }); // TO REMOVE
 	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampNearest, VulkanRendererBase::m_gbuffer_metallic_roughness[frame_idx].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
 	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampNearest, m_g_buffers_shadow_map[frame_idx]->view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampLinear,  CubemapRenderer::tex_cubemap_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
 	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampLinear,  CubemapRenderer::tex_irradiance_map_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
 
 	std::vector<VkWriteDescriptorSet> write_descriptor_set = {};
@@ -106,7 +108,7 @@ void DeferredRenderer::update_descriptor_set(size_t frame_idx)
 	desc_buffer_info_.buffer = h_light_manager->m_ubo[frame_idx].buffer;
 	desc_buffer_info_.offset = 0;
 	desc_buffer_info_.range = sizeof(h_light_manager->m_light_data);
-	write_descriptor_set.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], 7, &desc_buffer_info_, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+	write_descriptor_set.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], 8, &desc_buffer_info_, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
 
 	vkUpdateDescriptorSets(context.device, (uint32_t)write_descriptor_set.size(), write_descriptor_set.data(), 0, nullptr);
 }

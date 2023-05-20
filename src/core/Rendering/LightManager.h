@@ -17,8 +17,8 @@ struct PointLight
 
 struct DirectionalLight
 {
-	glm::vec4 direction{ 0, 1, 0, 1 };
-	glm::vec4 color{};
+	glm::vec4 direction{ 0, 1, 0, 0 };
+	glm::vec4 color{ 1.0 };
 	glm::mat4 view_proj{};
 };
 
@@ -41,7 +41,7 @@ struct LightManager
 	/* */
 	glm::vec3 eye = { 0,0,0 };
 	glm::vec3 up  = { 0,1,0 };
-	glm::vec3 view_volume_bbox_min = { -20.0f, -20.0f, -100.0f };
+	glm::vec3 view_volume_bbox_min = { -20.0f, -20.0f, -20.0f };
 	glm::vec3 view_volume_bbox_max = { 20.0f,  20.0f,   20.0f  };
 	static inline glm::mat4 view;
 	static inline glm::mat4 proj;

@@ -17,6 +17,7 @@ struct CubemapRenderer
 	void init_irradiance_map_rendering();
 	void render_irradiance_map(VkCommandBuffer cmd_buffer);
 
+	static inline VkImageView tex_cubemap_view;
 	static inline VkImageView tex_irradiance_map_view;
 
 	/* Handle to equirectangular HDR environment texture */
