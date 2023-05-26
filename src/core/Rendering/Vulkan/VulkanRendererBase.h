@@ -182,7 +182,7 @@ public:
 		}
 	}
 
-	static inline void add_drawable(Drawable drawable, const std::string& name, TransformData& transform)
+	static inline void add_drawable(Drawable drawable, const std::string& name, TransformData transform)
 	{ 
 		assert(drawable.mesh_handle);
 		if (!drawable.has_primitives)

@@ -3,6 +3,7 @@
 #include "Rendering/Camera.h"
 #include "Rendering/Vulkan/VulkanRendererBase.h"
 #include "Rendering/Vulkan/Renderers/DeferredRenderer.h"
+#include "Rendering/Vulkan/Renderers/ShadowRenderer.h"
 
 #include "../imgui/imgui.h"
 #include "../imgui/backends/imgui_impl_win32.h"
@@ -291,6 +292,29 @@ VulkanUI& VulkanUI::ShowLightSettings(LightManager* light_manager)
 		ImGui::DragFloat3("Bbox min", glm::value_ptr(light_manager->view_volume_bbox_min), 0.1f);
 		ImGui::DragFloat3("Bbox max", glm::value_ptr(light_manager->view_volume_bbox_max), 0.1f);
 		ImGui::DragFloat3("Color",	  glm::value_ptr(light_manager->m_light_data.directional_light.color), 0.1f);
+	}
+
+	ImGui::End();
+
+	return *this;
+}
+
+VulkanUI& VulkanUI::ShowShadowSettings(CascadedShadowRenderer* shadow_renderer)
+{
+	if (ImGui::Begin("Shadow Settings", 0, 0))
+	{
+		ImGui::SeparatorText("Cascaded Shadows");
+
+		if (ImGui::DragFloat("Z-Split Interpolation Factor", &shadow_renderer->interp_factor, 0.01f))
+		{
+			shadow_renderer->compute_z_splits();
+		}
+
+		float* v[2] { &shadow_renderer->frustum_near, &shadow_renderer->frustum_far };
+		if (ImGui::DragFloat2("Near/Far", v[0], 0.01f))
+		{
+			shadow_renderer->compute_z_splits();
+		}
 	}
 
 	ImGui::End();

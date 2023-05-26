@@ -1,6 +1,7 @@
 #include "Rendering/Vulkan/Renderers/DeferredRenderer.h"
 #include "Rendering/Vulkan/Renderers/VulkanModelRenderer.h"
 #include "Rendering/Vulkan/Renderers/CubemapRenderer.h"
+#include "Rendering/Vulkan/Renderers/ShadowRenderer.h"
 #include "Rendering/Vulkan/VulkanRendererBase.h"
 #include "Rendering/Vulkan/VulkanDebugUtils.h"
 #include "Rendering/Vulkan/VulkanRenderInterface.h"
@@ -24,7 +25,7 @@ void DeferredRenderer::init(std::span<Texture2D> g_buffers_shadow_map, const Lig
 	m_shader_deferred.load_from_file("DeferredLightingPass.vert.spv", "DeferredLightingPass.frag.spv");
 
 	/* Create Descriptor Pool */
-	m_descriptor_pool = create_descriptor_pool(0, 0, num_descriptors, 0);
+	m_descriptor_pool = create_descriptor_pool(0, 2, 8, 0);
 
 	/* Create descriptor set bindings */
 	std::vector<VkDescriptorSetLayoutBinding> bindings = {};
@@ -37,6 +38,8 @@ void DeferredRenderer::init(std::span<Texture2D> g_buffers_shadow_map, const Lig
 	bindings.push_back({ 6, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerClampLinear }); /*  Cube map */
 	bindings.push_back({ 7, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerClampLinear }); /*  Irradiance map */
 	bindings.push_back({ 8, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT }); /* Light data */
+	bindings.push_back({ 9, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT }); /* Shadow cascade info */
+	bindings.push_back({ 10, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT });
 
 	m_descriptor_set_layout = create_descriptor_set_layout(bindings);
 
@@ -104,11 +107,24 @@ void DeferredRenderer::update_descriptor_set(size_t frame_idx)
 	}
 
 	/* Light data */
+	VkDescriptorBufferInfo desc_buffer_info = {};
+	desc_buffer_info.buffer = h_light_manager->m_ubo[frame_idx].buffer;
+	desc_buffer_info.offset = 0;
+	desc_buffer_info.range = sizeof(h_light_manager->m_light_data);
+	write_descriptor_set.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], 8, &desc_buffer_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+
+	///* Shadow cascade info */
 	VkDescriptorBufferInfo desc_buffer_info_ = {};
-	desc_buffer_info_.buffer = h_light_manager->m_ubo[frame_idx].buffer;
+	desc_buffer_info_.buffer = CascadedShadowRenderer::cascade_ends_ubo.buffer;
 	desc_buffer_info_.offset = 0;
-	desc_buffer_info_.range = sizeof(h_light_manager->m_light_data);
-	write_descriptor_set.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], 8, &desc_buffer_info_, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+	desc_buffer_info_.range  = CascadedShadowRenderer::cascade_ends_ubo_size_bytes;
+	write_descriptor_set.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], 9, &desc_buffer_info_, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+
+	VkDescriptorBufferInfo desc_buffer_info__ = {};
+	desc_buffer_info__.buffer = CascadedShadowRenderer::proj_mats_ubo.buffer;
+	desc_buffer_info__.offset = 0;
+	desc_buffer_info__.range = CascadedShadowRenderer::mats_ubo_size_bytes;
+	write_descriptor_set.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], 10, &desc_buffer_info__, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
 
 	vkUpdateDescriptorSets(context.device, (uint32_t)write_descriptor_set.size(), write_descriptor_set.data(), 0, nullptr);
 }

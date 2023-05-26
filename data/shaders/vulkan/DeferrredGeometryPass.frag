@@ -12,7 +12,7 @@ layout(location = 4) in vec4 positionWS;
 layout(location = 0) out vec4  gbuffer_base_color;
 layout(location = 1) out vec4  gbuffer_normalWS;
 layout(location = 2) out vec4  gbuffer_metallic_roughness;
-layout(location = 3) out float gbuffer_depthCS;
+layout(location = 3) out float gbuffer_depthNDC;
 
 layout(set = 1, binding = 0) uniform ObjectData 
 { 
@@ -52,10 +52,9 @@ layout(set = 3, binding = 0) uniform FrameData
 
 void main()
 {
-
     gbuffer_base_color         = texture(sampler2D(textures[material.tex_base_color_id], smp_repeat_nearest), uv.xy) * material.base_color_factor;
-    gbuffer_normalWS           = vec4(normalize(normalWS.xyz), 1.0);
-    gbuffer_depthCS            = depthCS.z / depthCS.w;
+    gbuffer_normalWS           = vec4(normalize(normalWS.xyz), 1.0f);
+    gbuffer_depthNDC           = depthCS.z/depthCS.w;
     /* https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#metallic-roughness-material */
     /* Metallic : G, Roughness: B */
     gbuffer_metallic_roughness = vec4(texture(sampler2D(textures[material.tex_metallic_roughness_id], smp_repeat_nearest), uv.xy).bg, material.metallic_factor, material.roughness_factor);

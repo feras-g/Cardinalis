@@ -79,5 +79,6 @@ public:
 
 	/* Temporary */
 	static VkImageView create_texture_cube_view(Texture2D texture);
+	static VkImageView create_texture_array_view(Texture2D texture);
 };
 

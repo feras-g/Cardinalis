@@ -66,8 +66,8 @@ void VulkanImGuiRenderer::init(const ShadowRenderer& shadow_renderer)
 		m_ModelRendererMetallicRoughnessTextureId[i] = ++tex_id;
 		m_Textures.push_back(VulkanRendererBase::m_gbuffer_metallic_roughness[i]);
 
-		m_ShadowRendererTextureId[i] = ++tex_id;
-		m_Textures.push_back(shadow_renderer.m_shadow_maps[i]);
+		//m_ShadowRendererTextureId[i] = ++tex_id;
+		//m_Textures.push_back(shadow_renderer.m_shadow_maps[i]);
 	}
 
 	// Shaders

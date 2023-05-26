@@ -97,8 +97,8 @@ void VulkanModelRenderer::draw_scene(VkCommandBuffer cmdBuffer, size_t current_f
 	/* Object descriptor set : per instance data */
 	uint32_t dynamic_offset  = drawable.id * RenderObjectManager::per_object_data_dynamic_aligment;
 	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ppl_layout, 1, 1, &RenderObjectManager::drawable_descriptor_set, 1, &dynamic_offset);
-
-	if (drawable.has_primitives)
+	
+	if (drawable.mesh_handle->geometry_data.primitives.size())
 	{
 		for (int prim_idx = 0; prim_idx < drawable.mesh_handle->geometry_data.primitives.size(); prim_idx++)
 		{

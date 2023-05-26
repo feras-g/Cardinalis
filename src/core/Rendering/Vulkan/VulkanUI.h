@@ -5,6 +5,7 @@
 
 class Camera;
 struct LightManager;
+struct CascadedShadowRenderer;
 
 class VulkanUI
 {
@@ -24,6 +25,7 @@ public:
 	VulkanUI& ShowCameraSettings(Camera* camera);
 	VulkanUI& ShowInspector();
 	VulkanUI& ShowLightSettings(LightManager* light_manager);
+	VulkanUI& ShowShadowSettings(CascadedShadowRenderer* shadow_renderer);
 	void End();
 
 	bool bIsSceneViewportHovered = false;

@@ -524,3 +524,36 @@ VkImageView Texture2D::create_texture_cube_view(Texture2D texture)
 
     return out_view;
 }
+
+
+VkImageView Texture2D::create_texture_array_view(Texture2D texture)
+{
+    VkImageViewCreateInfo createInfo =
+    {
+        .sType      { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO },
+        .flags      {  },
+        .image      { texture.image },
+        .viewType   { VK_IMAGE_VIEW_TYPE_2D_ARRAY },
+        .format     { texture.info.imageFormat },
+        .components
+        {
+            .r = VK_COMPONENT_SWIZZLE_R,
+            .g = VK_COMPONENT_SWIZZLE_G,
+            .b = VK_COMPONENT_SWIZZLE_B,
+            .a = VK_COMPONENT_SWIZZLE_A
+        },
+        .subresourceRange
+        {
+            .aspectMask     { VK_IMAGE_ASPECT_DEPTH_BIT },
+            .baseMipLevel   { 0 },
+            .levelCount     { texture.info.mipLevels },
+            .baseArrayLayer { 0 },
+            .layerCount     { texture.info.layerCount },
+        }
+    };
+
+    VkImageView out_view;
+    vkCreateImageView(context.device, &createInfo, nullptr, &out_view);
+
+    return out_view;
+}

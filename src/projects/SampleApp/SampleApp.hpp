@@ -50,6 +50,7 @@ protected:
 	std::unique_ptr<VulkanModelRenderer>		m_model_renderer;
 	DeferredRenderer							m_deferred_renderer;
 	ShadowRenderer							    m_shadow_renderer;
+	CascadedShadowRenderer						m_cascaded_shadow_renderer;
 	CubemapRenderer							    m_cubemap_renderer;
 
 };
@@ -73,51 +74,106 @@ void SampleApp::InitSceneResources()
 	};
 	RenderObjectManager::add_material(default_material, "Default Material");
 
-	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/bistro-gltf/bistro.gltf"), "bistro");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/MetalRoughSpheres.gltf"), "spheres");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/sponza-gltf-pbr/sponza.glb"), "sponza");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/duck.gltf"), "duck");
+	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/MetalRoughSpheres.gltf"), "spheres");
+	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/duck.gltf"), "duck");
 
-	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/Main.1_Sponza/NewSponza_Main_glTF_002.gltf"), "intel_sponza");
-	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/Main.1_Sponza/PKG_A_Curtains/NewSponza_Curtains_glTF.gltf"), "intel_sponza_curtains");
+
 
 	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/bistro-gltf/bistro.gltf"), "bistro");
-	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/suntemple-gltf/suntemple.gltf"), "sun_temple");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/plane.glb"), "plane");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/Cube.gltf"), "cube");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/cone.glb"), "cone");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/cylinder.glb"), "cylinder");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/icosphere.glb"), "icosphere");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/DamagedHelmet/glTF/DamagedHelmet.gltf"), "damaged_helmet");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/robot/scene.gltf"), "robot");
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/streetsigns/scene.gltf"), "streetsigns");
+	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/cone.glb"), "cone");
+	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/icosphere.glb"), "icosphere");
+	////RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/DamagedHelmet/glTF/DamagedHelmet.gltf"), "damaged_helmet");
+	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/streetsigns/scene.gltf"), "streetsigns");
 
-	m_light_manager.init();
 
 	TransformData transform =
 	{
-		glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0))
+		glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0f))
 	};
-	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("streetsigns")), "streetsigns", transform);
-	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("sponza")), "sponza", transform);
+	//RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("streetsigns")), "streetsigns", transform);
 
-	//RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("spheres")), "spheres", transform);
+	////RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("spheres")), "spheres", transform);
 	//RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("duck")), "duck", transform);
 
-	transform.model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(50.0f));
-	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("plane")), "plane", transform);
+	//transform.model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(500.0f, 1.0, 500.0f));
+	//RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("plane")), "plane", transform);
 
-	//transform.model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.5f));
-	////RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("sponza")), "sponza", transform);
+	////transform.model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.5f));
 
-	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cube"), false), "unit_cube", transform);
+	//TransformData t =
+	//{
+	//	glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0))
+	//};
 
-	//transform.model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(0.02f));
-	//RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("robot")), "robot", transform);
+	//RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cube"), false), "cascade0", t);
+	//RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cube"), false), "cascade1", t);
+	//RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cube"), false), "cascade2", t);
+	//RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cube"), false), "cascade3", t);
 
-	transform.model = glm::inverse(m_light_manager.proj * m_light_manager.view);
-	transform.model = glm::translate(transform.model, m_light_manager.eye);
+
+
+	//transform.model = glm::inverse(m_light_manager.proj * m_light_manager.view);
+	//transform.model = glm::translate(transform.model, m_light_manager.eye);
+	//RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cube"), false), "frustum", transform);
+
+	/* Basic primitives */
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/Cube.gltf"), "cube");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/cylinder.glb"), "cylinder");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/plane.glb"), "plane");
+
+	/* Props */
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/streetsigns/scene.gltf"), "streetsigns");
+
+	/* Characters */
+	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/robot/scene.gltf"), "robot");
+
+	/* Big scenes */
+	{
+		//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/suntemple-gltf/suntemple.gltf"), "sun_temple");
+		//RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("sun_temple")), "sun_temple", transform);
+	}
+	
+	{
+		//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/bistro-gltf/bistro.gltf"), "bistro");
+		//RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("bistro")), "bistro", { .model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(0.25f)) });
+	}
+
+	{
+		//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/bistro-gltf/bistro.gltf"), "bistro");
+		//RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("bistro")), "bistro", { .model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(0.25f)) });
+	}
+
+	
+	{
+		//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/Main.1_Sponza/NewSponza_Main_glTF_002.gltf"), "intel_sponza");
+		//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/Main.1_Sponza/PKG_A_Curtains/NewSponza_Curtains_glTF.gltf"), "intel_sponza_curtains");
+		//RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("intel_sponza")), "sponza", transform);
+		//RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("intel_sponza_curtains")), "sponza_curtains", transform);
+	}
+
+	{
+		RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/sponza-gltf-pbr/sponza.glb"), "sponza");
+		RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("sponza")), "sponza", transform);
+	}
+
+
+	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cube")), "unit_cube", transform);
 	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cube")), "frustum", transform);
+	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("plane")), "floor", { .model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(50.0)) } );
+
+	{
+		/* Cascaded shadow maps test scene */
+		TransformData t =
+		{
+			glm::translate(glm::identity<glm::mat4>(), glm::vec3(0,0,0)) * glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0f))
+		};
+
+		for (int i = 0; i < 25; i++)
+		{
+			t.model = glm::translate(t.model, glm::vec3(i * 2, 0, 0));
+			RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("streetsigns")), "streetsigns", t);
+		}
+	}
 
 	RenderObjectManager::configure();
 }
@@ -126,14 +182,17 @@ void SampleApp::Initialize()
 {
 	InitSceneResources();
 
+	m_light_manager.init();
 	m_model_renderer.reset(new VulkanModelRenderer);
 	m_imgui_renderer.reset(new VulkanImGuiRenderer(context));
 	
-	m_shadow_renderer.init(2048, 2048, m_light_manager); 
+	//m_shadow_renderer.init(2048, 2048, m_light_manager); 
+	m_cascaded_shadow_renderer.init(2048, 2048, m_Camera, m_light_manager); 
 	m_cubemap_renderer.init(); //!\ Before deferred renderer
 
 	m_deferred_renderer.init(
-		m_shadow_renderer.m_shadow_maps,
+		m_cascaded_shadow_renderer.m_shadow_maps,
+		//m_shadow_renderer.m_shadow_maps,
 		m_light_manager
 	);
 
@@ -184,7 +243,8 @@ void SampleApp::Render()
 		swapchain.color_attachments[context.curr_frame_idx].transition_layout(current_frame.cmd_buffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 		m_model_renderer->render(context.curr_frame_idx, current_frame.cmd_buffer);
-		m_shadow_renderer.render(context.curr_frame_idx, current_frame.cmd_buffer);
+		//m_shadow_renderer.render(context.curr_frame_idx, current_frame.cmd_buffer);
+		m_cascaded_shadow_renderer.render(context.curr_frame_idx, current_frame.cmd_buffer);
 		m_deferred_renderer.render(context.curr_frame_idx, current_frame.cmd_buffer);
 		m_cubemap_renderer.render_skybox(context.curr_frame_idx, current_frame.cmd_buffer);
 		m_imgui_renderer->render(context.curr_frame_idx, current_frame.cmd_buffer);
@@ -282,6 +342,7 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 		m_UI.ShowCameraSettings(&m_Camera);
 		m_UI.ShowInspector();
 		m_UI.ShowLightSettings(&m_light_manager);
+		m_UI.ShowShadowSettings(&m_cascaded_shadow_renderer);
 		m_UI.End();
 	}
 
@@ -290,7 +351,9 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 	}
 
 	/* Temp */
-	RenderObjectManager::get_drawable_data("frustum").second->model = glm::inverse(m_light_manager.proj * m_light_manager.view);
+	RenderObjectManager::get_drawable("frustum")->transform.model  = glm::inverse(m_light_manager.proj * m_light_manager.view);
+
+
 }
 
 inline void SampleApp::OnWindowResize()

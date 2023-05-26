@@ -39,8 +39,9 @@ struct LightManager
 	Buffer m_ubo[NUM_FRAMES];
 
 	/* */
-	glm::vec3 eye = { 0,0,0 };
+	glm::vec3 eye = { 0,0, FLT_EPSILON };
 	glm::vec3 up  = { 0,1,0 };
+	static inline glm::vec3 direction = {};
 	glm::vec3 view_volume_bbox_min = { -20.0f, -20.0f, -20.0f };
 	glm::vec3 view_volume_bbox_max = { 20.0f,  20.0f,   20.0f };
 	/* Directional Light view / proj*/

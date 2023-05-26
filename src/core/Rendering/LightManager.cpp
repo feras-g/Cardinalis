@@ -59,11 +59,13 @@ glm::mat4 compute_view_proj(glm::vec3 eye, glm::vec3 forward, glm::vec3 up, glm:
 
 	/* Compute projection matrix */
 	//LightManager::proj = glm::perspective(45.0f, 1.0f, view_volume_bbox_min.z, view_volume_bbox_max.z);
-	LightManager::proj = glm::ortho(
-		view_volume_bbox_min.x, view_volume_bbox_max.x, 
-		view_volume_bbox_min.y, view_volume_bbox_max.y, 
-		view_volume_bbox_min.z, view_volume_bbox_max.z
-	);
+	//LightManager::proj = glm::ortho(
+	//	view_volume_bbox_min.x, view_volume_bbox_max.x, 
+	//	view_volume_bbox_min.y, view_volume_bbox_max.y, 
+	//	view_volume_bbox_min.z, view_volume_bbox_max.z
+	//);
+
+	LightManager::direction = forward;
 	
 	/* Compute view matrix */
 	LightManager::view = glm::lookAt(eye, forward, up);
