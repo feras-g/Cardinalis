@@ -1,6 +1,6 @@
 #version 460
 #define ENABLE_SHADOWS
-#define ENABLE_CUBEMAP_REFLECTIONS
+// #define ENABLE_CUBEMAP_REFLECTIONS
 
 #include "Headers/LightDefinitions.glsl"
 #include "Headers/Maths.glsl"
@@ -59,7 +59,7 @@ float sample_shadow_map(vec3 shadow_coord, vec2 offset, uint cascade_index)
     float shadow = 1.0;
     if( texture( gbuffer_shadow_map, vec3(shadow_coord.xy + offset, cascade_index) ).r < shadow_coord.z - bias)
     {
-        shadow = 0.27;
+        shadow = 0.05;
     }
     return shadow;
 }
@@ -84,6 +84,45 @@ float PCF(vec3 shadow_coord, uint cascade_index)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Volumetric lighting
+
+float mie_scattering(float g, float theta)
+{
+	float nume = (1-g) * (1-g);
+	float denom = 4 * PI * pow((1 + (g*g) - 2 * g * cos(theta)), 3/2);
+	return nume / denom;
+}
+
+
+vec3 raymarch_volumetric_light(float g, float theta, uint cascade_index, vec3 P_WS, vec3 light_color)
+{
+		float NUM_STEPS = 128.0f;
+		vec3 V_ = P_WS - frame_data.view_pos.xyz;
+		float increment = length(V_) / NUM_STEPS;
+		V_ = normalize(V_);
+	
+		vec3 ray_start = frame_data.view_pos.xyz;
+		vec3 p = ray_start;
+	
+		vec3 volumetric_light = vec3(0,0,0);
+		for(int i=0; i < NUM_STEPS; i++)
+		{
+			vec4 p_shadow_coord = bias_matrix * CSM_mats.proj[cascade_index] * vec4(p, 1.0f);
+			p_shadow_coord /= p_shadow_coord.w;
+		
+			// Fragment is visible to the light
+			if( texture( gbuffer_shadow_map, vec3(p_shadow_coord.x, 1-p_shadow_coord.y, cascade_index) ).r > p_shadow_coord.z )
+			{
+				volumetric_light += mie_scattering(0.06, theta) * light_color;
+			}
+	
+			p = p + increment * V_;
+		}
+
+		return  volumetric_light /= NUM_STEPS;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void main()
 {
 
@@ -134,8 +173,10 @@ float shadow = 1.0f;
 		}
 	}
 
-    vec3 shadow_coord = vec3(bias_matrix * CSM_mats.proj[cascade_index] * vec4(P_WS, 1.0f));
-    shadow_coord = vec3(shadow_coord.x, 1-shadow_coord.y, shadow_coord.z);
+    vec4 shadow_coord = bias_matrix * CSM_mats.proj[cascade_index] * vec4(P_WS, 1.0f);
+    shadow_coord /= shadow_coord.w;
+    shadow_coord = vec4(shadow_coord.x, 1-shadow_coord.y, shadow_coord.z, 1.0);
+
     if(params.bViewDebugShadow)
     {
 	    switch(cascade_index) 
@@ -157,16 +198,16 @@ float shadow = 1.0f;
     
     if(params.bUseShadowPCF)
     {
-        shadow = PCF(shadow_coord, cascade_index);
+        shadow = PCF(shadow_coord.xyz, cascade_index);
     }
     else
     {
-        shadow = sample_shadow_map(shadow_coord, vec2(0, 0), cascade_index);
+        shadow = sample_shadow_map(shadow_coord.xyz, vec2(0, 0), cascade_index);
     }
 #endif
 
-    vec3 color = BRDF(N_WS, V, L, H, light_color, irradiance, albedo, metallic, roughness, shadow);
+    vec3 color = BRDF(N_WS, V, L, H, light_color, irradiance, albedo, metallic, roughness);
+    color += raymarch_volumetric_light(0.8, dot(V, -L),cascade_index, P_WS, light_color);
     color *= shadow;
-
     out_color = vec4(color, 1.0) ;
 }

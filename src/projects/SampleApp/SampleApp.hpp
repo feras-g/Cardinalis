@@ -125,7 +125,10 @@ void SampleApp::InitSceneResources()
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/streetsigns/scene.gltf"), "streetsigns");
 
 	/* Characters */
-	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/robot/scene.gltf"), "robot");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/robot/scene.gltf"), "robot");
+	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("robot")), "robot", { .model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(0.05f)) });
+
+
 
 	/* Big scenes */
 	{
@@ -152,28 +155,32 @@ void SampleApp::InitSceneResources()
 	}
 
 	{
-		RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/sponza-gltf-pbr/sponza.glb"), "sponza");
-		RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("sponza")), "sponza", transform);
+		//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/sponza-gltf-pbr/sponza.glb"), "sponza");
+		//RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("sponza")), "sponza", { .model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(2.5)) });
 	}
-
-
-	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cube")), "unit_cube", transform);
-	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cube")), "frustum", transform);
-	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("plane")), "floor", { .model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(50.0)) } );
 
 	{
-		/* Cascaded shadow maps test scene */
-		TransformData t =
-		{
-			glm::translate(glm::identity<glm::mat4>(), glm::vec3(0,0,0)) * glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0f))
-		};
-
-		for (int i = 0; i < 25; i++)
-		{
-			t.model = glm::translate(t.model, glm::vec3(i * 2, 0, 0));
-			RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("streetsigns")), "streetsigns", t);
-		}
+		RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/diorama/scene.gltf"), "diorama");
+		RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("diorama")), "diorama", { .model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0f)) });
 	}
+
+	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cube"), false), "unit_cube", transform);
+	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cube"), false), "frustum", transform);
+	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("plane")), "floor", { .model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(50.0)) } );
+
+	//{
+	//	/* Cascaded shadow maps test scene */
+	//	TransformData t =
+	//	{
+	//		glm::translate(glm::identity<glm::mat4>(), glm::vec3(0,0,0)) * glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0f))
+	//	};
+
+	//	for (int i = 0; i < 25; i++)
+	//	{
+	//		t.model = glm::translate(t.model, glm::vec3(i * 2, 0, 0));
+	//		RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("streetsigns")), "streetsigns", t);
+	//	}
+	//}
 
 	RenderObjectManager::configure();
 }

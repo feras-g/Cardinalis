@@ -79,8 +79,8 @@ Drawable* unit_cube;
 /* Cubemap rendering */
 void CubemapRenderer::init()
 {
-	//init_resources("../../../data/textures/env/DF360_005_Reloaded_4k_sRGB.hdr");
-	init_resources("../../../data/textures/env/newport_loft.hdr");
+	init_resources("../../../data/textures/env/DF360_005_Reloaded_4k_sRGB.hdr");
+	//init_resources("../../../data/textures/env/newport_loft.hdr");
 	init_descriptors();
 
 	pass_render_cubemap.add_color_attachment(cubemap_render_attachment.view);

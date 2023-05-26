@@ -331,8 +331,6 @@ void CascadedShadowRenderer::compute_cascade_ortho_proj()
 			frustum_corners[i] = glm::vec3(corner / corner.w);
 		}
 
-		float radius = glm::length(frustum_corners[0] - frustum_corners[7]) / 2.0f;
-
 		/* Get frustum center in World space */
 		glm::vec3 center{};
 		for (int i = 0; i < 8; i++)
@@ -340,6 +338,8 @@ void CascadedShadowRenderer::compute_cascade_ortho_proj()
 			center += frustum_corners[i];
 		}
 		center *= (1.0f / 8.0f);
+
+		float radius = glm::length(frustum_corners[0] - frustum_corners[7]) / 2.0f;
 
 		/* Orthographics projection */
 		glm::vec3 eye = center - glm::normalize(LightManager::direction) * radius;
