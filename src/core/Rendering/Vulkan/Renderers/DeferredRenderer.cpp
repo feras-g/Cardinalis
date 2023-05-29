@@ -121,7 +121,7 @@ void DeferredRenderer::update_descriptor_set(size_t frame_idx)
 	write_descriptor_set.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], 9, &desc_buffer_info_, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
 
 	VkDescriptorBufferInfo desc_buffer_info__ = {};
-	desc_buffer_info__.buffer = CascadedShadowRenderer::proj_mats_ubo.buffer;
+	desc_buffer_info__.buffer = CascadedShadowRenderer::proj_mats_ubo[frame_idx].buffer;
 	desc_buffer_info__.offset = 0;
 	desc_buffer_info__.range = CascadedShadowRenderer::mats_ubo_size_bytes;
 	write_descriptor_set.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], 10, &desc_buffer_info__, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));

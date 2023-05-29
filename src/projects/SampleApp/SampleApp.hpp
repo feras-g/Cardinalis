@@ -81,7 +81,6 @@ void SampleApp::InitSceneResources()
 
 	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/bistro-gltf/bistro.gltf"), "bistro");
 	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/cone.glb"), "cone");
-	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/icosphere.glb"), "icosphere");
 	////RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/DamagedHelmet/glTF/DamagedHelmet.gltf"), "damaged_helmet");
 	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/streetsigns/scene.gltf"), "streetsigns");
 
@@ -120,13 +119,15 @@ void SampleApp::InitSceneResources()
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/Cube.gltf"), "cube");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/cylinder.glb"), "cylinder");
 	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/plane.glb"), "plane");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/sphere_pbr/scene.gltf"), "sphere_pbr");
+	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/basic/icosphere.glb"), "icosphere");
 
 	/* Props */
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/streetsigns/scene.gltf"), "streetsigns");
+	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/streetsigns/scene.gltf"), "streetsigns");
 
 	/* Characters */
-	RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/robot/scene.gltf"), "robot");
-	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("robot")), "robot", { .model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(0.05f)) });
+	//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/robot/scene.gltf"), "robot");
+	//RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("robot")), "robot", { .model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(0.04f)) });
 
 
 
@@ -155,18 +156,19 @@ void SampleApp::InitSceneResources()
 	}
 
 	{
-		//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/sponza-gltf-pbr/sponza.glb"), "sponza");
-		//RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("sponza")), "sponza", { .model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(2.5)) });
+		RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/sponza-gltf-pbr/sponza.glb"), "sponza");
+		RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("sponza")), "sponza", { .model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(0.25)) });
 	}
 
 	{
-		RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/diorama/scene.gltf"), "diorama");
-		RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("diorama")), "diorama", { .model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0f)) });
+		//RenderObjectManager::add_mesh(VulkanMesh("../../../data/models/local/building/scene.gltf"), "building");
+		//RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("building")), "building", { .model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0)) });
 	}
+	
 
 	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cube"), false), "unit_cube", transform);
 	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("cube"), false), "frustum", transform);
-	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("plane")), "floor", { .model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(50.0)) } );
+	RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("plane")), "floor", { .model = glm::scale(glm::identity<glm::mat4>(), glm::vec3(5000.0)) } );
 
 	//{
 	//	/* Cascaded shadow maps test scene */
@@ -175,11 +177,13 @@ void SampleApp::InitSceneResources()
 	//		glm::translate(glm::identity<glm::mat4>(), glm::vec3(0,0,0)) * glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0f))
 	//	};
 
-	//	for (int i = 0; i < 25; i++)
-	//	{
-	//		t.model = glm::translate(t.model, glm::vec3(i * 2, 0, 0));
-	//		RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("streetsigns")), "streetsigns", t);
-	//	}
+	//	for (int i = 0; i < 5; i++)
+	//		for (int j = 0; j < 5; j++)
+	//			{
+	//				t.model = glm::translate(glm::identity < glm::mat4 >() , glm::vec3(i * 10, 0, j * 10));
+	//				RenderObjectManager::add_drawable(Drawable(RenderObjectManager::get_mesh("building")), "building", t);
+	//			}
+
 	//}
 
 	RenderObjectManager::configure();

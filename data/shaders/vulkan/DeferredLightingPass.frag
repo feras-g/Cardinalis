@@ -55,11 +55,11 @@ const mat4 bias_matrix = mat4(
 
 float sample_shadow_map(vec3 shadow_coord, vec2 offset, uint cascade_index)
 {
-    float bias = 0.0005;
+    float bias = 0.0;
     float shadow = 1.0;
     if( texture( gbuffer_shadow_map, vec3(shadow_coord.xy + offset, cascade_index) ).r < shadow_coord.z - bias)
     {
-        shadow = 0.05;
+        shadow = 0.12;
     }
     return shadow;
 }
@@ -113,7 +113,7 @@ vec3 raymarch_volumetric_light(float g, float theta, uint cascade_index, vec3 P_
 			// Fragment is visible to the light
 			if( texture( gbuffer_shadow_map, vec3(p_shadow_coord.x, 1-p_shadow_coord.y, cascade_index) ).r > p_shadow_coord.z )
 			{
-				volumetric_light += mie_scattering(0.06, theta) * light_color;
+				volumetric_light += mie_scattering(0.8, theta) * light_color * 2;
 			}
 	
 			p = p + increment * V_;
@@ -128,6 +128,7 @@ void main()
 
     ToggleParams params;
     params.bUseShadowPCF = true;
+    params.bViewDebugShadow = false;
 
     float depthNDC = texture(gbuffer_depth, uv).x;
 
@@ -159,8 +160,9 @@ void main()
 
 float shadow = 1.0f;
 
+vec3 color = BRDF(N_WS, V, L, H, light_color, irradiance, albedo, metallic, roughness);
+
 #ifdef ENABLE_SHADOWS
-    params.bViewDebugShadow = false;
 
     uint cascade_index = 0;
     float z_view_space = abs(P_VS.z);
@@ -182,16 +184,16 @@ float shadow = 1.0f;
 	    switch(cascade_index) 
         {
 	    	case 0 :
-	    		out_color.rgb *= vec3(1.0f, 0.25f, 0.25f);
+	    		color.rgb *= vec3(1.0f, 0.25f, 0.25f);
 	    		break;
 	    	case 1 :
-	    		out_color.rgb *= vec3(0.25f, 1.0f, 0.25f);
+	    		color.rgb *= vec3(0.25f, 1.0f, 0.25f);
 	    		break;
 	    	case 2 :
-	    		out_color.rgb *= vec3(0.25f, 0.25f, 1.0f);
+	    		color.rgb *= vec3(0.25f, 0.25f, 1.0f);
 	    		break;
 	    	case 3 :
-	    		out_color.rgb *= vec3(1.0f, 1.0f, 0.25f);
+	    		color.rgb *= vec3(1.0f, 1.0f, 0.25f);
 	    		break;
 	    }
     }
@@ -205,9 +207,8 @@ float shadow = 1.0f;
         shadow = sample_shadow_map(shadow_coord.xyz, vec2(0, 0), cascade_index);
     }
 #endif
-
-    vec3 color = BRDF(N_WS, V, L, H, light_color, irradiance, albedo, metallic, roughness);
-    color += raymarch_volumetric_light(0.8, dot(V, -L),cascade_index, P_WS, light_color);
+    
     color *= shadow;
+    color += raymarch_volumetric_light(0.8, dot(V, -L), cascade_index, P_WS, light_color);
     out_color = vec4(color, 1.0) ;
 }

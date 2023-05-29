@@ -36,7 +36,7 @@ static const uint32_t view_mask = 0b00001111;
 
 struct CascadedShadowRenderer
 {
-	void init(unsigned int width, unsigned int height, const Camera& camera, const LightManager& lightmanager);
+	void init(unsigned int width, unsigned int height,  Camera& camera, const LightManager& lightmanager);
 	void update_desc_sets();
 
 	Texture2D m_shadow_maps[NUM_FRAMES];
@@ -59,18 +59,17 @@ struct CascadedShadowRenderer
 		glm::mat4 dir_light_view;
 	} ps;
 
-	void compute_cascade_ortho_proj();
+	void compute_cascade_ortho_proj(size_t current_frame_idx);
 	void render(size_t current_frame_idx, VkCommandBuffer cmd_buffer);
 	void draw_scene(VkCommandBuffer cmd_buffer);
-	static inline Buffer proj_mats_ubo;
+	static inline Buffer proj_mats_ubo[NUM_FRAMES];
 	static inline size_t mats_ubo_size_bytes = 0;
 
 	static inline Buffer cascade_ends_ubo;
 	static inline size_t cascade_ends_ubo_size_bytes = 0;
-
 	glm::ivec2 m_shadow_map_size;
 	const LightManager* h_light_manager;
-	const Camera* h_camera;
+	Camera* h_camera;
 	static inline std::array<float, NUM_CASCADES> z_splits;
 	std::array<glm::mat4, NUM_CASCADES> camera_splits_proj_mats;
 	std::array<glm::mat4, NUM_CASCADES> cascades_proj_mats;

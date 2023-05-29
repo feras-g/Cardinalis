@@ -203,7 +203,7 @@ void CubemapRenderer::init_skybox_rendering()
 	
 	VkDescriptorImageInfo image_info = {};
 	image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	image_info.imageView = tex_irradiance_map_view;
+	image_info.imageView = tex_cubemap_view;// tex_irradiance_map_view;
 	image_info.sampler = sampler;
 
 	VkWriteDescriptorSet write = ImageWriteDescriptorSet(render_skybox_desc_set.set, 0, &image_info);

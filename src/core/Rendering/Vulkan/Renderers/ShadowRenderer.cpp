@@ -194,7 +194,7 @@ struct Plane
 	}
 };
 
-void CascadedShadowRenderer::init(unsigned int width, unsigned int height, const Camera& camera, const LightManager& lightmanager)
+void CascadedShadowRenderer::init(unsigned int width, unsigned int height,  Camera& camera, const LightManager& lightmanager)
 {
 	h_light_manager = &lightmanager;
 	h_camera = &camera;
@@ -237,11 +237,17 @@ void CascadedShadowRenderer::init(unsigned int width, unsigned int height, const
 	m_gfx_pipeline_layout = create_pipeline_layout(context.device, desc_set_layouts, (uint32_t)sizeof(push_constants), 0);
 	
 	mats_ubo_size_bytes = sizeof(glm::mat4) * NUM_CASCADES;
-	create_uniform_buffer(proj_mats_ubo, mats_ubo_size_bytes);
+	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
+	{
+		create_uniform_buffer(proj_mats_ubo[frame_idx], mats_ubo_size_bytes);
+	}
 	cascade_ends_ubo_size_bytes = sizeof(glm::vec4);
 	create_uniform_buffer(cascade_ends_ubo, cascade_ends_ubo_size_bytes);
 	compute_z_splits();
-	compute_cascade_ortho_proj();
+	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
+	{
+		compute_cascade_ortho_proj(frame_idx);
+	}
 
 	update_desc_sets();
 
@@ -258,7 +264,7 @@ void CascadedShadowRenderer::update_desc_sets()
 		std::vector<VkWriteDescriptorSet> desc_writes = {};
 
 		/* Cascades projection matrices UBO */
-		VkDescriptorBufferInfo info = { proj_mats_ubo.buffer,  0, mats_ubo_size_bytes };
+		VkDescriptorBufferInfo info = { proj_mats_ubo[frame_idx].buffer,  0, mats_ubo_size_bytes };
 		desc_writes.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], 0, &info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
 
 		vkUpdateDescriptorSets(context.device, (uint32_t)desc_writes.size(), desc_writes.data(), 0, nullptr);
@@ -278,33 +284,34 @@ void CascadedShadowRenderer::compute_z_splits()
 	const float ratio = f / n;
 
 	// interpolation factor between exponential and uniform distribution of splits
+	glm::vec4 z_splits_view_space;
 
-	for (size_t i = 0; i < NUM_CASCADES; i++)
+	for (int i = 0; i < NUM_CASCADES; i++)
 	{
 		float p = (float)(i + 1) / NUM_CASCADES;
 		float log_distr     = n * std::pow(ratio, p); // exponential distribution of splits
 		float uniform_distr = n + p * range; // uniform distribution of splits
 
 		z_splits[i] = std::lerp(uniform_distr, log_distr, interp_factor);
+		z_splits_view_space[i] = z_splits[i];
 
 		/* Optional: compute the projection matrix corresponding to this cascade */
-		float n = (i > 0) ? z_splits[i - 1] : h_camera->near_far.x;
+		float n = (i > 0) ? z_splits[i - 1] : frustum_near;
 		camera_splits_proj_mats[i] = glm::perspective(glm::radians(h_camera->fov), h_camera->aspect_ratio, n, z_splits[i]);
 	}
+
+	upload_buffer_data(cascade_ends_ubo, &z_splits_view_space, cascade_ends_ubo_size_bytes, 0);
 }
 
-void CascadedShadowRenderer::compute_cascade_ortho_proj()
+void CascadedShadowRenderer::compute_cascade_ortho_proj(size_t frame_idx)
 {
-	float ar = h_camera->aspect_ratio;
+	glm::vec3 light_direction = glm::normalize(LightManager::direction);
 
-	/* Compute cascade corners in view space */
-	float tanHalfFovX = tan(glm::radians((h_camera->fov * ar) / 2));
-	float tanHalfFovY = tan(glm::radians(h_camera->fov / 2));
+	glm::vec3 up     = { 0.0f, 1.0f, 0.0f };
 
-	glm::mat4 cam_inv_view_mat     = glm::inverse(h_camera->controller.m_view);
-	glm::mat4 light_view		   = h_light_manager->view;
+	glm::mat4 cam_view = h_camera->controller.m_view;
 
-	glm::vec4 z_splits_clip_space;
+	glm::vec3 frustum_centers[NUM_CASCADES] = { glm::vec3(0) };
 
 	/* Compute orthographic matrix for each cascade */
 	for (int i = 0; i < NUM_CASCADES; i++)
@@ -313,48 +320,72 @@ void CascadedShadowRenderer::compute_cascade_ortho_proj()
 		glm::vec3 frustum_corners[8] = 
 		{
 			glm::vec3(-1.0f,  1.0f, 0.0f),	
-			glm::vec3(1.0f,  1.0f, 0.0f),	
-			glm::vec3(1.0f, -1.0f, 0.0f),	
+			glm::vec3( 1.0f,  1.0f, 0.0f),	
+			glm::vec3( 1.0f, -1.0f, 0.0f),	
 			glm::vec3(-1.0f, -1.0f, 0.0f),	
-			glm::vec3(-1.0f,  1.0f,  1.0f),	
-			glm::vec3(1.0f,  1.0f,  1.0f),
-			glm::vec3(1.0f, -1.0f,  1.0f),
-			glm::vec3(-1.0f, -1.0f,  1.0f),
+			glm::vec3(-1.0f,  1.0f, 1.0f),	
+			glm::vec3( 1.0f,  1.0f, 1.0f),
+			glm::vec3( 1.0f, -1.0f, 1.0f),
+			glm::vec3(-1.0f, -1.0f, 1.0f),
 		};
 
-
-		/* Transform the NDC cube into a frustum in World Space */
-		glm::mat4 inv_vp = glm::inverse(camera_splits_proj_mats[i] * h_camera->controller.m_view);
+		/* NDC -> World Space : Cube becomes a frustum in World Space */
+		glm::mat4 inv_vp = glm::inverse(camera_splits_proj_mats[i] * cam_view);
 		for (size_t i = 0; i < 8; i++)
 		{
 			glm::vec4 corner = inv_vp * glm::vec4(frustum_corners[i], 1.0f);
-			frustum_corners[i] = glm::vec3(corner / corner.w);
+			frustum_corners[i] = corner / corner.w;
 		}
+		float splitDist = z_splits[i];
+
 
 		/* Get frustum center in World space */
-		glm::vec3 center{};
+		glm::vec3 frustum_center = glm::vec3(0);
+		
 		for (int i = 0; i < 8; i++)
 		{
-			center += frustum_corners[i];
+			frustum_center += frustum_corners[i];
 		}
-		center *= (1.0f / 8.0f);
+		frustum_center /= 8.0f;
 
-		float radius = glm::length(frustum_corners[0] - frustum_corners[7]) / 2.0f;
+		float radius = 0.0f;
+		for (int i = 0; i < 8; i++)
+		{
+			radius = std::max(radius, glm::length(frustum_center - frustum_corners[i]));
+		}
+
+		///////////////////////// Remove shimmering
+		{
+			float texelsPerUnit = (float)2048.0f / (radius * 2.0f);
+			glm::mat4 scalar = glm::scale(glm::identity<glm::mat4>(), glm::vec3(texelsPerUnit));
+
+			glm::vec3 zero(0.0f);
+			glm::vec3 up(0, 1, 0);
+			glm::mat4 lookAt, lookAtInv;
+			glm::vec3 baseLookAt(light_direction);
+
+			lookAt = glm::lookAt(zero, baseLookAt, up);
+			lookAt = scalar * lookAt;
+			lookAtInv = glm::inverse(lookAt);
+
+			frustum_center = glm::vec3(lookAt * glm::vec4(frustum_center, 1));
+			frustum_center.x = (float)std::floor(frustum_center.x);
+			frustum_center.y = (float)std::floor(frustum_center.y);
+			frustum_center = glm::vec3(lookAtInv * glm::vec4(frustum_center, 1));
+		}
+
 
 		/* Orthographics projection */
-		glm::vec3 eye = center - glm::normalize(LightManager::direction) * radius;
-		glm::mat4 light_view = glm::lookAt(eye, center, { 0.0f, 1.0f, 0.0f } );
-		cascades_proj_mats[i] = glm::ortho(-radius, radius, -radius, radius, -radius * 6.0f, radius * 6.0f) * light_view;
-		z_splits_clip_space[i] = z_splits[i];
+		glm::vec3 eye = frustum_center + (light_direction * radius * 2.0f);
+		glm::mat4 light_view = glm::lookAt(eye, frustum_center, up);
+		cascades_proj_mats[i] = glm::ortho(-radius, radius, -radius, radius, -radius * 6.0f, 6.0f * radius) * light_view;
 	}
-
-	upload_buffer_data(proj_mats_ubo, cascades_proj_mats.data(), mats_ubo_size_bytes, 0);
-	upload_buffer_data(cascade_ends_ubo, &z_splits_clip_space, cascade_ends_ubo_size_bytes, 0);
+	upload_buffer_data(proj_mats_ubo[frame_idx], cascades_proj_mats.data(), mats_ubo_size_bytes, 0);
 }
 
 void CascadedShadowRenderer::render(size_t current_frame_idx, VkCommandBuffer cmd_buffer)
 {
-	compute_cascade_ortho_proj();
+	compute_cascade_ortho_proj(current_frame_idx);
 
 	m_shadow_maps[current_frame_idx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
 
