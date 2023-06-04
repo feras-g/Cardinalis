@@ -21,8 +21,12 @@ public:
 
 	vk::DynamicRenderPass m_dyn_renderpass[NUM_FRAMES];
 
+	static inline VkWriteDescriptorSet texture_array_write_descriptor_set;
+
 	~VulkanModelRenderer();
 private:
+
+
 	std::unique_ptr<VulkanShader> m_shader;
 
 	VkSampler m_TextureSampler;

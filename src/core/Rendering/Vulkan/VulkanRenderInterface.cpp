@@ -764,28 +764,40 @@ bool GfxPipeline::Create(const VulkanShader& shader, uint32_t numColorAttachment
 	return true;
 }
 
-size_t create_vertex_index_buffer(Buffer& result, const void* vtxData, size_t vtxBufferSizeInBytes, const void* idxData, size_t idxBufferSizeInBytes)
+size_t create_vertex_index_buffer(Buffer& result, const void* vtxData, size_t& vtxBufferSizeInBytes, const void* idxData, size_t& idxBufferSizeInBytes)
 {
-	size_t totalSizeInBytes = vtxBufferSizeInBytes + idxBufferSizeInBytes;
+	/* Compute a good alignment */
+	size_t min_alignment = VulkanRenderInterface::device_limits.minStorageBufferOffsetAlignment;
+	size_t total_size_bytes = vtxBufferSizeInBytes + idxBufferSizeInBytes;
+
+	if (total_size_bytes % min_alignment != 0)
+	{
+
+	}
+
+
+
+
+
 
 	// Staging buffer
 	Buffer stagingBuffer;
-	create_staging_buffer(stagingBuffer, totalSizeInBytes);
+	create_staging_buffer(stagingBuffer, total_size_bytes);
 
 	// Copy vertex + index data to staging buffer
 	void* pData;
-	vkMapMemory(context.device, stagingBuffer.memory, 0, totalSizeInBytes, 0, &pData);
+	vkMapMemory(context.device, stagingBuffer.memory, 0, total_size_bytes, 0, &pData);
 	memcpy(pData, vtxData, vtxBufferSizeInBytes);
 	memcpy((unsigned char*)pData + vtxBufferSizeInBytes, idxData, idxBufferSizeInBytes);
 	vkUnmapMemory(context.device, stagingBuffer.memory);
 
 	// Create storage buffer containing non-interleaved vertex + index data 
-	create_storage_buffer(result, totalSizeInBytes);
-	copy_buffer(stagingBuffer, result, totalSizeInBytes);
+	create_storage_buffer(result, total_size_bytes);
+	copy_buffer(stagingBuffer, result, total_size_bytes);
 
 	destroy_buffer(stagingBuffer);
 
-	return totalSizeInBytes;
+	return total_size_bytes;
 }
 
 VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, const VkDescriptorBufferInfo* bufferInfo, VkDescriptorType descriptorType)

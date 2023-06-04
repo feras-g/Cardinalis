@@ -79,8 +79,8 @@ Drawable* unit_cube;
 /* Cubemap rendering */
 void CubemapRenderer::init()
 {
-	init_resources("../../../data/textures/env/DF360_005_Reloaded_4k_sRGB.hdr");
-	//init_resources("../../../data/textures/env/newport_loft.hdr");
+	//init_resources("../../../data/textures/env/DF360_005_Reloaded_4k_sRGB.hdr");
+	init_resources("../../../data/textures/env/newport_loft.hdr");
 	init_descriptors();
 
 	pass_render_cubemap.add_color_attachment(cubemap_render_attachment.view);
@@ -163,7 +163,7 @@ void CubemapRenderer::render_irradiance_map(VkCommandBuffer cmd_buffer)
 
 	set_viewport_scissor(cmd_buffer, irradiance_map_dim, irradiance_map_dim, true);
 
-	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_irradiance_ppl_layout, 0, 1, &unit_cube->mesh_handle->descriptor_set, 0, nullptr);
+	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_irradiance_ppl_layout, 0, 1, &unit_cube->get_mesh().descriptor_set, 0, nullptr);
 	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_irradiance_ppl_layout, 1, 1, &cubemap_desc_set.set, 0, nullptr);
 	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_irradiance_ppl_layout, 2, 1, &irradiance_desc_set.set, 0, nullptr);
 
@@ -301,7 +301,7 @@ void CubemapRenderer::render_cubemap(VkCommandBuffer cmd_buffer, VkRect2D area)
 	set_viewport_scissor(cmd_buffer, layer_width, layer_height, true);
 	VkDescriptorSet desc_sets[2] =
 	{
-		unit_cube->mesh_handle->descriptor_set,
+		unit_cube->get_mesh().descriptor_set,
 		cubemap_desc_set.set
 	};
 
@@ -330,7 +330,7 @@ void CubemapRenderer::render_skybox(size_t currentImageIdx, VkCommandBuffer cmd_
 
 	set_viewport_scissor(cmd_buffer, VulkanRendererBase::render_width, VulkanRendererBase::render_height, true);
 
-	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_skybox_ppl_layout, 0, 1, &unit_cube->mesh_handle->descriptor_set, 0, nullptr);
+	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_skybox_ppl_layout, 0, 1, &unit_cube->get_mesh().descriptor_set, 0, nullptr);
 	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_skybox_ppl_layout, 1, 1, &VulkanRendererBase::m_framedata_desc_set[currentImageIdx].set, 0, nullptr);
 	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_skybox_ppl_layout, 2, 1, &render_skybox_desc_set.set, 0, nullptr);
 

@@ -31,6 +31,7 @@ layout(set = 0, binding = 9) uniform CascadedShadowInfo
 {
     mat4 proj[4];
 } CSM_mats;
+layout(set = 0, binding = 11) uniform texture2D textures[];
 
 layout(set = 1, binding = 0) uniform FrameData
 {
@@ -59,7 +60,7 @@ float sample_shadow_map(vec3 shadow_coord, vec2 offset, uint cascade_index)
     float shadow = 1.0;
     if( texture( gbuffer_shadow_map, vec3(shadow_coord.xy + offset, cascade_index) ).r < shadow_coord.z - bias)
     {
-        shadow = 0.12;
+        shadow = 0.27;
     }
     return shadow;
 }
@@ -125,7 +126,6 @@ vec3 raymarch_volumetric_light(float g, float theta, uint cascade_index, vec3 P_
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void main()
 {
-
     ToggleParams params;
     params.bUseShadowPCF = true;
     params.bViewDebugShadow = false;
@@ -135,9 +135,11 @@ void main()
     vec3 P_WS = ws_pos_from_depth(uv, depthNDC, frame_data.inv_view_proj);
     vec3 P_VS = (frame_data.view * vec4(P_WS, 1.0f)).xyz;
 
-    vec3 N_WS = texture(gbuffer_VS_normal, uv).xyz;
+    vec3 cam_pos_ws = frame_data.view_pos.xyz;
+
+    vec3 N_WS = normalize(texture(gbuffer_normal_map, uv).xyz * 2.0 - 1.0) ; 
     vec3 L = normalize(-lights.dir_light.direction.xyz);
-    vec3 V = normalize(frame_data.view_pos.xyz - P_WS);
+    vec3 V = normalize(cam_pos_ws - P_WS);
     vec3 H = normalize(V+L);
 
     vec3 albedo = texture(gbuffer_color, uv).xyz;
@@ -146,7 +148,7 @@ void main()
     float metallic  = metallic_roughness.x *  metallic_roughness.z;
     float roughness = metallic_roughness.y * metallic_roughness.w;
 
-    float light_dist = length(frame_data.view_pos.xyz - P_WS);
+    float light_dist = length(cam_pos_ws - P_WS);
     
     vec3 irradiance = texture(irradiance_map, N_WS).rgb;
 
@@ -209,6 +211,6 @@ vec3 color = BRDF(N_WS, V, L, H, light_color, irradiance, albedo, metallic, roug
 #endif
     
     color *= shadow;
-    color += raymarch_volumetric_light(0.8, dot(V, -L), cascade_index, P_WS, light_color);
+    // color += raymarch_volumetric_light(0.8, dot(V, -L), cascade_index, P_WS, light_color);
     out_color = vec4(color, 1.0) ;
 }

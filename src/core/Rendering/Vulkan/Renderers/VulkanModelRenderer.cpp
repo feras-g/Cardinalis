@@ -76,7 +76,7 @@ void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buf
 		const Drawable& drawable = RenderObjectManager::drawables[i];
 		if (drawable.render)
 		{
-			draw_scene(cmd_buffer, currentImageIdx, RenderObjectManager::drawables[i]);
+			draw_scene(cmd_buffer, currentImageIdx, drawable);
 		}
 	}
 	
@@ -91,18 +91,19 @@ void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buf
 
 void VulkanModelRenderer::draw_scene(VkCommandBuffer cmdBuffer, size_t current_frame_idx, const Drawable& drawable)
 {
+	assert(drawable.get_mesh().descriptor_set);
 	/* Mesh descriptor set : per mesh geometry data */
-	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ppl_layout, 0, 1, &drawable.mesh_handle->descriptor_set, 0, nullptr);
+	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ppl_layout, 0, 1, &drawable.get_mesh().descriptor_set, 0, nullptr);
 
 	/* Object descriptor set : per instance data */
 	uint32_t dynamic_offset  = drawable.id * RenderObjectManager::per_object_data_dynamic_aligment;
 	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ppl_layout, 1, 1, &RenderObjectManager::drawable_descriptor_set, 1, &dynamic_offset);
 	
-	if (drawable.mesh_handle->geometry_data.primitives.size())
+	if (drawable.get_mesh().geometry_data.primitives.size())
 	{
-		for (int prim_idx = 0; prim_idx < drawable.mesh_handle->geometry_data.primitives.size(); prim_idx++)
+		for (int prim_idx = 0; prim_idx < drawable.get_mesh().geometry_data.primitives.size(); prim_idx++)
 		{
-			const Primitive& p = drawable.mesh_handle->geometry_data.primitives[prim_idx];
+			const Primitive& p = drawable.get_mesh().geometry_data.primitives[prim_idx];
 
 			/* Model matrix push constant */
 			glm::mat4 model_mat = drawable.transform.model * p.mat_model;
@@ -114,7 +115,7 @@ void VulkanModelRenderer::draw_scene(VkCommandBuffer cmdBuffer, size_t current_f
 	}
 	else
 	{
-		vkCmdPushConstants(cmdBuffer, m_ppl_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &drawable.mesh_handle->model);
+		vkCmdPushConstants(cmdBuffer, m_ppl_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &drawable.get_mesh().model);
 		vkCmdPushConstants(cmdBuffer, m_ppl_layout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), sizeof(Material), &RenderObjectManager::materials[drawable.material_id]);
 		drawable.draw(cmdBuffer);
 	}
@@ -135,7 +136,8 @@ void VulkanModelRenderer::update_descriptor_set(VkDevice device, size_t frame_id
 	{
 		tex_descriptors.push_back({ .imageView = RenderObjectManager::textures[i].view, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
 	}
-	VkWriteDescriptorSet tex_array_desc =
+
+	texture_array_write_descriptor_set =
 	{
 		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 		.dstSet = m_pass_descriptor_set,
@@ -145,7 +147,7 @@ void VulkanModelRenderer::update_descriptor_set(VkDevice device, size_t frame_id
 		.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
 		.pImageInfo = tex_descriptors.data()
 	};
-	desc_writes.push_back(tex_array_desc);
+	desc_writes.push_back(texture_array_write_descriptor_set);
 
 	
 	VkDescriptorImageInfo sampler_info = {};

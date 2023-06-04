@@ -79,7 +79,7 @@ void VulkanMesh::create_from_file(const std::string& filename)
 //
 }
 
-void VulkanMesh::create_from_data(std::span<SimpleVertexData> vertices, std::span<unsigned int> indices)
+void VulkanMesh::create_from_data(std::span<VertexData> vertices, std::span<unsigned int> indices)
 {
 	m_num_vertices = vertices.size();
 	m_num_indices = indices.size();
@@ -91,29 +91,25 @@ void VulkanMesh::create_from_data(std::span<SimpleVertexData> vertices, std::spa
 
 void Drawable::draw(VkCommandBuffer cmd_buffer) const
 {
-	vkCmdDraw(cmd_buffer, (uint32_t)mesh_handle->m_num_indices, 1, 0, 0);
+	VulkanMesh& mesh = RenderObjectManager::meshes[mesh_id];
+	vkCmdDraw(cmd_buffer, (uint32_t)mesh.m_num_indices, 1, 0, 0);
 }
 
 void Drawable::draw_primitives(VkCommandBuffer cmd_buffer) const
 {
-	for (int i = 0; i < mesh_handle->geometry_data.primitives.size(); i++)
+	VulkanMesh& mesh = RenderObjectManager::meshes[mesh_id];
+	for (int i = 0; i < mesh.geometry_data.primitives.size(); i++)
 	{
-		const Primitive& p = mesh_handle->geometry_data.primitives[i];
-		//upload_buffer_data(RenderObjectManager::material_data_ubo, &RenderObjectManager::materials[p.material_id], sizeof(Material), 0);
+		const Primitive& p = mesh.geometry_data.primitives[i];
 		vkCmdDraw(cmd_buffer, p.index_count, 1, p.first_index, 0);
 	}
 }
-
-Drawable::Drawable(VulkanMesh* mesh, bool b_render, bool b_has_primitives) : mesh_handle(mesh), render(b_render)
-{
-	has_primitives = mesh->geometry_data.primitives.size() > 0;
-}	
 
 static void load_vertices(Primitive p, cgltf_primitive* primitive, GeometryData& geometry)
 {
 	std::vector<glm::vec3> positionsBuffer;
 	std::vector<glm::vec3> normalsBuffer;
-	std::vector<glm::vec3> texCoordBuffer;
+	std::vector<glm::vec2> texCoordBuffer;
 	std::vector<glm::vec3> tangentBuffer;
 
 	// Build raw buffers containing each attributes components
@@ -171,7 +167,7 @@ static void load_vertices(Primitive p, cgltf_primitive* primitive, GeometryData&
 			{
 				glm::vec2 texcoord;
 				cgltf_accessor_read_float(attribute->data, i, &texcoord.x, 2);
-				texCoordBuffer.push_back(glm::vec3(texcoord, 0.0f));
+				texCoordBuffer.push_back(texcoord);
 			}
 
 		}
@@ -180,16 +176,14 @@ static void load_vertices(Primitive p, cgltf_primitive* primitive, GeometryData&
 		case cgltf_attribute_type_tangent:
 		{
 			//////LOG_DEBUG("        Tangents : {0}", attribute->data->count);
-			tangentBuffer.resize(attribute->data->count);
-			for (int i = 0; i < tangentBuffer.size(); ++i)
+			for (int i = 0; i < attribute->data->count; ++i)
 			{
 				glm::vec4 t;
 				cgltf_accessor_read_float(attribute->data, i, &t.x, 4);
-				tangentBuffer[i] = glm::vec3(t.x, t.y, t.z) * t.w;
+				tangentBuffer.push_back(glm::vec3(t.x, t.y, t.z) * t.w);
 			}
 		}
 		break;
-
 		}
 	}
 
@@ -200,7 +194,7 @@ static void load_vertices(Primitive p, cgltf_primitive* primitive, GeometryData&
 		vertex.pos = positionsBuffer[i];
 		vertex.normal = normalsBuffer[i];
 		vertex.uv = glm::vec2(texCoordBuffer[i]);
-		//vertex.tangent = tangentBuffer.empty() ? DirectX::XMFLOAT3{ 0.0, 0.0, 0.0 } : tangentBuffer[i];
+		vertex.tangent = tangentBuffer.empty() ? glm::vec3(0) : tangentBuffer[i];
 
 		geometry.vertices.push_back(vertex);
 	}
@@ -261,7 +255,7 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 
 		if (tex_normal)
 		{
-			material.tex_normal_id = 0;// load_tex(tex_normal, tex_normal_format);
+			material.tex_normal_id = (unsigned int)load_tex(tex_normal, tex_normal_format, true);
 		}
 
 		if (tex_emissive)
@@ -446,7 +440,7 @@ void VulkanMesh::create_from_file_gltf(const std::string& filename)
 
 		model = geometry_data.world_mat;
 
-		create_vertex_index_buffer(m_vertex_index_buffer, geometry_data.vertices.data(), m_vertex_buf_size_bytes, geometry_data.indices.data(), m_index_buf_size_bytes);
+		create_from_data(geometry_data.vertices, geometry_data.indices);
 
 		cgltf_free(data);
 	}
@@ -457,6 +451,9 @@ void VulkanMesh::create_from_file_gltf(const std::string& filename)
 	}
 }
 
+
+bool Drawable::has_primitives() const { return RenderObjectManager::meshes[mesh_id].geometry_data.primitives.size() > 0; }
+const VulkanMesh& Drawable::get_mesh() const { return RenderObjectManager::meshes[mesh_id]; }
 
 //void SetMaterial(GeometryData* data, Primitive* primitive, cgltf_material* rawMaterial, MaterialProperties& material)
 //{

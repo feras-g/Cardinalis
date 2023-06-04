@@ -56,6 +56,8 @@ public:
 	static inline std::array<Texture2D, NUM_FRAMES> m_gbuffer_depth;
 	static inline std::array<Texture2D, NUM_FRAMES> m_gbuffer_directional_shadow;
 	static inline std::array<Texture2D, NUM_FRAMES> m_gbuffer_metallic_roughness;
+	//static inline std::array<Texture2D, NUM_FRAMES> m_gbuffer_emissive;
+
 	static inline std::array <Texture2D, NUM_FRAMES> m_output_attachment;
 
 	/* Formats */
@@ -114,23 +116,52 @@ public:
 	RenderObjectManager(RenderObjectManager&&) = delete;
 public:
 
+	static void init()
+	{
+		/* Mesh descriptor set layout */
+		std::vector<VkDescriptorSetLayoutBinding> mesh_descriptor_set_bindings = {};
+		mesh_descriptor_set_bindings.push_back({ 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr });
+		mesh_descriptor_set_bindings.push_back({ 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr });
+		RenderObjectManager::mesh_descriptor_set_layout = create_descriptor_set_layout(mesh_descriptor_set_bindings);
+
+		/* Drawable descriptor set layout */
+		std::vector<VkDescriptorSetLayoutBinding> bindings = {};
+		bindings.push_back({ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT });  /* Object data (transforms etc) */
+		drawable_descriptor_set_layout = create_descriptor_set_layout(bindings);
+
+		/* Descriptor pool */
+		const uint32_t max_number_meshes = 2048;
+		const uint32_t max_number_drawables = 2048;
+		uint32_t num_ssbo_per_mesh = 2;
+		uint32_t num_mesh_descriptor_sets = max_number_meshes;
+		uint32_t num_drawable_data_descriptor_sets = NUM_FRAMES * max_number_drawables;
+
+		std::vector<VkDescriptorPoolSize> pool_sizes;
+		pool_sizes.push_back(VkDescriptorPoolSize{ .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = num_mesh_descriptor_sets * num_ssbo_per_mesh });
+		pool_sizes.push_back(VkDescriptorPoolSize{ .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, .descriptorCount = num_drawable_data_descriptor_sets * max_number_drawables });
+
+		descriptor_pool = create_descriptor_pool(pool_sizes, num_mesh_descriptor_sets + num_drawable_data_descriptor_sets);
+
+		/* Default material */
+		uint32_t default_tex_id = (uint32_t)RenderObjectManager::add_texture("../../../data/textures/albedo_default.png", "Default Albedo");
+		uint32_t placeholder_tex_id = (uint32_t)RenderObjectManager::add_texture("../../../data/textures/placeholder.png", "Placeholder Texture");
+		static Material default_material
+		{
+			.tex_base_color_id = default_tex_id,
+			.tex_metallic_roughness_id = placeholder_tex_id,
+			.tex_normal_id = placeholder_tex_id,
+			.tex_emissive_id = placeholder_tex_id,
+			.base_color_factor = glm::vec4(1.0f),
+			.metallic_factor = 0.0f,
+			.roughness_factor = 1.0f,
+		};
+		RenderObjectManager::add_material(default_material, "Default Material");
+	}
+
 	/* Call after adding all drawables */
 	static void configure()
 	{
-		/* Setup descriptor pool */
-		uint32_t num_ssbo_per_mesh = 2;
-		uint32_t num_mesh_descriptor_sets = (uint32_t)meshes.size();
-		uint32_t num_drawable_data_descriptor_sets = NUM_FRAMES;
 
-		std::vector<VkDescriptorPoolSize> pool_sizes;
-		{
-			pool_sizes.push_back(VkDescriptorPoolSize{ .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = num_mesh_descriptor_sets * num_ssbo_per_mesh });
-		}
-		{
-			pool_sizes.push_back(VkDescriptorPoolSize{ .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, .descriptorCount = num_drawable_data_descriptor_sets * (uint32_t)drawables.size() });
-		}
-
-		descriptor_pool = create_descriptor_pool(pool_sizes, num_mesh_descriptor_sets + num_drawable_data_descriptor_sets);
 
 		/* Drawables */
 		/* Setup buffers */
@@ -140,14 +171,8 @@ public:
 
 		per_object_datas   = (TransformDataUbo*)alignedAlloc(object_data_dynamic_ubo_size_bytes, per_object_data_dynamic_aligment);
 
-		/* Setup descriptor set */
-		std::vector<VkDescriptorSetLayoutBinding> bindings = {};
-		bindings.push_back({ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT });  /* Object data (transforms etc) */
 
-		drawable_descriptor_set_layout = create_descriptor_set_layout(bindings);
-		drawable_descriptor_set = create_descriptor_set(RenderObjectManager::descriptor_pool, RenderObjectManager::drawable_descriptor_set_layout);
 
-		VkDescriptorBufferInfo object_ubo_desc_info = { .buffer = RenderObjectManager::object_data_dynamic_ubo.buffer, .offset = 0, .range = per_object_data_dynamic_aligment };
 
 		/* Material info */
 		create_uniform_buffer(material_data_ubo, sizeof(Material));
@@ -156,25 +181,25 @@ public:
 		desc_ubo_material.offset = 0;
 		desc_ubo_material.range = VK_WHOLE_SIZE;
 
+
+		VkDescriptorBufferInfo drawable_ubo_desc_info = { .buffer = RenderObjectManager::object_data_dynamic_ubo.buffer, .offset = 0, .range = per_object_data_dynamic_aligment };
 		VkDescriptorBufferInfo material_ubo_desc_info = { .buffer = material_data_ubo.buffer, .offset = 0, .range = VK_WHOLE_SIZE };
+		drawable_descriptor_set = create_descriptor_set(RenderObjectManager::descriptor_pool, RenderObjectManager::drawable_descriptor_set_layout);
 		std::array<VkWriteDescriptorSet, 1> desc_writes
 		{
-			BufferWriteDescriptorSet(RenderObjectManager::drawable_descriptor_set, 0, &object_ubo_desc_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC),	/* Object data */
+			BufferWriteDescriptorSet(RenderObjectManager::drawable_descriptor_set, 0, &drawable_ubo_desc_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC),	/* Object data */
 		};
 		vkUpdateDescriptorSets(context.device, (uint32_t)desc_writes.size(), desc_writes.data(), 0, nullptr);
 
 		/* Meshes */
 		/* Setup descriptor set layout */
-		std::vector<VkDescriptorSetLayoutBinding> mesh_descriptor_set_bindings = {};
-		mesh_descriptor_set_bindings.push_back({ 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr });
-		mesh_descriptor_set_bindings.push_back({ 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr });
-		RenderObjectManager::mesh_descriptor_set_layout = create_descriptor_set_layout(mesh_descriptor_set_bindings);
+
 		/* Setup descriptor set */
 		for (VulkanMesh& mesh : meshes)
 		{
 			VkDescriptorBufferInfo sbo_vtx_info = { .buffer = mesh.m_vertex_index_buffer.buffer, .offset = 0, .range = mesh.m_vertex_buf_size_bytes };
 			VkDescriptorBufferInfo sbo_idx_info = { .buffer = mesh.m_vertex_index_buffer.buffer, .offset = mesh.m_vertex_buf_size_bytes, .range = mesh.m_index_buf_size_bytes };
-			mesh.descriptor_set = create_descriptor_set(RenderObjectManager::descriptor_pool, RenderObjectManager::mesh_descriptor_set_layout);
+			assert(mesh.descriptor_set);
 			std::vector<VkWriteDescriptorSet> write_desc = {};
 			write_desc.push_back(BufferWriteDescriptorSet(mesh.descriptor_set, 0, &sbo_vtx_info, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
 			write_desc.push_back(BufferWriteDescriptorSet(mesh.descriptor_set, 1, &sbo_idx_info, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
@@ -182,10 +207,14 @@ public:
 		}
 	}
 
-	static inline void add_drawable(Drawable drawable, const std::string& name, TransformData transform)
+	static inline void add_drawable(uint32_t mesh_id, const std::string& name, TransformData transform)
 	{ 
-		assert(drawable.mesh_handle);
-		if (!drawable.has_primitives)
+		Drawable drawable;
+		drawable.mesh_id = mesh_id;
+		drawable.transform = transform;
+
+
+		if (!drawable.has_primitives())
 		{
 			drawable.material_id = (uint32_t)RenderObjectManager::get_material("Default Material").first;
 		}
@@ -194,11 +223,13 @@ public:
 		drawable.transform = transform;
 		drawables.push_back(drawable);
 
-		transform.model = drawable.mesh_handle->model * transform.model;
+		transform.model = drawable.get_mesh().model * transform.model;
 		/* Update scene bounding box */
 		{
-			glm::vec3 drawable_bbox_min_WS = drawable.mesh_handle->geometry_data.bbox_min_WS * transform.model;
-			glm::vec3 drawable_bbox_max_WS = drawable.mesh_handle->geometry_data.bbox_max_WS * transform.model;
+			const VulkanMesh& mesh = drawable.get_mesh();
+
+			glm::vec3 drawable_bbox_min_WS = mesh.geometry_data.bbox_min_WS * transform.model;
+			glm::vec3 drawable_bbox_max_WS = mesh.geometry_data.bbox_max_WS * transform.model;
 
 			global_bbox_min_WS.x = std::min(global_bbox_min_WS.x, drawable_bbox_min_WS.x);
 			global_bbox_min_WS.y = std::min(global_bbox_min_WS.y, drawable_bbox_min_WS.y);
@@ -253,20 +284,14 @@ public:
 		return material_idx;
 	}
 
-	static inline void add_mesh(VulkanMesh& mesh, const std::string& name)
+	static inline size_t add_mesh(VulkanMesh& mesh, const std::string& name)
 	{
+		mesh.descriptor_set = create_descriptor_set(RenderObjectManager::descriptor_pool, RenderObjectManager::mesh_descriptor_set_layout);
 		size_t mesh_idx = meshes.size();
 		mesh_names.push_back(name);
 		meshes.push_back(mesh);
 		mesh_from_name.insert({ name, mesh_idx });
-	}
-
-	static inline void add_mesh(VulkanMesh&& mesh, const std::string&& name)
-	{
-		size_t mesh_idx = meshes.size();
-		mesh_names.emplace_back(name);
-		meshes.emplace_back(mesh);
-		mesh_from_name.insert({ name, mesh_idx });
+		return mesh_idx;
 	}
 
 	static inline Drawable* get_drawable(const std::string& name)
@@ -323,10 +348,11 @@ public:
 	{
 		for (size_t i = 0; i < drawables.size(); i++)
 		{
+			const VulkanMesh& mesh = drawables[i].get_mesh();
 			per_object_datas[i].model = transform_datas[i].model;
 			per_object_datas[i].mvp = frame_data.proj *frame_data.view * transform_datas[i].model ;
-			per_object_datas[i].bbox_min_WS = per_object_datas[i].model * drawables[i].mesh_handle->geometry_data.bbox_min_WS;
-			per_object_datas[i].bbox_max_WS = per_object_datas[i].model * drawables[i].mesh_handle->geometry_data.bbox_max_WS ;
+			per_object_datas[i].bbox_min_WS = per_object_datas[i].model * mesh.geometry_data.bbox_min_WS;
+			per_object_datas[i].bbox_max_WS = per_object_datas[i].model * mesh.geometry_data.bbox_max_WS;
 		}
 
 		upload_buffer_data(object_data_dynamic_ubo, per_object_datas, RenderObjectManager::object_data_dynamic_ubo_size_bytes, 0);

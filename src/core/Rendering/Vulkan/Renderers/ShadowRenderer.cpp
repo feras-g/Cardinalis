@@ -99,18 +99,20 @@ void ShadowRenderer::draw_scene(VkCommandBuffer cmd_buffer)
 
 	for (size_t i = 0; i < RenderObjectManager::drawables.size(); i++)
 	{
+
 		const Drawable& drawable = RenderObjectManager::drawables[i];
-		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 1, 1, &drawable.mesh_handle->descriptor_set, 0, nullptr);
+		const VulkanMesh& mesh = drawable.get_mesh();
+		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 1, 1, &mesh.descriptor_set, 0, nullptr);
 
 		/* Object descriptor set : per instance data */
 		uint32_t dynamic_offset = drawable.id * RenderObjectManager::per_object_data_dynamic_aligment;
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 2, 1, &RenderObjectManager::drawable_descriptor_set, 1, &dynamic_offset);
 
-		if (drawable.has_primitives)
+		if (drawable.has_primitives())
 		{
-			for (int prim_idx = 0; prim_idx < drawable.mesh_handle->geometry_data.primitives.size(); prim_idx++)
+			for (int prim_idx = 0; prim_idx < mesh.geometry_data.primitives.size(); prim_idx++)
 			{
-				const Primitive& p = drawable.mesh_handle->geometry_data.primitives[prim_idx];
+				const Primitive& p = mesh.geometry_data.primitives[prim_idx];
 				/* Model matrix push constant */
 				glm::mat4 model_mat = drawable.transform.model * p.mat_model;
 				vkCmdPushConstants(cmd_buffer, m_gfx_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &model_mat);
@@ -307,11 +309,9 @@ void CascadedShadowRenderer::compute_cascade_ortho_proj(size_t frame_idx)
 {
 	glm::vec3 light_direction = glm::normalize(LightManager::direction);
 
-	glm::vec3 up     = { 0.0f, 1.0f, 0.0f };
+	static constexpr glm::vec3 up     = { 0.0f, 1.0f, 0.0f };
 
 	glm::mat4 cam_view = h_camera->controller.m_view;
-
-	glm::vec3 frustum_centers[NUM_CASCADES] = { glm::vec3(0) };
 
 	/* Compute orthographic matrix for each cascade */
 	for (int i = 0; i < NUM_CASCADES; i++)
@@ -336,8 +336,6 @@ void CascadedShadowRenderer::compute_cascade_ortho_proj(size_t frame_idx)
 			glm::vec4 corner = inv_vp * glm::vec4(frustum_corners[i], 1.0f);
 			frustum_corners[i] = corner / corner.w;
 		}
-		float splitDist = z_splits[i];
-
 
 		/* Get frustum center in World space */
 		glm::vec3 frustum_center = glm::vec3(0);
@@ -348,19 +346,18 @@ void CascadedShadowRenderer::compute_cascade_ortho_proj(size_t frame_idx)
 		}
 		frustum_center /= 8.0f;
 
-		float radius = 0.0f;
+		float cascade_radius = 0.0f;
 		for (int i = 0; i < 8; i++)
 		{
-			radius = std::max(radius, glm::length(frustum_center - frustum_corners[i]));
+			cascade_radius = std::max(cascade_radius, glm::length(frustum_center - frustum_corners[i]));
 		}
 
-		///////////////////////// Remove shimmering
+		/* Remove shimmering */
 		{
-			float texelsPerUnit = (float)2048.0f / (radius * 2.0f);
+			float texelsPerUnit = (float)m_shadow_map_size.x / (cascade_radius * 2.0f);
 			glm::mat4 scalar = glm::scale(glm::identity<glm::mat4>(), glm::vec3(texelsPerUnit));
 
 			glm::vec3 zero(0.0f);
-			glm::vec3 up(0, 1, 0);
 			glm::mat4 lookAt, lookAtInv;
 			glm::vec3 baseLookAt(light_direction);
 
@@ -376,9 +373,9 @@ void CascadedShadowRenderer::compute_cascade_ortho_proj(size_t frame_idx)
 
 
 		/* Orthographics projection */
-		glm::vec3 eye = frustum_center + (light_direction * radius * 2.0f);
+		glm::vec3 eye = frustum_center + (light_direction * cascade_radius * 2.0f);
 		glm::mat4 light_view = glm::lookAt(eye, frustum_center, up);
-		cascades_proj_mats[i] = glm::ortho(-radius, radius, -radius, radius, -radius * 6.0f, 6.0f * radius) * light_view;
+		cascades_proj_mats[i] = glm::ortho(-cascade_radius, cascade_radius, -cascade_radius, cascade_radius, -cascade_radius * 6.0f, 6.0f * cascade_radius) * light_view;
 	}
 	upload_buffer_data(proj_mats_ubo[frame_idx], cascades_proj_mats.data(), mats_ubo_size_bytes, 0);
 }
@@ -415,13 +412,14 @@ void CascadedShadowRenderer::draw_scene(VkCommandBuffer cmd_buffer)
 	for (size_t i = 0; i < RenderObjectManager::drawables.size(); i++)
 	{
 		const Drawable& drawable = RenderObjectManager::drawables[i];
-		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 0, 1, &drawable.mesh_handle->descriptor_set, 0, nullptr);
+		const VulkanMesh& mesh = drawable.get_mesh();
+		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 0, 1, &mesh.descriptor_set, 0, nullptr);
 		
-		if (drawable.has_primitives)
+		if (drawable.has_primitives())
 		{
-			for (int prim_idx = 0; prim_idx < drawable.mesh_handle->geometry_data.primitives.size(); prim_idx++)
+			for (int prim_idx = 0; prim_idx < mesh.geometry_data.primitives.size(); prim_idx++)
 			{
-				const Primitive& p = drawable.mesh_handle->geometry_data.primitives[prim_idx];
+				const Primitive& p = mesh.geometry_data.primitives[prim_idx];
 				/* Model matrix push constant */
 				ps.model = drawable.transform.model * p.mat_model;
 				ps.dir_light_view = LightManager::view;
