@@ -74,7 +74,8 @@ VkPipeline			render_skybox_gfx_ppl;
 VkPipelineLayout    render_skybox_ppl_layout;
 
 /* Drawable */
-Drawable* unit_cube;
+Drawable* d_skybox;
+Drawable* d_placeholder_cube;
 
 /* Cubemap rendering */
 void CubemapRenderer::init()
@@ -95,7 +96,8 @@ void CubemapRenderer::init()
 
 	TransformData transform;
 	transform.model = glm::identity<glm::mat4>();
-	unit_cube = RenderObjectManager::get_drawable("unit_cube");
+	d_skybox = RenderObjectManager::get_drawable("skybox");
+	d_placeholder_cube = RenderObjectManager::get_drawable("placeholder_cube");
 
 	VkCommandBuffer tmp = begin_temp_cmd_buffer();
 
@@ -163,7 +165,7 @@ void CubemapRenderer::render_irradiance_map(VkCommandBuffer cmd_buffer)
 
 	set_viewport_scissor(cmd_buffer, irradiance_map_dim, irradiance_map_dim, true);
 
-	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_irradiance_ppl_layout, 0, 1, &unit_cube->get_mesh().descriptor_set, 0, nullptr);
+	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_irradiance_ppl_layout, 0, 1, &d_placeholder_cube->get_mesh().descriptor_set, 0, nullptr);
 	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_irradiance_ppl_layout, 1, 1, &cubemap_desc_set.set, 0, nullptr);
 	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_irradiance_ppl_layout, 2, 1, &irradiance_desc_set.set, 0, nullptr);
 
@@ -175,7 +177,7 @@ void CubemapRenderer::render_irradiance_map(VkCommandBuffer cmd_buffer)
 
 	pass_render_irradiance_map.begin(cmd_buffer, area, view_mask);
 
-	unit_cube->draw(cmd_buffer);
+	d_placeholder_cube->draw(cmd_buffer);
 
 	pass_render_irradiance_map.end(cmd_buffer);
 
@@ -301,7 +303,7 @@ void CubemapRenderer::render_cubemap(VkCommandBuffer cmd_buffer, VkRect2D area)
 	set_viewport_scissor(cmd_buffer, layer_width, layer_height, true);
 	VkDescriptorSet desc_sets[2] =
 	{
-		unit_cube->get_mesh().descriptor_set,
+		d_placeholder_cube->get_mesh().descriptor_set,
 		cubemap_desc_set.set
 	};
 
@@ -313,7 +315,7 @@ void CubemapRenderer::render_cubemap(VkCommandBuffer cmd_buffer, VkRect2D area)
 
 	pass_render_cubemap.begin(cmd_buffer, area, view_mask);
 
-	unit_cube->draw(cmd_buffer);
+	d_placeholder_cube->draw(cmd_buffer);
 
 	pass_render_cubemap.end(cmd_buffer);
 
@@ -330,7 +332,7 @@ void CubemapRenderer::render_skybox(size_t currentImageIdx, VkCommandBuffer cmd_
 
 	set_viewport_scissor(cmd_buffer, VulkanRendererBase::render_width, VulkanRendererBase::render_height, true);
 
-	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_skybox_ppl_layout, 0, 1, &unit_cube->get_mesh().descriptor_set, 0, nullptr);
+	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_skybox_ppl_layout, 0, 1, &d_skybox->get_mesh().descriptor_set, 0, nullptr);
 	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_skybox_ppl_layout, 1, 1, &VulkanRendererBase::m_framedata_desc_set[currentImageIdx].set, 0, nullptr);
 	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_skybox_ppl_layout, 2, 1, &render_skybox_desc_set.set, 0, nullptr);
 
@@ -340,7 +342,7 @@ void CubemapRenderer::render_skybox(size_t currentImageIdx, VkCommandBuffer cmd_
 	VkRect2D area{ .offset = { } , .extent {.width = VulkanRendererBase::render_width, .height = VulkanRendererBase::render_height } };
 	pass_render_skybox[currentImageIdx].begin(cmd_buffer, area);
 
-	unit_cube->draw(cmd_buffer);
+	d_skybox->draw(cmd_buffer);
 
 	pass_render_skybox[currentImageIdx].end(cmd_buffer);
 }

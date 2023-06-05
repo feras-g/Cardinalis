@@ -151,7 +151,7 @@ struct Drawable
 	uint32_t id = 0;
 	uint32_t mesh_id = 0;
 	uint32_t material_id = 0;
-	bool render = true;
+	bool visible = true;	// True if it is rendered by the forward/deferred renderer.
 	bool has_primitives() const;
 	const VulkanMesh& get_mesh() const;
 	void draw(VkCommandBuffer cmd_buffer) const;

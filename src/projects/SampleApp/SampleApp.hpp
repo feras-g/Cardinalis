@@ -71,8 +71,8 @@ void SampleApp::InitSceneResources()
 	{
 		VulkanMesh mesh = VulkanMesh("../../../data/models/Cube.gltf");
 		uint32_t id = RenderObjectManager::add_mesh(mesh, "cube");
-		RenderObjectManager::add_drawable(id, "unit_cube", transform);
-		RenderObjectManager::add_drawable(id, "frustum", transform);
+		RenderObjectManager::add_drawable(id, "skybox", transform, false);
+		RenderObjectManager::add_drawable(id, "placeholder_cube", transform, false);
 	}
 
 	{
@@ -82,9 +82,21 @@ void SampleApp::InitSceneResources()
 	}
 
 	{
+		//VulkanMesh mesh = VulkanMesh("../../../data/models/basic/plane.glb");
+		//uint32_t id = RenderObjectManager::add_mesh(mesh, "plane");
+		//RenderObjectManager::add_drawable(id, "plane", { glm::scale(glm::identity<glm::mat4>(), glm::vec3(50.0f)) });
+	}
+
+	{
+		VulkanMesh mesh = VulkanMesh("../../../data/models/local/camera/scene.gltf");
+		uint32_t id = RenderObjectManager::add_mesh(mesh, "camera");
+		RenderObjectManager::add_drawable(id, "camera", { glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0)) });
+	}
+
+	{
 		VulkanMesh mesh = VulkanMesh("../../../data/models/local/sponza-gltf-pbr/sponza.glb");
 		uint32_t id = RenderObjectManager::add_mesh(mesh, "sponza");
-		RenderObjectManager::add_drawable(id, "sponza", transform);
+		RenderObjectManager::add_drawable(id, "sponza", { glm::translate(glm::identity<glm::mat4>(), {0, 0, 0 }) });
 	}
 
 	RenderObjectManager::configure();
@@ -263,7 +275,7 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 	}
 
 	/* Temp */
-	RenderObjectManager::get_drawable("frustum")->transform.model  = glm::inverse(m_light_manager.proj * m_light_manager.view);
+	//RenderObjectManager::get_drawable("frustum")->transform.model  = glm::inverse(m_light_manager.proj * m_light_manager.view);
 
 
 }

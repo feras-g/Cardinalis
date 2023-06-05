@@ -41,9 +41,9 @@ void main()
     vec4 positionOS = vec4(v.px, v.py, v.pz, 1.0);
     vec4 normalOS   = vec4(v.nx, v.ny, v.nz, 0.0);
 
-    vec3 tangentWS = normalize(vec3(pushConstant.model * vec4(v.tx, v.ty, v.tz, 0)));
+    vec3 tangentWS = normalize(vec3(pushConstant.model * vec4(v.tx, v.ty, v.tz, 0.0)));
     normalWS       = normalize(pushConstant.model * normalOS);
-    vec3 bitangentWS = cross(vec3(normalWS), tangentWS);
+    vec3 bitangentWS = cross(normalWS.xyz, tangentWS);
 
     TBN = mat3(tangentWS, bitangentWS, normalWS);
 

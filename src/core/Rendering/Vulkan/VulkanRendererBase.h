@@ -66,7 +66,7 @@ public:
 	static inline std::vector<VkFormat> m_formats =
 	{
 		tex_base_color_format,				/* Base color / Albedo */
-		tex_normal_format,		/* Vertex normal */
+		VK_FORMAT_R16G16B16A16_SFLOAT,		/* Vertex normal */
 		tex_metallic_roughness_format,		/* Metallic roughness */
 	};
 	static inline VkFormat m_depth_format = VK_FORMAT_D16_UNORM;
@@ -143,17 +143,16 @@ public:
 		descriptor_pool = create_descriptor_pool(pool_sizes, num_mesh_descriptor_sets + num_drawable_data_descriptor_sets);
 
 		/* Default material */
-		uint32_t default_tex_id = (uint32_t)RenderObjectManager::add_texture("../../../data/textures/albedo_default.png", "Default Albedo");
-		uint32_t placeholder_tex_id = (uint32_t)RenderObjectManager::add_texture("../../../data/textures/placeholder.png", "Placeholder Texture");
+		uint32_t placeholder_tex_id = (uint32_t)RenderObjectManager::add_texture("../../../data/textures/checker.png", "Placeholder Texture");
 		static Material default_material
 		{
-			.tex_base_color_id = default_tex_id,
+			.tex_base_color_id = placeholder_tex_id,
 			.tex_metallic_roughness_id = placeholder_tex_id,
 			.tex_normal_id = placeholder_tex_id,
 			.tex_emissive_id = placeholder_tex_id,
-			.base_color_factor = glm::vec4(1.0f),
+			.base_color_factor = glm::vec4(0.0f),
 			.metallic_factor = 0.0f,
-			.roughness_factor = 1.0f,
+			.roughness_factor = 0.0f,
 		};
 		RenderObjectManager::add_material(default_material, "Default Material");
 	}
@@ -207,12 +206,12 @@ public:
 		}
 	}
 
-	static inline void add_drawable(uint32_t mesh_id, const std::string& name, TransformData transform)
+	static inline void add_drawable(uint32_t mesh_id, const std::string& name, TransformData transform, bool visible = true)
 	{ 
 		Drawable drawable;
 		drawable.mesh_id = mesh_id;
 		drawable.transform = transform;
-
+		drawable.visible = visible;
 
 		if (!drawable.has_primitives())
 		{
@@ -301,7 +300,11 @@ public:
 		{
 			return &drawables[ite->second];
 		}
-		return nullptr;
+		else
+		{
+			assert(false);
+			return nullptr;
+		}
 	}
 
 	static std::pair<size_t, Material*> get_material(const std::string& name)

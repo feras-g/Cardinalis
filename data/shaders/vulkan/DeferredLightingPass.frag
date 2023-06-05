@@ -137,7 +137,7 @@ void main()
 
     vec3 cam_pos_ws = frame_data.view_pos.xyz;
 
-    vec3 N_WS = normalize(texture(gbuffer_normal_map, uv).xyz * 2.0 - 1.0) ; 
+    vec3 N_WS = normalize(texture(gbuffer_normal_map, uv).xyz) ; 
     vec3 L = normalize(-lights.dir_light.direction.xyz);
     vec3 V = normalize(cam_pos_ws - P_WS);
     vec3 H = normalize(V+L);
