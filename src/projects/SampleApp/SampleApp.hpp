@@ -75,11 +75,11 @@ void SampleApp::InitSceneResources()
 		RenderObjectManager::add_drawable(id, "placeholder_cube", transform, false);
 	}
 
-	{
-		VulkanMesh mesh = VulkanMesh("../../../data/models/local/stone/scene.gltf");
-		uint32_t id = RenderObjectManager::add_mesh(mesh, "stone");
-		RenderObjectManager::add_drawable(id, "stone", transform);
-	}
+	//{
+	//	VulkanMesh mesh = VulkanMesh("../../../data/models/local/stone/scene.gltf");
+	//	uint32_t id = RenderObjectManager::add_mesh(mesh, "stone");
+	//	RenderObjectManager::add_drawable(id, "stone", transform);
+	//}
 
 	{
 		//VulkanMesh mesh = VulkanMesh("../../../data/models/basic/plane.glb");
@@ -87,17 +87,59 @@ void SampleApp::InitSceneResources()
 		//RenderObjectManager::add_drawable(id, "plane", { glm::scale(glm::identity<glm::mat4>(), glm::vec3(50.0f)) });
 	}
 
-	{
-		VulkanMesh mesh = VulkanMesh("../../../data/models/local/camera/scene.gltf");
-		uint32_t id = RenderObjectManager::add_mesh(mesh, "camera");
-		RenderObjectManager::add_drawable(id, "camera", { glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0)) });
-	}
+	//{
+	//	VulkanMesh mesh = VulkanMesh("../../../data/models/local/bistro-gltf/scene.gltf");
+	//	uint32_t id = RenderObjectManager::add_mesh(mesh, "bistro");
+	//	RenderObjectManager::add_drawable(id, "bistro", { glm::scale(glm::identity<glm::mat4>(), glm::vec3(0.5f)) });
+	//}
+
+
+
+	//{
+	//	VulkanMesh mesh = VulkanMesh("../../../data/models/local/camera/scene.gltf");
+	//	uint32_t id = RenderObjectManager::add_mesh(mesh, "camera");
+	//	RenderObjectManager::add_drawable(id, "camera", { glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0)) });
+	//}
+
+
+	//{
+	//	VulkanMesh mesh = VulkanMesh("../../../data/models/local/sponza-gltf-pbr/sponza.glb");
+	//	uint32_t id = RenderObjectManager::add_mesh(mesh, "sponza");
+	//	RenderObjectManager::add_drawable(id, "sponza", { glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0)) });
+	//}
 
 	{
-		VulkanMesh mesh = VulkanMesh("../../../data/models/local/sponza-gltf-pbr/sponza.glb");
-		uint32_t id = RenderObjectManager::add_mesh(mesh, "sponza");
-		RenderObjectManager::add_drawable(id, "sponza", { glm::translate(glm::identity<glm::mat4>(), {0, 0, 0 }) });
+		VulkanMesh mesh = VulkanMesh("../../../data/models/local/car/scene.gltf");
+		uint32_t id = RenderObjectManager::add_mesh(mesh, "sphere");
+		RenderObjectManager::add_drawable(id, "sphere", { glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0)) });
 	}
+
+	//{
+	//	VulkanMesh mesh = VulkanMesh("../../../data/models/local/robot/scene.gltf");
+	//	uint32_t id = RenderObjectManager::add_mesh(mesh, "robot");
+	//	RenderObjectManager::add_drawable(id, "robot", { glm::scale(glm::identity<glm::mat4>(), glm::vec3(0.02)) });
+	//}
+
+	//{
+	//	VulkanMesh mesh = VulkanMesh("../../../data/models/local/venice_mask/scene.gltf");
+	//	uint32_t id = RenderObjectManager::add_mesh(mesh, "venice_mask");
+	//	RenderObjectManager::add_drawable(id, "venice_mask", { glm::scale(glm::identity<glm::mat4>(), glm::vec3(50.0)) });
+	//}
+
+	//{
+	//	VulkanMesh mesh = VulkanMesh("../../../data/models/local/DamagedHelmet/glTF/DamagedHelmet.gltf");
+	//	uint32_t id = RenderObjectManager::add_mesh(mesh, "sponza");
+	//	RenderObjectManager::add_drawable(id, "sponza", { glm::translate(glm::identity<glm::mat4>(), {0, 0, 0 }) });
+	//}
+
+	/* Test */
+	//{
+	//	VulkanMesh mesh = VulkanMesh("../../../data/models/test/NormalTangentTest/scene.gltf");
+	//	uint32_t id = RenderObjectManager::add_mesh(mesh, "NormalTangentTest");
+	//	RenderObjectManager::add_drawable(id, "NormalTangentTest", { glm::translate(glm::identity<glm::mat4>(), {0, 0, 0 }) });
+	//}
+
+
 
 	RenderObjectManager::configure();
 }

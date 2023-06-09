@@ -66,13 +66,11 @@ VulkanUI& VulkanUI::ShowSceneViewportPanel(
 		{
 			fSceneViewAspectRatio = currAspect;
 		}
-		
 
 		//if (combo_preview_value == "Deferred Output")
 		{
 			ImGui::Image(reinterpret_cast<ImTextureID>(texDeferred), sceneViewPanelSize );
 		}
-
 
 		bIsSceneViewportHovered = ImGui::IsItemHovered();
 	}
@@ -83,7 +81,7 @@ VulkanUI& VulkanUI::ShowSceneViewportPanel(
 
 	if (ImGui::Begin("GBuffers", 0, 0))
 	{
-		ImVec2 thumbnail_size{ 512, 512 };
+		ImVec2 thumbnail_size{ 64, 64 };
 		//ImGui::SetWindowSize({ thumbnail_size.x * 5, thumbnail_size.y });
 		
 		{
@@ -115,10 +113,6 @@ VulkanUI& VulkanUI::ShowSceneViewportPanel(
 		
 	}
 	ImGui::End();
-
-
-
-
 
 	return *this;
 }
@@ -223,9 +217,6 @@ VulkanUI& VulkanUI::ShowCameraSettings(Camera* camera)
 		ImGui::SetNextItemOpen(true);
 		if (ImGui::TreeNode("Controller Settings"))
 		{
-			static float vec4f[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
-			static int vec4i[4] = { 1, 5, 100, 255 };
-
 			ImGuiSliderFlags flags = ImGuiSliderFlags_AlwaysClamp;
 			
 			ImGui::SeparatorText("Transform");
@@ -263,11 +254,21 @@ VulkanUI& VulkanUI::ShowInspector()
 				if (i == 0)
 					ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 
-				if (ImGui::TreeNode((void*)(intptr_t)i, RenderObjectManager::drawable_names[i].c_str(), i))
+				std::string_view name = RenderObjectManager::drawable_names[i];
+				Drawable& drawable = RenderObjectManager::drawables[i];
+				if (ImGui::TreeNode((void*)(intptr_t)i, name.data(), i))
 				{
-					//ImGui::DragFloat3("Translation", glm::value_ptr(RenderObjectManager::transform_datas[i].translation), 0.1f);
+					bool modified = false;
+					modified |= ImGui::DragFloat3("Translation", glm::value_ptr(drawable.position), 0.1f);
+					modified |= ImGui::DragFloat3("Scale", glm::value_ptr(drawable.scale), 0.1f);
+					modified |= ImGui::DragFloat3("Rotation", glm::value_ptr(drawable.rotation), 0.1f);
 					//ImGui::SliderFloat4("Rotation",  glm::value_ptr(RenderObjectManager::transform_datas[i].rotation), 0.0f, 1.0f);
 					//ImGui::DragFloat3("Scale", glm::value_ptr(RenderObjectManager::transform_datas[i].scale), 0.1f);
+
+					if (modified)
+					{
+						drawable.update_model_matrix();
+					}
 					ImGui::TreePop();
 				}
 			}

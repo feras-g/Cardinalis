@@ -146,6 +146,8 @@ struct TransformData
 	glm::mat4 model = glm::identity<glm::mat4>();
 };
 
+
+
 struct Drawable
 {
 	uint32_t id = 0;
@@ -157,6 +159,12 @@ struct Drawable
 	void draw(VkCommandBuffer cmd_buffer) const;
 	void draw_primitives(VkCommandBuffer cmd_buffer) const;
 	TransformData transform;
+
+	void update_model_matrix();
+
+	glm::vec3 position = {0.0f, 0.0f, 0.0f};
+	glm::vec3 scale = {1.0f, 1.0f, 1.0f};
+	glm::vec3 rotation = {0.0f, 0.0f, 0.0f};
 };
 
 struct Materials

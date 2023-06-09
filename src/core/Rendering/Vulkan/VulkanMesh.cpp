@@ -3,6 +3,8 @@
 #include "Rendering/Vulkan/VulkanRendererBase.h"
 #include "VulkanTools.h"
 
+#include "glm/gtx/euler_angles.hpp"
+
 #include <vector>
 #include <span>
 #include <unordered_set>
@@ -103,6 +105,15 @@ void Drawable::draw_primitives(VkCommandBuffer cmd_buffer) const
 		const Primitive& p = mesh.geometry_data.primitives[i];
 		vkCmdDraw(cmd_buffer, p.index_count, 1, p.first_index, 0);
 	}
+}
+
+void Drawable::update_model_matrix()
+{
+	glm::mat4 T = glm::identity<glm::mat4>();
+	T  = glm::translate(T, position);
+	T *= glm::eulerAngleXYZ(glm::radians(rotation.x), glm::radians(rotation.y), glm::radians(rotation.z));
+	T  = glm::scale(T, scale);
+	transform.model = T;
 }
 
 static void load_vertices(Primitive p, cgltf_primitive* primitive, GeometryData& geometry)
