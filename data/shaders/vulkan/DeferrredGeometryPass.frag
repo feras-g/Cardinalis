@@ -66,15 +66,29 @@ void main()
     https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#additional-textures */
     if(material.tex_normal_id != 0)
     {
-        N = sample_nearest(material.tex_normal_id, uv.xy).xyz * 2.0 - 1.0;
-        N = normalize(TBN * N);
-        N.y *= -1;
+		vec3 N_map = sample_nearest(material.tex_normal_id, uv.xy).xyz * 2.0 - 1.0;
+		N = perturb_normal(N, N_map, vertexToEye, uv.xy);
     }
-    
-    gbuffer_base_color         = sample_nearest(material.tex_base_color_id, uv.xy) * material.base_color_factor;
+
+    if(material.tex_base_color_id == 0)
+    {
+        gbuffer_base_color = vec4(material.base_color_factor.rgba);
+    }
+    else
+    {
+        gbuffer_base_color = vec4(sample_nearest(material.tex_base_color_id, uv.xy).rgba);
+    }
     gbuffer_normalWS           = vec4(N, 1.0f);
     gbuffer_depthNDC           = depthCS.z/depthCS.w;
     /* https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#metallic-roughness-material */
     /* Metallic : G, Roughness: B */
-    gbuffer_metallic_roughness = vec4(sample_nearest(material.tex_metallic_roughness_id, uv.xy).bg, material.metallic_factor, material.roughness_factor);
+
+    if(material.tex_metallic_roughness_id != 0)
+    {
+        gbuffer_metallic_roughness = vec4(sample_nearest(material.tex_metallic_roughness_id, uv.xy).bg, material.metallic_factor, material.roughness_factor);
+    }
+    else
+    {
+        gbuffer_metallic_roughness = vec4(material.roughness_factor, material.metallic_factor, 1, 1);
+    }
 }

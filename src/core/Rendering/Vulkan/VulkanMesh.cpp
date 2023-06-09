@@ -207,7 +207,7 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 	// https://kcoley.github.io/glTF/extensions/2.0/Khronos/KHR_materials_pbrSpecularGlossiness/
 
 	cgltf_material* gltf_mat = gltf_primitive->material;
-
+	
 	Material material;
 	if (!gltf_mat)
 	{
@@ -226,7 +226,7 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 		std::function load_tex = [](cgltf_texture* tex, VkFormat format, bool calc_mip) -> size_t
 		{
 			const char* uri = tex->image->uri;
-			const char* name = uri ? uri : tex->image->name;
+			std::string name = uri ? base_path + uri : base_path + tex->image->name;
 
 			std::pair<size_t, Texture2D*> tex_object = RenderObjectManager::get_texture(name);
 
@@ -251,13 +251,12 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 		};
 
 		cgltf_texture* tex_normal = gltf_mat->normal_texture.texture;
-		cgltf_texture* tex_emissive = gltf_mat->emissive_texture.texture;
-
 		if (tex_normal)
 		{
-			material.tex_normal_id = (unsigned int)load_tex(tex_normal, tex_normal_format, false);
+			material.tex_normal_id = (unsigned int)load_tex(tex_normal, tex_normal_format, true);
 		}
 
+		cgltf_texture* tex_emissive = gltf_mat->emissive_texture.texture;
 		if (tex_emissive)
 		{
 			material.tex_emissive_id = (unsigned int)load_tex(tex_emissive, tex_emissive_format, true);
@@ -268,16 +267,15 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 			//LOG_DEBUG("Material Workflow: Metallic/Roughness, Name : {0}", gltf_material->name ? gltf_material->name : "Unnamed");
 
 			cgltf_texture* tex_base_color = gltf_mat->pbr_metallic_roughness.base_color_texture.texture;
-			cgltf_texture* tex_metallic_roughness = gltf_mat->pbr_metallic_roughness.metallic_roughness_texture.texture;
-
 			if (tex_base_color)
 			{
 				material.tex_base_color_id = (unsigned int)load_tex(tex_base_color, tex_base_color_format, true);
 			}
 
+			cgltf_texture* tex_metallic_roughness = gltf_mat->pbr_metallic_roughness.metallic_roughness_texture.texture;
 			if (tex_metallic_roughness)
 			{
-				material.tex_metallic_roughness_id = (unsigned int)load_tex(tex_metallic_roughness, tex_metallic_roughness_format, false);
+				material.tex_metallic_roughness_id = (unsigned int)load_tex(tex_metallic_roughness, tex_metallic_roughness_format, true);
 			}
 
 			/* Factors */
@@ -324,20 +322,8 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 			//SetMaterial(data, primitive, gltf_mat, materialProperties);
 		}
 
-		//std::size_t hash = MyHash<Material>{}(material);
-		//auto res = material_hashes.insert(hash);
-		//if (res.second == false)
-		/*if (gltf_mat->name)
-		{
-			material_name = gltf_mat->name;
-		}
-		else
-		{
-			assert(false);
-		}*/
-		
-		//std::string material_name = std::to_string(hash);
-		std::string material_name = std::to_string(RenderObjectManager::materials.size());
+		std::size_t hash = MyHash<Material>{}(material);
+		std::string material_name = std::to_string(hash);
 		LOG_DEBUG("Loaded new material named {0}, workflow : (Metallic/Roughness)", material_name);
 
 		std::pair<size_t, Material*> mat_object = RenderObjectManager::get_material(material_name);

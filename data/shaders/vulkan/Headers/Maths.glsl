@@ -44,8 +44,7 @@ vec3 perturb_normal( vec3 N, vec3 N_map, vec3 V, vec2 texcoord )
 {
     // assume N, the interpolated vertex normal and 
     // V, the view vector (vertex to eye)
-
-
+    N_map.y = -N_map.y; // gltf normal maps use right-handed coordinates (OpenGL convention)
     mat3 TBN = cotangent_frame( N, -V, texcoord );
     return normalize( TBN * N_map );
 }

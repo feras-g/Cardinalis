@@ -108,94 +108,30 @@ void ShadowRenderer::draw_scene(VkCommandBuffer cmd_buffer)
 		uint32_t dynamic_offset = drawable.id * RenderObjectManager::per_object_data_dynamic_aligment;
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 2, 1, &RenderObjectManager::drawable_descriptor_set, 1, &dynamic_offset);
 
-		if (drawable.has_primitives())
+		if (drawable.visible)
 		{
-			for (int prim_idx = 0; prim_idx < mesh.geometry_data.primitives.size(); prim_idx++)
+			if (drawable.has_primitives())
 			{
-				const Primitive& p = mesh.geometry_data.primitives[prim_idx];
-				/* Model matrix push constant */
-				glm::mat4 model_mat = drawable.transform.model * p.mat_model;
-				vkCmdPushConstants(cmd_buffer, m_gfx_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &model_mat);
-				vkCmdDraw(cmd_buffer, p.index_count, 1, p.first_index, 0);
+				for (int prim_idx = 0; prim_idx < mesh.geometry_data.primitives.size(); prim_idx++)
+				{
+					const Primitive& p = mesh.geometry_data.primitives[prim_idx];
+					/* Model matrix push constant */
+					glm::mat4 model_mat = drawable.transform.model * p.mat_model;
+					vkCmdPushConstants(cmd_buffer, m_gfx_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &model_mat);
+					vkCmdDraw(cmd_buffer, p.index_count, 1, p.first_index, 0);
+				}
+			}
+			else
+			{
+				drawable.draw(cmd_buffer);
 			}
 		}
-		else
-		{
-			drawable.draw(cmd_buffer);
-		}
+
 	}
 
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-struct Cascade
-{
-	float z_near;
-	float z_far;
-};
-
-struct Plane
-{
-	glm::vec4 bottom_left;
-	glm::vec4 bottom_right;
-	glm::vec4 top_left;
-	glm::vec4 top_right;
-
-	Plane& transform(glm::mat4 matrix)
-	{
-		bottom_left		= matrix * bottom_left;
-		bottom_right	= matrix * bottom_right;
-		top_left		= matrix * top_left;
-		top_right		= matrix * top_right;
-
-		return *this;
-	}
-
-	glm::vec3 get_min()
-	{
-		glm::vec3 min{ std::numeric_limits<float>::max(), std::numeric_limits<float>::max() , std::numeric_limits<float>::max() };
-
-		min.x = std::min(min.x, bottom_left.x);
-		min.x = std::min(min.x, bottom_right.x);
-		min.x = std::min(min.x, top_left.x);
-		min.x = std::min(min.x, top_right.x);
-
-		min.y = std::min(min.y, bottom_left.y);
-		min.y = std::min(min.y, bottom_right.y);
-		min.y = std::min(min.y, top_left.y);
-		min.y = std::min(min.y, top_right.y);
-
-		min.z = std::min(min.z, bottom_left.z);
-		min.z = std::min(min.z, bottom_right.z);
-		min.z = std::min(min.z, top_left.z);
-		min.z = std::min(min.z, top_right.z);
-
-		return min;
-	}
-
-	glm::vec3 get_max()
-	{
-		glm::vec3 max{ std::numeric_limits<float>::min(), std::numeric_limits<float>::min() , std::numeric_limits<float>::min() };
-
-		max.x = std::max(max.x, bottom_left.x);
-		max.x = std::max(max.x, bottom_right.x);
-		max.x = std::max(max.x, top_left.x);
-		max.x = std::max(max.x, top_right.x);
-
-		max.y = std::max(max.y, bottom_left.y);
-		max.y = std::max(max.y, bottom_right.y);
-		max.y = std::max(max.y, top_left.y);
-		max.y = std::max(max.y, top_right.y);
-
-		max.z = std::max(max.z, bottom_left.z);
-		max.z = std::max(max.z, bottom_right.z);
-		max.z = std::max(max.z, top_left.z);
-		max.z = std::max(max.z, top_right.z);
-
-		return max;
-	}
-};
-
 void CascadedShadowRenderer::init(unsigned int width, unsigned int height,  Camera& camera, const LightManager& lightmanager)
 {
 	h_light_manager = &lightmanager;
@@ -272,7 +208,6 @@ void CascadedShadowRenderer::update_desc_sets()
 		vkUpdateDescriptorSets(context.device, (uint32_t)desc_writes.size(), desc_writes.data(), 0, nullptr);
 	}
 }
-
 
 void CascadedShadowRenderer::compute_z_splits()
 {
@@ -371,9 +306,8 @@ void CascadedShadowRenderer::compute_cascade_ortho_proj(size_t frame_idx)
 			frustum_center = glm::vec3(lookAtInv * glm::vec4(frustum_center, 1));
 		}
 
-
 		/* Orthographics projection */
-		glm::vec3 eye = frustum_center + (light_direction * cascade_radius * 2.0f);
+		glm::vec3 eye = frustum_center + (-light_direction * cascade_radius * 2.0f);
 		glm::mat4 light_view = glm::lookAt(eye, frustum_center, up);
 		cascades_proj_mats[i] = glm::ortho(-cascade_radius, cascade_radius, -cascade_radius, cascade_radius, -cascade_radius * 6.0f, 6.0f * cascade_radius) * light_view;
 	}

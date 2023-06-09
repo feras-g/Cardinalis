@@ -142,7 +142,7 @@ void main()
     vec3 V = normalize(cam_pos_ws - P_WS);
     vec3 H = normalize(V+L);
 
-    vec3 albedo = texture(gbuffer_color, uv).xyz;
+    vec3 albedo = texture(gbuffer_color, uv).rgb;
     vec4 metallic_roughness = texture(gbuffer_metallic_roughness, uv);
 
     float metallic  = metallic_roughness.x *  metallic_roughness.z;
@@ -165,7 +165,6 @@ float shadow = 1.0f;
 vec3 color = BRDF(N_WS, V, L, H, light_color, irradiance, albedo, metallic, roughness);
 
 #ifdef ENABLE_SHADOWS
-
     uint cascade_index = 0;
     float z_view_space = abs(P_VS.z);
 	for(uint i = 0; i < 4; ++i) 
