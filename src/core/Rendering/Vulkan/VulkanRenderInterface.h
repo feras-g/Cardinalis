@@ -86,8 +86,6 @@ private:
 	std::vector<VkPhysicalDevice> vkPhysicalDevices;
 
 	std::vector<const char*> deviceExtensions;
-	std::vector<const char*> instanceExtensions;
-	std::vector<const char*> instanceLayers;
 
 	VkSurfaceKHR m_Surface;
 	void CreateFramebuffers(VkRenderPass renderPass, VulkanSwapchain& swapchain);

@@ -67,23 +67,44 @@ void VulkanRenderInterface::CreateInstance()
 		.apiVersion = version,
 	};
 
-	// Define instance extensions
-	GetInstanceExtensionNames(instanceExtensions);
-
-	// Define instance layers
-	GetInstanceLayerNames(instanceLayers);
-
-	VkInstanceCreateInfo createInfo =
 	{
-		.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-		.pNext = NULL,
-		.flags = NULL,
-		.pApplicationInfo = &appInfo,
-		.enabledLayerCount= (uint32_t)instanceLayers.size(),
-		.ppEnabledLayerNames=instanceLayers.data(),
-		.enabledExtensionCount= (uint32_t)instanceExtensions.size(),
-		.ppEnabledExtensionNames = instanceExtensions.data()
+		uint32_t extensionCount = 0;
+		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+		std::vector<VkExtensionProperties> instanceExtensions{ extensionCount };
+		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, instanceExtensions.data());
+	}
+
+	{
+		uint32_t layerCount = 0;
+		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+		std::vector<VkLayerProperties> instanceLayers{ layerCount };
+		vkEnumerateInstanceLayerProperties(&layerCount, instanceLayers.data());
+	}
+
+	// Instance extensions
+	std::vector<const char*> instance_ext_names
+	{
+		"VK_KHR_surface",
+#ifdef _WIN32
+		"VK_KHR_win32_surface",
+#endif // _WIN32
+		"VK_EXT_debug_utils",
+		"VK_EXT_validation_features"
 	};
+
+	// Instance layers
+	std::vector<const char*> instance_layers_names
+	{
+		"VK_LAYER_KHRONOS_validation",
+	};
+
+	VkInstanceCreateInfo createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+	createInfo.pApplicationInfo = &appInfo;
+	createInfo.enabledLayerCount= (uint32_t)instance_layers_names.size();
+	createInfo.ppEnabledLayerNames = instance_layers_names.data();
+	createInfo.enabledExtensionCount= (uint32_t)instance_ext_names.size();
+	createInfo.ppEnabledExtensionNames = instance_ext_names.data();
 	
 	VK_CHECK(vkCreateInstance(&createInfo, nullptr, &context.instance));
 	
@@ -125,10 +146,14 @@ void VulkanRenderInterface::CreateDevices()
 		.pQueuePriorities = queuePriorities
 	};
 
-	deviceExtensions = { "VK_KHR_swapchain", "VK_KHR_shader_draw_parameters", "VK_EXT_descriptor_indexing", "VK_KHR_dynamic_rendering", "VK_KHR_multiview"};
-
-
-	
+	deviceExtensions = 
+	{ 
+		"VK_KHR_swapchain", 
+		"VK_KHR_shader_draw_parameters", 
+		"VK_EXT_descriptor_indexing", 
+		"VK_KHR_dynamic_rendering", 
+		"VK_KHR_multiview"
+	};
 
 	// Enable runtime descriptor indexing
 	VkPhysicalDeviceDescriptorIndexingFeaturesEXT indexingFeatures
@@ -161,8 +186,6 @@ void VulkanRenderInterface::CreateDevices()
 		.flags = NULL,
 		.queueCreateInfoCount = 1,
 		.pQueueCreateInfos = &queueInfo,
-		.enabledLayerCount = (uint32_t)instanceLayers.size(),
-		.ppEnabledLayerNames = instanceLayers.data(),
 		.enabledExtensionCount = (uint32_t)deviceExtensions.size(),
 		.ppEnabledExtensionNames = deviceExtensions.data(),
 		.pEnabledFeatures = NULL
@@ -334,58 +357,6 @@ void end_temp_cmd_buffer(VkCommandBuffer cmd_buffer)
 void EndCommandBuffer(VkCommandBuffer cmdBuffer)
 {
 	VK_CHECK(vkEndCommandBuffer(cmdBuffer));
-}
-
-void GetInstanceExtensionNames(std::vector<const char*>& extensions)
-{
-	uint32_t extensionCount = 0;
-	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-
-	std::vector<VkExtensionProperties> instanceExtensions{ extensionCount };
-	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, instanceExtensions.data());
-	LOG_INFO("Found {0} Vulkan instance extensions :", extensionCount);
-
-	// Swapchain extension
-	extensions.push_back("VK_KHR_surface");
-#ifdef _WIN32
-	extensions.push_back("VK_KHR_win32_surface");
-#endif // _WIN32
-
-	for (const auto& e : instanceExtensions)
-	{
-		LOG_DEBUG("- {0}", e.extensionName);
-
-		// Debug markers
-		if (strcmp(e.extensionName, "VK_EXT_debug_utils") == 0)
-		{
-			extensions.push_back("VK_EXT_debug_utils");
-		}
-
-	}
-}
-
-void GetInstanceLayerNames(std::vector<const char*>& layers)
-{
-	uint32_t layerCount = 0;
-	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-
-	std::vector<VkLayerProperties> instanceLayers{ layerCount };
-	vkEnumerateInstanceLayerProperties(&layerCount, instanceLayers.data());
-
-	LOG_INFO("Found {0} vulkan layers :", layerCount);
-
-	for (const auto& p : instanceLayers)
-	{
-		LOG_DEBUG("- {0}", p.layerName);
-
-#ifdef ENABLE_VALIDATION_LAYERS
-		if (strcmp(p.layerName, "VK_LAYER_KHRONOS_validation") == 0)
-		{
-			layers.push_back("VK_LAYER_KHRONOS_validation");
-		}
-#endif // _DEBUG
-	}
-
 }
 
 bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, VkRenderPass* out_renderPass)
@@ -770,19 +741,9 @@ size_t create_vertex_index_buffer(Buffer& result, const void* vtxData, size_t& v
 	size_t min_alignment = VulkanRenderInterface::device_limits.minStorageBufferOffsetAlignment;
 	size_t total_size_bytes = vtxBufferSizeInBytes + idxBufferSizeInBytes;
 
-	if (total_size_bytes % min_alignment != 0)
-	{
-
-	}
-
-
-
-
-
-
 	// Staging buffer
 	Buffer stagingBuffer;
-	create_staging_buffer(stagingBuffer, total_size_bytes);
+	create_buffer(Buffer::Type::STAGING, stagingBuffer, total_size_bytes);
 
 	// Copy vertex + index data to staging buffer
 	void* pData;
@@ -792,7 +753,7 @@ size_t create_vertex_index_buffer(Buffer& result, const void* vtxData, size_t& v
 	vkUnmapMemory(context.device, stagingBuffer.memory);
 
 	// Create storage buffer containing non-interleaved vertex + index data 
-	create_storage_buffer(result, total_size_bytes);
+	create_buffer(Buffer::Type::STORAGE,result, total_size_bytes);
 	copy_buffer(stagingBuffer, result, total_size_bytes);
 
 	destroy_buffer(stagingBuffer);

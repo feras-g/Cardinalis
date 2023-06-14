@@ -1,10 +1,35 @@
 #include "VulkanResources.h"
 #include "VulkanTools.h"
 #include "VulkanRenderInterface.h"
+static size_t nb = 0;
 
-void create_buffer(Buffer& result, size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProperties)
+void create_buffer(Buffer::Type type, Buffer& result, size_t size)
 {
-	static size_t nb = 0;
+	switch (type)
+	{
+	case Buffer::Type::UNIFORM:
+		create_buffer_impl(result, size, 
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		break;
+	case Buffer::Type::STORAGE:
+		create_buffer_impl(result, size, 
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		break;
+	case Buffer::Type::STAGING:
+		create_buffer_impl(result, size, 
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		break;
+	default:
+		LOG_ERROR("Unknown buffer type.");
+		break;
+	}
+}
+
+void create_buffer_impl(Buffer& result, size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProperties)
+{
 	LOG_INFO("Create buffer {}", nb++);
 	VkBufferCreateInfo info =
 	{
@@ -35,21 +60,6 @@ void create_buffer(Buffer& result, size_t size, VkBufferUsageFlags usage, VkMemo
 	VK_CHECK(vkBindBufferMemory(context.device, result.buffer, result.memory, 0));
 }
 
-void create_uniform_buffer(Buffer& result, VkDeviceSize size)
-{
-	create_buffer(result, size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-}
-
-void create_storage_buffer(Buffer& result, VkDeviceSize size)
-{
-	create_buffer(result, size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-}
-
-void create_staging_buffer(Buffer& result, VkDeviceSize size)
-{
-	create_buffer(result, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-}
-
 void upload_buffer_data(Buffer& buffer, const void* data, const size_t size, VkDeviceSize offset)	
 {
 	void* pMappedData = nullptr;
@@ -72,5 +82,6 @@ void destroy_buffer(const Buffer& buffer)
 	{
 		vkDestroyBuffer(context.device, buffer.buffer, nullptr);
 		vkFreeMemory(context.device, buffer.memory, nullptr);
+		LOG_INFO("Destroy buffer {}", nb--);
 	}
 }

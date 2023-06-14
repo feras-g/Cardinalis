@@ -13,8 +13,6 @@
 #include <vector>
 #include <unordered_map>
 
-struct Buffer;
-
 // Vertex description
 struct VertexData
 {

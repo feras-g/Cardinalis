@@ -80,8 +80,7 @@ Drawable* d_placeholder_cube;
 /* Cubemap rendering */
 void CubemapRenderer::init()
 {
-	init_resources("../../../data/textures/env/DF360_005_Reloaded_4k_sRGB.hdr");
-	//init_resources("../../../data/textures/env/newport_loft.hdr");
+	init_resources("../../../data/textures/env/studio_small_09_4k.hdr");
 	init_descriptors();
 
 	pass_render_cubemap.add_color_attachment(cubemap_render_attachment.view);
@@ -238,13 +237,11 @@ void CubemapRenderer::init_resources(const char* filename)
 	cubemap_render_attachment.create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1  });
 
 	/* Uniform buffer */
-	create_uniform_buffer(uniform_buffer, sizeof(ubo));
+	create_buffer(Buffer::Type::UNIFORM, uniform_buffer, sizeof(ubo));
 
 	ubo.cube_model = glm::identity<glm::mat4>();
 
 	upload_buffer_data(uniform_buffer, &ubo, sizeof(ubo), 0);
-
-
 }
 
 void CubemapRenderer::init_descriptors()

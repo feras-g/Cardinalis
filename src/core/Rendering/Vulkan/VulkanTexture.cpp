@@ -153,7 +153,7 @@ void Texture::upload_data(VkDevice device, Image* pImage)
     VkDeviceSize imageSizeInBytes = layerSizeInBytes * info.layerCount;
     // Create temp CPU-GPU visible buffer holding image data 
     Buffer stagingBuffer;
-    create_staging_buffer(stagingBuffer, imageSizeInBytes);
+    create_buffer(Buffer::Type::STAGING,stagingBuffer, imageSizeInBytes);
     
     upload_buffer_data(stagingBuffer, pImage->get_data(), imageSizeInBytes, 0);
 

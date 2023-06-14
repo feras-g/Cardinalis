@@ -286,7 +286,7 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 			cgltf_texture* tex_metallic_roughness = gltf_mat->pbr_metallic_roughness.metallic_roughness_texture.texture;
 			if (tex_metallic_roughness)
 			{
-				material.tex_metallic_roughness_id = (unsigned int)load_tex(tex_metallic_roughness, tex_metallic_roughness_format, true);
+				material.tex_metallic_roughness_id = (unsigned int)load_tex(tex_metallic_roughness, tex_metallic_roughness_format, false);
 			}
 
 			/* Factors */

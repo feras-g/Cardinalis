@@ -42,7 +42,7 @@ protected:
 	VulkanUI m_UI;
 	Camera m_Camera;
 	LightManager m_light_manager;
-
+	RenderObjectManager m_rbo;
 	bool b_IsSceneViewportHovered = false;
 
 protected:
@@ -60,7 +60,7 @@ void SampleApp::InitSceneResources()
 	CameraController fpsController = CameraController({ 0,0,5 }, { 0,-180,0 }, { 0,0,1 }, { 0,1,0 });
 	m_Camera = Camera(fpsController, 45.0f, 1.0f, 0.1f, 1000.0f);
 
-	RenderObjectManager::init();
+	m_rbo.init();
 
 	TransformData transform =
 	{
@@ -70,78 +70,89 @@ void SampleApp::InitSceneResources()
 	/* Basic primitives */
 	{
 		VulkanMesh mesh = VulkanMesh("../../../data/models/Cube.gltf");
-		uint32_t id = RenderObjectManager::add_mesh(mesh, "cube");
-		RenderObjectManager::add_drawable(id, "skybox", transform, false);
-		RenderObjectManager::add_drawable(id, "placeholder_cube", transform, false);
+		uint32_t id = m_rbo.add_mesh(mesh, "cube");
+		m_rbo.add_drawable(id, "skybox", false);
+		m_rbo.add_drawable(id, "placeholder_cube", false);
 	}
 
 	//{
 	//	VulkanMesh mesh = VulkanMesh("../../../data/models/local/stone/scene.gltf");
-	//	uint32_t id = RenderObjectManager::add_mesh(mesh, "stone");
-	//	RenderObjectManager::add_drawable(id, "stone", transform);
+	//	uint32_t id = m_rbo.add_mesh(mesh, "stone");
+	//	m_rbo.add_drawable(id, "stone");
 	//}
 
 	{
-		//VulkanMesh mesh = VulkanMesh("../../../data/models/basic/plane.glb");
-		//uint32_t id = RenderObjectManager::add_mesh(mesh, "plane");
-		//RenderObjectManager::add_drawable(id, "plane", { glm::scale(glm::identity<glm::mat4>(), glm::vec3(50.0f)) });
+		VulkanMesh mesh = VulkanMesh("../../../data/models/basic/plane.glb");
+		uint32_t id = m_rbo.add_mesh(mesh, "plane");
+		m_rbo.add_drawable(id, "plane");
 	}
 
 	//{
 	//	VulkanMesh mesh = VulkanMesh("../../../data/models/local/bistro-gltf/scene.gltf");
-	//	uint32_t id = RenderObjectManager::add_mesh(mesh, "bistro");
-	//	RenderObjectManager::add_drawable(id, "bistro", { glm::scale(glm::identity<glm::mat4>(), glm::vec3(0.5f)) });
+	//	uint32_t id = m_rbo.add_mesh(mesh, "bistro");
+	//	m_rbo.add_drawable(id, "bistro");
 	//}
 
 
 
 	//{
 	//	VulkanMesh mesh = VulkanMesh("../../../data/models/local/camera/scene.gltf");
-	//	uint32_t id = RenderObjectManager::add_mesh(mesh, "camera");
-	//	RenderObjectManager::add_drawable(id, "camera", { glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0)) });
+	//	uint32_t id = m_rbo.add_mesh(mesh, "camera");
+	//	m_rbo.add_drawable(id, "camera");
 	//}
 
 
 	//{
 	//	VulkanMesh mesh = VulkanMesh("../../../data/models/local/sponza-gltf-pbr/sponza.glb");
-	//	uint32_t id = RenderObjectManager::add_mesh(mesh, "sponza");
-	//	RenderObjectManager::add_drawable(id, "sponza", { glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0)) });
+	//	uint32_t id = m_rbo.add_mesh(mesh, "sponza");
+	//	m_rbo.add_drawable(id, "sponza");
 	//}
 
 	{
-		VulkanMesh mesh = VulkanMesh("../../../data/models/local/car/scene.gltf");
-		uint32_t id = RenderObjectManager::add_mesh(mesh, "sphere");
-		RenderObjectManager::add_drawable(id, "sphere", { glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0)) });
+		VulkanMesh mesh = VulkanMesh("../../../data/models/MetalRoughSpheres.gltf");
+		uint32_t id = m_rbo.add_mesh(mesh, "MetalRoughSpheres");
+		m_rbo.add_drawable(id, "MetalRoughSpheres");
 	}
 
 	//{
+	//	VulkanMesh mesh = VulkanMesh("../../../data/models/local/car/scene.gltf");
+	//	uint32_t id = m_rbo.add_mesh(mesh, "sphere");
+	//	m_rbo.add_drawable(id, "sphere", { glm::scale(glm::identity<glm::mat4>(), glm::vec3(1.0)) });
+	//}
+
+
+	//{
+	//	VulkanMesh mesh = VulkanMesh("../../../data/models/local/venice_mask/scene.gltf");
+	//	uint32_t id = m_rbo.add_mesh(mesh, "Venice Mask");
+	//	m_rbo.add_drawable(id, "Venice Mask");
+	//}
+
+	//{
 	//	VulkanMesh mesh = VulkanMesh("../../../data/models/local/robot/scene.gltf");
-	//	uint32_t id = RenderObjectManager::add_mesh(mesh, "robot");
-	//	RenderObjectManager::add_drawable(id, "robot", { glm::scale(glm::identity<glm::mat4>(), glm::vec3(0.02)) });
+	//	uint32_t id = m_rbo.add_mesh(mesh, "robot");
+	//	m_rbo.add_drawable(id, "robot");
 	//}
 
 	//{
 	//	VulkanMesh mesh = VulkanMesh("../../../data/models/local/venice_mask/scene.gltf");
-	//	uint32_t id = RenderObjectManager::add_mesh(mesh, "venice_mask");
-	//	RenderObjectManager::add_drawable(id, "venice_mask", { glm::scale(glm::identity<glm::mat4>(), glm::vec3(50.0)) });
+	//	uint32_t id = m_rbo.add_mesh(mesh, "venice_mask");
+	//	m_rbo.add_drawable(id, "venice_mask", { glm::scale(glm::identity<glm::mat4>(), glm::vec3(50.0)) });
 	//}
 
 	//{
 	//	VulkanMesh mesh = VulkanMesh("../../../data/models/local/DamagedHelmet/glTF/DamagedHelmet.gltf");
-	//	uint32_t id = RenderObjectManager::add_mesh(mesh, "sponza");
-	//	RenderObjectManager::add_drawable(id, "sponza", { glm::translate(glm::identity<glm::mat4>(), {0, 0, 0 }) });
+	//	uint32_t id = m_rbo.add_mesh(mesh, "sponza");
+	//	m_rbo.add_drawable(id, "sponza", { glm::translate(glm::identity<glm::mat4>(), {0, 0, 0 }) });
 	//}
 
 	/* Test */
 	//{
 	//	VulkanMesh mesh = VulkanMesh("../../../data/models/test/NormalTangentTest/scene.gltf");
-	//	uint32_t id = RenderObjectManager::add_mesh(mesh, "NormalTangentTest");
-	//	RenderObjectManager::add_drawable(id, "NormalTangentTest", { glm::translate(glm::identity<glm::mat4>(), {0, 0, 0 }) });
+	//	uint32_t id = m_rbo.add_mesh(mesh, "NormalTangentTest");
+	//	m_rbo.add_drawable(id, "NormalTangentTest", { glm::translate(glm::identity<glm::mat4>(), {0, 0, 0 }) });
 	//}
 
-
-
-	RenderObjectManager::configure();
+	m_rbo.configure();
 }
 
 void SampleApp::Initialize()
@@ -283,7 +294,7 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 	}
 
 	/* Update drawables */
-	RenderObjectManager::update_per_object_data(frame_data);
+	m_rbo.update_per_object_data(frame_data);
 
 	m_deferred_renderer.update(currentImageIdx);
 	m_model_renderer->update(currentImageIdx, frame_data);
@@ -317,7 +328,7 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 	}
 
 	/* Temp */
-	//RenderObjectManager::get_drawable("frustum")->transform.model  = glm::inverse(m_light_manager.proj * m_light_manager.view);
+	//m_rbo.get_drawable("frustum")->transform.model  = glm::inverse(m_light_manager.proj * m_light_manager.view);
 
 
 }
@@ -373,8 +384,6 @@ inline void SampleApp::OnKeyEvent(KeyEvent event)
 inline void SampleApp::Terminate()
 {
 	m_Window->ShutdownGUI();
-	RenderObjectManager::destroy();
-	VulkanRendererBase::destroy();
 }
 
 inline SampleApp::~SampleApp()

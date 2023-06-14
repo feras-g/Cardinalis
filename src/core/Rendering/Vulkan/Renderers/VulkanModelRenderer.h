@@ -17,7 +17,6 @@ public:
 	void draw_scene(VkCommandBuffer cmdBuffer, size_t current_frame_idx, const Drawable& drawable);
 	void update(size_t frame_idx, const VulkanRendererBase::PerFrameData& frame_data);
 	void update_descriptor_set(VkDevice device, size_t frame_idx);
-	void create_buffers();
 
 	vk::DynamicRenderPass m_dyn_renderpass[NUM_FRAMES];
 
@@ -37,6 +36,4 @@ private:
 	
 	VkDescriptorSetLayout m_pass_descriptor_set_layout;
 	VkDescriptorSet m_pass_descriptor_set;
-
-	Buffer m_material_info_ubo;
 };

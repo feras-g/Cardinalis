@@ -34,10 +34,14 @@ struct ShadowRenderer
 constexpr int NUM_CASCADES = 4;
 static const uint32_t view_mask = 0b00001111;
 
-struct CascadedShadowRenderer
+class CascadedShadowRenderer
 {
+public:
+	~CascadedShadowRenderer();
+public:
 	void init(unsigned int width, unsigned int height,  Camera& camera, const LightManager& lightmanager);
 	void update_desc_sets();
+	void create_buffers();
 
 	Texture2D m_shadow_maps[NUM_FRAMES];
 	vk::DynamicRenderPass m_CSM_pass[NUM_FRAMES];
@@ -52,20 +56,21 @@ struct CascadedShadowRenderer
 	float frustum_near = 0.1f;
 	float frustum_far  = 100.0f;
 
-	void compute_z_splits();
 	struct push_constants
 	{
 		glm::mat4 model;
 		glm::mat4 dir_light_view;
 	} ps;
 
+	void compute_z_splits();
 	void compute_cascade_ortho_proj(size_t current_frame_idx);
 	void render(size_t current_frame_idx, VkCommandBuffer cmd_buffer);
 	void draw_scene(VkCommandBuffer cmd_buffer);
 	static inline Buffer proj_mats_ubo[NUM_FRAMES];
+	static inline Buffer cascade_ends_ubo;
+
 	static inline size_t mats_ubo_size_bytes = 0;
 
-	static inline Buffer cascade_ends_ubo;
 	static inline size_t cascade_ends_ubo_size_bytes = 0;
 	glm::ivec2 m_shadow_map_size;
 	const LightManager* h_light_manager;

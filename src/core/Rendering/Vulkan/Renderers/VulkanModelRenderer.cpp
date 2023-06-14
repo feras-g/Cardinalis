@@ -13,7 +13,6 @@ VulkanModelRenderer::VulkanModelRenderer()
 	
 	/* Render objects creation */
 	m_descriptor_pool = create_descriptor_pool(num_storage_buffers, num_uniform_buffers, num_combined_image_smp, 0);
-	create_buffers();
 
 	/* Configure layout for descriptor set used for a Pass */
 	std::vector<VkDescriptorSetLayoutBinding> bindings = {};
@@ -167,12 +166,6 @@ void VulkanModelRenderer::update_descriptor_set(VkDevice device, size_t frame_id
 	vkUpdateDescriptorSets(context.device, (uint32_t)desc_writes.size(), desc_writes.data(), 0, nullptr);
 }
 
-void VulkanModelRenderer::create_buffers()
-{
-	
-}
-
 VulkanModelRenderer::~VulkanModelRenderer()
 {
-
 }

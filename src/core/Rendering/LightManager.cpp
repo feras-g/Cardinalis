@@ -6,7 +6,7 @@ void LightManager::init()
 	/* Create and fill UBO data */
 	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
-		create_uniform_buffer(m_ubo[frame_idx], sizeof(m_light_data));
+		create_buffer(Buffer::Type::UNIFORM, m_ubo[frame_idx], sizeof(m_light_data));
 	}
 	update(nullptr, {-1,-1,-1}, { 1,1,1 });
 }

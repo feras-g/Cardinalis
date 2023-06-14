@@ -173,14 +173,8 @@ void CascadedShadowRenderer::init(unsigned int width, unsigned int height,  Came
 
 	size_t vtx_pushconstantsize = sizeof(glm::mat4);
 	m_gfx_pipeline_layout = create_pipeline_layout(context.device, desc_set_layouts, (uint32_t)sizeof(push_constants), 0);
-	
-	mats_ubo_size_bytes = sizeof(glm::mat4) * NUM_CASCADES;
-	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
-	{
-		create_uniform_buffer(proj_mats_ubo[frame_idx], mats_ubo_size_bytes);
-	}
-	cascade_ends_ubo_size_bytes = sizeof(glm::vec4);
-	create_uniform_buffer(cascade_ends_ubo, cascade_ends_ubo_size_bytes);
+
+	create_buffers();
 	compute_z_splits();
 	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
@@ -207,6 +201,26 @@ void CascadedShadowRenderer::update_desc_sets()
 
 		vkUpdateDescriptorSets(context.device, (uint32_t)desc_writes.size(), desc_writes.data(), 0, nullptr);
 	}
+}
+
+void CascadedShadowRenderer::create_buffers()
+{
+	mats_ubo_size_bytes = sizeof(glm::mat4) * NUM_CASCADES;
+	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
+	{
+		create_buffer(Buffer::Type::UNIFORM, proj_mats_ubo[frame_idx], mats_ubo_size_bytes);
+	}
+	cascade_ends_ubo_size_bytes = sizeof(glm::vec4);
+	create_buffer(Buffer::Type::UNIFORM, cascade_ends_ubo, cascade_ends_ubo_size_bytes);
+}
+
+CascadedShadowRenderer::~CascadedShadowRenderer()
+{
+	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
+	{
+		destroy_buffer(proj_mats_ubo[frame_idx]);
+	}
+	destroy_buffer(cascade_ends_ubo);
 }
 
 void CascadedShadowRenderer::compute_z_splits()
@@ -300,10 +314,10 @@ void CascadedShadowRenderer::compute_cascade_ortho_proj(size_t frame_idx)
 			lookAt = scalar * lookAt;
 			lookAtInv = glm::inverse(lookAt);
 
-			frustum_center = glm::vec3(lookAt * glm::vec4(frustum_center, 1));
+			frustum_center = glm::vec3(lookAt * glm::vec4(frustum_center, 1.0f));
 			frustum_center.x = (float)std::floor(frustum_center.x);
 			frustum_center.y = (float)std::floor(frustum_center.y);
-			frustum_center = glm::vec3(lookAtInv * glm::vec4(frustum_center, 1));
+			frustum_center = glm::vec3(lookAtInv * glm::vec4(frustum_center, 1.0f));
 		}
 
 		/* Orthographics projection */

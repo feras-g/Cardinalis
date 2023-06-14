@@ -122,8 +122,8 @@ void VulkanImGuiRenderer::render(size_t currentImageIdx, VkCommandBuffer cmdBuff
 
 void VulkanImGuiRenderer::create_buffers()
 {
-	create_storage_buffer(m_storage_buffer, imgui_buffer_size);
-	create_uniform_buffer(m_uniform_buffer, 1024);
+	create_buffer(Buffer::Type::STORAGE,m_storage_buffer, imgui_buffer_size);
+	create_buffer(Buffer::Type::UNIFORM,m_uniform_buffer, 1024);
 }
 
 void VulkanImGuiRenderer::draw_scene(VkCommandBuffer cmd_buffer)
@@ -226,7 +226,8 @@ void VulkanImGuiRenderer::update_buffers(ImDrawData* pDrawData)
 
 VulkanImGuiRenderer::~VulkanImGuiRenderer()
 {
-
+	destroy_buffer(m_storage_buffer);
+	destroy_buffer(m_uniform_buffer);
 }
 
 bool VulkanImGuiRenderer::CreateFontTexture(ImGuiIO* io, const char* fontPath, Texture2D& out_Font)

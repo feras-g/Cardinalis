@@ -5,7 +5,7 @@
 
 class Camera;
 struct LightManager;
-struct CascadedShadowRenderer;
+class CascadedShadowRenderer;
 
 class VulkanUI
 {
