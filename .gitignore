@@ -4,5 +4,5 @@
 build
 /premake/scripts/bin
 /premake/scripts/obj
-/data/models/sanmiguel
 /data/models/local
+/data/shaders/vulkan/spirv
