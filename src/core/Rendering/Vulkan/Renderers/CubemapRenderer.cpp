@@ -80,7 +80,7 @@ Drawable* d_placeholder_cube;
 /* Cubemap rendering */
 void CubemapRenderer::init()
 {
-	init_resources("../../../data/textures/env/studio_small_09_4k.hdr");
+	init_resources("../../../data/textures/env/newport_loft.hdr");
 	init_descriptors();
 
 	pass_render_cubemap.add_color_attachment(cubemap_render_attachment.view);

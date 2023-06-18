@@ -22,7 +22,6 @@ static std::string base_path;
 void VulkanMesh::create_from_file(const std::string& filename)
 {
 	std::string_view ext = get_extension(filename);
-	LOG_INFO("Filename extension: {}", ext);
 	
 	if (ext == "glb" || ext == "gltf")
 	{
@@ -132,8 +131,6 @@ static void load_vertices(Primitive p, cgltf_primitive* primitive, GeometryData&
 		{
 		case cgltf_attribute_type_position:
 		{
-			//////LOG_DEBUG("        Positions : {0}", attribute->data->count);
-			//positionsBuffer.resize(attribute->data->count);
 			for (int i = 0; i < attribute->data->count; ++i)
 			{
 				glm::vec3 pos;
@@ -146,22 +143,18 @@ static void load_vertices(Primitive p, cgltf_primitive* primitive, GeometryData&
 			{
 				glm::vec4 bbox_min_OS (attribute->data->min[0], attribute->data->min[1], attribute->data->min[2], 1.0f);
 				geometry.bbox_min_WS = bbox_min_OS * geometry.world_mat;
-				LOG_ERROR("Bbox min : [{0}, {1}, {2}]", geometry.bbox_min_WS[0], geometry.bbox_min_WS[1], geometry.bbox_min_WS[2]);
 			}
 
 			if (attribute->data->has_max)
 			{
 				glm::vec4 bbox_max_OS(attribute->data->max[0], attribute->data->max[1], attribute->data->max[2], 1.0f);
 				geometry.bbox_max_WS = bbox_max_OS * geometry.world_mat;
-				LOG_ERROR("Bbox max : [{0}, {1}, {2}]", geometry.bbox_max_WS[0], geometry.bbox_max_WS[1], geometry.bbox_max_WS[2]);
 			}
 		}
 		break;
 
 		case cgltf_attribute_type_normal:
 		{
-			//////LOG_DEBUG("        Normals : {0}", attribute->data->count);
-			//normalsBuffer.resize(attribute->data->count);
 			glm::vec3 normal;
 			for (int i = 0; i < attribute->data->count; ++i)
 			{
@@ -173,7 +166,6 @@ static void load_vertices(Primitive p, cgltf_primitive* primitive, GeometryData&
 
 		case cgltf_attribute_type_texcoord:
 		{
-			//////LOG_DEBUG("        Normals : {0}", attribute->data->count);
 			for (int i = 0; i < attribute->data->count; i++)
 			{
 				glm::vec2 texcoord;
@@ -186,7 +178,6 @@ static void load_vertices(Primitive p, cgltf_primitive* primitive, GeometryData&
 
 		case cgltf_attribute_type_tangent:
 		{
-			//////LOG_DEBUG("        Tangents : {0}", attribute->data->count);
 			for (int i = 0; i < attribute->data->count; ++i)
 			{
 				glm::vec4 t;
@@ -209,14 +200,11 @@ static void load_vertices(Primitive p, cgltf_primitive* primitive, GeometryData&
 
 		geometry.vertices.push_back(vertex);
 	}
-
-	//////LOG_DEBUG("        Vertex buffer size : {0}", st_Mesh.vertices.size());
 }
 
 static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 {
 	// https://kcoley.github.io/glTF/extensions/2.0/Khronos/KHR_materials_pbrSpecularGlossiness/
-
 	cgltf_material* gltf_mat = gltf_primitive->material;
 	
 	Material material;
@@ -226,7 +214,6 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 	}
 	else
 	{
-		//std::string material_name = "Unnamed Material " + std::to_string(RenderObjectManager::materials.size());
 		/*
 			Base Color
 			Normal
@@ -275,8 +262,6 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 
 		if (gltf_mat->has_pbr_metallic_roughness)
 		{
-			//LOG_DEBUG("Material Workflow: Metallic/Roughness, Name : {0}", gltf_material->name ? gltf_material->name : "Unnamed");
-
 			cgltf_texture* tex_base_color = gltf_mat->pbr_metallic_roughness.base_color_texture.texture;
 			if (tex_base_color)
 			{
@@ -298,44 +283,13 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 			}
 		}
 
-		if (gltf_mat->has_pbr_specular_glossiness)
+		else if (gltf_mat->has_pbr_specular_glossiness)
 		{
 			assert(false);
-
-			////LOG_DEBUG("MATERIAL WORKFLOW: Specular-Glossiness, Name : {0}", material->name);
-
-			//materialProperties.type = MaterialWorkflowType::SpecularGlossiness;
-			//materialProperties.specularGlossiness =
-			//{
-			//	.DiffuseFactor = DirectX::XMFLOAT4(gltf_mat->pbr_specular_glossiness.diffuse_factor),
-			//	.SpecularFactor = DirectX::XMFLOAT3(gltf_mat->pbr_specular_glossiness.specular_factor),
-			//	.GlossinessFactor = gltf_mat->pbr_specular_glossiness.glossiness_factor
-			//};
-
-			//// Texture loading
-			//cgltf_texture* diffuseTexture = gltf_mat->pbr_specular_glossiness.diffuse_texture.texture;
-			//cgltf_texture* specularGlossinessTexture = gltf_mat->pbr_specular_glossiness.specular_glossiness_texture.texture;
-
-			//if (diffuseTexture != nullptr)
-			//{
-			//	materialProperties.specularGlossiness.hDiffuseTexture = LoadImageFile(data, m_MeshRootPath, diffuseTexture->image);
-			//	materialProperties.specularGlossiness.hasDiffuse = true;
-
-			//}
-
-			//if (specularGlossinessTexture != nullptr)
-			//{
-			//	materialProperties.specularGlossiness.hSpecularGlossinessTexture = LoadImageFile(data, m_MeshRootPath, specularGlossinessTexture->image);
-			//	materialProperties.specularGlossiness.hasSpecularGlossiness = true;
-
-			//}
-
-			//SetMaterial(data, primitive, gltf_mat, materialProperties);
 		}
 
 		std::size_t hash = MyHash<Material>{}(material);
 		std::string material_name = std::to_string(hash);
-		LOG_DEBUG("Loaded new material named {0}, workflow : (Metallic/Roughness)", material_name);
 
 		std::pair<size_t, Material*> mat_object = RenderObjectManager::get_material(material_name);
 		if (mat_object.second == nullptr)
@@ -346,9 +300,7 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 		{
 			primitive.material_id = mat_object.first;
 		}
-		
 	}
-	
 }
 
 static void load_primitive(cgltf_node* node, cgltf_primitive* primitive, GeometryData& geometry)
@@ -356,10 +308,6 @@ static void load_primitive(cgltf_node* node, cgltf_primitive* primitive, Geometr
 	Primitive p = {};
 	p.first_index = (uint32_t)geometry.indices.size();
 	p.index_count = (uint32_t)primitive->indices->count;
-	 
-	//glm::mat4 mesh_world_mat;
-	//cgltf_node_transform_world(node, glm::value_ptr(mesh_world_mat));
-	//p.mat_model *= mesh_world_mat;
 
 	glm::mat4 mesh_local_mat;
 	cgltf_node_transform_world(node, glm::value_ptr(mesh_local_mat));
@@ -374,7 +322,6 @@ static void load_primitive(cgltf_node* node, cgltf_primitive* primitive, Geometr
 
 	load_vertices(p, primitive, geometry);
 	load_material(primitive, p);
-	//p.material_id = 0;
 	geometry.primitives.push_back(p);
 }
 
@@ -411,13 +358,7 @@ void VulkanMesh::create_from_file_gltf(const std::string& filename)
 	if (result == cgltf_result_success)
 	{
 		result = cgltf_load_buffers(&options, data, filename.c_str());
-
 		
-		LOG_INFO("Start loading {}", filename);
-		LOG_INFO("# Materials : {}", data->materials_count);
-		LOG_INFO("# Textures : {}",  data->textures_count);
-		LOG_INFO("# Meshes : {}", data->meshes_count);
-
 		if (result == cgltf_result_success)
 		{
 			for (size_t i = 0; i < data->nodes_count; ++i)
@@ -427,8 +368,6 @@ void VulkanMesh::create_from_file_gltf(const std::string& filename)
 				process_node(false, &currNode, geometry_data);
 			}
 		}
-
-
 
 		m_num_vertices = geometry_data.vertices.size();
 		m_num_indices  = geometry_data.indices.size();
@@ -440,6 +379,8 @@ void VulkanMesh::create_from_file_gltf(const std::string& filename)
 
 		create_from_data(geometry_data.vertices, geometry_data.indices);
 
+		LOG_INFO("Loaded {} : {} Materials, {} Textures, Meshes : {}", filename, data->materials_count, data->textures_count, data->meshes_count);
+
 		cgltf_free(data);
 	}
 	else
@@ -449,39 +390,8 @@ void VulkanMesh::create_from_file_gltf(const std::string& filename)
 	}
 }
 
-
 bool Drawable::has_primitives() const { return RenderObjectManager::meshes[mesh_id].geometry_data.primitives.size() > 0; }
 const VulkanMesh& Drawable::get_mesh() const { return RenderObjectManager::meshes[mesh_id]; }
-
-//void SetMaterial(GeometryData* data, Primitive* primitive, cgltf_material* rawMaterial, MaterialProperties& material)
-//{
-//	auto materialIte = data->materialTable.find(rawMaterial->name);
-//
-//	if (rawMaterial->name != nullptr && materialIte != data->materialTable.end())
-//	{
-//		primitive->MaterialName = materialIte->first;
-//		primitive->MaterialId = materialIte->second;
-//	}
-//	else
-//	{
-//		// Insert new material
-//		int materialId = (int)data->materials.size();
-//
-//		std::string name = std::string("Material ").append(std::to_string(materialId));
-//
-//		material.Id = materialId;
-//		material.name = name;
-//
-//		primitive->MaterialName = material.name;
-//		primitive->MaterialId = materialId;
-//
-//		data->materialTable.insert({ name.c_str(), materialId });
-//		data->materials.push_back(material);
-//	}
-//}
-
-
-
 
 
 
