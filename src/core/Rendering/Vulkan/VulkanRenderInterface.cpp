@@ -283,7 +283,7 @@ void VulkanRenderInterface::CreateSurface(Window* window)
 void VulkanRenderInterface::CreateSwapchain()
 {
 	context.swapchain.reset(new VulkanSwapchain(m_Surface, vkPhysicalDevices[0]));
-	context.swapchain->Initialize(ENGINE_SWAPCHAIN_COLOR_FORMAT, ENGINE_SWAPCHAIN_COLOR_SPACE, ENGINE_SWAPCHAIN_DS_FORMAT);
+	context.swapchain->init(ENGINE_SWAPCHAIN_COLOR_FORMAT, ENGINE_SWAPCHAIN_COLOR_SPACE, ENGINE_SWAPCHAIN_DS_FORMAT);
 }
 
 VulkanFrame& VulkanRenderInterface::GetCurrentFrame()

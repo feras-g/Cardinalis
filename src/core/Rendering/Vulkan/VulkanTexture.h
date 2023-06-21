@@ -33,11 +33,11 @@ static constexpr ImageViewInitInfo ImageViewCubeTexture
 
 struct Texture
 {
-	VkImage               image			{ nullptr };
-	VkImageView		      view			{ nullptr };
-	VkDeviceMemory        deviceMemory	{ nullptr };
-	VkSampler             sampler		{ nullptr };
-	VkDescriptorImageInfo descriptor	{ nullptr };
+	VkImage               image			{ VK_NULL_HANDLE };
+	VkImageView		      view			{ VK_NULL_HANDLE };
+	VkDeviceMemory        deviceMemory	{ VK_NULL_HANDLE };
+	VkSampler             sampler		{ VK_NULL_HANDLE };
+	VkDescriptorImageInfo descriptor	{ VK_NULL_HANDLE };
 	bool initialized					{ false };		/* True if TextureInfo has been initialized through init(). */
 	TextureInfo			  info;
 
@@ -51,8 +51,6 @@ struct Texture
 	/* Create and allocated memory for a Vulkan image */
 	void create_vk_image(VkDevice device, bool isCubemap, VkImageUsageFlags imageUsage);
 	void create_vk_image_cube(VkDevice device, VkImageUsageFlags imageUsage);
-
-
 };
 
 

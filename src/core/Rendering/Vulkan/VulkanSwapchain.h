@@ -8,8 +8,8 @@ struct Texture2D;
 struct VulkanSwapchainInfo
 {
 	uint32_t imageCount;
-	VkFormat colorFormat;
-	VkFormat depthStencilFormat;
+	VkFormat color_format;
+	VkFormat depth_format;
 	VkColorSpaceKHR colorSpace;
 	VkExtent2D extent;
 	VkPresentModeKHR presentMode;
@@ -20,7 +20,7 @@ class VulkanSwapchain
 public:
 	VulkanSwapchain() = default;
 	VulkanSwapchain(VkSurfaceKHR surface, VkPhysicalDevice physDevice);
-	void Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkFormat depthStencilFormat);
+	void init(VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkFormat depthStencilFormat);
 	void Reinitialize();
 
 	// Reset metadata and destroy images and framebuffers
@@ -38,7 +38,6 @@ public:
 	// Data
 	std::vector<Texture2D> color_attachments;
 	std::vector<Texture2D> depthTextures;
-	std::vector<VkFramebuffer> framebuffers;
 private:
 	// Function pointers
 	PFN_vkGetPhysicalDeviceSurfaceSupportKHR		fpGetPhysicalDeviceSurfaceSupportKHR;

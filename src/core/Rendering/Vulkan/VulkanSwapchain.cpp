@@ -33,7 +33,7 @@ VulkanSwapchain::VulkanSwapchain(VkSurfaceKHR surface, VkPhysicalDevice physDevi
     LOG_WARN("Current present mode : {0}", string_VkPresentModeKHR(info.presentMode));
 }
 
-void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkFormat depthStencilFormat)
+void VulkanSwapchain::init(VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkFormat depthStencilFormat)
 {
     const VkInstance& hVkInstance = context.instance;
     const VkDevice& hDevice = context.device;
@@ -56,9 +56,9 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
     info.extent = caps.currentExtent;
     info.imageCount = NUM_FRAMES;// std::min(NUM_FRAMES, caps.maxImageCount);
 
-    info.colorFormat = colorFormat;
+    info.color_format = colorFormat;
     info.colorSpace = colorSpace;
-    info.depthStencilFormat = depthStencilFormat;// VK_FORMAT_D32_SFLOAT;
+    info.depth_format = depthStencilFormat;// VK_FORMAT_D32_SFLOAT;
 
     // Swapchain creation
     VkSwapchainCreateInfoKHR swapchainCreateInfo =
@@ -67,7 +67,7 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
             .flags=NULL,
             .surface=hSurface,
             .minImageCount= info.imageCount,
-            .imageFormat= info.colorFormat,
+            .imageFormat= info.color_format,
             .imageColorSpace= info.colorSpace,
             .imageExtent= info.extent,
             .imageArrayLayers=1,
@@ -86,7 +86,6 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
     
     depthTextures.resize(info.imageCount);
     color_attachments.resize(info.imageCount);
-    framebuffers.resize(info.imageCount);
 
     std::vector<VkImage> tmp(info.imageCount);
     VK_CHECK(fpGetSwapchainImagesKHR(hDevice, swapchain, &info.imageCount, tmp.data()));
@@ -112,7 +111,6 @@ void VulkanSwapchain::Initialize(VkFormat colorFormat, VkColorSpaceKHR colorSpac
 
         /* Depth attachment */
 		std::string ds_name = "Swapchain Depth/Stencil Image #" + std::to_string(i);
-
         depthTextures[i].init(depthStencilFormat, info.extent.width, info.extent.height, 1, false);
         depthTextures[i].create(context.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
         depthTextures[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT });
@@ -126,12 +124,19 @@ void VulkanSwapchain::Reinitialize()
     LOG_INFO("Reinitializing swapchain");
     vkDeviceWaitIdle(context.device);
     Destroy();
-    Initialize(info.colorFormat, info.colorSpace, info.depthStencilFormat);
+    init(info.color_format, info.colorSpace, info.depth_format);
 }
 
 void VulkanSwapchain::Destroy()
 {
+
+    for (uint32_t i = 0; i < info.imageCount; i++)
+    {
+        depthTextures[i].destroy(context.device);
+    }
+
     vkDestroySwapchainKHR(context.device, swapchain, nullptr);
+
 }
 
 VkResult VulkanSwapchain::AcquireNextImage(VkSemaphore imageAcquiredSmp, uint32_t* pBackbufferIndex) const

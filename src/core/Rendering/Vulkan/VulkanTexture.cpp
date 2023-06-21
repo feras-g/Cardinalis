@@ -195,11 +195,16 @@ void Texture::create_view(VkDevice device, const ImageViewInitInfo& viewInfo)
 
 void Texture::destroy(VkDevice device)
 {
-    if(view) vkDestroyImageView(device, view, nullptr);
-    if(image) 
+    if (view != VK_NULL_HANDLE)
+    {
+        vkDestroyImageView(device, view, nullptr);
+    }
+
+    if(image != VK_NULL_HANDLE)
     {  
         vkDestroyImage(device, image, nullptr);
         vkFreeMemory  (device, deviceMemory, nullptr);
+        image = VK_NULL_HANDLE;
     }
     *this = {};
 }
