@@ -1,29 +1,32 @@
 
-// Microfacet model : Specular term and Diffuse term
-// Specular term : Cook-Torrance model 
-// Diffuse term : Lambertian model
-
-#define PI 3.1415926538
-
-/* 
-    Normal distribution function. Specular distribution term D.
-    @param NoH 
-    @param roughness
+/*  
+*   Microfacet model : specular and diffuse term
+*   Specular term : Cook-Torrance model
+*   Diffuse term : Lambertian model 
 */
-float D_GGX(float NoH, float roughness) 
+
+const float PI = 3.1415926538;
+const float INV_PI = 1.0 / PI;
+
+/*
+    Normal distribution function. Specular distribution term D.
+    @param NoH
+    @param perceptual roughness
+*/
+float D_GGX(float NoH, float roughness)
 {
     float a = NoH * roughness;
     float k = roughness / (1.0 - NoH * NoH + a * a);
     return k * k * (1.0 / PI);
 }
 
-/* 
+/*
     Geometric shadowing and masking. Specular visibility term V.
-    @param NoV 
+    @param NoV
     @param NoL
     @param roughness
 */
-float V_SmithGGXCorrelated(float NoV, float NoL, float roughness) 
+float V_SmithGGXCorrelated(float NoV, float NoL, float roughness)
 {
     float a2 = roughness * roughness;
     float GGXV = NoL * sqrt(NoV * NoV * (1.0 - a2) + a2);
@@ -31,113 +34,83 @@ float V_SmithGGXCorrelated(float NoV, float NoL, float roughness)
     return 0.5 / (GGXV + GGXL);
 }
 
-/* 
+/*
     Fresnel term. Schlick approximation.
-    @param u 
-    @param f0 Reflectance at normal incidence. 
-    
+    @param u
+    @param f0 Reflectance at normal incidence.
+
 */
-vec3 F_Schlick(float u, vec3 f0) 
+vec3 F_Schlick(float u, vec3 f0)
 {
-    /* Reflectance at grazing angle (f90) is 1 for dielectrics and conductors */ 
+    /* Reflectance at grazing angle (f90) is 1 for dielectrics and conductors */
     float f = pow(1.0 - u, 5.0);
     return f + f0 * (1.0 - f);
 }
 
 /* Diffuse BRDF */
-float Fd_Lambert() 
+vec3 Fd_Lambert(vec3 diffuse_reflectance)
 {
-    return 1.0 / PI;
+    return diffuse_reflectance * INV_PI;
 }
 
-vec3 BRDF(vec3 n, vec3 v, vec3 l, vec3 h, vec3 light_color, vec3 irradiance, vec3 albedo, float metallic, float perceptual_roughness)
+/* Unreal Shading */
+float SpecularD(float NoH, float a)
 {
-    float NoV = clamp(abs(dot(n, v)), 0.00390625, 1.0);
-    float NoL = clamp(dot(n, l), 0.00390625, 1.0);
-    float NoH = clamp(dot(n, h), 0.00390625, 1.0);
-    float LoH = clamp(dot(l, h), 0.00390625, 1.0);
-    float HoV = clamp(dot(h, v), 0.00390625, 1.0);
-    float roughness = perceptual_roughness * perceptual_roughness;
+    float a_sq = a * a;
+    float d = (NoH * NoH) * (a_sq - 1.f) + 1.f;
+    return a_sq / (PI * d*d);
+}
+
+float SpecularG(float NoV, float NoL, float r)
+{
+	float k = ((r + 1.f) * (r + 1.f)) / 8.f;
+	float G_v = NoV / (NoV * (1.f - k) + k);
+	float G_l = NoL / (NoL * (1.f - k) + k);
+	return G_v * G_l;
+}
+
+vec3 SpecularF(vec3 F0, float HoV)
+{	
+	float e = (-5.55473 * HoV - 6.98316) * HoV;
+	return F0 + (1.f-F0) * pow(2, e);
+}
+
+vec3 GetSpecularReflectance(vec3 base_color, float metalness)
+{
+    vec3 f0_dielectric = vec3(0.04);
+    return mix(f0_dielectric, base_color, metalness);
+}
+
+struct BRDFData
+{
+    vec3 diffuse_reflectance;
+    vec3 specular_reflectance;  // Specular F0 at normal incidence
+};
+
+vec3 BRDF(vec3 n, vec3 v, vec3 l, vec3 h, vec3 light_color, vec3 irradiance, vec3 base_color, float metalness, float perceptual_roughness)
+{
+    float NoV = abs(dot(n, v)) + 1e-5;
+    float NoL = clamp(dot(n, l), 0.0, 1.0);
+    float NoH = clamp(dot(n, h), 0.0, 1.0);
+    float LoH = clamp(dot(l, h), 0.0, 1.0);
+    float VoH = clamp(dot(v, h), 0.0, 1.0);
 
     vec3 final_color = vec3(0);
+
+    /* Diffuse reflection */
+    vec3 diffuse_reflectance = base_color * (1.0f - metalness);
+    vec3 diffuse = Fd_Lambert(diffuse_reflectance);
+
+    /* Specular reflection */
+    // https://google.github.io/filament/Filament.md.html#table_commonmatreflectance
+    vec3 specular_reflectance = GetSpecularReflectance(base_color, metalness);
     
-    // Specular reflectance at incident angle for dielectrics
-    vec3 F0_Dielectric = vec3(0.04);
-    // Material specular reflectance at incident angle for dielectrics
-    vec3 F0_Material = mix(F0_Dielectric, albedo, metallic);
+    float D = SpecularD(NoH, perceptual_roughness);
+    vec3  F = SpecularF(specular_reflectance, VoH);
+    float G = SpecularG(NoV, NoL, perceptual_roughness);
+    vec3 specular = (D * G * F) / (4 * NoL * NoV);
 
-    /* Indirect lighting  */
-    /* Diffuse ambient */
-    vec3 specular_ratio = F_Schlick(NoV, F0_Material);
-    vec3 diffuse_ratio  = (1.0 - specular_ratio) * (1.0 - metallic);
-    vec3 ambient_diffuse_color  = irradiance * albedo;
-    vec3 ambient_diffuse  = ambient_diffuse_color * diffuse_ratio;
-
-    final_color += ambient_diffuse;
-
-    /* Direct lighting  */
-    /* Directional Light */ 
-    vec3 diffuse_color  = albedo * (1 - F0_Dielectric) * (1.0 - metallic);
-    float D = D_GGX(NoH, roughness);
-    vec3  F = F_Schlick(LoH, F0_Material);
-    float V = V_SmithGGXCorrelated(NoV, NoL, roughness);
-
-    vec3 Fd = diffuse_color * Fd_Lambert();
-    vec3 Fr = (D * V) * F;
-
-    final_color += NoL * light_color * (Fd + Fr);
+    final_color = irradiance * light_color * NoL * (diffuse + specular);
 
     return final_color;
-}
-
-/////////////////////////////////////////////////////////
-
-float DistributionGGX (vec3 N, vec3 H, float roughness){
-    float a2    = roughness * roughness * roughness * roughness;
-    float NdotH = max (dot (N, H), 0.0);
-    float denom = (NdotH * NdotH * (a2 - 1.0) + 1.0);
-    return a2 / (PI * denom * denom);
-}
-
-float geometrySchlickGGX (float NdotV, float roughness){
-    float r = (roughness + 1.0);
-    float k = (r * r) / 8.0;
-    return NdotV / (NdotV * (1.0 - k) + k);
-}
-
-float GeometrySmith (vec3 N, vec3 V, vec3 L, float roughness){
-    return geometrySchlickGGX (max (dot (N, L), 0.0), roughness) * 
-           geometrySchlickGGX (max (dot (N, V), 0.0), roughness);
-}
-
-vec3 fresnelSchlick (float cosTheta, vec3 F0){
-    return F0 + (1.0 - F0) * pow (1.0 - cosTheta, 5.0);
-}
-
-vec3 BRDF_OGL(vec3 N, vec3 V, vec3 L, vec3 H, vec3 light_color, vec3 albedo, float metallic, float perceptual_roughness)
-{
-    vec3 radiance     = light_color;        
-    float roughness = perceptual_roughness * perceptual_roughness;
-
-    vec3 F0 = vec3(0.04); 
-    F0 = mix(F0, albedo, metallic);
-
-    // cook-torrance brdf
-    float NDF = DistributionGGX(N, H, roughness);        
-    float G   = GeometrySmith(N, V, L, roughness);      
-    vec3 F    = fresnelSchlick(max(dot(H, V), 0.0), F0);       
-    
-    vec3 kS = F;
-    vec3 kD = vec3(1.0) - kS;
-    kD *= 1.0 - metallic;	  
-    
-    vec3 numerator    = NDF * G * F;
-    float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
-    vec3 specular     = numerator / denominator;  
-        
-    // add to outgoing radiance Lo
-    float NdotL = max(dot(N, L), 0.0);                
-    vec3 Lo =  (kD * albedo / PI + specular) * radiance * NdotL; 
-
-    return Lo;
 }
