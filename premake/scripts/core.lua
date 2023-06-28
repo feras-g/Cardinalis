@@ -16,14 +16,14 @@ project("CoreLib")
 	location(project_path)
 
 	files { 
-		project_path .. "**.h", project_path .. "**.cpp"
+		project_path .. "**.h", project_path .. "**.cpp", engine_root .. "data/**"
 	}
 
 	vpaths { 
 		["Rendering/Vulkan/*"] = { rendering_path .. "Vulkan/*" }, 
 		["Window/*"] = { project_path .. "Window/*" }, 
-		["Core"] = { project_path .. "Core/*" } 
-
+		["Core"] = { project_path .. "Core/*" }, 
+		["Assets/*"] = { engine_root .. "data/*" } 
 	}
 
 	includedirs {
