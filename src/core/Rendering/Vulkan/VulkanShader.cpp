@@ -3,29 +3,38 @@
 #include "Core/EngineLogger.h"
 #include "VulkanRenderInterface.h"
 
-#define SPIRV_FOURCC 0x07230203
+static constexpr uint32_t SPIRV_FOURCC = 0x07230203;
 
 static std::string base_spirv_folder("../../../data/shaders/vulkan/spirv/");
-VulkanShader::VulkanShader(const char* vertexShader, const char* fragShader)
+
+VulkanShader::VulkanShader(const char* vertex_shader_path, const char* fragment_shader_path)
 {
-	load_from_file(vertexShader, fragShader);
+	load_from_file(vertex_shader_path, fragment_shader_path);
 }
 
-void VulkanShader::load_from_file(const char* vertexShader, const char* fragShader)
+void VulkanShader::load_from_file(const char* vertex_shader_path, const char* fragment_shader_path)
 {
-	LoadModule(VK_SHADER_STAGE_VERTEX_BIT, vertexShader);
-	LoadModule(VK_SHADER_STAGE_FRAGMENT_BIT, fragShader);
+	create_shader_module(VK_SHADER_STAGE_VERTEX_BIT, vertex_shader_path);
+	create_shader_module(VK_SHADER_STAGE_FRAGMENT_BIT, fragment_shader_path);
 }
 
-bool VulkanShader::LoadModule(const VkShaderStageFlagBits stage, const char* filename)
+void VulkanShader::load_from_file(const char* compute_shader_path)
 {
-	if (stage != VK_SHADER_STAGE_FRAGMENT_BIT && stage != VK_SHADER_STAGE_VERTEX_BIT)
+	create_shader_module(VK_SHADER_STAGE_COMPUTE_BIT, compute_shader_path);
+}
+
+bool VulkanShader::create_shader_module(const VkShaderStageFlagBits stage, const char* filename)
+{
+	int supported = 
+		int(VK_SHADER_STAGE_FRAGMENT_BIT) | int(VK_SHADER_STAGE_VERTEX_BIT) | int(VK_SHADER_STAGE_COMPUTE_BIT);
+
+	if ((stage & supported) != stage)
 	{
 		LOG_ERROR("Shader stage not implemented.");
 		return false;
 	}
 
-	FILE* fp;
+	FILE* fp = nullptr;
 	errno_t fopenresult = fopen_s(&fp, (base_spirv_folder + filename).c_str(), "rb");
 	
 	if (fp == nullptr)
@@ -42,18 +51,17 @@ bool VulkanShader::LoadModule(const VkShaderStageFlagBits stage, const char* fil
 		assert(false);
 	}
 
-	// Get file size in bytes
+	/* Extract bytecode */
 	fseek(fp, 0L, SEEK_END);
-	size_t filesizeInBytes = ftell(fp);
+	size_t bytecode_size_bytes = ftell(fp);
 	rewind(fp);
 
-	// Extract bytecode
-	uint32_t* bytecode = new uint32_t[filesizeInBytes/sizeof(uint32_t)];
-	fread(bytecode, filesizeInBytes, 1, fp);
+	uint32_t* bytecode = new uint32_t[bytecode_size_bytes/sizeof(uint32_t)];
+	fread(bytecode, bytecode_size_bytes, 1, fp);
 	fclose(fp);
 
-	// Create module
-	if (!bytecode)
+	/* Create module */
+	if (bytecode == nullptr)
 	{
 		LOG_ERROR("Cannot read SPIR-V bytecode.", filename);
 		return false;
@@ -63,16 +71,18 @@ bool VulkanShader::LoadModule(const VkShaderStageFlagBits stage, const char* fil
 	{
 		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
 		.flags = 0,
-		.codeSize = filesizeInBytes,
+		.codeSize = bytecode_size_bytes,
 		.pCode = bytecode,
 	};
 
-	VkShaderModule* module = stage == VK_SHADER_STAGE_VERTEX_BIT	? &fsModule :
-							 stage == VK_SHADER_STAGE_FRAGMENT_BIT  ? &vsModule : VK_NULL_HANDLE;
+	VkShaderModule* module =
+		stage == VK_SHADER_STAGE_VERTEX_BIT		? &module_fragment_stage :
+		stage == VK_SHADER_STAGE_FRAGMENT_BIT  	? &module_vertex_stage :
+		stage == VK_SHADER_STAGE_COMPUTE_BIT 	? &module_compute_stage : VK_NULL_HANDLE;
 
 	VK_CHECK(vkCreateShaderModule(context.device, &mci, nullptr, module));
 
-	pipelineStages.push_back(PipelineShaderStageCreateInfo(*module, stage, "main"));
+	pipeline_stages.push_back(PipelineShaderStageCreateInfo(*module, stage, "main"));
 
 	LOG_INFO("{1} : Created {0} module successfully.", string_VkShaderStageFlagBits(stage), filename);
 

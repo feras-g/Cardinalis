@@ -7,14 +7,16 @@ class VulkanShader
 {
 public:
 	VulkanShader() = default;
-	VulkanShader(const char* vertexShader, const char* fragShader);
-	bool LoadModule(const VkShaderStageFlagBits stage, const char* filename);
-	void load_from_file(const char* vertexShader, const char* fragShader);
+	VulkanShader(const char* vertex_shader_path, const char* fragment_shader_path);
+	VulkanShader(const char* compute_shader_path);
+	bool create_shader_module(const VkShaderStageFlagBits stage, const char* filename);
+	void load_from_file(const char* vertex_shader_path, const char* fragment_shader_path);
+	void load_from_file(const char* compute_shader_path);
 
-	std::vector<VkPipelineShaderStageCreateInfo> pipelineStages;
+	std::vector<VkPipelineShaderStageCreateInfo> pipeline_stages;
 protected:
-	VkShaderModule fsModule;
-	VkShaderModule vsModule;
-
+	VkShaderModule module_fragment_stage = VK_NULL_HANDLE;
+	VkShaderModule module_vertex_stage = VK_NULL_HANDLE;
+	VkShaderModule module_compute_stage = VK_NULL_HANDLE;
 };
 
