@@ -123,7 +123,10 @@ public:
 	void configure();
 	void create_buffers();
 
-	static void add_drawable(uint32_t mesh_id, const std::string& name, bool visible = true);
+	static void add_drawable(size_t mesh_id, const std::string& name, bool visible = true, 
+	                         glm::vec3 position = {0,0,0}, glm::vec3 rotation = {0,0,0}, glm::vec3 scale = {1,1,1});
+	static void add_drawable(std::string_view mesh_name, std::string_view name, bool visible,
+	                         glm::vec3 position = {0,0,0}, glm::vec3 rotation = {0,0,0}, glm::vec3 scale = {1,1,1});
 	static size_t add_texture(const std::string& filename, const std::string& name, VkFormat format = VK_FORMAT_R8G8B8A8_UNORM, bool calc_mip = true);
 	static size_t add_texture(const Texture2D& texture, const std::string& name);
 	static size_t add_material(Material material, const std::string& name);
@@ -132,6 +135,7 @@ public:
 	static std::pair<size_t, Material*> get_material(const std::string& name);
 	static std::pair<size_t, TransformData*> get_drawable_data(const std::string& name);
 	static VulkanMesh* get_mesh(const std::string& name);
+	static size_t get_mesh_id(const std::string& name);
 	static std::pair<size_t, Texture2D*> get_texture(const std::string& name);
 	static void update_per_object_data(const VulkanRendererBase::PerFrameData& frame_data);
 
@@ -140,7 +144,7 @@ public:
 	static inline std::vector<Material> materials;
 	static inline std::vector<Texture2D> textures;
 
-	static inline std::unordered_map<std::string, size_t> mesh_from_name;
+	static inline std::unordered_map<std::string, size_t> mesh_id_from_name;
 	static inline std::unordered_map<std::string, size_t> drawable_from_name;
 	static inline std::unordered_map<std::string, size_t> drawable_datas_from_name;
 	static inline std::unordered_map<std::string, size_t> material_from_name;
@@ -175,5 +179,4 @@ public:
 	static inline glm::vec3 global_bbox_max_WS { FLT_MIN };
 private:
 };
-
 

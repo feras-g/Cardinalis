@@ -31,53 +31,6 @@ void VulkanMesh::create_from_file(const std::string& filename)
 	{
 		assert(false);
 	}
-//	else
-//	{
-//		const aiScene* scene = aiImportFile(filename.data(), aiProcess_Triangulate);
-//
-//		assert(scene->HasMeshes());
-//
-//		// Load vertices
-//		std::vector<VertexData> vertices;
-//		std::vector<unsigned int> indices;
-//
-//		const aiVector3D vec3_zero{ 0.0f, 0.0f, 0.0f };
-//		for (size_t meshIdx = 0; meshIdx < scene->mNumMeshes; meshIdx++)
-//		{
-//			const aiMesh* mesh = scene->mMeshes[meshIdx];
-//
-//			/* vertices */
-//			for (size_t i = 0; i < mesh->mNumVertices; i++)
-//			{
-//				const aiVector3D& p = mesh->mVertices[i];
-//				const aiVector3D& n = mesh->HasNormals() ? mesh->mNormals[i] : vec3_zero;
-//				const aiVector3D& uv = mesh->HasTextureCoords(i) ? mesh->mTextureCoords[0][i] : p;
-//
-//				vertices.push_back({ .pos = {p.x, p.y, p.z}, .normal = {n.x, n.y, n.z}, .uv = {uv.x,  uv.y} });
-//			}
-//
-//			/* indices */
-//			for (size_t faceIdx = 0; faceIdx < mesh->mNumFaces; faceIdx++)
-//			{
-//				const aiFace& face = mesh->mFaces[faceIdx];
-//
-//				indices.push_back(face.mIndices[0]);
-//				indices.push_back(face.mIndices[1]);
-//				indices.push_back(face.mIndices[2]);
-//			}
-//		}
-//
-//		m_num_vertices = vertices.size();
-//		m_num_indices = indices.size();
-//
-//		aiReleaseImport(scene);
-//
-//		m_index_buf_size_bytes = indices.size() * sizeof(unsigned int);
-//		m_vertex_buf_size_bytes = vertices.size() * sizeof(VertexData);
-//
-//		create_vertex_index_buffer(m_vertex_index_buffer, vertices.data(), m_vertex_buf_size_bytes, indices.data(), m_index_buf_size_bytes);
-//	}
-//
 }
 
 void VulkanMesh::create_from_data(std::span<VertexData> vertices, std::span<unsigned int> indices)
@@ -248,6 +201,7 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 			}
 		};
 
+
 		cgltf_texture* tex_normal = gltf_mat->normal_texture.texture;
 		if (tex_normal)
 		{
@@ -345,22 +299,71 @@ static void process_node(bool bIsChild, cgltf_node* p_Node, GeometryData& geomet
 }
 
 
+static void load_textures(cgltf_texture* textures, size_t size)
+{
+//	std::function load_tex = [](cgltf_texture* tex, VkFormat format, bool calc_mip) -> size_t
+//	{
+//		const char* uri = tex->image->uri;
+//		std::string name = uri ? base_path + uri : base_path + tex->image->name;
+//
+//		std::pair<size_t, Texture2D*> tex_object = RenderObjectManager::get_texture(name);
+//
+//		if (tex_object.second == nullptr)
+//		{
+//			if (uri)
+//			{
+//				/* Load from file path */
+//				return RenderObjectManager::add_texture(base_path + uri, name, format, calc_mip);
+//			}
+//			else
+//			{
+//				/* Load from buffer */
+//				assert(false);
+//				return 0;
+//			}
+//		}
+//		else
+//		{
+//			return tex_object.first;
+//		}
+//	};
+//
+//	assert(textures != nullptr);
+//	
+//	std::unordered_map<const char*, Image> image_datas;
+//
+//	for (size_t i = 0; i < size; i++)
+//	{
+//		cgltf_texture* tex = textures[i];
+//		const char* uri = tex->image->uri;
+//		std::string name = uri ? base_path + uri : base_path + tex->image->name;
+//		Image im = load_image_from_file(base_path + uri);
+//		image_datas.insert({ name, im });
+//	}
+
+}
+
+
 void VulkanMesh::create_from_file_gltf(const std::string& filename)
 {
+	auto start = std::chrono::steady_clock::now();
+
 	cgltf_options options = { };
 	cgltf_data* data = NULL;
 	cgltf_result result = cgltf_parse_file(&options, filename.c_str(), &data);
 
 	auto const pos = filename.find_last_of('/');
-
+	
 	base_path = filename.substr(0, pos + 1);
-
+	
 	if (result == cgltf_result_success)
 	{
 		result = cgltf_load_buffers(&options, data, filename.c_str());
 		
 		if (result == cgltf_result_success)
 		{
+			load_textures(data->textures, data->textures_count);
+
 			for (size_t i = 0; i < data->nodes_count; ++i)
 			{
 				cgltf_node& currNode = data->nodes[i];
@@ -388,6 +391,10 @@ void VulkanMesh::create_from_file_gltf(const std::string& filename)
 		LOG_ERROR("Could not read GLTF/GLB file. [error code : {0}]", result);
 		assert(false);
 	}
+	
+	auto end = std::chrono::steady_clock::now();
+	std::chrono::duration<double> elapsed_seconds = end-start;
+	LOG_WARN("Loaded GLTF model in {} s", elapsed_seconds.count());
 }
 
 bool Drawable::has_primitives() const { return RenderObjectManager::meshes[mesh_id].geometry_data.primitives.size() > 0; }

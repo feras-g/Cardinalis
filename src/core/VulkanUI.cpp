@@ -81,7 +81,7 @@ VulkanUI& VulkanUI::ShowSceneViewportPanel(
 
 	if (ImGui::Begin("GBuffers", 0, 0))
 	{
-		ImVec2 thumbnail_size{ 64, 64 };
+		ImVec2 thumbnail_size{ 512, 512 };
 		//ImGui::SetWindowSize({ thumbnail_size.x * 5, thumbnail_size.y });
 		
 		{

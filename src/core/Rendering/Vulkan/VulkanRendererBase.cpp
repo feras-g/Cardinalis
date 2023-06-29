@@ -140,7 +140,7 @@ void RenderObjectManager::init()
 	descriptor_pool = create_descriptor_pool(pool_sizes, num_mesh_descriptor_sets + num_drawable_data_descriptor_sets);
 
 	/* Default material */
-	uint32_t placeholder_tex_id = (uint32_t)add_texture("../../../data/textures/checker.png", "Placeholder Texture");
+	uint32_t placeholder_tex_id = (uint32_t)add_texture("../../../data/textures/checker_grey.png", "Placeholder Texture");
 	static Material default_material
 	{
 		.tex_base_color_id = placeholder_tex_id,
@@ -204,18 +204,26 @@ RenderObjectManager::~RenderObjectManager()
     vkDestroyDescriptorSetLayout(context.device, drawable_descriptor_set_layout, nullptr);
     vkDestroyDescriptorSetLayout(context.device, mesh_descriptor_set_layout, nullptr);
 }
-
-void RenderObjectManager::add_drawable(uint32_t mesh_id, const std::string& name, bool visible)
+void RenderObjectManager::add_drawable(std::string_view mesh_name, std::string_view name, bool visible,
+                                       glm::vec3 position, glm::vec3 rotation, glm::vec3 scale)
+{
+	add_drawable(get_mesh_id(mesh_name.data()), name.data(), visible, position, rotation, scale);
+}
+void RenderObjectManager::add_drawable(size_t mesh_id, const std::string& name, bool visible, 
+                                       glm::vec3 position, glm::vec3 rotation, glm::vec3 scale)
 {
 	Drawable drawable;
 	drawable.mesh_id = mesh_id;
 	drawable.visible = visible;
+	drawable.position = position;
+	drawable.rotation = rotation;
+	drawable.scale = scale;
 	drawable.update_model_matrix();
 	if (!drawable.has_primitives())
 	{
-		drawable.material_id = (uint32_t)RenderObjectManager::get_material("Default Material").first;
+		drawable.material_id = RenderObjectManager::get_material("Default Material").first;
 	}
-	drawable.id = (uint32_t)drawables.size();
+	drawable.id = drawables.size();
 	size_t transform_data_idx = transform_datas.size();
 
 	drawables.push_back(drawable);
@@ -267,7 +275,7 @@ size_t RenderObjectManager::add_mesh(VulkanMesh& mesh, const std::string& name)
 	size_t mesh_idx = meshes.size();
 	mesh_names.push_back(name);
 	meshes.push_back(mesh);
-	mesh_from_name.insert({ name, mesh_idx });
+	mesh_id_from_name.insert({ name, mesh_idx });
 	return mesh_idx;
 }
 
@@ -305,10 +313,20 @@ std::pair<size_t, TransformData*> RenderObjectManager::get_drawable_data(const s
 	return {};
 }
 
+size_t RenderObjectManager::get_mesh_id(const std::string& name)
+{
+	auto ite = mesh_id_from_name.find(name);
+	if (ite != mesh_id_from_name.end())
+	{
+		return ite->second;
+	}
+	return 0;
+}
+
 VulkanMesh* RenderObjectManager::get_mesh(const std::string& name)
 {
-	auto ite = mesh_from_name.find(name);
-	if (ite != mesh_from_name.end())
+	auto ite = mesh_id_from_name.find(name);
+	if (ite != mesh_id_from_name.end())
 	{
 		return &meshes[ite->second];
 	}
