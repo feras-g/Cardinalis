@@ -6,7 +6,7 @@ static void example_descriptor_set_creation()
 {
 	/*
 		Example showing the creation of a descriptor set containing
-		one uniform buffer descriptor and one combine image sampler
+		one uniform buffer descriptor and one combined image sampler
 	*/
 
 	//VkDescriptorPool pool = create_descriptor_pool(0, 1, 1, 0, NUM_FRAMES);
@@ -74,17 +74,19 @@ struct DescriptorSet
 		desc_buffer_info.offset = offset;
 		desc_buffer_info.range = range;
 
-		descriptor_writes.push_back(BufferWriteDescriptorSet(set, binding, &desc_buffer_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+		VkWriteDescriptorSet write = BufferWriteDescriptorSet(set, binding, &desc_buffer_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+		descriptor_writes.push_back(write);
 	}
 
-	void write_descriptor_combined_image_sampler(uint32_t binding, VkImageView view, VkSampler sampler)
+	void write_descriptor_combined_image_sampler(uint32_t binding, VkImageView& view, VkSampler sampler)
 	{
 		VkDescriptorImageInfo desc_img_info = {};
 		desc_img_info.sampler = sampler;
 		desc_img_info.imageView = view;
 		desc_img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-		descriptor_writes.push_back(ImageWriteDescriptorSet(set, binding, &desc_img_info));
+		VkWriteDescriptorSet write = ImageWriteDescriptorSet(set, binding, &desc_img_info);
+		descriptor_writes.push_back(write);
 	}
 
 	void update()
