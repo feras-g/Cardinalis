@@ -105,8 +105,9 @@ void ShadowRenderer::draw_scene(VkCommandBuffer cmd_buffer)
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 1, 1, &mesh.descriptor_set, 0, nullptr);
 
 		/* Object descriptor set : per instance data */
-		uint32_t dynamic_offset = drawable.id * RenderObjectManager::per_object_data_dynamic_aligment;
-		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 2, 1, &RenderObjectManager::drawable_descriptor_set, 1, &dynamic_offset);
+		uint32_t dynamic_offset = static_cast<uint32_t>(drawable.id * RenderObjectManager::per_object_data_dynamic_aligment);
+		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 
+		                        2, 1, &RenderObjectManager::drawable_descriptor_set, 1, &dynamic_offset);
 
 		if (drawable.visible)
 		{
@@ -196,7 +197,7 @@ void CascadedShadowRenderer::update_desc_sets()
 		std::vector<VkWriteDescriptorSet> desc_writes = {};
 
 		/* Cascades projection matrices UBO */
-		VkDescriptorBufferInfo info = { proj_mats_ubo[frame_idx].buffer,  0, mats_ubo_size_bytes };
+		VkDescriptorBufferInfo info = { view_proj_mats_ubo[frame_idx].buffer,  0, mats_ubo_size_bytes };
 		desc_writes.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], 0, &info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
 
 		vkUpdateDescriptorSets(context.device, (uint32_t)desc_writes.size(), desc_writes.data(), 0, nullptr);
@@ -208,7 +209,7 @@ void CascadedShadowRenderer::create_buffers()
 	mats_ubo_size_bytes = sizeof(glm::mat4) * NUM_CASCADES;
 	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
-		create_buffer(Buffer::Type::UNIFORM, proj_mats_ubo[frame_idx], mats_ubo_size_bytes);
+		create_buffer(Buffer::Type::UNIFORM, view_proj_mats_ubo[frame_idx], mats_ubo_size_bytes);
 	}
 	cascade_ends_ubo_size_bytes = sizeof(glm::vec4);
 	create_buffer(Buffer::Type::UNIFORM, cascade_ends_ubo, cascade_ends_ubo_size_bytes);
@@ -218,7 +219,7 @@ CascadedShadowRenderer::~CascadedShadowRenderer()
 {
 	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
-		destroy_buffer(proj_mats_ubo[frame_idx]);
+		destroy_buffer(view_proj_mats_ubo[frame_idx]);
 	}
 	destroy_buffer(cascade_ends_ubo);
 }
@@ -323,9 +324,9 @@ void CascadedShadowRenderer::compute_cascade_ortho_proj(size_t frame_idx)
 		/* Orthographics projection */
 		glm::vec3 eye = frustum_center + (-light_direction * cascade_radius * 2.0f);
 		glm::mat4 light_view = glm::lookAt(eye, frustum_center, up);
-		cascades_proj_mats[i] = glm::ortho(-cascade_radius, cascade_radius, -cascade_radius, cascade_radius, -cascade_radius * 6.0f, 6.0f * cascade_radius) * light_view;
+		view_proj_mats[i] = glm::ortho(-cascade_radius, cascade_radius, -cascade_radius, cascade_radius, -cascade_radius * 6.0f, 6.0f * cascade_radius) * light_view;
 	}
-	upload_buffer_data(proj_mats_ubo[frame_idx], cascades_proj_mats.data(), mats_ubo_size_bytes, 0);
+	upload_buffer_data(view_proj_mats_ubo[frame_idx], view_proj_mats.data(), mats_ubo_size_bytes, 0);
 }
 
 void CascadedShadowRenderer::render(size_t current_frame_idx, VkCommandBuffer cmd_buffer)

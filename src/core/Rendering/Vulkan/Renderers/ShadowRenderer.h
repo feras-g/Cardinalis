@@ -66,7 +66,7 @@ public:
 	void compute_cascade_ortho_proj(size_t current_frame_idx);
 	void render(size_t current_frame_idx, VkCommandBuffer cmd_buffer);
 	void draw_scene(VkCommandBuffer cmd_buffer);
-	static inline Buffer proj_mats_ubo[NUM_FRAMES];
+	static inline Buffer view_proj_mats_ubo[NUM_FRAMES];
 	static inline Buffer cascade_ends_ubo;
 
 	static inline size_t mats_ubo_size_bytes = 0;
@@ -77,6 +77,6 @@ public:
 	Camera* h_camera;
 	static inline std::array<float, NUM_CASCADES> z_splits;
 	std::array<glm::mat4, NUM_CASCADES> camera_splits_proj_mats;
-	std::array<glm::mat4, NUM_CASCADES> cascades_proj_mats;
+	std::array<glm::mat4, NUM_CASCADES> view_proj_mats;
 
 };

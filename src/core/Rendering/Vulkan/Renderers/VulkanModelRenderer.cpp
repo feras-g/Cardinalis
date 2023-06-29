@@ -16,7 +16,7 @@ VulkanModelRenderer::VulkanModelRenderer()
 
 	/* Configure layout for descriptor set used for a Pass */
 	std::vector<VkDescriptorSetLayoutBinding> bindings = {};
-	bindings.push_back({ 0, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, (uint32_t)RenderObjectManager::textures.size(), VK_SHADER_STAGE_FRAGMENT_BIT });  /* Texture array */
+	bindings.push_back({ 0, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, (uint32_t)RenderObjectManager::textures.size(), VK_SHADER_STAGE_FRAGMENT_BIT });  /* Mesh Textures array */
 	bindings.push_back({ 1, VK_DESCRIPTOR_TYPE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT });  /* Sampler */
 	bindings.push_back({ 2, VK_DESCRIPTOR_TYPE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT });  /* Sampler */
 	bindings.push_back({ 3, VK_DESCRIPTOR_TYPE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT });  /* Sampler */
@@ -55,7 +55,7 @@ void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buf
 {
 	VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Deferred G-Buffer Pass");
 
-	/* Transition */
+	/* Transition to write */
 	VulkanRendererBase::m_gbuffer_albdedo[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	VulkanRendererBase::m_gbuffer_normal[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	VulkanRendererBase::m_gbuffer_depth[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
@@ -81,7 +81,7 @@ void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buf
 	
 	m_dyn_renderpass[currentImageIdx].end(cmd_buffer);
 
-	/* Transition */
+	/* Transition to read */
 	VulkanRendererBase::m_gbuffer_albdedo[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	VulkanRendererBase::m_gbuffer_normal[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	VulkanRendererBase::m_gbuffer_depth[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -95,7 +95,7 @@ void VulkanModelRenderer::draw_scene(VkCommandBuffer cmdBuffer, size_t current_f
 	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ppl_layout, 0, 1, &drawable.get_mesh().descriptor_set, 0, nullptr);
 
 	/* Object descriptor set : per instance data */
-	uint32_t dynamic_offset  = drawable.id * RenderObjectManager::per_object_data_dynamic_aligment;
+	uint32_t dynamic_offset  = static_cast<uint32_t>(drawable.id * RenderObjectManager::per_object_data_dynamic_aligment);
 	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ppl_layout, 1, 1, &RenderObjectManager::drawable_descriptor_set, 1, &dynamic_offset);
 	
 	if (drawable.get_mesh().geometry_data.primitives.size())

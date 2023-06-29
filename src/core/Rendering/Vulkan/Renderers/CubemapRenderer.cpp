@@ -6,7 +6,7 @@
 #include <glm/gtx/string_cast.hpp>
 
 /*
-	Basic steps:
+	Basic steps for skybox rendering from equirectangular map :
 	- Load an equirectangular map
 	- Create a color attachment containing 6 layers
 	- Render the equirect map to each layer, with a different view corresponding to each face
@@ -80,7 +80,7 @@ Drawable* d_placeholder_cube;
 /* Cubemap rendering */
 void CubemapRenderer::init()
 {
-	init_resources("../../../data/textures/env/newport_loft.hdr");
+	init_resources("../../../data/textures/env/pisa.hdr");
 	init_descriptors();
 
 	pass_render_cubemap.add_color_attachment(cubemap_render_attachment.view);
@@ -137,13 +137,8 @@ void CubemapRenderer::init_irradiance_map_rendering()
 	irradiance_desc_set.assign_layout(irradiance_desc_layout);
 	irradiance_desc_set.create(pool, "Gen Irradiance");
 
-	VkDescriptorImageInfo image_info = {};
-	image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	image_info.imageView = tex_cubemap_view;
-	image_info.sampler = sampler;
-
-	VkWriteDescriptorSet write = ImageWriteDescriptorSet(irradiance_desc_set.set, 0, &image_info);
-	vkUpdateDescriptorSets(context.device, 1, &write, 0, nullptr);
+	irradiance_desc_set.write_descriptor_combined_image_sampler(0, tex_cubemap_view, sampler);
+	irradiance_desc_set.update();
 
 	/* Pipeline layout */
 	std::vector<VkDescriptorSetLayout> desc_set_layouts = {};
