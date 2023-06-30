@@ -69,17 +69,9 @@ void main()
 		vec3 N_map = sample_nearest(material.tex_normal_id, uv.xy).xyz * 2.0 - 1.0;
 		N = perturb_normal(N, N_map, vertexToEye, uv.xy);
     }
-
-    if(material.tex_base_color_id == 0)
-    {
-        gbuffer_base_color = vec4(material.base_color_factor.rgba);
-    }
-    else
-    {
-        gbuffer_base_color = vec4(sample_nearest(material.tex_base_color_id, uv.xy).rgba);
-    }
-    gbuffer_normalWS           = vec4(N, 1.0f);
-    gbuffer_depthNDC           = depthCS.z/depthCS.w;
+    gbuffer_base_color = vec4(sample_nearest(material.tex_base_color_id, uv.xy).rgba);
+    gbuffer_normalWS   = vec4(N, 1.0f);
+    gbuffer_depthNDC   = depthCS.z/depthCS.w;
     /* https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#metallic-roughness-material */
     /* Metallic : G, Roughness: B */
 
@@ -89,6 +81,6 @@ void main()
     }
     else
     {
-        gbuffer_metallic_roughness = vec4(material.roughness_factor, material.metallic_factor, 1, 1);
+        gbuffer_metallic_roughness = vec4(0, 0, 0, 1);
     }
 }
