@@ -81,19 +81,19 @@ void SampleApp::InitSceneResources()
 	//LoadMesh("../../../data/models/local/attic_gltf/scene.gltf", "Nvidia-Attic");
 	//LoadMesh("../../../data/models/local/knight/scene.gltf", "Knight");
 
-	glm::ivec3 dimensions(5,5,5);
-	float spacing = 2.5f;
-	for (int x = 0; x < dimensions.x; x++)
-	{
-		for (int y = 0; y < dimensions.y; y++)
-		{
-			for (int z = 0; z < dimensions.z; z++)
-			{
-				glm::vec3 position{ x, y, z };
-				AddDrawable("Icosphere", true, position * spacing);
-			}
-		}
-	}
+//	glm::ivec3 dimensions(5,5,5);
+//	float spacing = 2.5f;
+//	for (int x = 0; x < dimensions.x; x++)
+//	{
+//		for (int y = 0; y < dimensions.y; y++)
+//		{
+//			for (int z = 0; z < dimensions.z; z++)
+//			{
+//				glm::vec3 position{ x, y, z };
+//				AddDrawable("Icosphere", true, position * spacing);
+//			}
+//		}
+//	}
 
 	m_rbo.configure();
 }
@@ -131,6 +131,7 @@ void SampleApp::Initialize()
 
 	m_imgui_renderer->init(m_shadow_renderer);
 	m_postprocess.init();
+	m_postprocess.m_postfx_downsample.init();
 }
 
 void SampleApp::Update(float dt)
@@ -152,7 +153,8 @@ void SampleApp::Update(float dt)
 
 void SampleApp::Render()
 {
-	VulkanFrame current_frame = context.frames[context.curr_frame_idx];
+	const uint32_t& frame_idx = context.curr_frame_idx;
+	VulkanFrame current_frame = context.frames[frame_idx];
 
 	VulkanSwapchain& swapchain = *m_RHI->GetSwapchain();
 
@@ -171,19 +173,19 @@ void SampleApp::Render()
 	VK_CHECK(vkBeginCommandBuffer(current_frame.cmd_buffer, &cmdBufferBeginInfo));
 	
 	/* Transition to color attachment */
-	swapchain.color_attachments[context.curr_frame_idx].transition_layout(current_frame.cmd_buffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	swapchain.color_attachments[frame_idx].transition_layout(current_frame.cmd_buffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	
 	{
-		m_model_renderer->render(context.curr_frame_idx, current_frame.cmd_buffer);
-		m_cascaded_shadow_renderer.render(context.curr_frame_idx, current_frame.cmd_buffer);
-		m_deferred_renderer.render(context.curr_frame_idx, current_frame.cmd_buffer);
-		m_cubemap_renderer.render_skybox(context.curr_frame_idx, current_frame.cmd_buffer);
-		m_imgui_renderer->render(context.curr_frame_idx, current_frame.cmd_buffer);
-		m_postprocess.render_downsample();
+		m_model_renderer->render(frame_idx, current_frame.cmd_buffer);
+		m_cascaded_shadow_renderer.render(frame_idx, current_frame.cmd_buffer);
+		m_deferred_renderer.render(frame_idx, current_frame.cmd_buffer);
+		m_postprocess.m_postfx_downsample.render(current_frame.cmd_buffer);
+		m_cubemap_renderer.render_skybox(frame_idx, current_frame.cmd_buffer);
+		m_imgui_renderer->render(frame_idx, current_frame.cmd_buffer);
 	}
 	
 	/* Transition to present */
-	swapchain.color_attachments[context.curr_frame_idx].transition_layout(current_frame.cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+	swapchain.color_attachments[frame_idx].transition_layout(current_frame.cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 	
 	VK_CHECK(vkEndCommandBuffer(current_frame.cmd_buffer));
 
