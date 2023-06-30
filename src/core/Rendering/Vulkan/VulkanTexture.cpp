@@ -37,7 +37,7 @@ void Texture2D::create_from_file(
 }
 
 void Texture2D::create_from_data(
-    Image*               image,
+    void*               data,
 	std::string_view    debug_name,
     VkImageUsageFlags	imageUsage,
     VkImageLayout		layout)
@@ -49,7 +49,7 @@ void Texture2D::create_from_data(
     transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     end_temp_cmd_buffer(cmd_buffer);
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
-    upload_data(context.device, image);
+    upload_data(context.device, data);
     if (info.mipLevels > 1)
     {
         generate_mipmaps();
@@ -60,6 +60,15 @@ void Texture2D::create_from_data(
         transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         end_temp_cmd_buffer(cmd_buffer);
     }
+}
+
+void Texture2D::create_from_data(
+	Image*               image,
+	std::string_view    debug_name,
+	VkImageUsageFlags	imageUsage,
+	VkImageLayout		layout)
+{
+	create_from_data(image->get_data(), debug_name, imageUsage, layout);
 }
 
 void Texture2D::create(VkDevice device, VkImageUsageFlags imageUsage, std::string_view debug_name)
@@ -146,7 +155,7 @@ void Texture::copy_from_buffer(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer)
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageRegion);
 }
 
-void Texture::upload_data(VkDevice device, Image* pImage)
+void Texture::upload_data(VkDevice device, void* data)
 {
     uint32_t bpp = GetBytesPerPixelFromFormat(info.imageFormat);
     VkDeviceSize layerSizeInBytes = info.width * info.height * bpp;
@@ -155,7 +164,7 @@ void Texture::upload_data(VkDevice device, Image* pImage)
     Buffer stagingBuffer;
     create_buffer(Buffer::Type::STAGING,stagingBuffer, imageSizeInBytes);
     
-    upload_buffer_data(stagingBuffer, pImage->get_data(), imageSizeInBytes, 0);
+	upload_buffer_data(stagingBuffer, data, imageSizeInBytes, 0);
 
     VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
     copy_from_buffer(cmd_buffer, stagingBuffer.buffer);
@@ -423,6 +432,9 @@ void GetSrcDstPipelineStage(VkImageLayout oldLayout, VkImageLayout newLayout, Vk
 	case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL:
 		out_srcStageMask = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
 		break;
+    case VK_IMAGE_LAYOUT_GENERAL:
+        out_srcStageMask = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        break;
     default:
         LOG_ERROR("Unsupported old_layout.");
         assert(false);
@@ -474,6 +486,9 @@ void GetSrcDstPipelineStage(VkImageLayout oldLayout, VkImageLayout newLayout, Vk
     //    break;
     case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
         out_dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        break;
+    case VK_IMAGE_LAYOUT_GENERAL:
+        out_dstStageMask = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
         break;
     //case VK_IMAGE_LAYOUT_VIDEO_DECODE_DST_KHR:
     //    break;

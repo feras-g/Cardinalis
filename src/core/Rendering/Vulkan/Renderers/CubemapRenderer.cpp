@@ -86,7 +86,8 @@ void CubemapRenderer::init()
 	pass_render_cubemap.add_color_attachment(cubemap_render_attachment.view);
 
 	/* Cubemap generation shader */
-	VulkanShader shader_gen_cubemap("GenCubemap.vert.spv", "GenCubemap.frag.spv");
+	VertexFragmentShader shader_gen_cubemap;
+	shader_gen_cubemap.create("GenCubemap.vert.spv", "GenCubemap.frag.spv");
 
 	/* Graphics pipeline */
 	GfxPipeline::Flags flags = GfxPipeline::Flags::NONE;
@@ -101,10 +102,10 @@ void CubemapRenderer::init()
 	VkCommandBuffer tmp = begin_temp_cmd_buffer();
 
 	VkRect2D area{ .offset = { } , .extent {.width = layer_width, .height = layer_height } };
-	/* Render cubemap */
+	/* Render equirectangular map to a cubemap */
 	render_cubemap(tmp, area);
 
-	/* Render the corresponding irradiance map */
+	/* Compute the irradiance map for this cubemap */
 	init_irradiance_map_rendering();
 	render_irradiance_map(tmp);
 
@@ -118,7 +119,8 @@ void CubemapRenderer::init()
 /* Irradiance map rendering */
 void CubemapRenderer::init_irradiance_map_rendering()
 {
-	VulkanShader shader_gen_irradiance_map("GenCubemap.vert.spv", "ConvoluteCubemap.frag.spv");
+	VertexFragmentShader shader_gen_irradiance_map;
+	shader_gen_irradiance_map.create("GenCubemap.vert.spv", "ConvoluteCubemap.frag.spv");
 
 	/* Irrandiance map attachment */
 	irradiance_map_attachment.init(irradiance_map_format, irradiance_map_dim, irradiance_map_dim, 6, false);
@@ -137,8 +139,16 @@ void CubemapRenderer::init_irradiance_map_rendering()
 	irradiance_desc_set.assign_layout(irradiance_desc_layout);
 	irradiance_desc_set.create(pool, "Gen Irradiance");
 
-	irradiance_desc_set.write_descriptor_combined_image_sampler(0, tex_cubemap_view, sampler);
-	irradiance_desc_set.update();
+	//irradiance_desc_set.write_descriptor_combined_image_sampler(0, tex_irradiance_map_view, sampler);
+	//irradiance_desc_set.update();
+
+	VkDescriptorImageInfo image_info = {};
+	image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	image_info.imageView = tex_cubemap_view;
+	image_info.sampler = sampler;
+
+	VkWriteDescriptorSet write = ImageWriteDescriptorSet(irradiance_desc_set.set, 0, &image_info);
+	vkUpdateDescriptorSets(context.device, 1, &write, 0, nullptr);
 
 	/* Pipeline layout */
 	std::vector<VkDescriptorSetLayout> desc_set_layouts = {};
@@ -181,11 +191,12 @@ void CubemapRenderer::render_irradiance_map(VkCommandBuffer cmd_buffer)
 /* Skybox rendering */
 void CubemapRenderer::init_skybox_rendering()
 {
-	VulkanShader shader_render_skybox("Skybox.vert.spv", "Skybox.frag.spv");
+	VertexFragmentShader shader_render_skybox;
+	shader_render_skybox.create("Skybox.vert.spv", "Skybox.frag.spv");
 
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
-		pass_render_skybox[i].add_color_attachment(VulkanRendererBase::m_output_attachment[i].view, VK_ATTACHMENT_LOAD_OP_LOAD);
+		pass_render_skybox[i].add_color_attachment(VulkanRendererBase::m_deferred_lighting_output[i].view, VK_ATTACHMENT_LOAD_OP_LOAD);
 		pass_render_skybox[i].add_depth_attachment(VulkanRendererBase::m_gbuffer_depth[i].view, VK_ATTACHMENT_LOAD_OP_LOAD);
 	}
 	const VkSampler sampler = VulkanRendererBase::s_SamplerClampLinear;
@@ -324,9 +335,14 @@ void CubemapRenderer::render_skybox(size_t currentImageIdx, VkCommandBuffer cmd_
 
 	set_viewport_scissor(cmd_buffer, VulkanRendererBase::render_width, VulkanRendererBase::render_height, true);
 
-	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_skybox_ppl_layout, 0, 1, &d_skybox->get_mesh().descriptor_set, 0, nullptr);
-	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_skybox_ppl_layout, 1, 1, &VulkanRendererBase::m_framedata_desc_set[currentImageIdx].set, 0, nullptr);
-	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_skybox_ppl_layout, 2, 1, &render_skybox_desc_set.set, 0, nullptr);
+	const VkDescriptorSet descriptor_sets[3] 
+	{
+		d_skybox->get_mesh().descriptor_set,
+		VulkanRendererBase::m_framedata_desc_set[currentImageIdx].set,
+		render_skybox_desc_set.set
+	};
+
+	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_skybox_ppl_layout, 0, 3, descriptor_sets, 0, nullptr);
 
 	vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_skybox_gfx_ppl);
 

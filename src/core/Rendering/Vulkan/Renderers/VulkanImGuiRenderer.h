@@ -2,6 +2,7 @@
 
 #include "Rendering/Vulkan/VulkanRendererBase.h"
 #include "Rendering/Vulkan/RenderPass.h"
+#include "Rendering/Vulkan/VulkanShader.h"
 
 #include "../imgui/imgui.h"
 #include "../imgui/backends/imgui_impl_win32.h"
@@ -9,7 +10,6 @@
 
 struct ImDrawData;
 struct ImGuiIO;
-class VulkanShader;
 class VulkanModelRenderer;
 struct DeferredRenderer;
 struct ShadowRenderer;
@@ -49,7 +49,7 @@ private:
 	Buffer m_storage_buffer;
 	Buffer m_uniform_buffer;
 
-	std::unique_ptr<VulkanShader> m_Shader;
+	VertexFragmentShader m_Shader;
 
 	bool CreateFontTexture(ImGuiIO* io, const char* fontPath, Texture2D& out_Font);
 	bool CreatePipeline(VkDevice device);

@@ -19,7 +19,7 @@ struct DeferredRenderer
 	VkPipeline m_gfx_pipeline;
 	VkPipelineLayout m_pipeline_layout;
 	VkDescriptorSetLayout m_descriptor_set_layout;
-	VulkanShader m_shader_deferred;
+	VertexFragmentShader m_shader_deferred;
 
 	VkDescriptorPool m_descriptor_pool;
 	std::array <vk::DynamicRenderPass, NUM_FRAMES> m_dyn_renderpass;

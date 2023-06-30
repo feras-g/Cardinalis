@@ -31,6 +31,11 @@ static constexpr ImageViewInitInfo ImageViewCubeTexture
 	VK_IMAGE_VIEW_TYPE_CUBE, VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 6
 };
 
+static constexpr ImageViewInitInfo ImageViewTexture2D
+{
+	VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1
+};
+
 struct Texture
 {
 	VkImage               image			{ VK_NULL_HANDLE };
@@ -43,7 +48,7 @@ struct Texture
 
 	void create_view(VkDevice device, const ImageViewInitInfo& info);
 	void copy_from_buffer(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer);
-	void upload_data(VkDevice device, Image* pImage);
+	void upload_data(VkDevice device, void* data);
 	void transition_layout(VkCommandBuffer cmdBuffer, VkImageLayout old_layout, VkImageLayout new_layout, VkImageSubresourceRange* subresourceRange = nullptr);
 	void destroy(VkDevice device);
 	void generate_mipmaps();
@@ -57,13 +62,18 @@ struct Texture
 
 struct Texture2D : public Texture
 {
-public:
 	void init(VkFormat format, uint32_t width, uint32_t height, uint32_t layers, bool calc_mip);
 
 	void create_from_file(
 		std::string_view	filename,
 		std::string_view    debug_name,
 		VkFormat			format,
+		VkImageUsageFlags	imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT,
+		VkImageLayout		layout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+	void create_from_data(
+		void*				data,
+		std::string_view    debug_name,
 		VkImageUsageFlags	imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT,
 		VkImageLayout		layout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 

@@ -41,7 +41,12 @@ void ShadowRenderer::init(unsigned int width, unsigned int height, const LightMa
 	desc_set_layouts.push_back(RenderObjectManager::drawable_descriptor_set_layout);	/* Drawable data descriptor set */
 	desc_set_layouts.push_back(VulkanRendererBase::m_framedata_desc_set_layout.layout);		/* Frame data */
 
-	m_descriptor_pool       = create_descriptor_pool(0, 2, 1, 0);
+	std::vector<VkDescriptorPoolSize> pool_sizes
+	{
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2},
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1}
+	};
+	m_descriptor_pool       = create_descriptor_pool(pool_sizes, NUM_FRAMES);
 	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
 		m_descriptor_set[frame_idx] = create_descriptor_set(m_descriptor_pool, m_descriptor_set_layout);
@@ -53,7 +58,7 @@ void ShadowRenderer::init(unsigned int width, unsigned int height, const LightMa
 	m_gfx_pipeline_layout   = create_pipeline_layout(context.device, desc_set_layouts, (uint32_t)vtx_pushconstantsize, 0);
 
 	/* Create graphics pipeline */
-	m_shadow_shader.load_from_file("GenShadowMap.vert.spv", "GenShadowMap.frag.spv");
+	m_shadow_shader.create("GenShadowMap.vert.spv", "GenShadowMap.frag.spv");
 	GfxPipeline::Flags flags = GfxPipeline::Flags::ENABLE_DEPTH_STATE;
 	GfxPipeline::CreateDynamic(m_shadow_shader, {}, shadow_map_format, flags, m_gfx_pipeline_layout, &m_gfx_pipeline, VK_CULL_MODE_FRONT_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
 }
@@ -166,7 +171,12 @@ void CascadedShadowRenderer::init(unsigned int width, unsigned int height,  Came
 	desc_set_layouts.push_back(RenderObjectManager::mesh_descriptor_set_layout);			/* Mesh geometry descriptor set*/
 	desc_set_layouts.push_back(m_descriptor_set_layout);									/* Shadow pass descriptor set */
 
-	m_descriptor_pool = create_descriptor_pool(0, 1, 0, 0);
+
+	std::vector<VkDescriptorPoolSize> pool_sizes
+	{
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1}
+	};
+	m_descriptor_pool = create_descriptor_pool(pool_sizes, NUM_FRAMES);
 	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
 		m_descriptor_set[frame_idx] = create_descriptor_set(m_descriptor_pool, m_descriptor_set_layout);
@@ -185,7 +195,7 @@ void CascadedShadowRenderer::init(unsigned int width, unsigned int height,  Came
 	update_desc_sets();
 
 	/* Create graphics pipeline */
-	m_csm_shader.load_from_file("GenCascadedShadowMap.vert.spv", "GenShadowMap.frag.spv");
+	m_csm_shader.create("GenCascadedShadowMap.vert.spv", "GenShadowMap.frag.spv");
 	GfxPipeline::Flags flags = GfxPipeline::Flags::ENABLE_DEPTH_STATE;
 	GfxPipeline::CreateDynamic(m_csm_shader, {}, shadow_map_format, flags, m_gfx_pipeline_layout, &m_gfx_pipeline, VK_CULL_MODE_FRONT_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE, {}, view_mask);
 }

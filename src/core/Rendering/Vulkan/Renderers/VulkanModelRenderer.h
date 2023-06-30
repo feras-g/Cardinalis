@@ -2,10 +2,9 @@
 
 #include "Rendering/Vulkan/VulkanRendererBase.h"
 #include "Rendering/Vulkan/VulkanMesh.h"
+#include "Rendering/Vulkan/VulkanShader.h"
 #include "Rendering/Vulkan/RenderPass.h"
 #include "Rendering/LightManager.h"
-
-class VulkanShader;
 
 class VulkanModelRenderer 
 {
@@ -24,9 +23,7 @@ public:
 
 	~VulkanModelRenderer();
 private:
-
-
-	std::unique_ptr<VulkanShader> m_shader;
+	VertexFragmentShader m_shader;
 
 	VkSampler m_TextureSampler;
 

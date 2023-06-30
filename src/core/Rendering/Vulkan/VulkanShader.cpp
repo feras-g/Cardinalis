@@ -7,23 +7,7 @@ static constexpr uint32_t SPIRV_FOURCC = 0x07230203;
 
 static std::string base_spirv_folder("../../../data/shaders/vulkan/spirv/");
 
-VulkanShader::VulkanShader(const char* vertex_shader_path, const char* fragment_shader_path)
-{
-	load_from_file(vertex_shader_path, fragment_shader_path);
-}
-
-void VulkanShader::load_from_file(const char* vertex_shader_path, const char* fragment_shader_path)
-{
-	create_shader_module(VK_SHADER_STAGE_VERTEX_BIT, vertex_shader_path);
-	create_shader_module(VK_SHADER_STAGE_FRAGMENT_BIT, fragment_shader_path);
-}
-
-void VulkanShader::load_from_file(const char* compute_shader_path)
-{
-	create_shader_module(VK_SHADER_STAGE_COMPUTE_BIT, compute_shader_path);
-}
-
-bool VulkanShader::create_shader_module(const VkShaderStageFlagBits stage, const char* filename)
+bool Shader::create_shader_module(const VkShaderStageFlagBits stage, const char* filename, VkShaderModule& out_module)
 {
 	int supported = 
 		int(VK_SHADER_STAGE_FRAGMENT_BIT) | int(VK_SHADER_STAGE_VERTEX_BIT) | int(VK_SHADER_STAGE_COMPUTE_BIT);
@@ -75,18 +59,24 @@ bool VulkanShader::create_shader_module(const VkShaderStageFlagBits stage, const
 		.pCode = bytecode,
 	};
 
-	VkShaderModule* module =
-		stage == VK_SHADER_STAGE_VERTEX_BIT		? &module_fragment_stage :
-		stage == VK_SHADER_STAGE_FRAGMENT_BIT  	? &module_vertex_stage :
-		stage == VK_SHADER_STAGE_COMPUTE_BIT 	? &module_compute_stage : VK_NULL_HANDLE;
+	VK_CHECK(vkCreateShaderModule(context.device, &mci, nullptr, &out_module));
 
-	VK_CHECK(vkCreateShaderModule(context.device, &mci, nullptr, module));
-
-	pipeline_stages.push_back(PipelineShaderStageCreateInfo(*module, stage, "main"));
+	stages.push_back(PipelineShaderStageCreateInfo(out_module, stage, "main"));
 
 	LOG_INFO("{1} : Created {0} module successfully.", string_VkShaderStageFlagBits(stage), filename);
 
 	delete [] bytecode;
 
 	return true;
+}
+
+void VertexFragmentShader::create(const char* vertex_shader_path, const char* fragment_shader_path)
+{
+	create_shader_module(VK_SHADER_STAGE_VERTEX_BIT, vertex_shader_path, module_vertex_stage);
+	create_shader_module(VK_SHADER_STAGE_FRAGMENT_BIT, fragment_shader_path, module_fragment_stage);
+}
+
+void ComputeShader::create(const char* compute_shader_path)
+{
+	create_shader_module(VK_SHADER_STAGE_COMPUTE_BIT, compute_shader_path, module_compute_stage);
 }

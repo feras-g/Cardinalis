@@ -43,6 +43,11 @@ struct DescriptorSetLayout
 		bindings.emplace_back(VkDescriptorSetLayoutBinding{ binding, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, shaderStage, &sampler });
 	}
 
+	inline void add_storage_image_binding(uint32_t binding, std::string_view name)
+	{
+		bindings.emplace_back(VkDescriptorSetLayoutBinding{ binding, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT });
+	}
+
 	inline void create(std::string_view name)
 	{
 		layout = create_descriptor_set_layout(bindings);
@@ -78,7 +83,7 @@ struct DescriptorSet
 		descriptor_writes.push_back(write);
 	}
 
-	void write_descriptor_combined_image_sampler(uint32_t binding, VkImageView& view, VkSampler sampler)
+	void write_descriptor_combined_image_sampler(uint32_t binding, VkImageView view, VkSampler sampler)
 	{
 		VkDescriptorImageInfo desc_img_info = {};
 		desc_img_info.sampler = sampler;

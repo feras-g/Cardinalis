@@ -18,14 +18,19 @@ void DeferredRenderer::init(std::span<Texture2D> g_buffers_shadow_map, const Lig
 
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
-		m_dyn_renderpass[i].add_color_attachment(VulkanRendererBase::m_output_attachment[i].view);
+		m_dyn_renderpass[i].add_color_attachment(VulkanRendererBase::m_deferred_lighting_output[i].view);
 	}
 
 	/* Create shader */
-	m_shader_deferred.load_from_file("DeferredLightingPass.vert.spv", "DeferredLightingPass.frag.spv");
+	m_shader_deferred.create("DeferredLightingPass.vert.spv", "DeferredLightingPass.frag.spv");
 
 	/* Create Descriptor Pool */
-	m_descriptor_pool = create_descriptor_pool(0, 2, 8, 0);
+	std::vector<VkDescriptorPoolSize> pool_sizes
+	{
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2},
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 8}
+	};
+	m_descriptor_pool = create_descriptor_pool(pool_sizes, NUM_FRAMES);
 
 	/* Create descriptor set bindings */
 	std::vector<VkDescriptorSetLayoutBinding> bindings = {};
@@ -90,7 +95,7 @@ void DeferredRenderer::update_descriptor_set(size_t frame_idx)
 		0: Albedo / 1: View Space Normal / 2: Depth / 3: Normal map / 4: Metallic/Roughness
 	*/
 	std::vector<VkDescriptorImageInfo>  descriptor_image_infos = {};
-	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampLinear,  VulkanRendererBase::m_gbuffer_albdedo[frame_idx].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampLinear,  VulkanRendererBase::m_gbuffer_albedo[frame_idx].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
 	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampNearest, VulkanRendererBase::m_gbuffer_normal[frame_idx].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
 	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampNearest, VulkanRendererBase::m_gbuffer_depth[frame_idx].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
 	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampNearest, VulkanRendererBase::m_gbuffer_normal[frame_idx].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }); // TODO : replace with emissive
@@ -132,12 +137,12 @@ void DeferredRenderer::render(size_t current_backbuffer_idx, VkCommandBuffer cmd
 {
 	VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Deferred Lighting Pass");
 
-	VulkanRendererBase::m_output_attachment[current_backbuffer_idx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	VulkanRendererBase::m_deferred_lighting_output[current_backbuffer_idx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 	VkRect2D render_area{ .offset {}, .extent { VulkanRendererBase::render_width , VulkanRendererBase::render_height } };
 	m_dyn_renderpass[current_backbuffer_idx].begin(cmd_buffer, render_area);
 	draw_scene(current_backbuffer_idx, cmd_buffer);
 	m_dyn_renderpass[current_backbuffer_idx].end(cmd_buffer);
 
-	VulkanRendererBase::m_output_attachment[current_backbuffer_idx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	VulkanRendererBase::m_deferred_lighting_output[current_backbuffer_idx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }

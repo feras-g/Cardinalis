@@ -544,7 +544,7 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colo
 }
 
 
-[[nodiscard]] VkDescriptorPool create_descriptor_pool(uint32_t num_ssbo, uint32_t num_ubo, uint32_t num_combined_img_smp, uint32_t num_dynamic_ubo, uint32_t max_sets)
+[[nodiscard]] VkDescriptorPool create_descriptor_pool(uint32_t num_ssbo, uint32_t num_ubo, uint32_t num_combined_img_smp, uint32_t num_dynamic_ubo, uint32_t max_sets, uint32_t num_storage_image)
 {
 	VkDescriptorPool out;
 
@@ -552,7 +552,7 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colo
 
 	if (num_ssbo)	 
 	{ 
-		poolSizes.push_back( VkDescriptorPoolSize{.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = num_ssbo   }); 
+		poolSizes.push_back( VkDescriptorPoolSize{.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = num_ssbo }); 
 	}
 	if (num_ubo)	 
 	{ 
@@ -565,6 +565,10 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colo
 	if (num_dynamic_ubo)
 	{
 		poolSizes.push_back(VkDescriptorPoolSize{ .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, .descriptorCount = num_dynamic_ubo });
+	}
+	if (num_storage_image)
+	{
+		poolSizes.push_back(VkDescriptorPoolSize{ .type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = num_storage_image });
 	}
 
 	VkDescriptorPoolCreateInfo poolInfo =
@@ -581,7 +585,7 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colo
 	return out;
 }
 
-bool GfxPipeline::CreateDynamic(const VulkanShader& shader, std::span<VkFormat> colorAttachmentFormats, VkFormat depth_format, Flags flags, VkPipelineLayout pipelineLayout,
+bool GfxPipeline::CreateDynamic(const VertexFragmentShader& shader, std::span<VkFormat> colorAttachmentFormats, VkFormat depth_format, Flags flags, VkPipelineLayout pipelineLayout,
 	VkPipeline* out_GraphicsPipeline, VkCullModeFlags cullMode, VkFrontFace frontFace, glm::vec2 customViewport, uint32_t viewMask)
 {
 	VkPipelineRenderingCreateInfoKHR pipeline_create{ VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR };
@@ -600,7 +604,7 @@ bool GfxPipeline::CreateDynamic(const VulkanShader& shader, std::span<VkFormat> 
 	return Create(shader, (uint32_t)colorAttachmentFormats.size(), flags, nullptr, pipelineLayout, out_GraphicsPipeline, cullMode, frontFace, &pipeline_create, customViewport);
 }
 
-bool GfxPipeline::Create(const VulkanShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPipeline* out_GraphicsPipeline,
+bool GfxPipeline::Create(const VertexFragmentShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPipeline* out_GraphicsPipeline,
 	VkCullModeFlags cullMode, VkFrontFace frontFace, VkPipelineRenderingCreateInfoKHR* dynamic_pipeline_create, glm::vec2 customViewport)
 {
 	// Pipeline stages
@@ -711,8 +715,8 @@ bool GfxPipeline::Create(const VulkanShader& shader, uint32_t numColorAttachment
 		.sType=VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
 		.pNext= dynamic_pipeline_create,
 		.flags=0,
-		.stageCount=(uint32_t)shader.pipeline_stages.size(),
-		.pStages=shader.pipeline_stages.data(),
+		.stageCount=(uint32_t)shader.stages.size(),
+		.pStages=shader.stages.data(),
 		.pVertexInputState= !!(flags & DISABLE_VTX_INPUT_STATE) ? VK_NULL_HANDLE  : &vertexInputState,
 		.pInputAssemblyState=&inputAssemblyState,
 		.pTessellationState=nullptr,

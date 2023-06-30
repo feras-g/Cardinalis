@@ -49,10 +49,10 @@ void VulkanImGuiRenderer::init(const ShadowRenderer& shadow_renderer)
 	for (size_t i = 0; i < NUM_FRAMES; i++)
 	{
 		m_DeferredRendererOutputTextureId[i] = ++tex_id;
-		m_Textures.push_back(VulkanRendererBase::m_output_attachment[i]);
+		m_Textures.push_back(VulkanRendererBase::m_deferred_lighting_output[i]);
 
 		m_ModelRendererColorTextureId[i] = ++tex_id;
-		m_Textures.push_back(VulkanRendererBase::m_gbuffer_albdedo[i]);
+		m_Textures.push_back(VulkanRendererBase::m_gbuffer_albedo[i]);
 	
 		m_ModelRendererNormalTextureId[i] = ++tex_id;
 		m_Textures.push_back(VulkanRendererBase::m_gbuffer_normal[i]);
@@ -71,7 +71,7 @@ void VulkanImGuiRenderer::init(const ShadowRenderer& shadow_renderer)
 	}
 
 	// Shaders
-	m_Shader.reset(new VulkanShader("ImGui.vert.spv", "ImGui.frag.spv"));
+	m_Shader.create("ImGui.vert.spv", "ImGui.frag.spv");
 
 	if (!CreatePipeline(context.device))
 	{
@@ -258,7 +258,14 @@ bool VulkanImGuiRenderer::CreatePipeline(VkDevice device)
 {
 	create_buffers();
 
-	m_descriptor_pool = create_descriptor_pool(numStorageBuffers, numUniformBuffers, (uint32_t)m_Textures.size(), 0);
+	std::vector<VkDescriptorPoolSize> pool_sizes
+	{
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, numUniformBuffers},
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, numStorageBuffers},
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, (uint32_t)m_Textures.size()}
+	};
+
+	m_descriptor_pool = create_descriptor_pool(pool_sizes, NUM_FRAMES);
 
 	{
 		std::vector<VkDescriptorSetLayoutBinding> bindings =
@@ -283,7 +290,7 @@ bool VulkanImGuiRenderer::CreatePipeline(VkDevice device)
 
 	GfxPipeline::Flags pp_flags = GfxPipeline::Flags::NONE;
 	std::array<VkFormat, 1> color_formats = { ENGINE_SWAPCHAIN_COLOR_FORMAT };
-	GfxPipeline::CreateDynamic(*m_Shader.get(), color_formats, {}, pp_flags, m_pipeline_layout, &m_gfx_pipeline, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
+	GfxPipeline::CreateDynamic(m_Shader, color_formats, {}, pp_flags, m_pipeline_layout, &m_gfx_pipeline, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
 
 	return true;
 }

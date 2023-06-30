@@ -9,10 +9,15 @@ const uint32_t num_combined_image_smp = 0;
 
 VulkanModelRenderer::VulkanModelRenderer()
 {
-	m_shader.reset(new VulkanShader("DeferrredGeometryPass.vert.spv", "DeferrredGeometryPass.frag.spv"));
+	m_shader.create("DeferrredGeometryPass.vert.spv", "DeferrredGeometryPass.frag.spv");
 	
 	/* Render objects creation */
-	m_descriptor_pool = create_descriptor_pool(num_storage_buffers, num_uniform_buffers, num_combined_image_smp, 0);
+	std::vector<VkDescriptorPoolSize> pool_sizes
+	{
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, num_uniform_buffers},
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, num_storage_buffers}
+	};
+	m_descriptor_pool = create_descriptor_pool(pool_sizes, NUM_FRAMES);
 
 	/* Configure layout for descriptor set used for a Pass */
 	std::vector<VkDescriptorSetLayoutBinding> bindings = {};
@@ -41,14 +46,14 @@ VulkanModelRenderer::VulkanModelRenderer()
 	/* Dynamic renderpass setup */
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
-		m_dyn_renderpass[i].add_color_attachment(VulkanRendererBase::m_gbuffer_albdedo[i].view);
+		m_dyn_renderpass[i].add_color_attachment(VulkanRendererBase::m_gbuffer_albedo[i].view);
 		m_dyn_renderpass[i].add_color_attachment(VulkanRendererBase::m_gbuffer_normal[i].view);
 		m_dyn_renderpass[i].add_color_attachment(VulkanRendererBase::m_gbuffer_metallic_roughness[i].view);
 		m_dyn_renderpass[i].add_depth_attachment(VulkanRendererBase::m_gbuffer_depth[i].view);
 	}
 
 	GfxPipeline::Flags ppl_flags = GfxPipeline::Flags::ENABLE_DEPTH_STATE;
-	GfxPipeline::CreateDynamic(*m_shader.get(), VulkanRendererBase::m_formats, VulkanRendererBase::m_depth_format, ppl_flags, m_ppl_layout, &m_gfx_pipeline, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+	GfxPipeline::CreateDynamic(m_shader, VulkanRendererBase::m_formats, VulkanRendererBase::m_depth_format, ppl_flags, m_ppl_layout, &m_gfx_pipeline, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
 }
 
 void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buffer)
@@ -56,7 +61,7 @@ void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buf
 	VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Deferred G-Buffer Pass");
 
 	/* Transition to write */
-	VulkanRendererBase::m_gbuffer_albdedo[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	VulkanRendererBase::m_gbuffer_albedo[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	VulkanRendererBase::m_gbuffer_normal[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	VulkanRendererBase::m_gbuffer_depth[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 	VulkanRendererBase::m_gbuffer_metallic_roughness[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
@@ -82,7 +87,7 @@ void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buf
 	m_dyn_renderpass[currentImageIdx].end(cmd_buffer);
 
 	/* Transition to read */
-	VulkanRendererBase::m_gbuffer_albdedo[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	VulkanRendererBase::m_gbuffer_albedo[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	VulkanRendererBase::m_gbuffer_normal[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	VulkanRendererBase::m_gbuffer_depth[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	VulkanRendererBase::m_gbuffer_metallic_roughness[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);

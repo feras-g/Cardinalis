@@ -20,7 +20,7 @@ struct ShadowRenderer
 
 	Texture2D m_shadow_maps[NUM_FRAMES];
 
-	VulkanShader m_shadow_shader;
+	VertexFragmentShader m_shadow_shader;
 	vk::DynamicRenderPass m_shadow_pass[NUM_FRAMES];
 	
 	VkDescriptorPool m_descriptor_pool;
@@ -49,7 +49,7 @@ public:
 	VkDescriptorPool m_descriptor_pool;
 	VkDescriptorSet m_descriptor_set[NUM_FRAMES];
 	VkPipelineLayout m_gfx_pipeline_layout;
-	VulkanShader m_csm_shader;
+	VertexFragmentShader m_csm_shader;
 	VkPipeline m_gfx_pipeline;
 	/* Orthographic projection matrices for each cascade */
 	float interp_factor = 0.9f;

@@ -51,14 +51,15 @@ public:
 	static uint32_t render_height;
 
 	/* G-Buffers for Deferred rendering */
-	static inline std::array<Texture2D, NUM_FRAMES> m_gbuffer_albdedo;
+	static inline std::array<Texture2D, NUM_FRAMES> m_gbuffer_albedo;
 	static inline std::array<Texture2D, NUM_FRAMES> m_gbuffer_normal;
 	static inline std::array<Texture2D, NUM_FRAMES> m_gbuffer_depth;
 	static inline std::array<Texture2D, NUM_FRAMES> m_gbuffer_directional_shadow;
 	static inline std::array<Texture2D, NUM_FRAMES> m_gbuffer_metallic_roughness;
 	//static inline std::array<Texture2D, NUM_FRAMES> m_gbuffer_emissive;
 
-	static inline std::array <Texture2D, NUM_FRAMES> m_output_attachment;
+	/* Color attachment resulting the deferred lighting pass */
+	static inline std::array <Texture2D, NUM_FRAMES> m_deferred_lighting_output;
 
 	/* Formats */
 	static const VkFormat color_attachment_format = VK_FORMAT_R8G8B8A8_SRGB; /* Format of the final render attachment */
