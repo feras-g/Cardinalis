@@ -161,9 +161,9 @@ void BeginRenderpass(VkCommandBuffer cmdBuffer, VkRenderPass renderPass, VkFrame
 void EndRenderPass(VkCommandBuffer cmdBuffer);
 void set_viewport_scissor(VkCommandBuffer cmdBuffer, uint32_t width, uint32_t height, bool invertViewportY = false);
 
-VkPipelineLayout create_pipeline_layout(VkDevice device, std::span<VkDescriptorSetLayout> descSetLayout);
-VkPipelineLayout create_pipeline_layout(VkDevice device, VkDescriptorSetLayout descSetLayout);
-VkPipelineLayout create_pipeline_layout(VkDevice device, std::span<VkDescriptorSetLayout> desc_set_layouts, uint32_t vtxConstRangeSizeInBytes, uint32_t fragConstRangeSizeInBytes);
+VkPipelineLayout create_pipeline_layout(VkDevice device, std::span<VkDescriptorSetLayout> descSetLayout, std::span<VkPushConstantRange> push_constant_ranges = {});
+VkPipelineLayout create_pipeline_layout(VkDevice device, VkDescriptorSetLayout descSetLayout, std::span<VkPushConstantRange> push_constant_ranges );
 
 VkDescriptorSetLayout create_descriptor_set_layout(std::span<VkDescriptorSetLayoutBinding> layout_bindings);
+
 VkDescriptorSet create_descriptor_set(VkDescriptorPool pool, VkDescriptorSetLayout layout);

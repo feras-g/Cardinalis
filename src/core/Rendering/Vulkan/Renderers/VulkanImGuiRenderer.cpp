@@ -286,7 +286,17 @@ bool VulkanImGuiRenderer::CreatePipeline(VkDevice device)
 
 	uint32_t fragConstRangeSizeInBytes = sizeof(uint32_t); // Size of 1 Push constant holding the texture ID passed from ImGui::Image
 	std::array<VkDescriptorSetLayout, 1> layouts{ m_descriptor_set_layout };
-	m_pipeline_layout = create_pipeline_layout(device, layouts, 0, fragConstRangeSizeInBytes);
+
+	VkPushConstantRange pushConstantRanges[1] =
+	{
+		{
+			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+			.offset = 0,
+			.size = fragConstRangeSizeInBytes
+		}
+	};
+
+	m_pipeline_layout = create_pipeline_layout(device, layouts, pushConstantRanges);
 
 	GfxPipeline::Flags pp_flags = GfxPipeline::Flags::NONE;
 	std::array<VkFormat, 1> color_formats = { ENGINE_SWAPCHAIN_COLOR_FORMAT };

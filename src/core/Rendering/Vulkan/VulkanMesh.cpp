@@ -49,6 +49,39 @@ void Drawable::draw(VkCommandBuffer cmd_buffer) const
 	vkCmdDraw(cmd_buffer, (uint32_t)mesh.m_num_indices, 1, 0, 0);
 }
 
+void Drawable::draw_node( VkCommandBuffer cmd_buffer, Node* node, VulkanMesh* model, VkPipelineLayout ppl_layout) 
+{
+	if (model->geometry_data.primitives.size() > 0) 
+	{
+		// Pass the node's matrix via push constants
+		// Traverse the node hierarchy to the top-most parent to get the final matrix of the current node
+		glm::mat4 nodeMatrix = node->matrix;
+		Node* currentParent = node->parent;
+		while (currentParent) 
+		{
+			nodeMatrix = currentParent->matrix * nodeMatrix;
+			currentParent = currentParent->parent;
+		}
+		nodeMatrix *= model->model;
+		// Pass the final matrix to the vertex shader using push constants
+		vkCmdPushConstants(cmd_buffer, ppl_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &nodeMatrix);
+
+		for (Primitive& primitive : model->geometry_data.primitives)
+		{
+			if (primitive.index_count > 0) 
+			{
+				vkCmdPushConstants(cmd_buffer, ppl_layout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), sizeof(Material), &RenderObjectManager::materials[primitive.material_id]);
+				vkCmdDraw(cmd_buffer, primitive.index_count, 1, primitive.first_index, 0);
+			}
+		}
+	}
+
+	for (auto& child : node->children) 
+	{
+		draw_node(cmd_buffer, child, model, ppl_layout);
+	}
+}
+
 void Drawable::draw_primitives(VkCommandBuffer cmd_buffer) const
 {
 	VulkanMesh& mesh = RenderObjectManager::meshes[mesh_id];
@@ -257,7 +290,7 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 	}
 }
 
-static void load_primitive(cgltf_node* node, cgltf_primitive* primitive, GeometryData& geometry)
+static void load_primitive(cgltf_node* node, cgltf_primitive* primitive, Node* engine_node, GeometryData& geometry)
 {
 	Primitive p = {};
 	p.first_index = (uint32_t)geometry.indices.size();
@@ -279,22 +312,36 @@ static void load_primitive(cgltf_node* node, cgltf_primitive* primitive, Geometr
 	geometry.primitives.push_back(p);
 }
 
-static void process_node(bool bIsChild, cgltf_node* p_Node, GeometryData& geometry)
+static void process_node(cgltf_node* p_Node, Node* parent, VulkanMesh& model)
 {
-	if (p_Node->mesh)
-	{		
-		for (int i = 0; i < p_Node->mesh->primitives_count; ++i)
-		{
-			load_primitive(p_Node, &p_Node->mesh->primitives[i], geometry);
-		}
-	}
+	Node* node = new Node{};
+	
+	cgltf_node_transform_world(p_Node, glm::value_ptr(node->matrix));
+	node->parent = parent;
 
 	if (p_Node->children_count > 0)
 	{
 		for (size_t i = 0; i < p_Node->children_count; i++)
 		{
-			process_node(true, p_Node->children[i], geometry);
+			process_node(p_Node->children[i], node, model);
 		}
+	}
+
+	if (p_Node->mesh)
+	{		
+		for (int i = 0; i < p_Node->mesh->primitives_count; ++i)
+		{
+			load_primitive(p_Node, &p_Node->mesh->primitives[i], node, model.geometry_data);
+		}
+	}
+
+	if (parent) 
+	{
+		parent->children.push_back(node);
+	}
+	else 
+	{
+		model.nodes.push_back(node);
 	}
 }
 
@@ -366,9 +413,7 @@ void VulkanMesh::create_from_file_gltf(const std::string& filename)
 
 			for (size_t i = 0; i < data->nodes_count; ++i)
 			{
-				cgltf_node& currNode = data->nodes[i];
-
-				process_node(false, &currNode, geometry_data);
+				process_node(&data->nodes[i], nullptr, *this);
 			}
 		}
 

@@ -34,7 +34,7 @@ struct Primitive
 	uint32_t first_index;
 	uint32_t index_count;
 	glm::mat4 mat_model = glm::identity<glm::mat4>();
-	size_t material_id;
+	size_t material_id = 0;
 };
 
 struct GeometryData
@@ -52,6 +52,8 @@ struct GeometryData
 	glm::vec4 bbox_max_WS {};
 
 };
+
+struct Node;
 
 /* Class describing geometry */
 struct VulkanMesh
@@ -75,8 +77,22 @@ struct VulkanMesh
 	VkDescriptorSet descriptor_set = nullptr;
 
 	GeometryData geometry_data{};
+	std::vector<Node*> nodes;
+
 };
 
+
+// A node represents an object in the glTF scene graph
+struct Node {
+	Node* parent;
+	std::vector<Node*> children;
+	glm::mat4 matrix;
+	~Node() {
+		for (auto& child : children) {
+			delete child;
+		}
+	}
+};
 
 constexpr VkFormat tex_base_color_format         = VK_FORMAT_R8G8B8A8_SRGB;
 constexpr VkFormat tex_metallic_roughness_format = VK_FORMAT_R8G8B8A8_UNORM;

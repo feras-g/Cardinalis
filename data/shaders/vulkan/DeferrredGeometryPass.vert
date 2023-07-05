@@ -21,6 +21,11 @@ layout(set = 1, binding = 0) uniform ObjectData
     vec4 bbox_max_WS;
 } object_data;
 
+layout(push_constant) uniform PushConstant
+{
+    mat4 model;
+} push_constant;
+
 layout(set = 3, binding = 0) uniform FrameData 
 { 
     mat4 view;

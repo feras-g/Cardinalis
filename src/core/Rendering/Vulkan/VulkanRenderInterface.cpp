@@ -884,36 +884,15 @@ void set_viewport_scissor(VkCommandBuffer cmdBuffer, uint32_t width, uint32_t he
 	vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
 }
 
-[[nodiscard]] VkPipelineLayout create_pipeline_layout(VkDevice device, VkDescriptorSetLayout descSetLayout)
+[[nodiscard]] VkPipelineLayout create_pipeline_layout(VkDevice device, VkDescriptorSetLayout descSetLayout, std::span<VkPushConstantRange> push_constant_ranges)
 {
 	std::array<VkDescriptorSetLayout, 1> layout = { descSetLayout };
-	return create_pipeline_layout(device, layout, 0, 0);
+	return create_pipeline_layout(device, layout, push_constant_ranges);
 }
 
-[[nodiscard]] VkPipelineLayout create_pipeline_layout(VkDevice device, std::span<VkDescriptorSetLayout> desc_set_layouts)
-{
-	return create_pipeline_layout(device, desc_set_layouts, 0, 0);
-}
-
-[[nodiscard]] VkPipelineLayout create_pipeline_layout(VkDevice device, std::span<VkDescriptorSetLayout> desc_set_layouts, uint32_t vtxConstRangeSizeInBytes, uint32_t fragConstRangeSizeInBytes)
+[[nodiscard]] VkPipelineLayout create_pipeline_layout(VkDevice device, std::span<VkDescriptorSetLayout> desc_set_layouts, std::span<VkPushConstantRange> push_constant_ranges )
 {
 	VkPipelineLayout out;
-
-	VkPushConstantRange pushConstantRanges[2] =
-	{
-		{
-			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-			.offset = 0,
-			.size   = vtxConstRangeSizeInBytes
-		},
-		{
-			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-			.offset = vtxConstRangeSizeInBytes,
-			.size   = fragConstRangeSizeInBytes
-		}
-	};
-	
-	uint32_t pushConstantRangeCount = (vtxConstRangeSizeInBytes > 0) + (fragConstRangeSizeInBytes > 0);
 
 	const VkPipelineLayoutCreateInfo pipelineLayoutInfo =
 	{
@@ -922,8 +901,8 @@ void set_viewport_scissor(VkCommandBuffer cmdBuffer, uint32_t width, uint32_t he
 		.flags = 0,
 		.setLayoutCount = (uint32_t)desc_set_layouts.size(),
 		.pSetLayouts = desc_set_layouts.data(),
-		.pushConstantRangeCount = pushConstantRangeCount,
-		.pPushConstantRanges = pushConstantRangeCount == 0 ? nullptr : (vtxConstRangeSizeInBytes > 0 ? pushConstantRanges : &pushConstantRanges[1])
+		.pushConstantRangeCount = (uint32_t)push_constant_ranges.size(),
+		.pPushConstantRanges = push_constant_ranges.data()
 	};
 
 	VK_CHECK(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &out));

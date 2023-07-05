@@ -36,7 +36,21 @@ VulkanModelRenderer::VulkanModelRenderer()
 	desc_set_layouts.push_back(m_pass_descriptor_set_layout);							/* Per pass */
 	desc_set_layouts.push_back(VulkanRendererBase::m_framedata_desc_set_layout.layout);	/* Per frame */
 
-	m_ppl_layout = create_pipeline_layout(context.device, desc_set_layouts, sizeof(glm::mat4), /* material push constant */ sizeof(Material));
+	VkPushConstantRange pushConstantRanges[2] =
+	{
+		{
+			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+			.offset = 0,
+			.size = sizeof(glm::mat4)
+		},
+		{
+			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+			.offset = sizeof(glm::mat4),
+			.size = sizeof(Material)
+		}
+	};
+
+	m_ppl_layout = create_pipeline_layout(context.device, desc_set_layouts, pushConstantRanges);
 
 	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
@@ -93,7 +107,7 @@ void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buf
 	VulkanRendererBase::m_gbuffer_metallic_roughness[currentImageIdx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
-void VulkanModelRenderer::draw_scene(VkCommandBuffer cmdBuffer, size_t current_frame_idx, const Drawable& drawable)
+void VulkanModelRenderer::draw_scene(VkCommandBuffer cmdBuffer, size_t current_frame_idx, Drawable& drawable)
 {
 	assert(drawable.get_mesh().descriptor_set);
 	/* Mesh descriptor set : per mesh geometry data */
@@ -123,6 +137,11 @@ void VulkanModelRenderer::draw_scene(VkCommandBuffer cmdBuffer, size_t current_f
 		vkCmdPushConstants(cmdBuffer, m_ppl_layout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), sizeof(Material), &RenderObjectManager::materials[drawable.material_id]);
 		drawable.draw(cmdBuffer);
 	}
+	//else
+	//{
+	//	vkCmdPushConstants(cmdBuffer, m_ppl_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Material), &RenderObjectManager::materials[drawable.material_id]);
+	//	drawable.draw(cmdBuffer);
+	//}
 }
 
 void VulkanModelRenderer::update(size_t frame_idx, const VulkanRendererBase::PerFrameData& frame_data)

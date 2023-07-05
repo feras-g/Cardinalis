@@ -25,7 +25,7 @@ layout(set = 1, binding = 0) uniform ObjectData
     vec4 bbox_max_WS;
 } object_data;
 
-layout(push_constant) uniform Material
+layout(push_constant) uniform PushConstants
 {
     mat4 mat;
     uint tex_base_color_id;

@@ -13,7 +13,7 @@ public:
 	explicit VulkanModelRenderer();
 	void render(size_t currentImageIdx, VkCommandBuffer cmd_buffer);
 
-	void draw_scene(VkCommandBuffer cmdBuffer, size_t current_frame_idx, const Drawable& drawable);
+	void draw_scene(VkCommandBuffer cmdBuffer, size_t current_frame_idx,  Drawable& drawable);
 	void update(size_t frame_idx, const VulkanRendererBase::PerFrameData& frame_data);
 	void update_descriptor_set(VkDevice device, size_t frame_idx);
 
