@@ -299,7 +299,6 @@ void Texture::generate_mipmaps()
 // Helper to transition images and remember the current layout
 void Texture::transition_layout(VkCommandBuffer cmdBuffer, VkImageLayout old_layout, VkImageLayout new_layout, VkImageSubresourceRange* subresourceRange)
 {
-    
     VkImageMemoryBarrier barrier =
     {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -341,6 +340,14 @@ void Texture::transition_layout(VkCommandBuffer cmdBuffer, VkImageLayout old_lay
     vkCmdPipelineBarrier(cmdBuffer, srcStageMask, dstStageMask, 0, 0, NULL, 0, NULL, 1, &barrier);
     
     info.imageLayout = new_layout;
+}
+
+/* The image layout transition is executed immediately */
+void Texture::transition_layout_immediate(VkImageLayout old_layout, VkImageLayout new_layout, VkImageSubresourceRange* subresourceRange)
+{
+	VkCommandBuffer cmd_buff = begin_temp_cmd_buffer();
+	transition_layout(cmd_buff, old_layout, new_layout, subresourceRange);
+	end_temp_cmd_buffer(cmd_buff);
 }
 
 VkAccessFlags GetAccessMask(VkImageLayout layout)

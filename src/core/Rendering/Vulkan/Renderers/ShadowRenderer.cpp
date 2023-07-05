@@ -54,8 +54,18 @@ void ShadowRenderer::init(unsigned int width, unsigned int height, const LightMa
 
 	update_desc_sets();
 
-	size_t vtx_pushconstantsize = sizeof(glm::mat4);
-	m_gfx_pipeline_layout   = create_pipeline_layout(context.device, desc_set_layouts, (uint32_t)vtx_pushconstantsize, 0);
+
+	VkPushConstantRange pushConstantRanges[1] =
+	{
+		{
+			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+			.offset = 0,
+			.size = sizeof(glm::mat4)
+		},
+	};
+
+
+	m_gfx_pipeline_layout   = create_pipeline_layout(context.device, desc_set_layouts, pushConstantRanges);
 
 	/* Create graphics pipeline */
 	m_shadow_shader.create("GenShadowMap.vert.spv", "GenShadowMap.frag.spv");
@@ -182,8 +192,16 @@ void CascadedShadowRenderer::init(unsigned int width, unsigned int height,  Came
 		m_descriptor_set[frame_idx] = create_descriptor_set(m_descriptor_pool, m_descriptor_set_layout);
 	}
 
-	size_t vtx_pushconstantsize = sizeof(glm::mat4);
-	m_gfx_pipeline_layout = create_pipeline_layout(context.device, desc_set_layouts, (uint32_t)sizeof(push_constants), 0);
+	VkPushConstantRange pushConstantRanges[1] =
+	{
+		{
+			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+			.offset = 0,
+			.size = sizeof(push_constants)
+		},
+	};
+
+	m_gfx_pipeline_layout = create_pipeline_layout(context.device, desc_set_layouts, pushConstantRanges);
 
 	create_buffers();
 	compute_z_splits();

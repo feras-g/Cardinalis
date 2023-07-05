@@ -50,6 +50,8 @@ struct Texture
 	void copy_from_buffer(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer);
 	void upload_data(VkDevice device, void* data);
 	void transition_layout(VkCommandBuffer cmdBuffer, VkImageLayout old_layout, VkImageLayout new_layout, VkImageSubresourceRange* subresourceRange = nullptr);
+	void transition_layout_immediate(VkImageLayout old_layout, VkImageLayout new_layout, VkImageSubresourceRange* subresourceRange = nullptr);
+
 	void destroy(VkDevice device);
 	void generate_mipmaps();
 

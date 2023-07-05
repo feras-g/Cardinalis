@@ -49,39 +49,6 @@ void Drawable::draw(VkCommandBuffer cmd_buffer) const
 	vkCmdDraw(cmd_buffer, (uint32_t)mesh.m_num_indices, 1, 0, 0);
 }
 
-void Drawable::draw_node( VkCommandBuffer cmd_buffer, Node* node, VulkanMesh* model, VkPipelineLayout ppl_layout) 
-{
-	if (model->geometry_data.primitives.size() > 0) 
-	{
-		// Pass the node's matrix via push constants
-		// Traverse the node hierarchy to the top-most parent to get the final matrix of the current node
-		glm::mat4 nodeMatrix = node->matrix;
-		Node* currentParent = node->parent;
-		while (currentParent) 
-		{
-			nodeMatrix = currentParent->matrix * nodeMatrix;
-			currentParent = currentParent->parent;
-		}
-		nodeMatrix *= model->model;
-		// Pass the final matrix to the vertex shader using push constants
-		vkCmdPushConstants(cmd_buffer, ppl_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &nodeMatrix);
-
-		for (Primitive& primitive : model->geometry_data.primitives)
-		{
-			if (primitive.index_count > 0) 
-			{
-				vkCmdPushConstants(cmd_buffer, ppl_layout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), sizeof(Material), &RenderObjectManager::materials[primitive.material_id]);
-				vkCmdDraw(cmd_buffer, primitive.index_count, 1, primitive.first_index, 0);
-			}
-		}
-	}
-
-	for (auto& child : node->children) 
-	{
-		draw_node(cmd_buffer, child, model, ppl_layout);
-	}
-}
-
 void Drawable::draw_primitives(VkCommandBuffer cmd_buffer) const
 {
 	VulkanMesh& mesh = RenderObjectManager::meshes[mesh_id];

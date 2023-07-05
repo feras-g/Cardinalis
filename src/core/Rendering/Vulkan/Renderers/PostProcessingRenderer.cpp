@@ -47,7 +47,7 @@ static Texture2D create_test_texture()
 
 void PostFX_Downsample::init()
 {
-	Texture2D input_image = VulkanRendererBase::m_deferred_lighting_output[0];
+	Texture2D& input_image = VulkanRendererBase::m_gbuffer_albedo[0];
 	input_image_handle = &input_image;// &input_image;
 	width  = input_image.info.width;
 	height = input_image.info.height;
@@ -56,6 +56,8 @@ void PostFX_Downsample::init()
 	output_image.init(input_image.info.imageFormat, width / 2, height / 2, 1, false);
 	output_image.create(context.device, VK_IMAGE_USAGE_STORAGE_BIT, "PostFX_Downsample Ouput Storage Image");
 	output_image.create_view(context.device, ImageViewTexture2D);
+
+	output_image.transition_layout_immediate(VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 	
 	/* Descriptor set */
 	DescriptorSetLayout desc_set_layout;
@@ -108,12 +110,11 @@ void PostFX_Downsample::render(VkCommandBuffer_T* cmd_buff)
 	static int dispatch_size_x = num_threads_X / workgroup_dim;
 	static int dispatch_size_y = num_threads_Y / workgroup_dim;
 
-	/* Transition to write */
+	input_image_handle->transition_layout(cmd_buff, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
 
 	vkCmdBindDescriptorSets(cmd_buff, VK_PIPELINE_BIND_POINT_COMPUTE, ppl_layout, 0, 1, &desc_set.set, 0, nullptr);
 	vkCmdBindPipeline(cmd_buff, VK_PIPELINE_BIND_POINT_COMPUTE, compute_ppl);
 	vkCmdDispatch(cmd_buff, dispatch_size_x, dispatch_size_y, 1);
 
-
-	/* Transition to read */
+	input_image_handle->transition_layout(cmd_buff, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
