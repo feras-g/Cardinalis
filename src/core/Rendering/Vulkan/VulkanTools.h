@@ -17,20 +17,6 @@ static constexpr uint64_t OneSecondInNanoSeconds = 1000000000;
 		}                                                                                       \
 	} while (0)
 
-#define GET_INSTANCE_PROC_ADDR(inst, entry)                            \
-{                                                                      \
-  fp##entry = (PFN_vk##entry)vkGetInstanceProcAddr(inst, "vk" #entry); \
-  if (!fp##entry)                                                      \
-    EXIT_ON_ERROR("vkGetInstanceProcAddr failed to find vk" #entry);   \
-}
-
-#define GET_DEVICE_PROC_ADDR(dev, entry)                            \
-{                                                                   \
-  fp##entry = (PFN_vk##entry)vkGetDeviceProcAddr(dev, "vk" #entry); \
-  if (!fp##entry)                                                   \
-    EXIT_ON_ERROR("vkGetDeviceProcAddr failed to find vk" #entry);  \
-}
-
 uint32_t FindMemoryType(VkPhysicalDevice physDevice, uint32_t memoryTypeBits, VkMemoryPropertyFlags memoryProperties);
 
 std::string_view get_extension(std::string_view filename);

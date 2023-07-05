@@ -12,15 +12,17 @@ VulkanSwapchain::VulkanSwapchain(VkSurfaceKHR surface, VkPhysicalDevice physDevi
     const VkDevice& hDevice = context.device;
 
     // Initialize function pointers
-    GET_INSTANCE_PROC_ADDR(hVkInstance, GetPhysicalDeviceSurfaceSupportKHR);
-    GET_INSTANCE_PROC_ADDR(hVkInstance, GetPhysicalDeviceSurfaceCapabilitiesKHR);
-    GET_INSTANCE_PROC_ADDR(hVkInstance, GetPhysicalDeviceSurfaceFormatsKHR);
-    GET_INSTANCE_PROC_ADDR(hVkInstance, GetPhysicalDeviceSurfacePresentModesKHR);
-    GET_DEVICE_PROC_ADDR(hDevice, CreateSwapchainKHR);
-    GET_DEVICE_PROC_ADDR(hDevice, DestroySwapchainKHR);
-    GET_DEVICE_PROC_ADDR(hDevice, GetSwapchainImagesKHR);
-    GET_DEVICE_PROC_ADDR(hDevice, AcquireNextImageKHR);
-    GET_DEVICE_PROC_ADDR(hDevice, QueuePresentKHR);
+
+	fpGetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR)vkGetInstanceProcAddr(hVkInstance, "vkGetPhysicalDeviceSurfaceSupportKHR");
+	fpGetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR)vkGetInstanceProcAddr(hVkInstance, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
+	fpGetPhysicalDeviceSurfaceFormatsKHR = (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR)vkGetInstanceProcAddr(hVkInstance, "vkGetPhysicalDeviceSurfaceFormatsKHR");
+	fpGetPhysicalDeviceSurfacePresentModesKHR = (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR)vkGetInstanceProcAddr(hVkInstance, "vkGetPhysicalDeviceSurfacePresentModesKHR");
+
+	fpCreateSwapchainKHR = (PFN_vkCreateSwapchainKHR)vkGetDeviceProcAddr(hDevice, "vkCreateSwapchainKHR");
+	fpDestroySwapchainKHR = (PFN_vkDestroySwapchainKHR)vkGetDeviceProcAddr(hDevice, "vkDestroySwapchainKHR");
+	fpGetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR)vkGetDeviceProcAddr(hDevice, "vkGetSwapchainImagesKHR");
+	fpAcquireNextImageKHR = (PFN_vkAcquireNextImageKHR)vkGetDeviceProcAddr(hDevice, "vkAcquireNextImageKHR");
+	fpQueuePresentKHR = (PFN_vkQueuePresentKHR)vkGetDeviceProcAddr(hDevice, "vkQueuePresentKHR");
 
     // Present mode
     uint32_t presentModeCount = 0;
