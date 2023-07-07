@@ -60,7 +60,9 @@ struct Texture
 	void create_vk_image_cube(VkDevice device, VkImageUsageFlags imageUsage);
 };
 
-
+VkImageView create_texture_view(
+	Texture texture, VkFormat format, VkImageViewType view_type, 
+	VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
 
 struct Texture2D : public Texture
 {
@@ -87,8 +89,13 @@ struct Texture2D : public Texture
 
 	void create(VkDevice device, VkImageUsageFlags imageUsage, std::string_view debug_name = "");
 
-	/* Temporary */
-	static VkImageView create_texture_cube_view(Texture2D texture);
-	static VkImageView create_texture_array_view(Texture2D texture);
+
+
+	static VkImageView create_texture_2d_view(Texture2D texture, VkFormat format, 
+	                                          VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
+	static VkImageView create_texture_cube_view(Texture2D texture, VkFormat format, 
+	                                            VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
+	static VkImageView create_texture_2d_array_view(Texture2D texture, VkFormat format, 
+	                                                VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
 };
 

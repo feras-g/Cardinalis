@@ -175,31 +175,7 @@ void Texture::upload_data(VkDevice device, void* data)
 
 void Texture::create_view(VkDevice device, const ImageViewInitInfo& viewInfo)
 {
-    VkImageViewCreateInfo createInfo =
-    {
-        .sType      { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO },
-        .flags      { 0 },
-        .image      { image },
-        .viewType   { viewInfo.viewType },
-        .format     { info.imageFormat },
-        .components 
-        {
-            .r = VK_COMPONENT_SWIZZLE_R,
-            .g = VK_COMPONENT_SWIZZLE_G,
-            .b = VK_COMPONENT_SWIZZLE_B,
-            .a = VK_COMPONENT_SWIZZLE_A
-        },
-        .subresourceRange
-        {
-            .aspectMask     { viewInfo.aspectMask },
-            .baseMipLevel   { viewInfo.baseMipLevel },
-            .levelCount     { viewInfo.levelCount },
-            .baseArrayLayer { viewInfo.baseArrayLayer },
-            .layerCount     { (viewInfo.viewType == VK_IMAGE_VIEW_TYPE_CUBE) ? 6 : viewInfo.layerCount },
-        }
-    };
-
-    VK_CHECK(vkCreateImageView(context.device, &createInfo, nullptr, &view));
+	view = create_texture_view(*this, info.imageFormat, viewInfo.viewType, viewInfo.aspectMask);
 }
 
 void Texture::destroy(VkDevice device)
@@ -520,67 +496,57 @@ void GetSrcDstPipelineStage(VkImageLayout oldLayout, VkImageLayout newLayout, Vk
     }
 }
 
-VkImageView Texture2D::create_texture_cube_view(Texture2D texture)
+VkImageView create_texture_view(
+	Texture texture, VkFormat format, VkImageViewType view_type,
+	VkImageAspectFlags aspect)
 {
-    VkImageViewCreateInfo createInfo =
-    {
-        .sType      { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO },
-        .flags      {  },
-        .image      { texture.image },
-        .viewType   { VK_IMAGE_VIEW_TYPE_CUBE },
-        .format     { texture.info.imageFormat },
-        .components
-        {
-            .r = VK_COMPONENT_SWIZZLE_R,
-            .g = VK_COMPONENT_SWIZZLE_G,
-            .b = VK_COMPONENT_SWIZZLE_B,
-            .a = VK_COMPONENT_SWIZZLE_A
-        },
-        .subresourceRange
-        {
-            .aspectMask     { VK_IMAGE_ASPECT_COLOR_BIT },
-            .baseMipLevel   { 0 },
-            .levelCount     { texture.info.mipLevels },
-            .baseArrayLayer { 0 },
-            .layerCount     { 6 },
-        }
-    };
+	VkImageViewCreateInfo createInfo =
+	{
+		.sType      { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO },
+		.flags      {  },
+		.image      { texture.image },
+		.viewType   { view_type },
+		.format     { format },
+		.components
+		{
+			.r = VK_COMPONENT_SWIZZLE_R,
+			.g = VK_COMPONENT_SWIZZLE_G,
+			.b = VK_COMPONENT_SWIZZLE_B,
+			.a = VK_COMPONENT_SWIZZLE_A
+		},
+		.subresourceRange
+		{
+			.aspectMask     { aspect },
+			.baseMipLevel   { 0 },
+			.levelCount     { texture.info.mipLevels },
+			.baseArrayLayer { 0 },
+			.layerCount     { texture.info.layerCount },
+		}
+	};
 
-    VkImageView out_view;
-    vkCreateImageView(context.device, &createInfo, nullptr, &out_view);
+	VkImageView out_view;
+	vkCreateImageView(context.device, &createInfo, nullptr, &out_view);
 
-    return out_view;
+	return out_view;
 }
 
-
-VkImageView Texture2D::create_texture_array_view(Texture2D texture)
+VkImageView Texture2D::create_texture_2d_view(Texture2D texture, VkFormat format, 
+                                              VkImageAspectFlags aspect)
 {
-    VkImageViewCreateInfo createInfo =
-    {
-        .sType      { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO },
-        .flags      {  },
-        .image      { texture.image },
-        .viewType   { VK_IMAGE_VIEW_TYPE_2D_ARRAY },
-        .format     { texture.info.imageFormat },
-        .components
-        {
-            .r = VK_COMPONENT_SWIZZLE_R,
-            .g = VK_COMPONENT_SWIZZLE_G,
-            .b = VK_COMPONENT_SWIZZLE_B,
-            .a = VK_COMPONENT_SWIZZLE_A
-        },
-        .subresourceRange
-        {
-            .aspectMask     { VK_IMAGE_ASPECT_DEPTH_BIT },
-            .baseMipLevel   { 0 },
-            .levelCount     { texture.info.mipLevels },
-            .baseArrayLayer { 0 },
-            .layerCount     { texture.info.layerCount },
-        }
-    };
+	return create_texture_view(texture, format, 
+	                    VK_IMAGE_VIEW_TYPE_2D, aspect);
+}
 
-    VkImageView out_view;
-    vkCreateImageView(context.device, &createInfo, nullptr, &out_view);
+VkImageView Texture2D::create_texture_cube_view(Texture2D texture, VkFormat format, 
+                                                VkImageAspectFlags aspect)
+{
+	return create_texture_view(texture, format, 
+	                    VK_IMAGE_VIEW_TYPE_CUBE, aspect);
+}
 
-    return out_view;
+VkImageView Texture2D::create_texture_2d_array_view(Texture2D texture, VkFormat format, 
+                                                    VkImageAspectFlags aspect)
+{
+	return create_texture_view(texture, format, 
+	                    VK_IMAGE_VIEW_TYPE_2D_ARRAY, aspect);
 }
