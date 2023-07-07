@@ -86,11 +86,10 @@ void Texture::create_vk_image(VkDevice device, bool isCubemap, VkImageUsageFlags
     VkImageCreateFlags flags{ 0 };
     uint32_t arrayLayers = 1u;
 
-
     VkImageCreateInfo createInfo =
     {
         .sType                  { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO },
-        .flags                  { },
+		.flags                  { VK_IMAGE_CREATE_EXTENDED_USAGE_BIT },
         .imageType              { VK_IMAGE_TYPE_2D },
         .format                 { info.imageFormat },
         .extent                 { info.width, info.height, 1 },
