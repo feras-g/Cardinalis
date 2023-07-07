@@ -11,7 +11,7 @@ vec3 ws_pos_from_depth(vec2 uv, float z, mat4 inv_view_proj)
 
     // Compute NDC position
     float x = uv.x * 2 - 1;
-	float y = (1-uv.y) * 2 - 1;
+	  float y = (1-uv.y) * 2 - 1;
     vec4 ndc_pos = vec4(x,y,z, 1.0);
 
     // NDC -> View-Space
@@ -49,5 +49,11 @@ vec3 perturb_normal( vec3 N, vec3 N_map, vec3 V, vec2 texcoord )
     return normalize( TBN * N_map );
 }
 
+// Source: https://github.com/Microsoft/DirectX-Graphics-Samples/blob/master/MiniEngine/Core/Shaders/ColorSpaceUtility.hlsli
+vec3 ApplySRGBCurve( vec3 x )
+{
+  // Approximately pow(x, 1.0 / 2.2)
+  return all(lessThan(x, vec3(0.0031308))) ? 12.92 * x : 1.055 * pow(x, vec3(1.0 / 2.4)) - 0.055;
+}
 
 

@@ -77,20 +77,21 @@ void SampleApp::InitSceneResources()
 	LoadMesh("../../../data/models/basic/unit_plane.glb", "Floor");
 	LoadMesh("../../../data/models/test/metalroughspheres/MetalRoughSpheres.gltf", "MetalRoughSpheres");
 	LoadMesh("../../../data/models/basic/duck/duck.gltf", "ColladaDuck");
+	LoadMesh("../../../data/models/scenes/sponza-gltf-pbr/sponza.glb", "Sponza");
 
-//	glm::ivec3 dimensions(5,5,5);
-//	float spacing = 2.5f;
-//	for (int x = 0; x < dimensions.x; x++)
-//	{
-//		for (int y = 0; y < dimensions.y; y++)
-//		{
-//			for (int z = 0; z < dimensions.z; z++)
-//			{
-//				glm::vec3 position{ x, y, z };
-//				AddDrawable("Icosphere", true, position * spacing);
-//			}
-//		}
-//	}
+	glm::ivec3 dimensions(5,5,5);
+	float spacing = 2.5f;
+	for (int x = 0; x < dimensions.x; x++)
+	{
+		for (int y = 0; y < dimensions.y; y++)
+		{
+			for (int z = 0; z < dimensions.z; z++)
+			{
+				glm::vec3 position{ x, y, z };
+				AddDrawable("ColladaDuck", true, position * spacing, { 0, 0, 0 }, { 0.1, 0.1, 0.1 });
+			}
+		}
+	}
 
 	m_rbo.configure();
 }
