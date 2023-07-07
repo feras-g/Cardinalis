@@ -3,6 +3,7 @@
 #include "Rendering/Vulkan/VulkanRendererBase.h"
 #include "Rendering/Vulkan/RenderPass.h"
 #include "Rendering/Vulkan/VulkanShader.h"
+#include "Rendering/Vulkan/Renderers/ShadowRenderer.h"
 
 #include "../imgui/imgui.h"
 #include "../imgui/backends/imgui_impl_win32.h"
@@ -35,14 +36,16 @@ public:
 	std::array<int, NUM_FRAMES> m_ModelRendererNormalMapTextureId;
 	std::array<int, NUM_FRAMES> m_ModelRendererMetallicRoughnessTextureId;
 	std::array<int, NUM_FRAMES> m_DeferredRendererOutputTextureId;
-	std::array<int, NUM_FRAMES> m_ShadowRendererTextureId;
+
+	std::array<std::array<size_t, 4>, NUM_FRAMES> m_ShadowCascadesTextureIds;
+
 
 	~VulkanImGuiRenderer() ;
 private:
 	ImDrawData* m_pDrawData = nullptr;
 
 	Texture2D m_FontTexture;
-	std::vector<Texture2D> m_Textures;	// Textures displayed inside UI
+	std::vector<VkImageView*> m_Textures;	// Textures displayed inside UI
 	std::vector<VkDescriptorImageInfo> m_TextureDescriptors;
 
 	// Storage buffers

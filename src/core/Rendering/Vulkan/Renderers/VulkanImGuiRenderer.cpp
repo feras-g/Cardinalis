@@ -28,12 +28,9 @@ void VulkanImGuiRenderer::init(const ShadowRenderer& shadow_renderer)
 {
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-	//io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
 	// Create font texture
-	m_Textures.push_back(Texture2D());
-
-	CreateFontTexture(&io, "../../../data/fonts/SSTRg.TTF", m_Textures[FONT_TEXTURE_INDEX]);
+	CreateFontTexture(&io, "../../../data/fonts/SSTRg.TTF", m_FontTexture);
 	io.Fonts->TexID = (ImTextureID)FONT_TEXTURE_INDEX;
 	
 	// Then add other textures
@@ -46,28 +43,33 @@ void VulkanImGuiRenderer::init(const ShadowRenderer& shadow_renderer)
 	// [9] [10] : Shadow map output of shadow renderer for Frame 0 / Frame 1
 
 	int tex_id = 0;
-	for (size_t i = 0; i < NUM_FRAMES; i++)
+	m_Textures.push_back(&(m_FontTexture.view));
+	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
-		m_DeferredRendererOutputTextureId[i] = ++tex_id;
-		m_Textures.push_back(VulkanRendererBase::m_deferred_lighting_attachment[i]);
+		m_DeferredRendererOutputTextureId[frame_idx] = ++tex_id;
+		m_Textures.push_back(&VulkanRendererBase::m_deferred_lighting_attachment[frame_idx].view);
 
-		m_ModelRendererColorTextureId[i] = ++tex_id;
-		m_Textures.push_back(VulkanRendererBase::m_gbuffer_albedo[i]);
+		m_ModelRendererColorTextureId[frame_idx] = ++tex_id;
+		m_Textures.push_back(&VulkanRendererBase::m_gbuffer_albedo[frame_idx].view);
 	
-		m_ModelRendererNormalTextureId[i] = ++tex_id;
-		m_Textures.push_back(VulkanRendererBase::m_gbuffer_normal[i]);
+		m_ModelRendererNormalTextureId[frame_idx] = ++tex_id;
+		m_Textures.push_back(&VulkanRendererBase::m_gbuffer_normal[frame_idx].view);
 
-		m_ModelRendererDepthTextureId[i] = ++tex_id;
-		m_Textures.push_back(VulkanRendererBase::m_gbuffer_depth[i]);
+		m_ModelRendererDepthTextureId[frame_idx] = ++tex_id;
+		m_Textures.push_back(&VulkanRendererBase::m_gbuffer_depth[frame_idx].view);
 	
-		m_ModelRendererNormalMapTextureId[i] = ++tex_id;
-		m_Textures.push_back(VulkanRendererBase::m_gbuffer_directional_shadow[i]);
+		m_ModelRendererNormalMapTextureId[frame_idx] = ++tex_id;
+		m_Textures.push_back(&VulkanRendererBase::m_gbuffer_directional_shadow[frame_idx].view);
 
-		m_ModelRendererMetallicRoughnessTextureId[i] = ++tex_id;
-		m_Textures.push_back(VulkanRendererBase::m_gbuffer_metallic_roughness[i]);
+		m_ModelRendererMetallicRoughnessTextureId[frame_idx] = ++tex_id;
+		m_Textures.push_back(&VulkanRendererBase::m_gbuffer_metallic_roughness[frame_idx].view);
 
-		//m_ShadowRendererTextureId[i] = ++tex_id;
-		//m_Textures.push_back(shadow_renderer.m_shadow_maps[i]);
+
+		for (int i = 0; i < CascadedShadowRenderer::cascade_views[frame_idx].size(); i++)
+		{
+			m_ShadowCascadesTextureIds[frame_idx][i] = ++tex_id;
+			m_Textures.push_back(&CascadedShadowRenderer::cascade_views[frame_idx][i]);
+		}
 	}
 
 	// Shaders
@@ -313,8 +315,9 @@ void VulkanImGuiRenderer::update_descriptor_set(VkDevice device)
 		std::vector<VkDescriptorImageInfo> textureDescriptors;
 		for (size_t i = 0; i < m_Textures.size(); i++)
 		{
-			m_Textures[i].descriptor = { .sampler = VulkanRendererBase::s_SamplerClampNearest, .imageView = m_Textures[i].view, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-			textureDescriptors.push_back(m_Textures[i].descriptor);
+			VkDescriptorImageInfo descriptor_info = 
+			{ .sampler = VulkanRendererBase::s_SamplerClampNearest, .imageView = *m_Textures[i], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+			textureDescriptors.push_back(descriptor_info);
 		}
 
 		VkDescriptorBufferInfo uboInfo0{ .buffer = m_uniform_buffer.buffer, .offset = 0, .range = sizeof(glm::mat4) };

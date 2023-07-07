@@ -31,7 +31,6 @@ struct ShadowRenderer
 	const LightManager* h_light_manager;
 };
 
-constexpr int NUM_CASCADES = 4;
 static const uint32_t view_mask = 0b00001111;
 
 class CascadedShadowRenderer
@@ -42,6 +41,8 @@ public:
 	void init(unsigned int width, unsigned int height,  Camera& camera, const LightManager& lightmanager);
 	void update_desc_sets();
 	void create_buffers();
+
+	static constexpr int NUM_CASCADES = 4;
 
 	Texture2D m_shadow_maps[NUM_FRAMES];
 	vk::DynamicRenderPass m_CSM_pass[NUM_FRAMES];
@@ -79,4 +80,10 @@ public:
 	std::array<glm::mat4, NUM_CASCADES> camera_splits_proj_mats;
 	std::array<glm::mat4, NUM_CASCADES> view_proj_mats;
 
+
+	/* 
+		For each frame, hold separate views for each layer of a texture 2D array.
+		To be displayed by ImGui. 
+	*/
+	static inline std::array<std::array<VkImageView, NUM_CASCADES>, NUM_FRAMES> cascade_views;
 };

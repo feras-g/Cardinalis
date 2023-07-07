@@ -2,6 +2,7 @@
 
 #include "glm/gtx/log_base.hpp"
 #include <glm/gtc/type_ptr.hpp> // value_ptr
+#include <span>
 
 class Camera;
 struct LightManager;
@@ -16,7 +17,7 @@ public:
 	VulkanUI& ShowSceneViewportPanel(
 		size_t texDeferred, size_t texColorId,
 		size_t texNormalId, size_t texDepthId,
-		size_t texNormalMapId, size_t texMetallicRoughnessId, size_t texShadowMapId);
+		size_t texNormalMapId, size_t texMetallicRoughnessId);
 	VulkanUI& ShowMenuBar();
 	VulkanUI& AddHierarchyPanel();
 	VulkanUI& AddInspectorPanel();
@@ -25,7 +26,7 @@ public:
 	VulkanUI& ShowCameraSettings(Camera* camera);
 	VulkanUI& ShowInspector();
 	VulkanUI& ShowLightSettings(LightManager* light_manager);
-	VulkanUI& ShowShadowSettings(CascadedShadowRenderer* shadow_renderer);
+	VulkanUI& ShowShadowPanel(CascadedShadowRenderer* shadow_renderer, std::span<size_t> texShadowCascades);
 	void End();
 
 	bool bIsSceneViewportHovered = false;

@@ -9,6 +9,7 @@
 #include "../imgui/backends/imgui_impl_win32.h"
 #include "../imgui/backends/imgui_impl_vulkan.h"
 
+
 VulkanUI& VulkanUI::Start()
 {
 	ImGui::NewFrame();
@@ -28,8 +29,7 @@ void VulkanUI::End()
 VulkanUI& VulkanUI::ShowSceneViewportPanel(
 	size_t texDeferred, size_t texColorId,
 	size_t texNormalId, size_t texDepthId,
-	size_t texNormalMapId, size_t texMetallicRoughnessId, size_t texShadowMapId
-)
+	size_t texNormalMapId, size_t texMetallicRoughnessId)
 {
 	static ImGuiComboFlags flags = 0;
 
@@ -78,39 +78,22 @@ VulkanUI& VulkanUI::ShowSceneViewportPanel(
 
 	ImGui::End();
 
-
 	if (ImGui::Begin("GBuffers", 0, 0))
 	{
-		ImVec2 thumbnail_size{ 512, 512 };
+		ImVec2 thumbnail_size{ 256, 256 };
 		//ImGui::SetWindowSize({ thumbnail_size.x * 5, thumbnail_size.y });
 		
-		{
-			ImGui::Text("Albedo");
-			ImGui::Image(reinterpret_cast<ImTextureID>(texColorId), thumbnail_size);
-		}
+		ImGui::Image((ImTextureID)(texColorId), thumbnail_size);
+		ImGui::SameLine();
 
-		{
-			ImGui::Text("WS Normal");
-			ImGui::Image(reinterpret_cast<ImTextureID>(texNormalId), thumbnail_size);
-		}
+		ImGui::Image((ImTextureID)(texNormalId), thumbnail_size);
+		ImGui::SameLine();
 
-		{
-			ImGui::Text("Depth");
-			ImGui::Image(reinterpret_cast<ImTextureID>(texDepthId), thumbnail_size);
+		ImGui::Image((ImTextureID)(texDepthId), thumbnail_size);
+		ImGui::SameLine();
 
-		}
-
-		{
-			ImGui::Text("Metallic/Roughness");
-			ImGui::Image(reinterpret_cast<ImTextureID>(texMetallicRoughnessId), thumbnail_size);
-
-		}
-
-		{
-			ImGui::Text("Depth (Directional Light)");
-			ImGui::Image(reinterpret_cast<ImTextureID>(texShadowMapId), thumbnail_size);
-		}
-		
+		ImGui::Image((ImTextureID)(texMetallicRoughnessId), thumbnail_size);
+		ImGui::SameLine();
 	}
 	ImGui::End();
 
@@ -300,7 +283,7 @@ VulkanUI& VulkanUI::ShowLightSettings(LightManager* light_manager)
 	return *this;
 }
 
-VulkanUI& VulkanUI::ShowShadowSettings(CascadedShadowRenderer* shadow_renderer)
+VulkanUI& VulkanUI::ShowShadowPanel(CascadedShadowRenderer* shadow_renderer, std::span<size_t> texShadowCascades)
 {
 	if (ImGui::Begin("Shadow Settings", 0, 0))
 	{
@@ -316,7 +299,15 @@ VulkanUI& VulkanUI::ShowShadowSettings(CascadedShadowRenderer* shadow_renderer)
 		{
 			shadow_renderer->compute_z_splits();
 		}
+
+		/* Display shadow cascades */
+		for (int i = 0; i < texShadowCascades.size(); i++)
+		{
+			ImGui::Image((ImTextureID)texShadowCascades[i], { 256, 256 });
+			ImGui::SameLine();
+		}
 	}
+
 
 	ImGui::End();
 

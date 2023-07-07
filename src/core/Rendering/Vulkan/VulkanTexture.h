@@ -62,7 +62,7 @@ struct Texture
 
 VkImageView create_texture_view(
 	Texture texture, VkFormat format, VkImageViewType view_type, 
-	VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
+	VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT, VkImageSubresourceRange* subresourceRange = nullptr);
 
 struct Texture2D : public Texture
 {

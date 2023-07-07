@@ -77,7 +77,7 @@ void SampleApp::InitSceneResources()
 	LoadMesh("../../../data/models/basic/unit_plane.glb", "Floor");
 	LoadMesh("../../../data/models/test/metalroughspheres/MetalRoughSpheres.gltf", "MetalRoughSpheres");
 	LoadMesh("../../../data/models/basic/duck/duck.gltf", "ColladaDuck");
-	LoadMesh("../../../data/models/scenes/sponza-gltf-pbr/sponza.glb", "Sponza");
+	//LoadMesh("../../../data/models/scenes/sponza-gltf-pbr/sponza.glb", "Sponza");
 
 	glm::ivec3 dimensions(5,5,5);
 	float spacing = 2.5f;
@@ -265,14 +265,13 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 			m_imgui_renderer->m_ModelRendererNormalTextureId[currentImageIdx],
 			m_imgui_renderer->m_ModelRendererDepthTextureId[currentImageIdx],
 			m_imgui_renderer->m_ModelRendererNormalMapTextureId[currentImageIdx],
-			m_imgui_renderer->m_ModelRendererMetallicRoughnessTextureId[currentImageIdx],
-			m_imgui_renderer->m_ShadowRendererTextureId[currentImageIdx]
+			m_imgui_renderer->m_ModelRendererMetallicRoughnessTextureId[currentImageIdx]
 		);
 		//m_UI.ShowFrameTimeGraph(FrameStats::History.data(), FrameStats::History.size());
 		m_UI.ShowCameraSettings(&m_Camera);
 		m_UI.ShowInspector();
 		m_UI.ShowLightSettings(&m_light_manager);
-		m_UI.ShowShadowSettings(&m_cascaded_shadow_renderer);
+		m_UI.ShowShadowPanel(&m_cascaded_shadow_renderer, m_imgui_renderer->m_ShadowCascadesTextureIds[currentImageIdx]);
 		m_UI.End();
 	}
 

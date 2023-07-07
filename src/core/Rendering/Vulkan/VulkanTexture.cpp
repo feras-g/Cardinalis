@@ -497,7 +497,7 @@ void GetSrcDstPipelineStage(VkImageLayout oldLayout, VkImageLayout newLayout, Vk
 
 VkImageView create_texture_view(
 	Texture texture, VkFormat format, VkImageViewType view_type,
-	VkImageAspectFlags aspect)
+	VkImageAspectFlags aspect, VkImageSubresourceRange* subresourceRange)
 {
 	VkImageViewCreateInfo createInfo =
 	{
@@ -513,15 +513,23 @@ VkImageView create_texture_view(
 			.b = VK_COMPONENT_SWIZZLE_B,
 			.a = VK_COMPONENT_SWIZZLE_A
 		},
-		.subresourceRange
+	};
+
+	if (subresourceRange != nullptr)
+	{
+		createInfo.subresourceRange = *subresourceRange;
+	}
+	else
+	{
+		createInfo.subresourceRange =
 		{
 			.aspectMask     { aspect },
 			.baseMipLevel   { 0 },
 			.levelCount     { texture.info.mipLevels },
 			.baseArrayLayer { 0 },
 			.layerCount     { texture.info.layerCount },
-		}
-	};
+		};
+	}
 
 	VkImageView out_view;
 	vkCreateImageView(context.device, &createInfo, nullptr, &out_view);
