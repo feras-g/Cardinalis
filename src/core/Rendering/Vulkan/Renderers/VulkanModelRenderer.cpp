@@ -67,7 +67,13 @@ VulkanModelRenderer::VulkanModelRenderer()
 	}
 
 	GfxPipeline::Flags ppl_flags = GfxPipeline::Flags::ENABLE_DEPTH_STATE;
-	GfxPipeline::CreateDynamic(m_shader, VulkanRendererBase::m_formats, VulkanRendererBase::m_depth_format, ppl_flags, m_ppl_layout, &m_gfx_pipeline, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+	std::array<VkFormat, 3> color_attachment_formats
+	{
+		VulkanRendererBase::tex_base_color_format,
+		VulkanRendererBase::tex_gbuffer_normal_format,
+		VulkanRendererBase::tex_metallic_roughness_format
+	};
+	GfxPipeline::CreateDynamic(m_shader, color_attachment_formats, VulkanRendererBase::tex_gbuffer_depth_format, ppl_flags, m_ppl_layout, &m_gfx_pipeline, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
 }
 
 void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buffer)

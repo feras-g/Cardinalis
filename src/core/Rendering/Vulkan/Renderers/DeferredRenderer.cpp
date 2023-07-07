@@ -18,7 +18,7 @@ void DeferredRenderer::init(std::span<Texture2D> g_buffers_shadow_map, const Lig
 
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
-		m_dyn_renderpass[i].add_color_attachment(VulkanRendererBase::m_deferred_lighting_output[i].view);
+		m_dyn_renderpass[i].add_color_attachment(VulkanRendererBase::m_deferred_lighting_attachment[i].view);
 	}
 
 	/* Create shader */
@@ -65,7 +65,7 @@ void DeferredRenderer::init(std::span<Texture2D> g_buffers_shadow_map, const Lig
 
 	/* Create graphics pipeline */
 	GfxPipeline::Flags ppl_flags = GfxPipeline::NONE;
-	std::array<VkFormat, 1> color_formats = { VulkanRendererBase::color_attachment_format };
+	std::array<VkFormat, 1> color_formats = { VulkanRendererBase::tex_deferred_lighting_format };
 	GfxPipeline::CreateDynamic(m_shader_deferred, color_formats, {}, ppl_flags, m_pipeline_layout, &m_gfx_pipeline, VK_CULL_MODE_FRONT_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
 }
 
@@ -137,12 +137,12 @@ void DeferredRenderer::render(size_t current_backbuffer_idx, VkCommandBuffer cmd
 {
 	VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Deferred Lighting Pass");
 
-	VulkanRendererBase::m_deferred_lighting_output[current_backbuffer_idx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	VulkanRendererBase::m_deferred_lighting_attachment[current_backbuffer_idx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 	VkRect2D render_area{ .offset {}, .extent { VulkanRendererBase::render_width , VulkanRendererBase::render_height } };
 	m_dyn_renderpass[current_backbuffer_idx].begin(cmd_buffer, render_area);
 	draw_scene(current_backbuffer_idx, cmd_buffer);
 	m_dyn_renderpass[current_backbuffer_idx].end(cmd_buffer);
 
-	VulkanRendererBase::m_deferred_lighting_output[current_backbuffer_idx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	VulkanRendererBase::m_deferred_lighting_attachment[current_backbuffer_idx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }

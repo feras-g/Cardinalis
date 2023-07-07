@@ -197,7 +197,7 @@ void CubemapRenderer::init_skybox_rendering()
 
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
-		pass_render_skybox[i].add_color_attachment(VulkanRendererBase::m_deferred_lighting_output[i].view, VK_ATTACHMENT_LOAD_OP_LOAD);
+		pass_render_skybox[i].add_color_attachment(VulkanRendererBase::m_deferred_lighting_attachment[i].view, VK_ATTACHMENT_LOAD_OP_LOAD);
 		pass_render_skybox[i].add_depth_attachment(VulkanRendererBase::m_gbuffer_depth[i].view, VK_ATTACHMENT_LOAD_OP_LOAD);
 	}
 	const VkSampler sampler = VulkanRendererBase::s_SamplerClampLinear;
@@ -225,8 +225,8 @@ void CubemapRenderer::init_skybox_rendering()
 
 	/* Graphics pipeline */
 	GfxPipeline::Flags flags = GfxPipeline::Flags::ENABLE_DEPTH_STATE;
-	VkFormat color_formats[1] = { VulkanRendererBase::color_attachment_format };
-	GfxPipeline::CreateDynamic(shader_render_skybox, color_formats, VulkanRendererBase::m_depth_format, flags, render_skybox_ppl_layout, &render_skybox_gfx_ppl, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_CLOCKWISE, {});
+	VkFormat color_formats[1] = { VulkanRendererBase::tex_deferred_lighting_format };
+	GfxPipeline::CreateDynamic(shader_render_skybox, color_formats, VulkanRendererBase::tex_gbuffer_depth_format, flags, render_skybox_ppl_layout, &render_skybox_gfx_ppl, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_CLOCKWISE, {});
 }
 
 void CubemapRenderer::init_resources(const char* filename)

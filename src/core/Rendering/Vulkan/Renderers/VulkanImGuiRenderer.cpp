@@ -49,7 +49,7 @@ void VulkanImGuiRenderer::init(const ShadowRenderer& shadow_renderer)
 	for (size_t i = 0; i < NUM_FRAMES; i++)
 	{
 		m_DeferredRendererOutputTextureId[i] = ++tex_id;
-		m_Textures.push_back(VulkanRendererBase::m_deferred_lighting_output[i]);
+		m_Textures.push_back(VulkanRendererBase::m_deferred_lighting_attachment[i]);
 
 		m_ModelRendererColorTextureId[i] = ++tex_id;
 		m_Textures.push_back(VulkanRendererBase::m_gbuffer_albedo[i]);
@@ -299,7 +299,7 @@ bool VulkanImGuiRenderer::CreatePipeline(VkDevice device)
 	m_pipeline_layout = create_pipeline_layout(device, layouts, pushConstantRanges);
 
 	GfxPipeline::Flags pp_flags = GfxPipeline::Flags::NONE;
-	std::array<VkFormat, 1> color_formats = { ENGINE_SWAPCHAIN_COLOR_FORMAT };
+	std::array<VkFormat, 1> color_formats = { VulkanRendererBase::swapchain_color_format };
 	GfxPipeline::CreateDynamic(m_Shader, color_formats, {}, pp_flags, m_pipeline_layout, &m_gfx_pipeline, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
 
 	return true;

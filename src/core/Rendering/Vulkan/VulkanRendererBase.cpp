@@ -7,10 +7,20 @@ VkSampler VulkanRendererBase::s_SamplerRepeatNearest;
 Buffer VulkanRendererBase::m_ubo_framedata[NUM_FRAMES];
 
 /** Size in pixels of the offscreen buffers */
-uint32_t VulkanRendererBase::render_width = 2048;
+uint32_t VulkanRendererBase::render_width  = 2048;
 uint32_t VulkanRendererBase::render_height = 2048;
 
-
+/* Formats */
+VkFormat 			VulkanRendererBase::swapchain_color_format 			= VK_FORMAT_B8G8R8A8_SRGB;
+VkColorSpaceKHR 	VulkanRendererBase::swapchain_colorspace 			= VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+VkFormat 			VulkanRendererBase::swapchain_depth_format 			= VK_FORMAT_D32_SFLOAT;
+VkFormat 			VulkanRendererBase::tex_base_color_format         	= VK_FORMAT_R8G8B8A8_SRGB;
+VkFormat 			VulkanRendererBase::tex_metallic_roughness_format 	= VK_FORMAT_R8G8B8A8_UNORM;
+VkFormat 			VulkanRendererBase::tex_normal_map_format         	= VK_FORMAT_R8G8B8A8_UNORM;
+VkFormat 			VulkanRendererBase::tex_emissive_format           	= VK_FORMAT_R8G8B8A8_SRGB;
+VkFormat 			VulkanRendererBase::tex_gbuffer_normal_format     	= VK_FORMAT_R16G16B16A16_SFLOAT;
+VkFormat 			VulkanRendererBase::tex_gbuffer_depth_format 		= VK_FORMAT_D16_UNORM;
+VkFormat 			VulkanRendererBase::tex_deferred_lighting_format 	= VK_FORMAT_R8G8B8A8_SRGB;
 	
 void VulkanRendererBase::create_descriptor_sets()
 {
@@ -80,33 +90,34 @@ void VulkanRendererBase::create_attachments()
 	{
 		std::string s_prefix = "Frame #" + std::to_string(i) + "G-Buffer ";
 
-		m_gbuffer_albedo[i].init(m_formats[0], render_width, render_height, 1, false);	/* G-Buffer Color */
-		m_gbuffer_normal[i].init(m_formats[1], render_width, render_height, 1, false);	/* G-Buffer Normal */
-		m_gbuffer_depth[i].init(m_depth_format, render_width, render_height, 1, false);		/* G-Buffer Depth */
-		m_gbuffer_directional_shadow[i].init(m_depth_format, render_width, render_height, 1, false);			/* G-Buffer Shadow map */
-		m_gbuffer_metallic_roughness[i].init(m_formats[2], render_width, render_height, 1, false);			/* G-Buffer Metallic/Roughness */
-		m_deferred_lighting_output[i].init(color_attachment_format, 2048, 2048, 1, false); /* Final color attachment */
+		m_gbuffer_albedo[i].init(tex_base_color_format, render_width, render_height, 1, false);	/* G-Buffer Color */
+		m_gbuffer_normal[i].init(tex_gbuffer_normal_format, render_width, render_height, 1, false);	/* G-Buffer Normal */
+		m_gbuffer_depth[i].init(tex_gbuffer_depth_format, render_width, render_height, 1, false);		/* G-Buffer Depth */
+		m_gbuffer_directional_shadow[i].init(tex_gbuffer_depth_format, render_width, render_height, 1, false);			/* G-Buffer Shadow map */
+		m_gbuffer_metallic_roughness[i].init(tex_metallic_roughness_format, render_width, render_height, 1, false);			/* G-Buffer Metallic/Roughness */
+		m_deferred_lighting_attachment[i].init(tex_deferred_lighting_format, 2048, 2048, 1, false); /* Final color attachment */
 
-		m_gbuffer_albedo[i].create(context.device, VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Albedo").c_str());
+		m_gbuffer_albedo[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Albedo").c_str());
 		m_gbuffer_normal[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Normal").c_str());
 		m_gbuffer_depth[i].create(context.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Depth").c_str());
 		m_gbuffer_directional_shadow[i].create(context.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Directional Shadow Map").c_str());
 		m_gbuffer_metallic_roughness[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Metallic roughness").c_str());
-		m_deferred_lighting_output[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, "Deferred Renderer Attachment");
+		m_deferred_lighting_attachment[i].create(context.device, VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
+		                                         "Deferred Lighting Attachment");
 
 		m_gbuffer_albedo[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
 		m_gbuffer_normal[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
 		m_gbuffer_depth[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT });
 		m_gbuffer_directional_shadow[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT });
 		m_gbuffer_metallic_roughness[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
-		m_deferred_lighting_output[i].create_view(context.device, {});
+		m_deferred_lighting_attachment[i].create_view(context.device, {});
 
 		m_gbuffer_albedo[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		m_gbuffer_normal[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		m_gbuffer_depth[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		m_gbuffer_directional_shadow[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		m_gbuffer_metallic_roughness[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		m_deferred_lighting_output[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		m_deferred_lighting_attachment[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
 
 	end_temp_cmd_buffer(cmd_buffer);

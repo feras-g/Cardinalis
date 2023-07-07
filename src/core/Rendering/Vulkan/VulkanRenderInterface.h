@@ -24,10 +24,6 @@
 #include <glm/mat4x4.hpp>
 #include <glm/ext.hpp>
 
-static constexpr VkFormat ENGINE_SWAPCHAIN_COLOR_FORMAT = VK_FORMAT_B8G8R8A8_SRGB;
-static constexpr VkFormat ENGINE_SWAPCHAIN_DS_FORMAT = VK_FORMAT_D32_SFLOAT;
-static constexpr VkColorSpaceKHR ENGINE_SWAPCHAIN_COLOR_SPACE = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-
 /* Function pointers*/
 inline PFN_vkCmdBeginDebugUtilsLabelEXT		fpCmdBeginDebugUtilsLabelEXT;
 inline PFN_vkCmdEndDebugUtilsLabelEXT		fpCmdEndDebugUtilsLabelEXT;

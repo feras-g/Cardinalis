@@ -59,18 +59,20 @@ public:
 	//static inline std::array<Texture2D, NUM_FRAMES> m_gbuffer_emissive;
 
 	/* Color attachment resulting the deferred lighting pass */
-	static inline std::array <Texture2D, NUM_FRAMES> m_deferred_lighting_output;
+	static inline std::array <Texture2D, NUM_FRAMES> m_deferred_lighting_attachment;
 
 	/* Formats */
-	static const VkFormat color_attachment_format = VK_FORMAT_R8G8B8A8_SRGB; /* Format of the final render attachment */
+	static VkFormat swapchain_color_format;
+	static VkColorSpaceKHR swapchain_colorspace;
+	static VkFormat swapchain_depth_format;
+	static VkFormat tex_base_color_format;
+	static VkFormat tex_metallic_roughness_format;
+	static VkFormat tex_normal_map_format;
+	static VkFormat tex_emissive_format;
+	static VkFormat tex_gbuffer_normal_format;
+	static VkFormat tex_gbuffer_depth_format;
+	static VkFormat tex_deferred_lighting_format;
 
-	static inline std::vector<VkFormat> m_formats =
-	{
-		tex_base_color_format,				/* Base color / Albedo */
-		VK_FORMAT_R16G16B16A16_SFLOAT,		/* Vertex normal */
-		tex_metallic_roughness_format,		/* Metallic roughness */
-	};
-	static inline VkFormat m_depth_format = VK_FORMAT_D16_UNORM;
 
 	// void init();
 	// void render();

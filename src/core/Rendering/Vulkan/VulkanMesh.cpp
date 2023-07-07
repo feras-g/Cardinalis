@@ -205,13 +205,13 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 		cgltf_texture* tex_normal = gltf_mat->normal_texture.texture;
 		if (tex_normal)
 		{
-			material.tex_normal_id = (unsigned int)load_tex(tex_normal, tex_normal_format, true);
+			material.tex_normal_id = (unsigned int)load_tex(tex_normal, VulkanRendererBase::tex_normal_map_format, true);
 		}
 
 		cgltf_texture* tex_emissive = gltf_mat->emissive_texture.texture;
 		if (tex_emissive)
 		{
-			material.tex_emissive_id = (unsigned int)load_tex(tex_emissive, tex_emissive_format, true);
+			material.tex_emissive_id = (unsigned int)load_tex(tex_emissive, VulkanRendererBase::tex_emissive_format, true);
 		}
 
 		if (gltf_mat->has_pbr_metallic_roughness)
@@ -219,13 +219,13 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 			cgltf_texture* tex_base_color = gltf_mat->pbr_metallic_roughness.base_color_texture.texture;
 			if (tex_base_color)
 			{
-				material.tex_base_color_id = (unsigned int)load_tex(tex_base_color, tex_base_color_format, true);
+				material.tex_base_color_id = (unsigned int)load_tex(tex_base_color, VulkanRendererBase::tex_base_color_format, true);
 			}
 
 			cgltf_texture* tex_metallic_roughness = gltf_mat->pbr_metallic_roughness.metallic_roughness_texture.texture;
 			if (tex_metallic_roughness)
 			{
-				material.tex_metallic_roughness_id = (unsigned int)load_tex(tex_metallic_roughness, tex_metallic_roughness_format, false);
+				material.tex_metallic_roughness_id = (unsigned int)load_tex(tex_metallic_roughness, VulkanRendererBase::tex_metallic_roughness_format, false);
 			}
 
 			/* Factors */
