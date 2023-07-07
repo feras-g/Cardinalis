@@ -162,7 +162,8 @@ void CascadedShadowRenderer::init(unsigned int width, unsigned int height,  Came
 		/* Create shadow map */
 		m_shadow_maps[frame_idx].init(shadow_map_format, m_shadow_map_size.x, m_shadow_map_size.y, (uint32_t)NUM_CASCADES, false);
 		m_shadow_maps[frame_idx].create(context.device, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
-		m_shadow_maps[frame_idx].view = Texture2D::create_texture_array_view(m_shadow_maps[frame_idx]); //create_view(context.device, { .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT });
+		m_shadow_maps[frame_idx].view = Texture2D::create_texture_2d_array_view(
+			m_shadow_maps[frame_idx], m_shadow_maps[frame_idx].info.imageFormat, VK_IMAGE_ASPECT_DEPTH_BIT); //create_view(context.device, { .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT });
 		m_shadow_maps[frame_idx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 		/* Create render pass */

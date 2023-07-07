@@ -68,18 +68,15 @@ void SampleApp::InitSceneResources()
 
 	/* Basic primitives */
 	{
-		VulkanMesh mesh = VulkanMesh("../../../data/models/Cube.gltf");
+		VulkanMesh mesh = VulkanMesh("../../../data/models/basic/unit_cube.glb");
 		uint32_t id = m_rbo.add_mesh(mesh, "cube");
 		m_rbo.add_drawable(id, "skybox", false);
 		m_rbo.add_drawable(id, "placeholder_cube", false);
 	}
 
-	LoadMesh("../../../data/models/basic/plane.glb", "Floor");
-	LoadMesh("../../../data/models/MetalRoughSpheres.gltf", "MetalRoughSpheres");
-	LoadMesh("../../../data/models/duck.gltf", "ColladaDuck");
-	LoadMesh("../../../data/models/basic/icosphere.glb", "Icosphere");
-	//LoadMesh("../../../data/models/local/attic_gltf/scene.gltf", "Nvidia-Attic");
-	//LoadMesh("../../../data/models/local/knight/scene.gltf", "Knight");
+	LoadMesh("../../../data/models/basic/unit_plane.glb", "Floor");
+	LoadMesh("../../../data/models/test/metalroughspheres/MetalRoughSpheres.gltf", "MetalRoughSpheres");
+	LoadMesh("../../../data/models/basic/duck/duck.gltf", "ColladaDuck");
 
 //	glm::ivec3 dimensions(5,5,5);
 //	float spacing = 2.5f;

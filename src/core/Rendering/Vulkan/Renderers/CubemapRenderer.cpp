@@ -125,12 +125,13 @@ void CubemapRenderer::init_irradiance_map_rendering()
 	/* Irrandiance map attachment */
 	irradiance_map_attachment.init(irradiance_map_format, irradiance_map_dim, irradiance_map_dim, 6, false);
 	irradiance_map_attachment.create_vk_image(context.device, true, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-	irradiance_map_attachment.create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+	irradiance_map_attachment.view = Texture2D::create_texture_2d_array_view(irradiance_map_attachment, irradiance_map_attachment.info.imageFormat);
 
 	pass_render_irradiance_map.add_color_attachment(irradiance_map_attachment.view);
 
 	/* sampler cube view */
-	tex_irradiance_map_view = Texture2D::create_texture_cube_view(irradiance_map_attachment);
+	tex_irradiance_map_view = Texture2D::create_texture_cube_view(
+		irradiance_map_attachment, irradiance_map_attachment.info.imageFormat);
 
 	const VkSampler sampler = VulkanRendererBase::s_SamplerClampLinear;
 	irradiance_desc_layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, sampler, "Cubemap");
@@ -240,7 +241,7 @@ void CubemapRenderer::init_resources(const char* filename)
 	/* Cubemap render attachment */
 	cubemap_render_attachment.init(cubemap_render_attachment_format, layer_width, layer_height, 6, false);
 	cubemap_render_attachment.create_vk_image(context.device, true, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-	cubemap_render_attachment.create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1  });
+	cubemap_render_attachment.view = Texture2D::create_texture_2d_array_view(cubemap_render_attachment, cubemap_render_attachment.info.imageFormat);
 
 	/* Uniform buffer */
 	create_buffer(Buffer::Type::UNIFORM, uniform_buffer, sizeof(ubo));
@@ -325,7 +326,8 @@ void CubemapRenderer::render_cubemap(VkCommandBuffer cmd_buffer, VkRect2D area)
 	cubemap_render_attachment.transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	
 	/* Sampler cube */
-	tex_cubemap_view = Texture2D::create_texture_cube_view(cubemap_render_attachment);
+	tex_cubemap_view = Texture2D::create_texture_cube_view(
+		cubemap_render_attachment, cubemap_render_attachment.info.imageFormat);
 }
 
 
