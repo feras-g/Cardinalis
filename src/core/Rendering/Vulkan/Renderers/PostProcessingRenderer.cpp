@@ -47,7 +47,7 @@ static Texture2D create_test_texture()
 
 void PostFX_Downsample::init()
 {
-	Texture2D& input_image = VulkanRendererBase::m_deferred_lighting_attachment[0];
+	Texture2D& input_image = VulkanRendererBase::m_gbuffer_albedo[0];
 	input_image_handle = &input_image;// &input_image;
 	width  = input_image.info.width;
 	height = input_image.info.height;
