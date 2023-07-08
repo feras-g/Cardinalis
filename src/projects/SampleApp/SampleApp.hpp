@@ -62,7 +62,7 @@ protected:
 void SampleApp::InitSceneResources()
 {
 	CameraController fpsController = CameraController( { 0, 0, 5 }, { 0, -180, 0 }, { 0, 0, 1 }, { 0, 1, 0 });
-	m_Camera = Camera(fpsController, 45.0f, 1.0f, 0.01f, 1000.0f);
+	m_Camera = Camera(fpsController, 45.0f, 1.0f, 0.25f, 250.0f);
 
 	m_rbo.init();
 

@@ -50,7 +50,7 @@ glm::mat4& CameraController::GetView()
 }
 
 Camera::Camera()
-	: controller({ 0,0,-5 }, { 0,-180,0 }, { 0,0,1 }, { 0,1,0 }), fov(45.0f), aspect_ratio(ASPECT_16_9), near_far(0.1f, 1000.0f)
+: controller({ 0,0,-5 }, { 0,-180,0 }, { 0,0,1 }, { 0,1,0 }), fov(45.0f), aspect_ratio(ASPECT_16_9), near_far(0.25f, 250.0f)
 {
 	UpdateProjection();
 }
