@@ -613,8 +613,6 @@ bool GfxPipeline::Create(const VertexFragmentShader& shader, uint32_t numColorAt
 	// Vertex Input -> Input Assembly -> Viewport -> Rasterization -> Depth-Stencil -> Color Blending
 	VkPipelineVertexInputStateCreateInfo vertexInputState;
 	VkPipelineInputAssemblyStateCreateInfo inputAssemblyState;
-	VkPipelineViewportStateCreateInfo viewportState;
-	VkPipelineRasterizationStateCreateInfo rasterizerState;
 	VkPipelineMultisampleStateCreateInfo multisampleState;
 	VkPipelineDepthStencilStateCreateInfo depthStencilState;
 	VkPipelineColorBlendStateCreateInfo colorBlendState;
@@ -638,23 +636,20 @@ bool GfxPipeline::Create(const VertexFragmentShader& shader, uint32_t numColorAt
 
 	VkRect2D scissor = { .offset = {0,0}, .extent = {.width = (uint32_t)viewport.width, .height = (uint32_t)viewport.height } };
 
-	viewportState =
-	{
-		.sType=VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-		.viewportCount=1,
-		.pViewports=&viewport,
-		.scissorCount=1,
-		.pScissors=&scissor,
-	};
+	VkPipelineViewportStateCreateInfo viewportState = {};
+	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+	viewportState.viewportCount = 1;
+	viewportState.pViewports = &viewport;
+	viewportState.scissorCount = 1;
+	viewportState.pScissors = &scissor;
 
-	rasterizerState =
-	{
-		.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-		.polygonMode = VK_POLYGON_MODE_FILL,
-		.cullMode = cullMode,
-		.frontFace = frontFace,
-		.lineWidth = 1.0f
-	};
+	VkPipelineRasterizationStateCreateInfo raster_state_info = {};
+	raster_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	raster_state_info.polygonMode = VK_POLYGON_MODE_FILL;
+	raster_state_info.cullMode = cullMode;
+	raster_state_info.frontFace = frontFace;
+	raster_state_info.lineWidth = 1.0f;
+	raster_state_info.depthClampEnable = VK_TRUE;
 
 	multisampleState = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
@@ -669,9 +664,6 @@ bool GfxPipeline::Create(const VertexFragmentShader& shader, uint32_t numColorAt
 		.depthTestEnable = VK_TRUE,
 		.depthWriteEnable = VK_TRUE,
 		.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL,// VK_COMPARE_OP_LESS,
-		.depthBoundsTestEnable = VK_FALSE,
-		.minDepthBounds = 0.0f,
-		.maxDepthBounds = 1.0f,
 	};
 
 
@@ -723,7 +715,7 @@ bool GfxPipeline::Create(const VertexFragmentShader& shader, uint32_t numColorAt
 		.pInputAssemblyState=&inputAssemblyState,
 		.pTessellationState=nullptr,
 		.pViewportState=&viewportState,
-		.pRasterizationState=&rasterizerState,
+		.pRasterizationState=&raster_state_info,
 		.pMultisampleState=&multisampleState,
 		.pDepthStencilState= !!(flags & ENABLE_DEPTH_STATE) ? &depthStencilState : VK_NULL_HANDLE,
 		.pColorBlendState=&colorBlendState,
