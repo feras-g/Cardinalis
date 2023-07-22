@@ -6,3 +6,4 @@ build
 /premake/scripts/obj
 /data/models/local
 /data/shaders/vulkan/spirv
+/data/models
