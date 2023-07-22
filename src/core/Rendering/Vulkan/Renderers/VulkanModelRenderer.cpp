@@ -34,7 +34,7 @@ VulkanModelRenderer::VulkanModelRenderer()
 	desc_set_layouts.push_back(RenderObjectManager::mesh_descriptor_set_layout);		/* Per mesh geometry data */
 	desc_set_layouts.push_back(RenderObjectManager::drawable_descriptor_set_layout);	/* Per object data */
 	desc_set_layouts.push_back(m_pass_descriptor_set_layout);							/* Per pass */
-	desc_set_layouts.push_back(VulkanRendererBase::m_framedata_desc_set_layout.layout);	/* Per frame */
+	desc_set_layouts.push_back(VulkanRendererBase::m_framedata_desc_set_layout.vk_set_layout);	/* Per frame */
 
 	VkPushConstantRange pushConstantRanges[2] =
 	{
@@ -93,7 +93,7 @@ void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buf
 	vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline);
 
 	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ppl_layout, 2, 1, &m_pass_descriptor_set, 0, nullptr);
-	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ppl_layout, 3, 1, &VulkanRendererBase::m_framedata_desc_set[currentImageIdx].set, 0, nullptr);
+	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ppl_layout, 3, 1, &VulkanRendererBase::m_framedata_desc_set[currentImageIdx].vk_set, 0, nullptr);
 
 	for (size_t i = 0; i < RenderObjectManager::drawables.size(); i++)
 	{

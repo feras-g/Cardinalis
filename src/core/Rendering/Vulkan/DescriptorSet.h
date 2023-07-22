@@ -50,56 +50,58 @@ struct DescriptorSetLayout
 
 	inline void create(std::string_view name)
 	{
-		layout = create_descriptor_set_layout(bindings);
-		set_object_name(VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, (uint64_t)layout, name.data());
+		vk_set_layout = create_descriptor_set_layout(bindings);
+		set_object_name(VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, (uint64_t)vk_set_layout, name.data());
 	}
 
-	VkDescriptorSetLayout layout;
+	VkDescriptorSetLayout vk_set_layout;
 	std::unordered_map<std::string, size_t> binding_name_to_index;
 	std::vector<VkDescriptorSetLayoutBinding> bindings;
 };
 
 struct DescriptorSet
 {
-	void assign_layout(DescriptorSetLayout in_layout)
+	operator VkDescriptorSet&() { return vk_set; };
+
+	inline void assign_layout(DescriptorSetLayout in_layout)
 	{
 		layout = in_layout;
 	}
 
-	void create(VkDescriptorPool pool, std::string_view name)
+	inline void create(VkDescriptorPool pool, std::string_view name)
 	{
-		set = create_descriptor_set(pool, layout.layout);
-		set_object_name(VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t)set, name.data());
+		vk_set = create_descriptor_set(pool, layout.vk_set_layout);
+		set_object_name(VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t)vk_set, name.data());
 	}
 
-	void write_descriptor_uniform_buffer(uint32_t binding, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize range)
+	inline void write_descriptor_uniform_buffer(uint32_t binding, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize range)
 	{
 		VkDescriptorBufferInfo desc_buffer_info = {};
 		desc_buffer_info.buffer = buffer;
 		desc_buffer_info.offset = offset;
 		desc_buffer_info.range = range;
 
-		VkWriteDescriptorSet write = BufferWriteDescriptorSet(set, binding, &desc_buffer_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+		VkWriteDescriptorSet write = BufferWriteDescriptorSet(vk_set, binding, &desc_buffer_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 		descriptor_writes.push_back(write);
 	}
 
-	void write_descriptor_combined_image_sampler(uint32_t binding, VkImageView view, VkSampler sampler)
+	inline void write_descriptor_combined_image_sampler(uint32_t binding, VkImageView view, VkSampler sampler)
 	{
 		VkDescriptorImageInfo desc_img_info = {};
 		desc_img_info.sampler = sampler;
 		desc_img_info.imageView = view;
 		desc_img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-		VkWriteDescriptorSet write = ImageWriteDescriptorSet(set, binding, &desc_img_info);
+		VkWriteDescriptorSet write = ImageWriteDescriptorSet(vk_set, binding, &desc_img_info);
 		descriptor_writes.push_back(write);
 	}
 
-	void update()
+	inline void update()
 	{
 		vkUpdateDescriptorSets(context.device, (uint32_t)descriptor_writes.size(), descriptor_writes.data(), 0, nullptr);
 	}
 
-	VkDescriptorSet set;
+	VkDescriptorSet vk_set;
 	DescriptorSetLayout layout;
 
 	std::vector<VkWriteDescriptorSet> descriptor_writes = {};

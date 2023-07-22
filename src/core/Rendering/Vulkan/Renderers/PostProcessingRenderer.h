@@ -21,18 +21,22 @@ struct PostFX_Inputs
 	Texture2D* depth = nullptr;
 };
 
-struct PostFX_Downsample
+struct PostFX_Base
+{
+	DescriptorSet descriptor_set = VK_NULL_HANDLE;
+	VkPipeline pipeline = VK_NULL_HANDLE;
+	VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
+	ComputeShader shader;
+};
+
+struct PostFX_Downsample : PostFX_Base
 {
 	void init();
 	void render(VkCommandBuffer_T* cmd_buff);
-	DescriptorSet desc_set = VK_NULL_HANDLE;
-	VkPipeline compute_ppl = VK_NULL_HANDLE;
-	ComputeShader m_downsample_cs;
+	Texture2D* input_image_handle = nullptr;
 	Texture2D output_image;
-	VkPipelineLayout ppl_layout;
 	uint32_t width;
 	uint32_t height;
-	Texture2D* input_image_handle = nullptr;
 };
 
 struct PostProcessRenderer

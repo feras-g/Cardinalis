@@ -51,7 +51,7 @@ void DeferredRenderer::init(std::span<Texture2D> g_buffers_shadow_map, const Lig
 	std::array<VkDescriptorSetLayout, 2> layouts =
 	{
 		m_descriptor_set_layout,
-		VulkanRendererBase::m_framedata_desc_set_layout.layout
+		VulkanRendererBase::m_framedata_desc_set_layout.vk_set_layout
 	};
 
 	m_pipeline_layout = create_pipeline_layout(context.device, layouts);
@@ -74,7 +74,7 @@ void DeferredRenderer::draw_scene(size_t current_backbuffer_idx, VkCommandBuffer
 	set_viewport_scissor(cmd_buffer, VulkanRendererBase::render_width, VulkanRendererBase::render_height);
 	vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline);
 	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_descriptor_set[current_backbuffer_idx], 0, nullptr);
-	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 1, 1, &VulkanRendererBase::m_framedata_desc_set[current_backbuffer_idx].set, 0, nullptr);
+	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 1, 1, &VulkanRendererBase::m_framedata_desc_set[current_backbuffer_idx].vk_set, 0, nullptr);
 	vkCmdDraw(cmd_buffer, 3, 1, 0, 0);
 }
 

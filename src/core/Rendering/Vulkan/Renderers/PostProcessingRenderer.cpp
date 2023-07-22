@@ -52,7 +52,7 @@ void PostFX_Downsample::init()
 	width  = input_image.info.width;
 	height = input_image.info.height;
 
-	m_downsample_cs.create("Downsample.comp.spv");
+	shader.create("Downsample.comp.spv");
 	output_image.init(input_image.info.imageFormat, width / 2, height / 2, 1, false);
 	output_image.create(context.device, VK_IMAGE_USAGE_STORAGE_BIT, "PostFX_Downsample Ouput Storage Image");
 	output_image.create_view(context.device, ImageViewTexture2D);
@@ -71,16 +71,16 @@ void PostFX_Downsample::init()
 	};
 	VkDescriptorPool pool = create_descriptor_pool(pool_sizes, NUM_FRAMES);
 
-	desc_set.assign_layout(desc_set_layout);
-	desc_set.create(pool, "PostFX_Downsample Descriptor Set Layout");
+	descriptor_set.assign_layout(desc_set_layout);
+	descriptor_set.create(pool, "PostFX_Downsample Descriptor Set Layout");
 
 	VkDescriptorImageInfo input_image_desc_info = { VK_NULL_HANDLE, input_image.view,  VK_IMAGE_LAYOUT_GENERAL  };
 	VkDescriptorImageInfo ouput_image_desc_info = { VK_NULL_HANDLE, output_image.view, VK_IMAGE_LAYOUT_GENERAL  };
 
 	std::vector<VkWriteDescriptorSet> write_descriptor_set 
 	{
-		ImageWriteDescriptorSet(desc_set.set, 0, &input_image_desc_info, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE),
-		ImageWriteDescriptorSet(desc_set.set, 1, &ouput_image_desc_info, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
+		ImageWriteDescriptorSet(descriptor_set.vk_set, 0, &input_image_desc_info, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE),
+		ImageWriteDescriptorSet(descriptor_set.vk_set, 1, &ouput_image_desc_info, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
 	};
 	vkUpdateDescriptorSets(context.device, (uint32_t)write_descriptor_set.size(), write_descriptor_set.data(), 0, nullptr);
 
@@ -88,17 +88,17 @@ void PostFX_Downsample::init()
 	VkPipelineLayoutCreateInfo ppl_layout_info = {};
 	ppl_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	ppl_layout_info.setLayoutCount = 1;
-	ppl_layout_info.pSetLayouts = &desc_set_layout.layout;
+	ppl_layout_info.pSetLayouts = &desc_set_layout.vk_set_layout;
 	
-	vkCreatePipelineLayout(context.device, &ppl_layout_info, nullptr, &ppl_layout);
+	vkCreatePipelineLayout(context.device, &ppl_layout_info, nullptr, &pipeline_layout);
 
 	/* Compute pipeline */
 	VkComputePipelineCreateInfo compute_ppl_info = {};
 	compute_ppl_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-	compute_ppl_info.stage = m_downsample_cs.stages[0];
-	compute_ppl_info.layout = ppl_layout;
+	compute_ppl_info.stage = shader.stages[0];
+	compute_ppl_info.layout = pipeline_layout;
 
-	vkCreateComputePipelines(context.device, VK_NULL_HANDLE, 1, &compute_ppl_info, nullptr, &compute_ppl);
+	VK_CHECK(vkCreateComputePipelines(context.device, VK_NULL_HANDLE, 1, &compute_ppl_info, nullptr, &pipeline));
 }
 
 void PostFX_Downsample::render(VkCommandBuffer_T* cmd_buff)
@@ -112,8 +112,8 @@ void PostFX_Downsample::render(VkCommandBuffer_T* cmd_buff)
 
 	input_image_handle->transition_layout(cmd_buff, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
 
-	vkCmdBindDescriptorSets(cmd_buff, VK_PIPELINE_BIND_POINT_COMPUTE, ppl_layout, 0, 1, &desc_set.set, 0, nullptr);
-	vkCmdBindPipeline(cmd_buff, VK_PIPELINE_BIND_POINT_COMPUTE, compute_ppl);
+	vkCmdBindDescriptorSets(cmd_buff, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 1, &descriptor_set.vk_set, 0, nullptr);
+	vkCmdBindPipeline(cmd_buff, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
 	vkCmdDispatch(cmd_buff, dispatch_size_x, dispatch_size_y, 1);
 
 	input_image_handle->transition_layout(cmd_buff, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);

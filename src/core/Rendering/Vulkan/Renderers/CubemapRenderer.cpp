@@ -64,7 +64,7 @@ VkDescriptorPool pool;
 
 DescriptorSetLayout cubemap_desc_layout;
 DescriptorSet		cubemap_desc_set;
-VkPipelineLayout    ppl_layout;
+VkPipelineLayout    pipeline_layout;
 VkPipeline			gfx_ppl;
 
 /* Descriptor : Render skybox */
@@ -92,7 +92,7 @@ void CubemapRenderer::init()
 	/* Graphics pipeline */
 	GfxPipeline::Flags flags = GfxPipeline::Flags::NONE;
 	VkFormat color_formats[1] = { cubemap_render_attachment_format };
-	GfxPipeline::CreateDynamic(shader_gen_cubemap, color_formats, {}, flags, ppl_layout, &gfx_ppl, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_CLOCKWISE, {}, view_mask);
+	GfxPipeline::CreateDynamic(shader_gen_cubemap, color_formats, {}, flags, pipeline_layout, &gfx_ppl, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_CLOCKWISE, {}, view_mask);
 
 	TransformData transform;
 	transform.model = glm::identity<glm::mat4>();
@@ -148,14 +148,14 @@ void CubemapRenderer::init_irradiance_map_rendering()
 	image_info.imageView = tex_cubemap_view;
 	image_info.sampler = sampler;
 
-	VkWriteDescriptorSet write = ImageWriteDescriptorSet(irradiance_desc_set.set, 0, &image_info);
+	VkWriteDescriptorSet write = ImageWriteDescriptorSet(irradiance_desc_set, 0, &image_info);
 	vkUpdateDescriptorSets(context.device, 1, &write, 0, nullptr);
 
 	/* Pipeline layout */
 	std::vector<VkDescriptorSetLayout> desc_set_layouts = {};
 	desc_set_layouts.push_back(RenderObjectManager::mesh_descriptor_set_layout);
-	desc_set_layouts.push_back(cubemap_desc_layout.layout);
-	desc_set_layouts.push_back(irradiance_desc_layout.layout);
+	desc_set_layouts.push_back(cubemap_desc_layout.vk_set_layout);
+	desc_set_layouts.push_back(irradiance_desc_layout.vk_set_layout);
 	render_irradiance_ppl_layout = create_pipeline_layout(context.device, desc_set_layouts);
 
 	/* Graphics pipeline */
@@ -171,8 +171,8 @@ void CubemapRenderer::render_irradiance_map(VkCommandBuffer cmd_buffer)
 	set_viewport_scissor(cmd_buffer, irradiance_map_dim, irradiance_map_dim, true);
 
 	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_irradiance_ppl_layout, 0, 1, &d_placeholder_cube->get_mesh().descriptor_set, 0, nullptr);
-	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_irradiance_ppl_layout, 1, 1, &cubemap_desc_set.set, 0, nullptr);
-	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_irradiance_ppl_layout, 2, 1, &irradiance_desc_set.set, 0, nullptr);
+	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_irradiance_ppl_layout, 1, 1, &cubemap_desc_set.vk_set, 0, nullptr);
+	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_irradiance_ppl_layout, 2, 1, &irradiance_desc_set.vk_set, 0, nullptr);
 
 	vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_irradiance_gfx_ppl);
 	
@@ -214,13 +214,13 @@ void CubemapRenderer::init_skybox_rendering()
 	image_info.imageView = tex_cubemap_view;// tex_irradiance_map_view;
 	image_info.sampler = sampler;
 
-	VkWriteDescriptorSet write = ImageWriteDescriptorSet(render_skybox_desc_set.set, 0, &image_info);
+	VkWriteDescriptorSet write = ImageWriteDescriptorSet(render_skybox_desc_set.vk_set, 0, &image_info);
 	vkUpdateDescriptorSets(context.device, 1, &write, 0, nullptr);
 
 	std::vector<VkDescriptorSetLayout> desc_set_layouts = {};
 	desc_set_layouts.push_back(RenderObjectManager::mesh_descriptor_set_layout);
-	desc_set_layouts.push_back(VulkanRendererBase::m_framedata_desc_set_layout.layout);
-	desc_set_layouts.push_back(render_skybox_desc_layout.layout);
+	desc_set_layouts.push_back(VulkanRendererBase::m_framedata_desc_set_layout.vk_set_layout);
+	desc_set_layouts.push_back(render_skybox_desc_layout.vk_set_layout);
 	render_skybox_ppl_layout = create_pipeline_layout(context.device, desc_set_layouts);
 
 	/* Graphics pipeline */
@@ -279,15 +279,15 @@ void CubemapRenderer::init_descriptors()
 	image_info.sampler = sampler;
 
 	std::vector<VkWriteDescriptorSet> write_descriptor_set = {};
-	write_descriptor_set.push_back(BufferWriteDescriptorSet(cubemap_desc_set.set, 0, &buffer_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
-	write_descriptor_set.push_back(ImageWriteDescriptorSet(cubemap_desc_set.set, 1, &image_info));
+	write_descriptor_set.push_back(BufferWriteDescriptorSet(cubemap_desc_set.vk_set, 0, &buffer_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+	write_descriptor_set.push_back(ImageWriteDescriptorSet(cubemap_desc_set.vk_set, 1, &image_info));
 
 	vkUpdateDescriptorSets(context.device, 2, write_descriptor_set.data(), 0, nullptr);
 
 	std::vector<VkDescriptorSetLayout> desc_set_layouts = {};
 	desc_set_layouts.push_back(RenderObjectManager::mesh_descriptor_set_layout);								
-	desc_set_layouts.push_back(cubemap_desc_layout.layout);	
-	ppl_layout = create_pipeline_layout(context.device, desc_set_layouts);
+	desc_set_layouts.push_back(cubemap_desc_layout.vk_set_layout);	
+	pipeline_layout = create_pipeline_layout(context.device, desc_set_layouts);
 }
 
 void init_gfx_pipeline()
@@ -308,10 +308,10 @@ void CubemapRenderer::render_cubemap(VkCommandBuffer cmd_buffer, VkRect2D area)
 	VkDescriptorSet desc_sets[2] =
 	{
 		d_placeholder_cube->get_mesh().descriptor_set,
-		cubemap_desc_set.set
+		cubemap_desc_set.vk_set
 	};
 
-	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, ppl_layout, 0, 2, desc_sets, 0, nullptr);
+	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 2, desc_sets, 0, nullptr);
 	vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gfx_ppl);
 
 	/* The ith least significant view correpondons to the ith layer */
@@ -340,8 +340,8 @@ void CubemapRenderer::render_skybox(size_t currentImageIdx, VkCommandBuffer cmd_
 	const VkDescriptorSet descriptor_sets[3] 
 	{
 		d_skybox->get_mesh().descriptor_set,
-		VulkanRendererBase::m_framedata_desc_set[currentImageIdx].set,
-		render_skybox_desc_set.set
+		VulkanRendererBase::m_framedata_desc_set[currentImageIdx].vk_set,
+		render_skybox_desc_set.vk_set
 	};
 
 	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_skybox_ppl_layout, 0, 3, descriptor_sets, 0, nullptr);
