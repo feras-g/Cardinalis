@@ -30,12 +30,12 @@ public:
 	
 	void UpdateAttachments();
 
-	std::array<int, NUM_FRAMES> m_ModelRendererColorTextureId;
-	std::array<int, NUM_FRAMES> m_ModelRendererNormalTextureId;
-	std::array<int, NUM_FRAMES> m_ModelRendererDepthTextureId;
-	std::array<int, NUM_FRAMES> m_ModelRendererNormalMapTextureId;
-	std::array<int, NUM_FRAMES> m_ModelRendererMetallicRoughnessTextureId;
-	std::array<int, NUM_FRAMES> m_DeferredRendererOutputTextureId;
+	std::array<size_t, NUM_FRAMES> m_ModelRendererColorTextureId;
+	std::array<size_t, NUM_FRAMES> m_ModelRendererNormalTextureId;
+	std::array<size_t, NUM_FRAMES> m_ModelRendererDepthTextureId;
+	std::array<size_t, NUM_FRAMES> m_ModelRendererNormalMapTextureId;
+	std::array<size_t, NUM_FRAMES> m_ModelRendererMetallicRoughnessTextureId;
+	std::array<size_t, NUM_FRAMES> m_DeferredRendererOutputTextureId;
 
 	std::array<std::array<size_t, 4>, NUM_FRAMES> m_ShadowCascadesTextureIds;
 

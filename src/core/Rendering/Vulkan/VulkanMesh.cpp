@@ -148,7 +148,10 @@ static void load_vertices(Primitive p, cgltf_primitive* primitive, GeometryData&
 		VertexData vertex;
 		vertex.pos = positionsBuffer[i];
 		vertex.normal = normalsBuffer[i];
-		vertex.uv = glm::vec2(texCoordBuffer[i]);
+		if (texCoordBuffer.size())
+		{
+			vertex.uv = glm::vec2(texCoordBuffer[i]);
+		}
 		vertex.tangent = tangentBuffer.empty() ? glm::vec3(0) : tangentBuffer[i];
 
 		geometry.vertices.push_back(vertex);

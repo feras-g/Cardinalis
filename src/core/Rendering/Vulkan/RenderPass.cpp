@@ -37,7 +37,7 @@ void DynamicRenderPass::add_attachment(VkImageView view, VkImageLayout layout, V
 	
 	if (layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 	{
-		attachment_info.clearValue.color = { 0.0f, 0.0f, 0.0f, 1.0f };
+		attachment_info.clearValue.color = { 1.0f, 0.0f, 1.0f, 1.0f };
 		color_attachments.push_back(attachment_info);
 	}
 	else if (layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL || VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)

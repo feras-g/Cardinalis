@@ -65,7 +65,7 @@ glm::mat4 compute_view_proj(glm::vec3 eye, glm::vec3 forward, glm::vec3 up, glm:
 	//	view_volume_bbox_min.z, view_volume_bbox_max.z
 	//);
 
-	LightManager::direction = forward;
+	LightManager::direction = glm::normalize(forward);
 	
 	/* Compute view matrix */
 	LightManager::view = glm::lookAt(eye, forward, up);

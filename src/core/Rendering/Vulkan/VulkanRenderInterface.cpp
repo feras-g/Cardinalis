@@ -179,10 +179,14 @@ void VulkanRenderInterface::CreateDevices()
 	multiview_feature.multiview = VK_TRUE;
 	multiview_feature.pNext = &dynamic_rendering_feature;
 
+	VkPhysicalDeviceFeatures2  features = {};
+	features.features.depthClamp = VK_TRUE;
+	features.pNext = &multiview_feature;
+
 	VkDeviceCreateInfo deviceInfo = 
 	{
 		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-		.pNext = &multiview_feature,
+		.pNext = &features,
 		.flags = NULL,
 		.queueCreateInfoCount = 1,
 		.pQueueCreateInfos = &queueInfo,
@@ -807,30 +811,28 @@ VkPipelineShaderStageCreateInfo PipelineShaderStageCreateInfo(VkShaderModule sha
 	};
 }
 
-bool CreateTextureSampler(VkDevice device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode, VkSampler& out_Sampler)
+void create_sampler(VkDevice device, VkFilter min, VkFilter mag, VkSamplerAddressMode addressMode, VkSampler& out_Sampler)
 {
-	VkSamplerCreateInfo samplerInfo =
-	{
-		.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-		.flags = 0,
-		.magFilter = magFilter,	// VK_FILTER_LINEAR, VK_FILTER_NEAREST
-		.minFilter = minFilter, // VK_FILTER_LINEAR, VK_FILTER_NEAREST
-		.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR, // VK_SAMPLER_MIPMAP_MODE_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST
-		.addressModeU = addressMode, // VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
-		.addressModeV = addressMode,
-		.addressModeW = addressMode,
-		.mipLodBias = 0.0f,
-		.anisotropyEnable = VK_FALSE,
-		.maxAnisotropy = 1,
-		.compareEnable = VK_FALSE,
-		.compareOp = VK_COMPARE_OP_ALWAYS,
-		.minLod = 0.0f,
-		.maxLod = 100.0f,
-		.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
-		.unnormalizedCoordinates = VK_FALSE
-	};
+	VkSamplerCreateInfo sampler_create_info = {};
 
-	return (vkCreateSampler(context.device, &samplerInfo, nullptr, &out_Sampler) == VK_SUCCESS);
+	sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	sampler_create_info.magFilter = mag;
+	sampler_create_info.minFilter = min;
+	sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	sampler_create_info.addressModeU = addressMode;
+	sampler_create_info.addressModeV = addressMode;
+	sampler_create_info.addressModeW = addressMode;
+	sampler_create_info.mipLodBias = 0.0f;
+	sampler_create_info.anisotropyEnable = VK_FALSE;
+	sampler_create_info.maxAnisotropy = 1.0f;
+	sampler_create_info.compareEnable = VK_FALSE;
+	sampler_create_info.compareOp = VK_COMPARE_OP_ALWAYS;
+	sampler_create_info.minLod = 0.0f;
+	sampler_create_info.maxLod = 1.0f;
+	sampler_create_info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+	sampler_create_info.unnormalizedCoordinates = VK_FALSE;
+	
+	VK_CHECK(vkCreateSampler(context.device, &sampler_create_info, nullptr, &out_Sampler));
 }
 
 void BeginRenderpass(VkCommandBuffer cmdBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer, VkRect2D renderArea, const VkClearValue* clearValues, uint32_t clearValueCount)

@@ -42,7 +42,7 @@ void VulkanImGuiRenderer::init(const ShadowRenderer& shadow_renderer)
 	// [7] [8] : Depth output of model's renderer for Frame 0 / Frame 1
 	// [9] [10] : Shadow map output of shadow renderer for Frame 0 / Frame 1
 
-	int tex_id = 0;
+	uint32_t tex_id = 0;
 	m_Textures.push_back(&(m_FontTexture.view));
 	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{

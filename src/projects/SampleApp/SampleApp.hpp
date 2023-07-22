@@ -43,11 +43,10 @@ public:
 	void OnKeyEvent(KeyEvent event);
 
 protected:
-	VulkanUI m_UI;
-	Camera m_Camera;
+	VulkanUI m_ui;
+	Camera m_camera;
 	LightManager m_light_manager;
-	RenderObjectManager m_rbo;
-	bool b_IsSceneViewportHovered = false;
+	RenderObjectManager m_object_manager;
 
 protected:
 	std::unique_ptr<VulkanImGuiRenderer>		m_imgui_renderer;
@@ -61,26 +60,32 @@ protected:
 
 void SampleApp::InitSceneResources()
 {
-	CameraController fpsController = CameraController( { 0, 0, 5 }, { 0, -180, 0 }, { 0, 0, 1 }, { 0, 1, 0 });
-	m_Camera = Camera(fpsController, 45.0f, 1.0f, 0.25f, 250.0f);
+	CameraController fpsController = CameraController( { 10, 1, 0 }, { 0, -90, 0 }, { 0, 0, 1 }, { 0, -1, 0 });
+	m_camera = Camera(fpsController, 45.0f, 1.0f, 0.25f, 250.0f);
 
-	m_rbo.init();
+	m_object_manager.init();
 
 	/* Basic primitives */
 	{
 		VulkanMesh mesh = VulkanMesh("../../../data/models/basic/unit_cube.glb");
-		uint32_t id = m_rbo.add_mesh(mesh, "cube");
-		m_rbo.add_drawable(id, "skybox", false);
-		m_rbo.add_drawable(id, "placeholder_cube", false);
+		uint32_t id = m_object_manager.add_mesh(mesh, "cube");
+		m_object_manager.add_drawable(id, "skybox", false);
+		m_object_manager.add_drawable(id, "placeholder_cube", false);
 	}
 
-	LoadMesh("../../../data/models/basic/unit_plane.glb", "Floor");
-	LoadMesh("../../../data/models/test/metalroughspheres/MetalRoughSpheres.gltf", "MetalRoughSpheres");
-	LoadMesh("../../../data/models/basic/duck/duck.gltf", "ColladaDuck");
+	LoadMesh("../../../data/models/basic/unit_plane.glb", "Plane");
+	LoadMesh("../../../data/models/basic/column_5m.glb",  "Column");
+
+	AddDrawable("Floor", true, { 0, -5, 0 }, { 0, 0, 0 }, { 100.0f, 1.0f, 100.0f });
+	//LoadMesh("../../../data/models/test/metalroughspheres/MetalRoughSpheres.gltf", "MetalRoughSpheres");
+	//LoadMesh("../../../data/models/basic/duck/duck.gltf", "ColladaDuck");
 	//LoadMesh("../../../data/models/scenes/sponza-gltf-pbr/sponza.glb", "Sponza");
 
-	glm::ivec3 dimensions(5,5,5);
-	float spacing = 2.5f;
+	LoadMesh("../../../data/models/scenes/Powerplant_GLTF/powerplant.gltf", "Powerplant");
+	AddDrawable("Powerplant", true, { 0, 0, 0 }, { 0, 0, 0 }, { 0.10f, 0.10f, 0.10f });
+
+	glm::ivec3 dimensions(1,1,20);
+	float spacing = 20;
 	for (int x = 0; x < dimensions.x; x++)
 	{
 		for (int y = 0; y < dimensions.y; y++)
@@ -88,27 +93,25 @@ void SampleApp::InitSceneResources()
 			for (int z = 0; z < dimensions.z; z++)
 			{
 				glm::vec3 position{ x, y, z };
-				AddDrawable("ColladaDuck", true, position * spacing, { 0, 0, 0 }, { 0.1, 0.1, 0.1 });
+				AddDrawable("Column", true, position * spacing, { 0, 0, 0 }, { 1.0f, 1.0f, 1.0f });
 			}
 		}
 	}
 
-	m_rbo.configure();
+	m_object_manager.configure();
 }
 
 inline void SampleApp::LoadMesh(std::string_view path, std::string_view name)
 {
 	VulkanMesh mesh = VulkanMesh(path.data());
-	uint32_t id = m_rbo.add_mesh(mesh, name.data());
-	std::string drawable_name("Drawable" + std::to_string(m_rbo.drawables.size()) + "_" + name.data());
-	m_rbo.add_drawable(id, drawable_name);
+	uint32_t id = m_object_manager.add_mesh(mesh, name.data());
 }
 
 
 inline void SampleApp::AddDrawable(std::string_view mesh_name, bool visible, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale)
 {
-	std::string drawable_name("Drawable" + std::to_string(m_rbo.drawables.size()) + "_" + mesh_name.data());
-	m_rbo.add_drawable(mesh_name, drawable_name, visible, position, rotation, scale);
+	std::string drawable_name("Drawable" + std::to_string(m_object_manager.drawables.size()) + "_" + mesh_name.data());
+	m_object_manager.add_drawable(mesh_name, drawable_name, visible, position, rotation, scale);
 }
 
 void SampleApp::Initialize()
@@ -119,7 +122,7 @@ void SampleApp::Initialize()
 	m_model_renderer.reset(new VulkanModelRenderer);
 	m_imgui_renderer.reset(new VulkanImGuiRenderer(context));
 	
-	m_cascaded_shadow_renderer.init(2048, 2048, m_Camera, m_light_manager);
+	m_cascaded_shadow_renderer.init(1024, 1024, m_camera, m_light_manager);
 	m_cubemap_renderer.init(); //!\ Before deferred renderer
 
 	m_deferred_renderer.init(
@@ -137,12 +140,12 @@ void SampleApp::Update(float dt)
 	// Update keyboard, mouse interaction
 	m_Window->UpdateGUI();
 
-	if (EngineGetAsyncKeyState(Key::Z))     m_Camera.controller.m_movement = m_Camera.controller.m_movement | Movement::FORWARD;
-	if (EngineGetAsyncKeyState(Key::Q))     m_Camera.controller.m_movement = m_Camera.controller.m_movement | Movement::LEFT;
-	if (EngineGetAsyncKeyState(Key::S))     m_Camera.controller.m_movement = m_Camera.controller.m_movement | Movement::BACKWARD;
-	if (EngineGetAsyncKeyState(Key::D))     m_Camera.controller.m_movement = m_Camera.controller.m_movement | Movement::RIGHT;
-	if (EngineGetAsyncKeyState(Key::SPACE)) m_Camera.controller.m_movement = m_Camera.controller.m_movement | Movement::UP;
-	if (EngineGetAsyncKeyState(Key::LSHIFT)) m_Camera.controller.m_movement = m_Camera.controller.m_movement | Movement::DOWN;
+	if (EngineGetAsyncKeyState(Key::Z))     m_camera.controller.m_movement = m_camera.controller.m_movement | Movement::FORWARD;
+	if (EngineGetAsyncKeyState(Key::Q))     m_camera.controller.m_movement = m_camera.controller.m_movement | Movement::LEFT;
+	if (EngineGetAsyncKeyState(Key::S))     m_camera.controller.m_movement = m_camera.controller.m_movement | Movement::BACKWARD;
+	if (EngineGetAsyncKeyState(Key::D))     m_camera.controller.m_movement = m_camera.controller.m_movement | Movement::RIGHT;
+	if (EngineGetAsyncKeyState(Key::SPACE)) m_camera.controller.m_movement = m_camera.controller.m_movement | Movement::UP;
+	if (EngineGetAsyncKeyState(Key::LSHIFT)) m_camera.controller.m_movement = m_camera.controller.m_movement | Movement::DOWN;
 
 	m_light_manager.update(nullptr, m_light_manager.view_volume_bbox_min, m_light_manager.view_volume_bbox_max);
 	
@@ -225,41 +228,41 @@ void SampleApp::Render()
 
 inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 {
-	if (m_UI.fSceneViewAspectRatio != m_Camera.aspect_ratio)
+	if (m_ui.default_scene_view_aspect_ratio != m_camera.aspect_ratio)
 	{
-		m_Camera.UpdateAspectRatio(m_UI.fSceneViewAspectRatio);
+		m_camera.UpdateAspectRatio(m_ui.default_scene_view_aspect_ratio);
 	}
-	m_Camera.controller.deltaTime = dt;
-	m_Camera.controller.UpdateTranslation(dt);
+	m_camera.controller.deltaTime = dt;
+	m_camera.controller.UpdateTranslation(dt);
 
 	/* Update frame Data */
 	VulkanRendererBase::PerFrameData frame_data;
 	{
-		frame_data.view = m_Camera.GetView();
-		frame_data.proj = m_Camera.GetProj();
+		frame_data.view = m_camera.GetView();
+		frame_data.proj = m_camera.GetProj();
 		frame_data.inv_view_proj = glm::inverse(frame_data.proj * frame_data.view);
 		frame_data.view_pos = glm::vec4(
-			m_Camera.controller.m_position.x,
-			m_Camera.controller.m_position.y,
-			m_Camera.controller.m_position.z,
+			m_camera.controller.m_position.x,
+			m_camera.controller.m_position.y,
+			m_camera.controller.m_position.z,
 			1.0);
 		VulkanRendererBase::update_frame_data(frame_data, currentImageIdx);
 	}
 
 	/* Update drawables */
-	m_rbo.update_per_object_data(frame_data);
+	m_object_manager.update_per_object_data(frame_data);
 
 	m_deferred_renderer.update(currentImageIdx);
 	m_model_renderer->update(currentImageIdx, frame_data);
 
 	// ImGui composition
 	{
-		m_UI.Start();
+		m_ui.Start();
 		//m_UI.AddHierarchyPanel();
 		//m_UI.ShowMenuBar();
 		//m_UI.AddInspectorPanel();
-		m_UI.ShowStatistics(m_DebugName, dt, context.frame_count);
-		m_UI.ShowSceneViewportPanel(
+		m_ui.ShowStatistics(m_DebugName, dt, context.frame_count);
+		m_ui.ShowSceneViewportPanel(m_camera,
 			m_imgui_renderer->m_DeferredRendererOutputTextureId[currentImageIdx],
 			m_imgui_renderer->m_ModelRendererColorTextureId[currentImageIdx],
 			m_imgui_renderer->m_ModelRendererNormalTextureId[currentImageIdx],
@@ -268,11 +271,11 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 			m_imgui_renderer->m_ModelRendererMetallicRoughnessTextureId[currentImageIdx]
 		);
 		//m_UI.ShowFrameTimeGraph(FrameStats::History.data(), FrameStats::History.size());
-		m_UI.ShowCameraSettings(&m_Camera);
-		m_UI.ShowInspector();
-		m_UI.ShowLightSettings(&m_light_manager);
-		m_UI.ShowShadowPanel(&m_cascaded_shadow_renderer, m_imgui_renderer->m_ShadowCascadesTextureIds[currentImageIdx]);
-		m_UI.End();
+		m_ui.ShowCameraSettings(&m_camera);
+		m_ui.ShowInspector();
+		m_ui.ShowLightSettings(&m_light_manager);
+		m_ui.ShowShadowPanel(&m_cascaded_shadow_renderer, m_imgui_renderer->m_ShadowCascadesTextureIds[currentImageIdx]);
+		m_ui.End();
 	}
 
 	{
@@ -299,14 +302,14 @@ inline void SampleApp::OnLeftMouseButtonUp()
 void SampleApp::OnLeftMouseButtonDown()
 {
 	Application::OnLeftMouseButtonDown();
-	m_Camera.controller.m_last_mouse_pos = { m_MouseEvent.px, m_MouseEvent.py };
+	m_camera.controller.m_last_mouse_pos = { m_MouseEvent.px, m_MouseEvent.py };
 }
 
 inline void SampleApp::OnMouseMove(int x, int y)
 {
 	/* Update camera */
 	Application::OnMouseMove(x, y);
-	if (m_UI.bIsSceneViewportHovered)
+	if (m_ui.is_scene_viewport_hovered)
 	{
 		if (m_MouseEvent.bLeftClick)
 		{
@@ -318,7 +321,7 @@ inline void SampleApp::OnMouseMove(int x, int y)
 			}
 			else
 			{
-				m_Camera.controller.UpdateRotation( { x, y });
+				m_camera.controller.UpdateRotation( { x, y });
 			}
 		}
 	}

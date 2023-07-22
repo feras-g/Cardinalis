@@ -47,10 +47,10 @@ void VulkanRendererBase::create_descriptor_sets()
 
 void VulkanRendererBase::create_samplers()
 {
-	CreateTextureSampler(context.device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, s_SamplerRepeatLinear);
-	CreateTextureSampler(context.device, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, s_SamplerRepeatNearest);
-	CreateTextureSampler(context.device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, s_SamplerClampLinear);
-	CreateTextureSampler(context.device, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, s_SamplerClampNearest);
+	create_sampler(context.device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, s_SamplerRepeatLinear);
+	create_sampler(context.device, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, s_SamplerRepeatNearest);
+	create_sampler(context.device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, s_SamplerClampLinear);
+	create_sampler(context.device, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, s_SamplerClampNearest);
 }
 
 void VulkanRendererBase::create_buffers()
@@ -163,9 +163,9 @@ void RenderObjectManager::init()
 		.tex_metallic_roughness_id = 0,
 		.tex_normal_id = 0,
 		.tex_emissive_id = 0,
-		.base_color_factor = glm::vec4(0.27f, 0.27f, 0.27f, 1.0f),
+		.base_color_factor = glm::vec4(1.0f, 1.0, 1.0f, 1.0f),
 		.metallic_factor = 0.0f,
-		.roughness_factor = 1.0f,
+		.roughness_factor = 0.0f,
 	};
 	add_material(default_material, "Default Material");
 }

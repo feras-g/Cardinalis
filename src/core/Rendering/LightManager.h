@@ -17,8 +17,8 @@ struct PointLight
 
 struct DirectionalLight
 {
-	glm::vec4 direction{ 0.0f, -1.0f, 0.0f, 0.0f };
-	glm::vec4 color{ 0.8, 0.4, 0.2, 1.0 };
+	glm::vec4 direction{ -0.58f, -0.58f, 0.58f, 0.0f };
+	glm::vec4 color{ 80.f, 40.f, 20.f, 1.0 };
 	glm::mat4 view_proj{};
 };
 
