@@ -28,6 +28,8 @@ static void example_descriptor_set_creation()
 
 struct DescriptorSetLayout
 {
+	operator VkDescriptorSetLayout&() { return vk_set_layout; }
+
 	inline void add_uniform_buffer_binding(uint32_t binding, VkShaderStageFlags shaderStage, std::string_view name)
 	{
 		bindings.emplace_back(VkDescriptorSetLayoutBinding{ binding, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, shaderStage });
@@ -48,20 +50,22 @@ struct DescriptorSetLayout
 		bindings.emplace_back(VkDescriptorSetLayoutBinding{ binding, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT });
 	}
 
-	inline void create(std::string_view name)
+	inline void create(std::string_view name = "")
 	{
 		vk_set_layout = create_descriptor_set_layout(bindings);
 		set_object_name(VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, (uint64_t)vk_set_layout, name.data());
+		is_created = true;
 	}
 
 	VkDescriptorSetLayout vk_set_layout;
 	std::unordered_map<std::string, size_t> binding_name_to_index;
 	std::vector<VkDescriptorSetLayoutBinding> bindings;
+	bool is_created = false;
 };
 
 struct DescriptorSet
 {
-	operator VkDescriptorSet&() { return vk_set; };
+	operator VkDescriptorSet&() { return vk_set; }
 
 	inline void assign_layout(DescriptorSetLayout in_layout)
 	{
@@ -70,6 +74,10 @@ struct DescriptorSet
 
 	inline void create(VkDescriptorPool pool, std::string_view name)
 	{
+		if (false == layout.is_created)
+		{
+			layout.create();
+		}
 		vk_set = create_descriptor_set(pool, layout.vk_set_layout);
 		set_object_name(VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t)vk_set, name.data());
 	}

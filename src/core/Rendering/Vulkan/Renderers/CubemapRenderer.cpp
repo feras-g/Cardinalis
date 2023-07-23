@@ -29,7 +29,6 @@ uint32_t irradiance_map_dim = 32;
 
 
 DescriptorSet irradiance_desc_set;
-DescriptorSetLayout irradiance_desc_layout;
 VkPipelineLayout render_irradiance_ppl_layout;
 VkPipeline render_irradiance_gfx_ppl;
 
@@ -62,13 +61,11 @@ VkDescriptorPool pool;
 
 /* Descriptor */
 
-DescriptorSetLayout cubemap_desc_layout;
 DescriptorSet		cubemap_desc_set;
 VkPipelineLayout    pipeline_layout;
 VkPipeline			gfx_ppl;
 
 /* Descriptor : Render skybox */
-DescriptorSetLayout render_skybox_desc_layout;
 DescriptorSet render_skybox_desc_set;
 VkPipeline			render_skybox_gfx_ppl;
 VkPipelineLayout    render_skybox_ppl_layout;
@@ -134,10 +131,7 @@ void CubemapRenderer::init_irradiance_map_rendering()
 		irradiance_map_attachment, irradiance_map_attachment.info.imageFormat);
 
 	const VkSampler sampler = VulkanRendererBase::s_SamplerClampLinear;
-	irradiance_desc_layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, sampler, "Cubemap");
-	irradiance_desc_layout.create("Gen Irradiance");
-
-	irradiance_desc_set.assign_layout(irradiance_desc_layout);
+	irradiance_desc_set.layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, sampler, "Cubemap");
 	irradiance_desc_set.create(pool, "Gen Irradiance");
 
 	//irradiance_desc_set.write_descriptor_combined_image_sampler(0, tex_irradiance_map_view, sampler);
@@ -154,8 +148,8 @@ void CubemapRenderer::init_irradiance_map_rendering()
 	/* Pipeline layout */
 	std::vector<VkDescriptorSetLayout> desc_set_layouts = {};
 	desc_set_layouts.push_back(RenderObjectManager::mesh_descriptor_set_layout);
-	desc_set_layouts.push_back(cubemap_desc_layout.vk_set_layout);
-	desc_set_layouts.push_back(irradiance_desc_layout.vk_set_layout);
+	desc_set_layouts.push_back(cubemap_desc_set.layout);
+	desc_set_layouts.push_back(irradiance_desc_set.layout);
 	render_irradiance_ppl_layout = create_pipeline_layout(context.device, desc_set_layouts);
 
 	/* Graphics pipeline */
@@ -203,10 +197,7 @@ void CubemapRenderer::init_skybox_rendering()
 	const VkSampler sampler = VulkanRendererBase::s_SamplerClampLinear;
 
 	///* Descriptor */
-	render_skybox_desc_layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, sampler, "SamplerCube");
-	render_skybox_desc_layout.create("Render Skybox");
-
-	render_skybox_desc_set.assign_layout(render_skybox_desc_layout);
+	render_skybox_desc_set.layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, sampler, "SamplerCube");
 	render_skybox_desc_set.create(pool, "Render Skybox");
 	
 	VkDescriptorImageInfo image_info = {};
@@ -219,8 +210,8 @@ void CubemapRenderer::init_skybox_rendering()
 
 	std::vector<VkDescriptorSetLayout> desc_set_layouts = {};
 	desc_set_layouts.push_back(RenderObjectManager::mesh_descriptor_set_layout);
-	desc_set_layouts.push_back(VulkanRendererBase::m_framedata_desc_set_layout.vk_set_layout);
-	desc_set_layouts.push_back(render_skybox_desc_layout.vk_set_layout);
+	desc_set_layouts.push_back(VulkanRendererBase::m_framedata_desc_set_layout);
+	desc_set_layouts.push_back(render_skybox_desc_set.layout);
 	render_skybox_ppl_layout = create_pipeline_layout(context.device, desc_set_layouts);
 
 	/* Graphics pipeline */
@@ -257,11 +248,10 @@ void CubemapRenderer::init_descriptors()
 	
 	const VkSampler& sampler = VulkanRendererBase::s_SamplerRepeatNearest;
 	
-	cubemap_desc_layout.add_uniform_buffer_binding(0, VK_SHADER_STAGE_VERTEX_BIT, "View matrices UBO");
-	cubemap_desc_layout.add_combined_image_sampler_binding(1, VK_SHADER_STAGE_FRAGMENT_BIT, sampler, "HDR map texture");
-	cubemap_desc_layout.create("GenCubemap");
+	cubemap_desc_set.layout.add_uniform_buffer_binding(0, VK_SHADER_STAGE_VERTEX_BIT, "View matrices UBO");
+	cubemap_desc_set.layout.add_combined_image_sampler_binding(1, VK_SHADER_STAGE_FRAGMENT_BIT, sampler, "HDR map texture");
+	cubemap_desc_set.layout.create("GenCubemap");
 
-	cubemap_desc_set.assign_layout(cubemap_desc_layout);
 	cubemap_desc_set.create(pool, "GenCubemap");
 
 	//cubemap_desc_set.write_descriptor_uniform_buffer(0, uniform_buffer.buffer, 0, sizeof(ubo));
@@ -286,7 +276,7 @@ void CubemapRenderer::init_descriptors()
 
 	std::vector<VkDescriptorSetLayout> desc_set_layouts = {};
 	desc_set_layouts.push_back(RenderObjectManager::mesh_descriptor_set_layout);								
-	desc_set_layouts.push_back(cubemap_desc_layout.vk_set_layout);	
+	desc_set_layouts.push_back(cubemap_desc_set.layout);	
 	pipeline_layout = create_pipeline_layout(context.device, desc_set_layouts);
 }
 
