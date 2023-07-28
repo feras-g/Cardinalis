@@ -53,7 +53,7 @@ void create_buffer_impl(Buffer& result, size_t size, VkBufferUsageFlags usage, V
 	{
 		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 		.allocationSize = memRequirements.size,
-		.memoryTypeIndex = FindMemoryType(context.physicalDevice, memRequirements.memoryTypeBits, memProperties)
+		.memoryTypeIndex = FindMemoryType(context.physical_device, memRequirements.memoryTypeBits, memProperties)
 	};
 	VK_CHECK(vkAllocateMemory(context.device, &allocInfo, nullptr, &result.memory));
 

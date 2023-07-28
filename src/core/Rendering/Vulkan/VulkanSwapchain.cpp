@@ -5,8 +5,8 @@
 #include "VulkanRenderInterface.h"
 #include "VulkanDebugUtils.h"
 
-VulkanSwapchain::VulkanSwapchain(VkSurfaceKHR surface, VkPhysicalDevice physDevice)
-    : hSurface(surface), hPhysicalDevice(physDevice)
+VulkanSwapchain::VulkanSwapchain(VkSurfaceKHR surface, VkPhysicalDevice physical_device)
+    : hSurface(surface), hPhysicalDevice(physical_device)
 {
     const VkInstance& hVkInstance = context.instance;
     const VkDevice& hDevice = context.device;
@@ -49,9 +49,9 @@ void VulkanSwapchain::init(VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkF
         caps.maxImageExtent.width, caps.maxImageExtent.height);
 
     uint32_t surfaceFormatsCount = 0;
-    fpGetPhysicalDeviceSurfaceFormatsKHR(context.physicalDevice, hSurface, &surfaceFormatsCount, nullptr);
+    fpGetPhysicalDeviceSurfaceFormatsKHR(context.physical_device, hSurface, &surfaceFormatsCount, nullptr);
     std::vector<VkSurfaceFormatKHR> surfaceFormats (surfaceFormatsCount);
-    fpGetPhysicalDeviceSurfaceFormatsKHR(context.physicalDevice, hSurface, &surfaceFormatsCount, surfaceFormats.data());
+    fpGetPhysicalDeviceSurfaceFormatsKHR(context.physical_device, hSurface, &surfaceFormatsCount, surfaceFormats.data());
 
    
     assert(caps.maxImageCount >= 1);

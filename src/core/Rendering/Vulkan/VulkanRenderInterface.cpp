@@ -11,31 +11,31 @@ static void GetInstanceExtensionNames(std::vector<const char*>& extensions);
 static void GetInstanceLayerNames(std::vector<const char*>& layers);
 
 VulkanRenderInterface::VulkanRenderInterface(const char* name, int maj, int min, int patch)
-	: m_Name(name), minVer(min), majVer(maj), patchVer(patch), vkPhysicalDevices(1), m_InitSuccess(false)
+	: m_name(name), min_ver(min), maj_ver(maj), patch_ver(patch), m_init_success(false)
 {
 }
 
-void VulkanRenderInterface::Initialize()
+void VulkanRenderInterface::initialize()
 {
 	// Init Vulkan context
-	CreateInstance();
-	CreateDevices();
+	create_instance();
+	create_device();
 
 	// Init frames
-	CreateCommandStructures();
-	CreateSyncStructures();
+	create_command_structures();
+	create_synchronization_structures();
 
 	VulkanRendererBase::create_samplers();
 	VulkanRendererBase::create_buffers();
 	VulkanRendererBase::create_attachments();
 	VulkanRendererBase::create_descriptor_sets();
 
-	m_InitSuccess = true;
+	m_init_success = true;
 
 	LOG_INFO("Vulkan init successful.");
 }
 
-void VulkanRenderInterface::Terminate()
+void VulkanRenderInterface::terminate()
 {
 	vkDeviceWaitIdle(context.device);
 
@@ -47,22 +47,22 @@ void VulkanRenderInterface::Terminate()
 	vkDestroyCommandPool(context.device, context.temp_cmd_pool, nullptr);
 
 	context.swapchain->Destroy();
-	vkDestroySurfaceKHR(context.instance, m_Surface, nullptr);
+	vkDestroySurfaceKHR(context.instance, surface, nullptr);
 
 	vkDestroyDevice(context.device, nullptr);
 	vkDestroyInstance(context.instance, nullptr);
 }
 
-void VulkanRenderInterface::CreateInstance()
+void VulkanRenderInterface::create_instance()
 {
-	uint32_t version = VK_MAKE_VERSION(majVer, minVer, patchVer);
+	uint32_t version = VK_MAKE_VERSION(maj_ver, min_ver, patch_ver);
 	VkApplicationInfo appInfo =
 	{
 		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
 		.pNext = NULL,
-		.pApplicationName = m_Name,
+		.pApplicationName = m_name,
 		.applicationVersion = version,
-		.pEngineName = m_Name,
+		.pEngineName = m_name,
 		.engineVersion = version,
 		.apiVersion = version,
 	};
@@ -111,28 +111,29 @@ void VulkanRenderInterface::CreateInstance()
 	LOG_INFO("vkCreateInstance() : success.");
 }
 
-void VulkanRenderInterface::CreateDevices()
+void VulkanRenderInterface::create_device()
 {
 	uint32_t deviceCount = 0;
 	vkEnumeratePhysicalDevices(context.instance, &deviceCount, nullptr);
 	assert(deviceCount >= 1);
 
-	vkPhysicalDevices.resize(deviceCount);
-	VK_CHECK(vkEnumeratePhysicalDevices(context.instance, &deviceCount, vkPhysicalDevices.data()));
+	std::vector<VkPhysicalDevice> physical_devices;
+	physical_devices.resize(deviceCount);
+	VK_CHECK(vkEnumeratePhysicalDevices(context.instance, &deviceCount, physical_devices.data()));
 
 	// Use first physical device by default
-	context.physicalDevice = vkPhysicalDevices[0];
+	context.physical_device = physical_devices[0];
 
 	// Enumerate devices
 	LOG_INFO("Found {0} device(s) :", deviceCount);
-	VkPhysicalDeviceProperties props = {};
+	VkPhysicalDeviceProperties device_props = {};
 	for (uint32_t i=0; i < deviceCount; i++)
 	{
-		vkGetPhysicalDeviceProperties(vkPhysicalDevices[i], &props);
-		VulkanRenderInterface::device_limits = props.limits;
+		vkGetPhysicalDeviceProperties(physical_devices[i], &device_props);
+		VulkanRenderInterface::device_limits = device_props.limits;
 		LOG_DEBUG("{0} {1} {2}. Driver version = {3}. API Version = {4}.{5}.{6}", 
-			string_VkPhysicalDeviceType(props.deviceType), props.deviceName, props.deviceID, props.driverVersion,
-			VK_VERSION_MAJOR(props.apiVersion), VK_VERSION_MINOR(props.apiVersion), VK_VERSION_PATCH(props.apiVersion));
+			string_VkPhysicalDeviceType(device_props.deviceType), device_props.deviceName, device_props.deviceID, device_props.driverVersion,
+			VK_VERSION_MAJOR(device_props.apiVersion), VK_VERSION_MINOR(device_props.apiVersion), VK_VERSION_PATCH(device_props.apiVersion));
 	}
 
 	// Create a physical device and a queue : we chose the first
@@ -146,7 +147,7 @@ void VulkanRenderInterface::CreateDevices()
 		.pQueuePriorities = queuePriorities
 	};
 
-	deviceExtensions = 
+	extensions = 
 	{ 
 		"VK_KHR_swapchain", 
 		"VK_KHR_shader_draw_parameters", 
@@ -155,47 +156,51 @@ void VulkanRenderInterface::CreateDevices()
 		"VK_KHR_multiview"
 	};
 
-	// Enable runtime descriptor indexing
-	VkPhysicalDeviceDescriptorIndexingFeaturesEXT indexingFeatures
-	{
-		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT,
-		.pNext = nullptr,
-		.shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
-		.descriptorBindingPartiallyBound = VK_TRUE,
-		.runtimeDescriptorArray = VK_TRUE
-	};
+	/* Enabled device features */
+	VkPhysicalDeviceDescriptorIndexingFeaturesEXT descriptor_indexing_feature = {};
 
-	// Enable dynamic rendering
-	VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamic_rendering_feature
-	{
-		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
-		.pNext = &indexingFeatures,
-		.dynamicRendering = VK_TRUE,
-	};
+	VkPhysicalDeviceFeatures2 physical_features2 = {};
+	physical_features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+	physical_features2.pNext = &descriptor_indexing_feature;
+	vkGetPhysicalDeviceFeatures2(context.physical_device, &physical_features2);
+	
+	VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamic_rendering_feature = {};
+	VkPhysicalDeviceMultiviewFeaturesKHR multiview_feature = {};
+	VkPhysicalDeviceDepthClampZeroOneFeaturesEXT depth_clamp_feature = {};
 
-	// Enable mutiview
-	VkPhysicalDeviceMultiviewFeaturesKHR multiview_feature{};
+	/* Descriptor indexing */
+	descriptor_indexing_feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
+	descriptor_indexing_feature.pNext = &dynamic_rendering_feature;
+	descriptor_indexing_feature.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
+	descriptor_indexing_feature.descriptorBindingPartiallyBound = VK_TRUE;
+	descriptor_indexing_feature.runtimeDescriptorArray = VK_TRUE;
+	
+	/* Dynamic rendering */
+	dynamic_rendering_feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
+	dynamic_rendering_feature.pNext = &multiview_feature;
+	dynamic_rendering_feature.dynamicRendering = VK_TRUE;
+
+	/* Multiview */
 	multiview_feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHR;
 	multiview_feature.multiview = VK_TRUE;
-	multiview_feature.pNext = &dynamic_rendering_feature;
+	multiview_feature.pNext = &depth_clamp_feature;
 
-	VkPhysicalDeviceFeatures2  features = {};
-	features.features.depthClamp = VK_TRUE;
-	features.pNext = &multiview_feature;
+	/* Depth clamp */
+	depth_clamp_feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_CLAMP_ZERO_ONE_FEATURES_EXT;
+	depth_clamp_feature.pNext = VK_NULL_HANDLE;
+	depth_clamp_feature.depthClampZeroOne = VK_TRUE;
 
-	VkDeviceCreateInfo deviceInfo = 
-	{
-		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-		.pNext = &features,
-		.flags = NULL,
-		.queueCreateInfoCount = 1,
-		.pQueueCreateInfos = &queueInfo,
-		.enabledExtensionCount = (uint32_t)deviceExtensions.size(),
-		.ppEnabledExtensionNames = deviceExtensions.data(),
-		.pEnabledFeatures = NULL
-	};
+	VkDeviceCreateInfo device_create_info = {};
+	device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	device_create_info.pNext = &physical_features2;
+	device_create_info.flags = 0;
+	device_create_info.queueCreateInfoCount = 1;
+	device_create_info.pQueueCreateInfos = &queueInfo;
+	device_create_info.enabledExtensionCount = (uint32_t)extensions.size();
+	device_create_info.ppEnabledExtensionNames = extensions.data();
+	device_create_info.pEnabledFeatures = nullptr;
 	
-	VK_CHECK(vkCreateDevice(context.physicalDevice, &deviceInfo, nullptr, &context.device));
+	VK_CHECK(vkCreateDevice(context.physical_device, &device_create_info, nullptr, &context.device));
 	
 	/* Initialize function pointers */
 	assert(fpCmdBeginDebugUtilsLabelEXT = (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetInstanceProcAddr(context.instance, "vkCmdBeginDebugUtilsLabelEXT"));
@@ -208,7 +213,7 @@ void VulkanRenderInterface::CreateDevices()
 	LOG_INFO("vkCreateDevice() : success.");
 }
 
-void VulkanRenderInterface::CreateCommandStructures()
+void VulkanRenderInterface::create_command_structures()
 {
 	// Command queue
 	vkGetDeviceQueue(context.device, context.gfxQueueFamily, 0, &context.queue);
@@ -243,7 +248,7 @@ void VulkanRenderInterface::CreateCommandStructures()
 	}
 }
 
-void VulkanRenderInterface::CreateSyncStructures()
+void VulkanRenderInterface::create_synchronization_structures()
 {
 	VkFenceCreateInfo fenceInfo			= { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,		.flags = VK_FENCE_CREATE_SIGNALED_BIT };
 	VkSemaphoreCreateInfo semaphoreInfo = { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,	.flags = 0 };
@@ -263,7 +268,7 @@ struct WindowData
 	HINSTANCE hInstance;
 };
 
-void VulkanRenderInterface::CreateSurface(Window* window)
+void VulkanRenderInterface::create_surface(Window* window)
 {
 #ifdef _WIN32
 	assert(window->GetData()->hWnd);
@@ -275,7 +280,7 @@ void VulkanRenderInterface::CreateSurface(Window* window)
 		.hwnd = window->GetData()->hWnd
 	};
 
-	VK_CHECK(vkCreateWin32SurfaceKHR(context.instance, &surfaceInfo, nullptr, &m_Surface));
+	VK_CHECK(vkCreateWin32SurfaceKHR(context.instance, &surfaceInfo, nullptr, &surface));
 
 	LOG_INFO("vkCreateWin32SurfaceKHR() success.");
 
@@ -284,15 +289,15 @@ void VulkanRenderInterface::CreateSurface(Window* window)
 #endif // _WIN32
 }
 
-void VulkanRenderInterface::CreateSwapchain()
+void VulkanRenderInterface::create_swapchain()
 {
-	context.swapchain.reset(new VulkanSwapchain(m_Surface, vkPhysicalDevices[0]));
+	context.swapchain.reset(new VulkanSwapchain(surface, context.physical_device));
 	context.swapchain->init(VulkanRendererBase::swapchain_color_format, 
 	                        VulkanRendererBase::swapchain_colorspace, 
 	                        VulkanRendererBase::swapchain_depth_format);
 }
 
-VulkanFrame& VulkanRenderInterface::GetCurrentFrame()
+VulkanFrame& VulkanRenderInterface::get_current_frame()
 {
 	return context.frames[context.frame_count % NUM_FRAMES];
 }

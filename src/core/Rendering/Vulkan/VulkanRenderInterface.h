@@ -41,7 +41,7 @@ struct VulkanContext
 {
 	VkInstance instance			= VK_NULL_HANDLE;
 	VkDevice   device			= VK_NULL_HANDLE;
-	VkPhysicalDevice physicalDevice	= VK_NULL_HANDLE;
+	VkPhysicalDevice physical_device	= VK_NULL_HANDLE;
 	VkQueue	   queue			= VK_NULL_HANDLE;
 	VkCommandPool frames_cmd_pool = VK_NULL_HANDLE;
 	VkCommandPool temp_cmd_pool	= VK_NULL_HANDLE;
@@ -49,7 +49,7 @@ struct VulkanContext
 
 	uint32_t frame_count= 0;
 	uint32_t curr_frame_idx = 0;
-	uint32_t curr_backbuffer_idx = 0; // From vkAcquireNextImageKHR
+	uint32_t curr_backbuffer_idx = 0; 
 	VulkanFrame frames[NUM_FRAMES];
 	uint32_t gfxQueueFamily		= 0;
 };
@@ -60,34 +60,34 @@ class VulkanRenderInterface
 public:
 	VulkanRenderInterface(const char* name, int maj, int min, int patch);
 
-	void Initialize();
-	void Terminate();
-	bool m_InitSuccess;
+	void initialize();
+	void terminate();
+	bool m_init_success;
 
-	void CreateInstance();
-	void CreateDevices();
-	void CreateSurface(Window* window);
-	void CreateSwapchain();
+	void create_instance();
+	void create_device();
+	void create_surface(Window* window);
+	void create_swapchain();
 
-	void CreateCommandStructures();
-	void CreateSyncStructures();
+	void create_command_structures();
+	void create_synchronization_structures();
 
-	VulkanFrame& GetCurrentFrame();
-	inline VulkanSwapchain* GetSwapchain() { return context.swapchain.get(); }
+	VulkanFrame& get_current_frame();
+	inline VulkanSwapchain* get_swapchain() const { return context.swapchain.get(); }
 
-	inline size_t GetCurrentImageIdx() { return context.frame_count % NUM_FRAMES;  }
+	inline size_t get_current_frame_index() const { return context.frame_count % NUM_FRAMES;  }
 
 	static inline VkPhysicalDeviceLimits device_limits = {};
+
+	VkSurfaceKHR surface;
+
 private:
-	std::vector<VkPhysicalDevice> vkPhysicalDevices;
 
-	std::vector<const char*> deviceExtensions;
+	std::vector<const char*> extensions;
+	void create_framebuffers(VkRenderPass renderPass, VulkanSwapchain& swapchain);
 
-	VkSurfaceKHR m_Surface;
-	void CreateFramebuffers(VkRenderPass renderPass, VulkanSwapchain& swapchain);
-
-	const char* m_Name;
-	int minVer, majVer, patchVer;
+	const char* m_name;
+	int min_ver, maj_ver, patch_ver;
 };
 
 

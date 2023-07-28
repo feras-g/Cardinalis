@@ -9,7 +9,6 @@
 #include "../imgui/backends/imgui_impl_win32.h"
 #include "../imgui/backends/imgui_impl_vulkan.h"
 
-
 VulkanUI& VulkanUI::Start()
 {
 	ImGui::NewFrame();
@@ -26,7 +25,7 @@ void VulkanUI::End()
 	ImGui::Render();
 }
 
-VulkanUI& VulkanUI::ShowSceneViewportPanel(
+VulkanUI& VulkanUI::ShowSceneViewportPanel(Camera& scene_camera,
 	size_t texDeferred, size_t texColorId,
 	size_t texNormalId, size_t texDepthId,
 	size_t texNormalMapId, size_t texMetallicRoughnessId)
@@ -55,24 +54,24 @@ VulkanUI& VulkanUI::ShowSceneViewportPanel(
 		}
 	}
 	ImGui::End();
-
+	
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0.0f, 0.0f });
-	if (ImGui::Begin("Scene", 0, ImGuiWindowFlags_MenuBar |  ImGuiWindowFlags_NoDecoration))
+	if (ImGui::Begin("Scene", 0, 0))
 	{
+		is_scene_viewport_hovered = ImGui::IsWindowHovered();
 		ImVec2 sceneViewPanelSize = ImGui::GetContentRegionAvail();
-		const float currAspect = sceneViewPanelSize.x / sceneViewPanelSize.y;
+		const float curr_aspect_ratio = sceneViewPanelSize.x / sceneViewPanelSize.y;
 
-		if (currAspect != fSceneViewAspectRatio)
+		if (curr_aspect_ratio != default_scene_view_aspect_ratio)
 		{
-			fSceneViewAspectRatio = currAspect;
+			default_scene_view_aspect_ratio = curr_aspect_ratio;
+			scene_camera.UpdateAspectRatio(default_scene_view_aspect_ratio);
 		}
 
 		//if (combo_preview_value == "Deferred Output")
 		{
 			ImGui::Image(reinterpret_cast<ImTextureID>(texDeferred), sceneViewPanelSize );
 		}
-
-		bIsSceneViewportHovered = ImGui::IsItemHovered();
 	}
 	ImGui::PopStyleVar();
 
@@ -270,12 +269,8 @@ VulkanUI& VulkanUI::ShowLightSettings(LightManager* light_manager)
 	{
 		ImGui::SeparatorText("Directional Light");
 		
-		ImGui::DragFloat3("Direction", glm::value_ptr(light_manager->m_light_data.directional_light.direction), 0.01f);
-		ImGui::DragFloat3("Eye", glm::value_ptr(light_manager->eye), 0.01f);
-		ImGui::DragFloat3("Up", glm::value_ptr(light_manager->up), 0.01f);
-		ImGui::DragFloat3("Bbox min", glm::value_ptr(light_manager->view_volume_bbox_min), 0.1f);
-		ImGui::DragFloat3("Bbox max", glm::value_ptr(light_manager->view_volume_bbox_max), 0.1f);
-		ImGui::DragFloat3("Color",	  glm::value_ptr(light_manager->m_light_data.directional_light.color), 0.1f);
+		ImGui::DragFloat4("Direction", glm::value_ptr(light_manager->m_light_data.directional_light.direction), 0.01f);
+		ImGui::DragFloat4("Color",	  glm::value_ptr(light_manager->m_light_data.directional_light.color), 0.1f);
 	}
 
 	ImGui::End();
@@ -289,21 +284,23 @@ VulkanUI& VulkanUI::ShowShadowPanel(CascadedShadowRenderer* shadow_renderer, std
 	{
 		ImGui::SeparatorText("Cascaded Shadows");
 
-		if (ImGui::DragFloat("Z-Split Interpolation Factor", &shadow_renderer->interp_factor, 0.01f))
+		if (ImGui::DragFloat("Z-Split Interpolation Factor", &shadow_renderer->lambda, 0.01f))
 		{
-			shadow_renderer->compute_z_splits();
+			shadow_renderer->compute_cascade_splits();
 		}
 
 		float* v[2] { &shadow_renderer->frustum_near, &shadow_renderer->frustum_far };
 		if (ImGui::DragFloat2("Near/Far", v[0], 0.01f))
 		{
-			shadow_renderer->compute_z_splits();
+			shadow_renderer->compute_cascade_splits();
 		}
+
+		ImGui::Checkbox("Use Per Cascade Projection", &shadow_renderer->b_use_per_cascade_projection);
 
 		/* Display shadow cascades */
 		for (int i = 0; i < texShadowCascades.size(); i++)
 		{
-			ImGui::Image((ImTextureID)texShadowCascades[i], { 256, 256 });
+			ImGui::Image(reinterpret_cast<ImTextureID>(texShadowCascades[i]), { 256, 256 });
 			ImGui::SameLine();
 		}
 	}

@@ -15,10 +15,10 @@ Application::Application(const char* title, uint32_t width, uint32_t height) : b
 	Logger::Init("Engine");
 
 	m_RHI.reset(new VulkanRenderInterface(title, 1, 2, 196));
-	m_RHI->Initialize();
+	m_RHI->initialize();
 #ifdef _WIN32
-	m_RHI->CreateSurface(m_Window.get());
-	m_RHI->CreateSwapchain();
+	m_RHI->create_surface(m_Window.get());
+	m_RHI->create_swapchain();
 #else
 	assert(false);
 #endif // _WIN32
@@ -28,7 +28,7 @@ Application::Application(const char* title, uint32_t width, uint32_t height) : b
 
 Application::~Application()
 {
-	m_RHI->Terminate();
+	m_RHI->terminate();
 	m_RHI.release();
 	m_Window.release();
 }
