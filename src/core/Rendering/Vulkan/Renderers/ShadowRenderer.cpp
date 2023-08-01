@@ -22,7 +22,7 @@ void ShadowRenderer::init(unsigned int width, unsigned int height, const LightMa
 		m_shadow_maps[frame_idx].init(shadow_map_format, width, height, 1, false);
 		m_shadow_maps[frame_idx].create(context.device, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
 		m_shadow_maps[frame_idx].create_view(context.device, { .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT });
-		m_shadow_maps[frame_idx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		m_shadow_maps[frame_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 		/* Create render pass */
 		m_shadow_pass[frame_idx].add_depth_attachment(m_shadow_maps[frame_idx].view);
@@ -40,7 +40,7 @@ void ShadowRenderer::init(unsigned int width, unsigned int height, const LightMa
 	desc_set_layouts.push_back(m_descriptor_set_layout);								/* Shadow pass descriptor set */
 	desc_set_layouts.push_back(RenderObjectManager::mesh_descriptor_set_layout);		/* Mesh geometry descriptor set*/
 	desc_set_layouts.push_back(RenderObjectManager::drawable_descriptor_set_layout);	/* Drawable data descriptor set */
-	desc_set_layouts.push_back(VulkanRendererBase::m_framedata_desc_set_layout.layout);		/* Frame data */
+	desc_set_layouts.push_back(VulkanRendererBase::m_framedata_desc_set_layout.vk_set_layout);		/* Frame data */
 
 	std::vector<VkDescriptorPoolSize> pool_sizes
 	{
@@ -81,7 +81,7 @@ void ShadowRenderer::update_desc_sets()
 		std::vector<VkWriteDescriptorSet> desc_writes = {};
 
 		/* Lighting data UBO */
-		VkDescriptorBufferInfo info = { h_light_manager->m_ubo[frame_idx].buffer,  0, sizeof(LightData) };
+		VkDescriptorBufferInfo info = { h_light_manager->m_ubo[frame_idx],  0, sizeof(LightData) };
 		desc_writes.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], 0, &info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
 
 		vkUpdateDescriptorSets(context.device, (uint32_t)desc_writes.size(), desc_writes.data(), 0, nullptr);
@@ -90,7 +90,7 @@ void ShadowRenderer::update_desc_sets()
 
 void ShadowRenderer::render(size_t current_frame_idx, VkCommandBuffer cmd_buffer)
 {
-	m_shadow_maps[current_frame_idx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+	m_shadow_maps[current_frame_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
 
 	VkRect2D render_area{ .offset {}, .extent { m_shadow_map_size.x , m_shadow_map_size.y } };
 	set_viewport_scissor(cmd_buffer, m_shadow_map_size.x, m_shadow_map_size.y, true);
@@ -100,13 +100,13 @@ void ShadowRenderer::render(size_t current_frame_idx, VkCommandBuffer cmd_buffer
 	vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline);
 
 	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 0, 1, &m_descriptor_set[current_frame_idx], 0, nullptr);
-	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 3, 1, &VulkanRendererBase::m_framedata_desc_set[current_frame_idx].set, 0, nullptr);
+	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 3, 1, &VulkanRendererBase::m_framedata_desc_set[current_frame_idx].vk_set, 0, nullptr);
 
 	draw_scene(cmd_buffer);
 
 	m_shadow_pass[current_frame_idx].end(cmd_buffer);
 
-	m_shadow_maps[current_frame_idx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	m_shadow_maps[current_frame_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
 void ShadowRenderer::draw_scene(VkCommandBuffer cmd_buffer)
@@ -149,6 +149,7 @@ void ShadowRenderer::draw_scene(VkCommandBuffer cmd_buffer)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void CascadedShadowRenderer::init(unsigned int width, unsigned int height,  Camera& camera, const LightManager& lightmanager)
 {
 	h_light_manager = &lightmanager;
@@ -165,7 +166,7 @@ void CascadedShadowRenderer::init(unsigned int width, unsigned int height,  Came
 		m_shadow_maps[frame_idx].create(context.device, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
 		m_shadow_maps[frame_idx].view = Texture2D::create_texture_2d_array_view(
 			m_shadow_maps[frame_idx], m_shadow_maps[frame_idx].info.imageFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
-		m_shadow_maps[frame_idx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		m_shadow_maps[frame_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 
 		/* Store separate views */
@@ -180,7 +181,7 @@ void CascadedShadowRenderer::init(unsigned int width, unsigned int height,  Came
 				.layerCount     { 1 },
 			};
 
-			VkImageView view = create_texture_view(m_shadow_maps[frame_idx], VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT, &subresource_desc);
+			VkImageView view = create_texture_view(m_shadow_maps[frame_idx], m_shadow_maps[frame_idx].info.imageFormat, VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT, &subresource_desc);
 			cascade_views[frame_idx][cascade_idx] = view;
 		}
 
@@ -199,7 +200,6 @@ void CascadedShadowRenderer::init(unsigned int width, unsigned int height,  Came
 	std::vector<VkDescriptorSetLayout> desc_set_layouts = {};
 	desc_set_layouts.push_back(RenderObjectManager::mesh_descriptor_set_layout);			/* Mesh geometry descriptor set*/
 	desc_set_layouts.push_back(m_descriptor_set_layout);									/* Shadow pass descriptor set */
-
 
 	std::vector<VkDescriptorPoolSize> pool_sizes
 	{
@@ -223,7 +223,7 @@ void CascadedShadowRenderer::init(unsigned int width, unsigned int height,  Came
 	m_gfx_pipeline_layout = create_pipeline_layout(context.device, desc_set_layouts, pushConstantRanges);
 
 	create_buffers();
-	compute_z_splits();
+	compute_cascade_splits();
 	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
 		compute_cascade_ortho_proj(frame_idx);
@@ -244,7 +244,7 @@ void CascadedShadowRenderer::update_desc_sets()
 		std::vector<VkWriteDescriptorSet> desc_writes = {};
 
 		/* Cascades projection matrices UBO */
-		VkDescriptorBufferInfo info = { view_proj_mats_ubo[frame_idx].buffer,  0, mats_ubo_size_bytes };
+		VkDescriptorBufferInfo info = { view_proj_mats_ubo[frame_idx],  0, mats_ubo_size_bytes };
 		desc_writes.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], 0, &info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
 
 		vkUpdateDescriptorSets(context.device, (uint32_t)desc_writes.size(), desc_writes.data(), 0, nullptr);
@@ -256,131 +256,165 @@ void CascadedShadowRenderer::create_buffers()
 	mats_ubo_size_bytes = sizeof(glm::mat4) * NUM_CASCADES;
 	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
-		create_buffer(Buffer::Type::UNIFORM, view_proj_mats_ubo[frame_idx], mats_ubo_size_bytes);
+		view_proj_mats_ubo[frame_idx].init(Buffer::Type::UNIFORM, mats_ubo_size_bytes);
 	}
-	cascade_ends_ubo_size_bytes = sizeof(glm::vec4);
-	create_buffer(Buffer::Type::UNIFORM, cascade_ends_ubo, cascade_ends_ubo_size_bytes);
+	cascade_splits_ubo_size = sizeof(float) * cascade_splits.size();
+	cascade_ends_ubo.init(Buffer::Type::UNIFORM, cascade_splits_ubo_size);
 }
 
 CascadedShadowRenderer::~CascadedShadowRenderer()
 {
-	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
-	{
-		destroy_buffer(view_proj_mats_ubo[frame_idx]);
-	}
-	destroy_buffer(cascade_ends_ubo);
+
 }
 
-void CascadedShadowRenderer::compute_z_splits()
+void CascadedShadowRenderer::compute_cascade_splits()
 {
-	// https://developer.download.nvidia.com/SDK/10.5/opengl/src/cascaded_shadow_maps/doc/cascaded_shadow_maps.pdf, Page 6
-	//  compute the z-values of the splits of the view frustum in camera eye space
+	// Use Practical Split Scheme method
+	// https://developer.download.nvidia.com/SDK/10.5/opengl/src/cascaded_shadow_maps/doc/cascaded_shadow_maps.pdf, page 6
 	
-	const float n = frustum_near;
-	const float f = frustum_far;
+	near_clip  = h_camera->near_far.x;
+	far_clip   = h_camera->near_far.y;
+	clip_range = far_clip - near_clip;
 
-	const float range = f - n;
-	const float ratio = f / n;
+	float z_min = near_clip;
+	float z_max = near_clip + clip_range;
 
-	// interpolation factor between exponential and uniform distribution of splits
-	glm::vec4 z_splits_view_space;
+	float range = z_max - z_min;
+	float ratio = z_max / z_min;
 
-	for (int i = 0; i < NUM_CASCADES; i++)
+	float prev_split_dist = 0.0f;
+
+	for(int i = 0; i < NUM_CASCADES; ++i)
 	{
-		float p = (float)(i + 1) / NUM_CASCADES;
-		float log_distr     = n * std::pow(ratio, p); // exponential distribution of splits
-		float uniform_distr = n + p * range; // uniform distribution of splits
+		float p = (i + 1) / (float)(NUM_CASCADES);
+		float log = z_min * std::pow(ratio, p);
+		float uniform = z_min + range * p;
+		float d = lambda * (log - uniform) + uniform;
+		cascade_splits[i] = (d - near_clip) / clip_range;
 
-		z_splits[i] = std::lerp(uniform_distr, log_distr, interp_factor);
-		z_splits_view_space[i] = z_splits[i];
+		float split_dist = cascade_splits[i];
 
-		/* Optional: compute the projection matrix corresponding to this cascade */
-		float n = (i > 0) ? z_splits[i - 1] : frustum_near;
-		camera_splits_proj_mats[i] = glm::perspective(glm::radians(h_camera->fov), h_camera->aspect_ratio, n, z_splits[i]);
+		per_cascade_projection[i] = glm::perspective(glm::radians(h_camera->fov), h_camera->aspect_ratio, (near_clip + prev_split_dist * clip_range), (near_clip + split_dist * clip_range));
+		prev_split_dist = split_dist;
 	}
-
-	upload_buffer_data(cascade_ends_ubo, &z_splits_view_space, cascade_ends_ubo_size_bytes, 0);
+	
 }
 
 void CascadedShadowRenderer::compute_cascade_ortho_proj(size_t frame_idx)
 {
+	compute_cascade_splits();
+
 	glm::vec3 light_direction = glm::normalize(LightManager::direction);
+	
+	glm::vec4 cascade_splits_view_space_depth;
 
 	static constexpr glm::vec3 up     = { 0.0f, 1.0f, 0.0f };
 
 	glm::mat4 cam_view = h_camera->controller.m_view;
+	glm::mat4 cam_proj = h_camera->projection;
 
 	/* Compute orthographic matrix for each cascade */
-	for (int i = 0; i < NUM_CASCADES; i++)
+	float prev_split_dist = 0.0f;
+	for (int cascade_idx = 0; cascade_idx < NUM_CASCADES; cascade_idx++)
 	{
-		/* Frustum corners in NDC */
+		float split_dist = cascade_splits[cascade_idx];
+
+		/* Get the corners of the view frustum in world space */
+
+		/* The frustum in NDC is a cube */
 		glm::vec3 frustum_corners[8] = 
 		{
-			glm::vec3(-1.0f,  1.0f, 0.0f),	
-			glm::vec3( 1.0f,  1.0f, 0.0f),	
-			glm::vec3( 1.0f, -1.0f, 0.0f),	
-			glm::vec3(-1.0f, -1.0f, 0.0f),	
-			glm::vec3(-1.0f,  1.0f, 1.0f),	
+			glm::vec3(-1.0f,  1.0f, 0.0f),
+			glm::vec3( 1.0f,  1.0f, 0.0f),
+			glm::vec3( 1.0f, -1.0f, 0.0f),
+			glm::vec3(-1.0f, -1.0f, 0.0f),
+			glm::vec3(-1.0f,  1.0f, 1.0f),
 			glm::vec3( 1.0f,  1.0f, 1.0f),
 			glm::vec3( 1.0f, -1.0f, 1.0f),
 			glm::vec3(-1.0f, -1.0f, 1.0f),
 		};
 
-		/* NDC -> World Space : Cube becomes a frustum in World Space */
-		glm::mat4 inv_vp = glm::inverse(camera_splits_proj_mats[i] * cam_view);
-		for (size_t i = 0; i < 8; i++)
+
+		/* Transform to World Space : Cube becomes a frustum in World Space */
+		glm::mat4 view_proj_inv = glm::inverse(h_camera->projection * cam_view);
+
+		for (int corner_idx = 0; corner_idx < 8; corner_idx++)
 		{
-			glm::vec4 corner = inv_vp * glm::vec4(frustum_corners[i], 1.0f);
-			frustum_corners[i] = corner / corner.w;
+			glm::vec4 corner = view_proj_inv * glm::vec4(frustum_corners[corner_idx], 1.0f);
+			frustum_corners[corner_idx] = corner / corner.w;
+		}
+
+		/* Get the corners of the current cascade */
+		for (int corner_idx = 0; corner_idx < 4; corner_idx++) 
+		{
+			glm::vec3 dist = frustum_corners[corner_idx + 4] - frustum_corners[corner_idx];
+			frustum_corners[corner_idx + 4] = frustum_corners[corner_idx] + (dist * split_dist);
+			frustum_corners[corner_idx] = frustum_corners[corner_idx] + (dist * prev_split_dist);
 		}
 
 		/* Get frustum center in World space */
 		glm::vec3 frustum_center = glm::vec3(0);
-		
-		for (int i = 0; i < 8; i++)
+		for (int corner_idx = 0; corner_idx < 8; corner_idx++)
 		{
-			frustum_center += frustum_corners[i];
+			frustum_center += frustum_corners[corner_idx];
 		}
 		frustum_center /= 8.0f;
 
+		/* Compute AABB around frustum */
+//		glm::vec3 up = glm::normalize(h_camera->controller.m_up);
+//		glm::vec3 lightCameraPos = frustum_center;
+//		glm::vec3 lookAt = frustum_center - light_direction;
+//		glm::mat4x4 lightView = glm::lookAt(lightCameraPos, lookAt, up);
+//
+//		glm::vec3 mins  = glm::vec3(FLT_MAX, FLT_MAX, FLT_MAX);
+//		glm::vec3 maxes = glm::vec3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+//
+//		for(int i = 0; i < 8; ++i)
+//		{
+//			glm::vec3 corner = glm::vec3(lightView * glm::vec4(frustum_corners[i], 1.0f));
+//			mins  = glm::min(mins, corner);
+//			maxes = glm::max(maxes, corner);
+//		}
+//
+//		glm::vec3 minExtents = mins;
+//		glm::vec3 maxExtents = maxes;
+//
+//		// Adjust the min/max to accommodate the filtering size
+//		float scale = (m_shadow_map_size.x  + 9.0f) / float(m_shadow_map_size.x);
+//		minExtents.x *= scale;
+//		minExtents.y *= scale;
+//		maxExtents.x *= scale;
+//		maxExtents.y *= scale;
+
+
 		float cascade_radius = 0.0f;
-		for (int i = 0; i < 8; i++)
+		for (int corner_idx = 0; corner_idx < 8; corner_idx++)
 		{
-			cascade_radius = std::max(cascade_radius, glm::length(frustum_center - frustum_corners[i]));
+			cascade_radius = std::max(cascade_radius, glm::length(frustum_center - frustum_corners[corner_idx]));
 		}
+		cascade_radius = std::ceil(cascade_radius * 16.0f) / 16.0f;
+		glm::vec3 maxExtents = glm::vec3(cascade_radius);
+		glm::vec3 minExtents = -maxExtents;
 
-		/* Remove shimmering */
-		{
-			float texelsPerUnit = (float)m_shadow_map_size.x / (cascade_radius * 2.0f);
-			glm::mat4 scalar = glm::scale(glm::identity<glm::mat4>(), glm::vec3(texelsPerUnit));
+		glm::vec3 cascade_extents = maxExtents - minExtents;
 
-			glm::vec3 zero(0.0f);
-			glm::mat4 lookAt, lookAtInv;
-			glm::vec3 baseLookAt(light_direction);
+		glm::mat4 lightViewMatrix  = glm::lookAt(frustum_center - light_direction * -minExtents.z, frustum_center, glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::mat4 lightOrthoMatrix = glm::ortho(minExtents.x, maxExtents.x, minExtents.y, maxExtents.y, 0.0f, maxExtents.z - minExtents.z);
 
-			lookAt = glm::lookAt(zero, baseLookAt, up);
-			lookAt = scalar * lookAt;
-			lookAtInv = glm::inverse(lookAt);
-
-			frustum_center = glm::vec3(lookAt * glm::vec4(frustum_center, 1.0f));
-			frustum_center.x = (float)std::floor(frustum_center.x);
-			frustum_center.y = (float)std::floor(frustum_center.y);
-			frustum_center = glm::vec3(lookAtInv * glm::vec4(frustum_center, 1.0f));
-		}
-
-		/* Orthographics projection */
-		glm::vec3 eye = frustum_center + (-light_direction * cascade_radius * 2.0f);
-		glm::mat4 light_view = glm::lookAt(eye, frustum_center, up);
-		view_proj_mats[i] = glm::ortho(-cascade_radius, cascade_radius, -cascade_radius, cascade_radius, -cascade_radius * 6.0f, 6.0f * cascade_radius) * light_view;
+		// Store split distance and matrix in cascade
+		cascade_splits_view_space_depth[cascade_idx] = (near_clip + split_dist * clip_range) * -1.0f;
+		view_proj_mats[cascade_idx] = lightOrthoMatrix * lightViewMatrix;
+		prev_split_dist = cascade_splits[cascade_idx];
 	}
-	upload_buffer_data(view_proj_mats_ubo[frame_idx], view_proj_mats.data(), mats_ubo_size_bytes, 0);
+	view_proj_mats_ubo[frame_idx].upload(context.device, view_proj_mats.data(), 0, mats_ubo_size_bytes);
+	cascade_ends_ubo.upload(context.device, &cascade_splits_view_space_depth, 0, cascade_splits_ubo_size);
 }
 
 void CascadedShadowRenderer::render(size_t current_frame_idx, VkCommandBuffer cmd_buffer)
 {
 	compute_cascade_ortho_proj(current_frame_idx);
 
-	m_shadow_maps[current_frame_idx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+	m_shadow_maps[current_frame_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_ACCESS_SHADER_WRITE_BIT);
 
 	VkRect2D render_area{ .offset {}, .extent { (uint32_t)m_shadow_map_size.x , (uint32_t)m_shadow_map_size.y } };
 	set_viewport_scissor(cmd_buffer, (uint32_t)m_shadow_map_size.x, (uint32_t)m_shadow_map_size.y, true);
@@ -393,12 +427,11 @@ void CascadedShadowRenderer::render(size_t current_frame_idx, VkCommandBuffer cm
 	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 1, 1, &m_descriptor_set[current_frame_idx], 0, nullptr);
 
 	/* Push constant */
-
 	draw_scene(cmd_buffer);
 
 	m_CSM_pass[current_frame_idx].end(cmd_buffer);
 
-	m_shadow_maps[current_frame_idx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	m_shadow_maps[current_frame_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
 }
 
 void CascadedShadowRenderer::draw_scene(VkCommandBuffer cmd_buffer)

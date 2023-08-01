@@ -108,7 +108,7 @@ void VulkanSwapchain::init(VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkF
         color_attachments[i].image = tmp[i];
         color_attachments[i].init(colorFormat, info.extent.width, info.extent.height, 1, false);
         color_attachments[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
-        color_attachments[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        color_attachments[i].transition(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 		set_object_name(VK_OBJECT_TYPE_IMAGE, (uint64_t)color_attachments[i].image, color_name.c_str());
 
         /* Depth attachment */
