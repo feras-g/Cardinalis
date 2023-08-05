@@ -64,9 +64,9 @@ void DeferredRenderer::init(std::span<Texture2D> g_buffers_shadow_map, const Lig
 	}
 
 	/* Create graphics pipeline */
-	GfxPipeline::Flags ppl_flags = GfxPipeline::NONE;
+	Pipeline::Flags ppl_flags = Pipeline::NONE;
 	std::array<VkFormat, 1> color_formats = { VulkanRendererBase::tex_deferred_lighting_format };
-	GfxPipeline::CreateDynamic(m_shader_deferred, color_formats, {}, ppl_flags, m_pipeline_layout, &m_gfx_pipeline, VK_CULL_MODE_FRONT_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+	Pipeline::create_graphics_pipeline_dynamic(m_shader_deferred, color_formats, {}, ppl_flags, m_pipeline_layout, &m_gfx_pipeline, VK_CULL_MODE_FRONT_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
 }
 
 void DeferredRenderer::draw_scene(size_t current_backbuffer_idx, VkCommandBuffer cmd_buffer)
@@ -112,20 +112,20 @@ void DeferredRenderer::update_descriptor_set(size_t frame_idx)
 
 	/* Light data */
 	VkDescriptorBufferInfo desc_buffer_info = {};
-	desc_buffer_info.buffer = h_light_manager->m_ubo[frame_idx].buffer;
+	desc_buffer_info.buffer = h_light_manager->m_ubo[frame_idx];
 	desc_buffer_info.offset = 0;
 	desc_buffer_info.range = sizeof(h_light_manager->m_light_data);
 	write_descriptor_set.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], 8, &desc_buffer_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
 
 	///* Shadow cascade info */
 	VkDescriptorBufferInfo desc_buffer_info_ = {};
-	desc_buffer_info_.buffer = CascadedShadowRenderer::cascade_ends_ubo.buffer;
+	desc_buffer_info_.buffer = CascadedShadowRenderer::cascade_ends_ubo;
 	desc_buffer_info_.offset = 0;
 	desc_buffer_info_.range  = CascadedShadowRenderer::cascade_splits_ubo_size;
 	write_descriptor_set.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], 9, &desc_buffer_info_, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
 
 	VkDescriptorBufferInfo desc_buffer_info__ = {};
-	desc_buffer_info__.buffer = CascadedShadowRenderer::view_proj_mats_ubo[frame_idx].buffer;
+	desc_buffer_info__.buffer = CascadedShadowRenderer::view_proj_mats_ubo[frame_idx];
 	desc_buffer_info__.offset = 0;
 	desc_buffer_info__.range = CascadedShadowRenderer::mats_ubo_size_bytes;
 	write_descriptor_set.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], 10, &desc_buffer_info__, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
@@ -137,12 +137,12 @@ void DeferredRenderer::render(size_t current_backbuffer_idx, VkCommandBuffer cmd
 {
 	VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Deferred Lighting Pass");
 
-	VulkanRendererBase::m_deferred_lighting_attachment[current_backbuffer_idx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	VulkanRendererBase::m_deferred_lighting_attachment[current_backbuffer_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 
 	VkRect2D render_area{ .offset {}, .extent { VulkanRendererBase::render_width , VulkanRendererBase::render_height } };
 	m_dyn_renderpass[current_backbuffer_idx].begin(cmd_buffer, render_area);
 	draw_scene(current_backbuffer_idx, cmd_buffer);
 	m_dyn_renderpass[current_backbuffer_idx].end(cmd_buffer);
 
-	VulkanRendererBase::m_deferred_lighting_attachment[current_backbuffer_idx].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	VulkanRendererBase::m_deferred_lighting_attachment[current_backbuffer_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
 }

@@ -4,9 +4,25 @@
 #include "Rendering/Vulkan/VulkanRenderInterface.h"
 #include "Rendering/Vulkan/VulkanRendererBase.h"
 
+static void create_default_descriptor_set(DescriptorSet& descriptor_set)
+{
+	/* Create default descriptor set */
+	descriptor_set.layout.add_storage_image_binding(0, "Read-Only Input image");
+	descriptor_set.layout.add_storage_image_binding(1, "Write Ouput image");
+	descriptor_set.layout.create("Post Process Renderer");
+	
+	std::vector<VkDescriptorPoolSize> pool_sizes
+	{
+		VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2 }
+	};
+	VkDescriptorPool pool = create_descriptor_pool(pool_sizes, NUM_FRAMES);
+
+	descriptor_set.create(pool, "PostFX_Downsample Descriptor Set Layout");
+}
+
 void PostProcessRenderer::init()
 {
-	
+	create_default_descriptor_set(descriptor_set);
 }
 
 void PostProcessRenderer::render(PostFX fx, VkCommandBuffer_T* cmd_buff, const Texture2D& input_image)
@@ -39,7 +55,7 @@ static Texture2D create_test_texture()
 		flat_data[j+3]  = data[i].w;
 	}
 	
-	texture.create_from_data(flat_data.data(), "Post Process Test texture", VK_IMAGE_USAGE_STORAGE_BIT, VK_IMAGE_LAYOUT_UNDEFINED);
+	texture.create_from_data(flat_data.data(), "Post Process Test texture", VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, VK_IMAGE_LAYOUT_UNDEFINED);
 	texture.create_view(context.device, ImageViewTexture2D);
 
 	return texture;
@@ -47,58 +63,39 @@ static Texture2D create_test_texture()
 
 void PostFX_Downsample::init()
 {
-	Texture2D& input_image = VulkanRendererBase::m_deferred_lighting_attachment[0];
-	input_image_handle = &input_image;// &input_image;
+	create_default_descriptor_set(descriptor_set);
+
+	Texture2D input_image = create_test_texture();// VulkanRendererBase::m_deferred_lighting_attachment[0];
+	input_image_handle = &input_image;
 	width  = input_image.info.width;
 	height = input_image.info.height;
 
+	input_image_handle->transition_immediate(VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_MEMORY_READ_BIT);
+
 	shader.create("Downsample.comp.spv");
-	output_image.init(input_image.info.imageFormat, width / 2, height / 2, 1, false);
+	output_image.init(VK_FORMAT_R8G8B8A8_UNORM, width / 2, height / 2, 1, false);
 	output_image.create(context.device, VK_IMAGE_USAGE_STORAGE_BIT, "PostFX_Downsample Ouput Storage Image");
 	output_image.create_view(context.device, ImageViewTexture2D);
 
-	output_image.transition_layout_immediate(VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
-	
-	/* Descriptor set */
-	DescriptorSetLayout desc_set_layout;
-	desc_set_layout.add_storage_image_binding(0, "Read-only Input image");
-	desc_set_layout.add_storage_image_binding(1, "Write Ouput image");
-	desc_set_layout.create("PostFX_Downsample Descriptor Set Layout");
-	
-	std::vector<VkDescriptorPoolSize> pool_sizes
-	{
-		VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2 }
-	};
-	VkDescriptorPool pool = create_descriptor_pool(pool_sizes, NUM_FRAMES);
-
-	descriptor_set.assign_layout(desc_set_layout);
-	descriptor_set.create(pool, "PostFX_Downsample Descriptor Set Layout");
+	output_image.transition_immediate(VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_MEMORY_WRITE_BIT);
 
 	VkDescriptorImageInfo input_image_desc_info = { VK_NULL_HANDLE, input_image.view,  VK_IMAGE_LAYOUT_GENERAL  };
 	VkDescriptorImageInfo ouput_image_desc_info = { VK_NULL_HANDLE, output_image.view, VK_IMAGE_LAYOUT_GENERAL  };
 
 	std::vector<VkWriteDescriptorSet> write_descriptor_set 
 	{
-		ImageWriteDescriptorSet(descriptor_set.vk_set, 0, &input_image_desc_info, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE),
-		ImageWriteDescriptorSet(descriptor_set.vk_set, 1, &ouput_image_desc_info, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
+		ImageWriteDescriptorSet(descriptor_set, 0, &input_image_desc_info, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE),
+		ImageWriteDescriptorSet(descriptor_set, 1, &ouput_image_desc_info, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
 	};
 	vkUpdateDescriptorSets(context.device, (uint32_t)write_descriptor_set.size(), write_descriptor_set.data(), 0, nullptr);
 
 	/* Pipeline layout */
-	VkPipelineLayoutCreateInfo ppl_layout_info = {};
-	ppl_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	ppl_layout_info.setLayoutCount = 1;
-	ppl_layout_info.pSetLayouts = &desc_set_layout.vk_set_layout;
-	
-	vkCreatePipelineLayout(context.device, &ppl_layout_info, nullptr, &pipeline_layout);
+	pipeline_layout = create_pipeline_layout(context.device, descriptor_set.layout, {});
 
 	/* Compute pipeline */
-	VkComputePipelineCreateInfo compute_ppl_info = {};
-	compute_ppl_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-	compute_ppl_info.stage = shader.stages[0];
-	compute_ppl_info.layout = pipeline_layout;
+	pipeline = Pipeline::create_compute_pipeline(shader, pipeline_layout);
 
-	VK_CHECK(vkCreateComputePipelines(context.device, VK_NULL_HANDLE, 1, &compute_ppl_info, nullptr, &pipeline));
+
 }
 
 void PostFX_Downsample::render(VkCommandBuffer_T* cmd_buff)
@@ -110,11 +107,8 @@ void PostFX_Downsample::render(VkCommandBuffer_T* cmd_buff)
 	static int dispatch_size_x = num_threads_X / workgroup_dim;
 	static int dispatch_size_y = num_threads_Y / workgroup_dim;
 
-	input_image_handle->transition_layout(cmd_buff, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
-
-	vkCmdBindDescriptorSets(cmd_buff, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 1, &descriptor_set.vk_set, 0, nullptr);
+	vkCmdBindDescriptorSets(cmd_buff, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 1, descriptor_set, 0, nullptr);
 	vkCmdBindPipeline(cmd_buff, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
 	vkCmdDispatch(cmd_buff, dispatch_size_x, dispatch_size_y, 1);
-
-	input_image_handle->transition_layout(cmd_buff, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
+

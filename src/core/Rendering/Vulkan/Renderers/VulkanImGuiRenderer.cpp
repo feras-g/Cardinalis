@@ -124,8 +124,8 @@ void VulkanImGuiRenderer::render(size_t currentImageIdx, VkCommandBuffer cmdBuff
 
 void VulkanImGuiRenderer::create_buffers()
 {
-	create_buffer(Buffer::Type::STORAGE,m_storage_buffer, imgui_buffer_size);
-	create_buffer(Buffer::Type::UNIFORM,m_uniform_buffer, 1024);
+	m_storage_buffer.init(Buffer::Type::STORAGE, imgui_buffer_size);
+	m_uniform_buffer.init(Buffer::Type::UNIFORM, 1024);
 }
 
 void VulkanImGuiRenderer::draw_scene(VkCommandBuffer cmd_buffer)
@@ -196,17 +196,15 @@ void VulkanImGuiRenderer::update_buffers(ImDrawData* pDrawData)
 
 	// UBO
 	const glm::mat4 inMtx = glm::ortho(L, R, T, B);
-	upload_buffer_data(m_uniform_buffer, glm::value_ptr(inMtx), sizeof(glm::mat4), 0);
+	m_uniform_buffer.upload(context.device, glm::value_ptr(inMtx), 0, sizeof(glm::mat4));
 	
 	// SBO : Vertex/Index data
-	void* sboData = nullptr;
-	vkMapMemory(context.device, m_storage_buffer.memory, 0, imgui_buffer_size, 0, &sboData);
+	void* sboData = m_storage_buffer.map(context.device, 0, imgui_buffer_size);
 	
 	ImDrawVert* vtx = (ImDrawVert*)sboData;
 	for (int n = 0; n < m_pDrawData->CmdListsCount; n++)
 	{
 		ImDrawList* cmdList = m_pDrawData->CmdLists[n];
-		
 		memcpy(vtx, cmdList->VtxBuffer.Data, cmdList->VtxBuffer.Size * sizeof(ImDrawVert));
 		vtx += cmdList->VtxBuffer.Size;
 	}
@@ -223,13 +221,12 @@ void VulkanImGuiRenderer::update_buffers(ImDrawData* pDrawData)
 		}
 	}
 
-	vkUnmapMemory(context.device, m_storage_buffer.memory);
+	m_storage_buffer.unmap(context.device);
 }
 
 VulkanImGuiRenderer::~VulkanImGuiRenderer()
 {
-	destroy_buffer(m_storage_buffer);
-	destroy_buffer(m_uniform_buffer);
+
 }
 
 bool VulkanImGuiRenderer::CreateFontTexture(ImGuiIO* io, const char* fontPath, Texture2D& out_Font)
@@ -300,9 +297,9 @@ bool VulkanImGuiRenderer::CreatePipeline(VkDevice device)
 
 	m_pipeline_layout = create_pipeline_layout(device, layouts, pushConstantRanges);
 
-	GfxPipeline::Flags pp_flags = GfxPipeline::Flags::NONE;
+	Pipeline::Flags pp_flags = Pipeline::Flags::NONE;
 	std::array<VkFormat, 1> color_formats = { VulkanRendererBase::swapchain_color_format };
-	GfxPipeline::CreateDynamic(m_Shader, color_formats, {}, pp_flags, m_pipeline_layout, &m_gfx_pipeline, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
+	Pipeline::create_graphics_pipeline_dynamic(m_Shader, color_formats, {}, pp_flags, m_pipeline_layout, &m_gfx_pipeline, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
 
 	return true;
 }
@@ -320,9 +317,9 @@ void VulkanImGuiRenderer::update_descriptor_set(VkDevice device)
 			textureDescriptors.push_back(descriptor_info);
 		}
 
-		VkDescriptorBufferInfo uboInfo0{ .buffer = m_uniform_buffer.buffer, .offset = 0, .range = sizeof(glm::mat4) };
-		VkDescriptorBufferInfo sboInfo0{ .buffer = m_storage_buffer.buffer, .offset = 0, .range = ImGuiVtxBufferSize };
-		VkDescriptorBufferInfo sboInfo1{ .buffer = m_storage_buffer.buffer, .offset = ImGuiVtxBufferSize, .range = ImGuiIdxBufferSize };
+		VkDescriptorBufferInfo uboInfo0{ .buffer = m_uniform_buffer, .offset = 0, .range = sizeof(glm::mat4) };
+		VkDescriptorBufferInfo sboInfo0{ .buffer = m_storage_buffer, .offset = 0, .range = ImGuiVtxBufferSize };
+		VkDescriptorBufferInfo sboInfo1{ .buffer = m_storage_buffer, .offset = ImGuiVtxBufferSize, .range = ImGuiIdxBufferSize };
 
 		std::array<VkWriteDescriptorSet, 4> descriptorWrites
 		{

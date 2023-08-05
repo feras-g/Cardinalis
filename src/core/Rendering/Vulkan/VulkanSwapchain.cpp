@@ -86,7 +86,7 @@ void VulkanSwapchain::init(VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkF
 
     VK_CHECK(vkCreateSwapchainKHR(hDevice, &swapchainCreateInfo, nullptr, &swapchain));
     
-    depthTextures.resize(info.imageCount);
+    depth_attachments.resize(info.imageCount);
     color_attachments.resize(info.imageCount);
 
     std::vector<VkImage> tmp(info.imageCount);
@@ -108,14 +108,13 @@ void VulkanSwapchain::init(VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkF
         color_attachments[i].image = tmp[i];
         color_attachments[i].init(colorFormat, info.extent.width, info.extent.height, 1, false);
         color_attachments[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
-        color_attachments[i].transition(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 		set_object_name(VK_OBJECT_TYPE_IMAGE, (uint64_t)color_attachments[i].image, color_name.c_str());
 
         /* Depth attachment */
 		std::string ds_name = "Swapchain Depth/Stencil Image #" + std::to_string(i);
-        depthTextures[i].init(depthStencilFormat, info.extent.width, info.extent.height, 1, false);
-        depthTextures[i].create(context.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
-        depthTextures[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT });
+        depth_attachments[i].init(depthStencilFormat, info.extent.width, info.extent.height, 1, false);
+        depth_attachments[i].create(context.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, ds_name.c_str());
+        depth_attachments[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT });
     }
 
     end_temp_cmd_buffer(cmd_buffer);
@@ -131,14 +130,12 @@ void VulkanSwapchain::Reinitialize()
 
 void VulkanSwapchain::Destroy()
 {
-
     for (uint32_t i = 0; i < info.imageCount; i++)
     {
-        depthTextures[i].destroy(context.device);
+        depth_attachments[i].destroy();
     }
 
     vkDestroySwapchainKHR(context.device, swapchain, nullptr);
-
 }
 
 VkResult VulkanSwapchain::AcquireNextImage(VkSemaphore imageAcquiredSmp, uint32_t* pBackbufferIndex) const

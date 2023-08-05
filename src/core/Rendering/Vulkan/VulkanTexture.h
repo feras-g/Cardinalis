@@ -52,12 +52,15 @@ struct Texture
 	void transition(VkCommandBuffer cmdBuffer, VkImageLayout new_layout, VkAccessFlags dst_access_mask, VkImageSubresourceRange* subresourceRange = nullptr);
 	void transition_immediate(VkImageLayout new_layout, VkAccessFlags dst_access_mask, VkImageSubresourceRange* subresourceRange = nullptr);
 
-	void destroy(VkDevice device);
+	void destroy();
 	void generate_mipmaps();
 
 	/* Create and allocated memory for a Vulkan image */
 	void create_vk_image(VkDevice device, bool isCubemap, VkImageUsageFlags imageUsage);
 	void create_vk_image_cube(VkDevice device, VkImageUsageFlags imageUsage);
+
+	/* Identifier in Resource manager */
+	size_t hash;
 };
 
 VkImageView create_texture_view(
@@ -87,7 +90,7 @@ struct Texture2D : public Texture
 		VkImageUsageFlags	imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT,
 		VkImageLayout		layout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-	void create(VkDevice device, VkImageUsageFlags imageUsage, std::string_view debug_name = "");
+	void create(VkDevice device, VkImageUsageFlags imageUsage, std::string_view debug_name);
 
 
 

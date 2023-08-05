@@ -39,10 +39,17 @@ struct PostFX_Downsample : PostFX_Base
 	uint32_t height;
 };
 
-struct PostProcessRenderer
+struct PostFX_Blur : PostFX_Base
+{
+	void init();
+	void render(VkCommandBuffer_T* cmd_buff);
+};
+
+struct PostProcessRenderer : PostFX_Base
 {
 	void init();
 	void render(PostFX fx, VkCommandBuffer_T* cmd_buff, const Texture2D& input_image);
 
 	PostFX_Downsample m_postfx_downsample;
+	PostFX_Blur m_postfx_blur;
 };

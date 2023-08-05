@@ -6,7 +6,7 @@ void LightManager::init()
 	/* Create and fill UBO data */
 	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
-		create_buffer(Buffer::Type::UNIFORM, m_ubo[frame_idx], sizeof(m_light_data));
+		m_ubo[frame_idx].init(Buffer::Type::UNIFORM, sizeof(m_light_data));
 	}
 	update(nullptr, {-1,-1,-1}, { 1,1,1 });
 }
@@ -26,12 +26,8 @@ void LightManager::update_ubo(LightData* data)
 
 	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
-		void* pMappedData = nullptr;
-		VK_CHECK(vkMapMemory(context.device, m_ubo[frame_idx].memory, 0, sizeof(LightData), 0, &pMappedData));
-		memcpy(pMappedData, data, sizeof(LightData));
-		vkUnmapMemory(context.device, m_ubo[frame_idx].memory);
+		m_ubo[frame_idx].upload(context.device, data, 0, sizeof(LightData));
 	}
-
 }
 
 void LightManager::update_view_proj(glm::vec3 bbox_min, glm::vec3 bbox_max)
@@ -42,7 +38,7 @@ void LightManager::destroy()
 {
 	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
-		destroy_buffer(m_ubo[frame_idx]);
+		m_ubo[frame_idx].destroy();
 	}
 }
 

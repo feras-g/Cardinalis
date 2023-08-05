@@ -1,5 +1,6 @@
 #include "VulkanRenderInterface.h"
 #include "VulkanRendererBase.h"
+#include "Rendering/VkResourceManager.h"
 
 #include "Window/Window.h"
 
@@ -25,10 +26,13 @@ void VulkanRenderInterface::initialize()
 	create_command_structures();
 	create_synchronization_structures();
 
-	VulkanRendererBase::create_samplers();
-	VulkanRendererBase::create_buffers();
-	VulkanRendererBase::create_attachments();
-	VulkanRendererBase::create_descriptor_sets();
+
+	VulkanRendererBase& renderer_base = VulkanRendererBase::get_instance();
+
+	renderer_base.create_samplers();
+	renderer_base.create_buffers();
+	renderer_base.create_attachments();
+	renderer_base.create_descriptor_sets();
 
 	m_init_success = true;
 
@@ -38,6 +42,7 @@ void VulkanRenderInterface::initialize()
 void VulkanRenderInterface::terminate()
 {
 	vkDeviceWaitIdle(context.device);
+	VkResourceManager::get_instance(context.device)->destroy_all_resources();
 
 	for (uint32_t i = 0; i < NUM_FRAMES; i++)
 	{
@@ -48,6 +53,7 @@ void VulkanRenderInterface::terminate()
 
 	context.swapchain->Destroy();
 	vkDestroySurfaceKHR(context.instance, surface, nullptr);
+
 
 	vkDestroyDevice(context.device, nullptr);
 	vkDestroyInstance(context.instance, nullptr);
@@ -363,6 +369,7 @@ void end_temp_cmd_buffer(VkCommandBuffer cmd_buffer)
 	vkWaitForFences(context.device, 1, &submit_fence, VK_TRUE, OneSecondInNanoSeconds);
 
 	vkFreeCommandBuffers(context.device, context.temp_cmd_pool, 1, &cmd_buffer);
+	vkDestroyFence(context.device, submit_fence, nullptr);
 }
 
 void EndCommandBuffer(VkCommandBuffer cmdBuffer)
@@ -476,7 +483,7 @@ bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, VkRenderPass* out
 
 bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const VulkanSwapchain* swapchain, VkFramebuffer* out_Framebuffers, bool useDepth)
 {
-	return CreateColorDepthFramebuffers(renderPass, swapchain->color_attachments.data(), swapchain->depthTextures.data(), out_Framebuffers, useDepth);
+	return CreateColorDepthFramebuffers(renderPass, swapchain->color_attachments.data(), swapchain->depth_attachments.data(), out_Framebuffers, useDepth);
 }
 
 [[nodiscard]] VkDescriptorSetLayout create_descriptor_set_layout(std::span<VkDescriptorSetLayoutBinding> layout_bindings)
@@ -491,6 +498,10 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const VulkanSwapchain
 
 	VkDescriptorSetLayout out;
 	VK_CHECK(vkCreateDescriptorSetLayout(context.device, &layout_info, nullptr, &out));
+
+	/* Add to resource manager */
+	VkResourceManager::get_instance(context.device)->add_descriptor_set_layout(out);
+
 	return out;
 }
 
@@ -551,6 +562,10 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colo
 	};
 
 	VK_CHECK(vkCreateDescriptorPool(context.device, &poolInfo, nullptr, &out));
+
+	/* Add to resource manager */
+	VkResourceManager::get_instance(context.device)->add_descriptor_pool(out);
+
 	return out;
 }
 
@@ -593,10 +608,13 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colo
 
 	VK_CHECK(vkCreateDescriptorPool(context.device, &poolInfo, nullptr, &out));
 
+	/* Add to resource manager */
+	VkResourceManager::get_instance(context.device)->add_descriptor_pool(out);
+
 	return out;
 }
 
-bool GfxPipeline::CreateDynamic(const VertexFragmentShader& shader, std::span<VkFormat> colorAttachmentFormats, VkFormat depth_format, Flags flags, VkPipelineLayout pipelineLayout,
+bool Pipeline::create_graphics_pipeline_dynamic(const VertexFragmentShader& shader, std::span<VkFormat> colorAttachmentFormats, VkFormat depth_format, Flags flags, VkPipelineLayout pipelineLayout,
 	VkPipeline* out_GraphicsPipeline, VkCullModeFlags cullMode, VkFrontFace frontFace, glm::vec2 customViewport, uint32_t viewMask)
 {
 	VkPipelineRenderingCreateInfoKHR pipeline_create{ VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR };
@@ -612,10 +630,10 @@ bool GfxPipeline::CreateDynamic(const VertexFragmentShader& shader, std::span<Vk
 		flags = Flags(( (int)flags | (int)Flags::ENABLE_DEPTH_STATE));
 	}
 
-	return Create(shader, (uint32_t)colorAttachmentFormats.size(), flags, nullptr, pipelineLayout, out_GraphicsPipeline, cullMode, frontFace, &pipeline_create, customViewport);
+	return create_graphics_pipeline(shader, (uint32_t)colorAttachmentFormats.size(), flags, nullptr, pipelineLayout, out_GraphicsPipeline, cullMode, frontFace, &pipeline_create, customViewport);
 }
 
-bool GfxPipeline::Create(const VertexFragmentShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPipeline* out_GraphicsPipeline,
+bool Pipeline::create_graphics_pipeline(const VertexFragmentShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPipeline* out_GraphicsPipeline,
 	VkCullModeFlags cullMode, VkFrontFace frontFace, VkPipelineRenderingCreateInfoKHR* dynamic_pipeline_create, glm::vec2 customViewport)
 {
 	// Pipeline stages
@@ -739,7 +757,27 @@ bool GfxPipeline::Create(const VertexFragmentShader& shader, uint32_t numColorAt
 
 	VK_CHECK(vkCreateGraphicsPipelines(context.device, VK_NULL_HANDLE, 1, &gfxPipeline, nullptr, out_GraphicsPipeline));
 
+	/* Add to resource manager */
+	VkResourceManager::get_instance(context.device)->add_pipeline(*out_GraphicsPipeline);
+
 	return true;
+}
+
+VkPipeline Pipeline::create_compute_pipeline(const Shader& shader, VkPipelineLayout pipeline_layout)
+{
+	VkPipeline pipeline = VK_NULL_HANDLE;
+
+	VkComputePipelineCreateInfo compute_ppl_info = {};
+	compute_ppl_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+	compute_ppl_info.stage = shader.stages[0];
+	compute_ppl_info.layout = pipeline_layout;
+
+	VK_CHECK(vkCreateComputePipelines(context.device, VK_NULL_HANDLE, 1, &compute_ppl_info, nullptr, &pipeline));
+
+	/* Add to resource manager */
+	VkResourceManager::get_instance(context.device)->add_pipeline(pipeline);
+
+	return pipeline;
 }
 
 size_t create_vertex_index_buffer(Buffer& result, const void* vtxData, size_t& vtxBufferSizeInBytes, const void* idxData, size_t& idxBufferSizeInBytes)
@@ -750,20 +788,18 @@ size_t create_vertex_index_buffer(Buffer& result, const void* vtxData, size_t& v
 
 	// Staging buffer
 	Buffer stagingBuffer;
-	create_buffer(Buffer::Type::STAGING, stagingBuffer, total_size_bytes);
+	stagingBuffer.init(Buffer::Type::STAGING, total_size_bytes);
 
 	// Copy vertex + index data to staging buffer
-	void* pData;
-	vkMapMemory(context.device, stagingBuffer.memory, 0, total_size_bytes, 0, &pData);
+	
+	void* pData = stagingBuffer.map(context.device, 0, total_size_bytes);
 	memcpy(pData, vtxData, vtxBufferSizeInBytes);
 	memcpy((unsigned char*)pData + vtxBufferSizeInBytes, idxData, idxBufferSizeInBytes);
-	vkUnmapMemory(context.device, stagingBuffer.memory);
+	stagingBuffer.unmap(context.device);
 
 	// Create storage buffer containing non-interleaved vertex + index data 
-	create_buffer(Buffer::Type::STORAGE,result, total_size_bytes);
-	copy_buffer(stagingBuffer, result, total_size_bytes);
-
-	destroy_buffer(stagingBuffer);
+	result.init(Buffer::Type::STORAGE, total_size_bytes);
+	copy(stagingBuffer, result, total_size_bytes);
 
 	return total_size_bytes;
 }
@@ -838,6 +874,9 @@ void create_sampler(VkDevice device, VkFilter min, VkFilter mag, VkSamplerAddres
 	sampler_create_info.unnormalizedCoordinates = VK_FALSE;
 	
 	VK_CHECK(vkCreateSampler(context.device, &sampler_create_info, nullptr, &out_Sampler));
+
+	/* Add to resource manager */
+	VkResourceManager::get_instance(context.device)->add_sampler(out_Sampler);
 }
 
 void BeginRenderpass(VkCommandBuffer cmdBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer, VkRect2D renderArea, const VkClearValue* clearValues, uint32_t clearValueCount)
@@ -907,6 +946,9 @@ void set_viewport_scissor(VkCommandBuffer cmdBuffer, uint32_t width, uint32_t he
 	};
 
 	VK_CHECK(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &out));
+
+	/* Add to resource manager */
+	VkResourceManager::get_instance(context.device)->add_pipeline_layout(out);
 
 	return out;
 }

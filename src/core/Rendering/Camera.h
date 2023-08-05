@@ -92,7 +92,6 @@ public:
 
 	glm::vec2 near_far;
 
-
 	enum ProjectionType
 	{
 		PERSPECTIVE = 0,

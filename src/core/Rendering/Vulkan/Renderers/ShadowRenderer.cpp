@@ -16,11 +16,13 @@ void ShadowRenderer::init(unsigned int width, unsigned int height, const LightMa
 
 	m_shadow_map_size = { width, height };
 
+	const char* attachment_debug_name = "Shadow Map";
+
 	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
 		/* Create shadow map */
 		m_shadow_maps[frame_idx].init(shadow_map_format, width, height, 1, false);
-		m_shadow_maps[frame_idx].create(context.device, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+		m_shadow_maps[frame_idx].create(context.device, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, attachment_debug_name);
 		m_shadow_maps[frame_idx].create_view(context.device, { .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT });
 		m_shadow_maps[frame_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
@@ -70,8 +72,8 @@ void ShadowRenderer::init(unsigned int width, unsigned int height, const LightMa
 
 	/* Create graphics pipeline */
 	m_shadow_shader.create("GenShadowMap.vert.spv", "GenShadowMap.frag.spv");
-	GfxPipeline::Flags flags = GfxPipeline::Flags::ENABLE_DEPTH_STATE;
-	GfxPipeline::CreateDynamic(m_shadow_shader, {}, shadow_map_format, flags, m_gfx_pipeline_layout, &m_gfx_pipeline, VK_CULL_MODE_FRONT_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+	Pipeline::Flags flags = Pipeline::Flags::ENABLE_DEPTH_STATE;
+	Pipeline::create_graphics_pipeline_dynamic(m_shadow_shader, {}, shadow_map_format, flags, m_gfx_pipeline_layout, &m_gfx_pipeline, VK_CULL_MODE_FRONT_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
 }
 
 void ShadowRenderer::update_desc_sets()
@@ -159,11 +161,13 @@ void CascadedShadowRenderer::init(unsigned int width, unsigned int height,  Came
 
 	m_shadow_map_size = { width, height };
 
+	const char* attachment_debug_name = "Cascaded Shadow Map";
+
 	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
 		/* Create shadow map */
 		m_shadow_maps[frame_idx].init(shadow_map_format, m_shadow_map_size.x, m_shadow_map_size.y, (uint32_t)NUM_CASCADES, false);
-		m_shadow_maps[frame_idx].create(context.device, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+		m_shadow_maps[frame_idx].create(context.device, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, attachment_debug_name);
 		m_shadow_maps[frame_idx].view = Texture2D::create_texture_2d_array_view(
 			m_shadow_maps[frame_idx], m_shadow_maps[frame_idx].info.imageFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
 		m_shadow_maps[frame_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -233,8 +237,8 @@ void CascadedShadowRenderer::init(unsigned int width, unsigned int height,  Came
 
 	/* Create graphics pipeline */
 	m_csm_shader.create("GenCascadedShadowMap.vert.spv", "GenShadowMap.frag.spv");
-	GfxPipeline::Flags flags = GfxPipeline::Flags::ENABLE_DEPTH_STATE;
-	GfxPipeline::CreateDynamic(m_csm_shader, {}, shadow_map_format, flags, m_gfx_pipeline_layout, &m_gfx_pipeline, VK_CULL_MODE_FRONT_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE, {}, view_mask);
+	Pipeline::Flags flags = Pipeline::Flags::ENABLE_DEPTH_STATE;
+	Pipeline::create_graphics_pipeline_dynamic(m_csm_shader, {}, shadow_map_format, flags, m_gfx_pipeline_layout, &m_gfx_pipeline, VK_CULL_MODE_FRONT_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE, {}, view_mask);
 }
 
 void CascadedShadowRenderer::update_desc_sets()
@@ -260,11 +264,6 @@ void CascadedShadowRenderer::create_buffers()
 	}
 	cascade_splits_ubo_size = sizeof(float) * cascade_splits.size();
 	cascade_ends_ubo.init(Buffer::Type::UNIFORM, cascade_splits_ubo_size);
-}
-
-CascadedShadowRenderer::~CascadedShadowRenderer()
-{
-
 }
 
 void CascadedShadowRenderer::compute_cascade_splits()
@@ -414,7 +413,7 @@ void CascadedShadowRenderer::render(size_t current_frame_idx, VkCommandBuffer cm
 {
 	compute_cascade_ortho_proj(current_frame_idx);
 
-	m_shadow_maps[current_frame_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_ACCESS_SHADER_WRITE_BIT);
+	m_shadow_maps[current_frame_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
 
 	VkRect2D render_area{ .offset {}, .extent { (uint32_t)m_shadow_map_size.x , (uint32_t)m_shadow_map_size.y } };
 	set_viewport_scissor(cmd_buffer, (uint32_t)m_shadow_map_size.x, (uint32_t)m_shadow_map_size.y, true);

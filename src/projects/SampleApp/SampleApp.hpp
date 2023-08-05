@@ -67,7 +67,8 @@ void SampleApp::InitSceneResources()
 
 	/* Basic primitives */
 	{
-		VulkanMesh mesh = VulkanMesh("../../../data/models/basic/unit_cube.glb");
+		VulkanMesh mesh;
+		mesh.create_from_file("../../../data/models/basic/unit_cube.glb");
 		uint32_t id = m_object_manager.add_mesh(mesh, "cube");
 		m_object_manager.add_drawable(id, "skybox", false);
 		m_object_manager.add_drawable(id, "placeholder_cube", false);
@@ -79,7 +80,8 @@ void SampleApp::InitSceneResources()
 	AddDrawable("Floor", true, { 0, -5, 0 }, { 0, 0, 0 }, { 100.0f, 1.0f, 100.0f });
 	//LoadMesh("../../../data/models/test/metalroughspheres/MetalRoughSpheres.gltf", "MetalRoughSpheres");
 	//LoadMesh("../../../data/models/basic/duck/duck.gltf", "ColladaDuck");
-	//LoadMesh("../../../data/models/scenes/sponza-gltf-pbr/sponza.glb", "Sponza");
+	LoadMesh("../../../data/models/scenes/sponza-gltf-pbr/sponza.glb", "Sponza");
+	AddDrawable("Sponza", true, { 0, 0, 0 }, { 0, 0, 0 }, { 0.10f, 0.10f, 0.10f });
 
 	LoadMesh("../../../data/models/scenes/Powerplant_GLTF/powerplant.gltf", "Powerplant");
 	AddDrawable("Powerplant", true, { 0, 0, 0 }, { 0, 0, 0 }, { 0.10f, 0.10f, 0.10f });
@@ -103,7 +105,8 @@ void SampleApp::InitSceneResources()
 
 inline void SampleApp::LoadMesh(std::string_view path, std::string_view name)
 {
-	VulkanMesh mesh = VulkanMesh(path.data());
+	VulkanMesh mesh;
+	mesh.create_from_file(path.data());
 	uint32_t id = m_object_manager.add_mesh(mesh, name.data());
 }
 
@@ -157,7 +160,7 @@ void SampleApp::Render()
 	const uint32_t& frame_idx = context.curr_frame_idx;
 	VulkanFrame current_frame = context.frames[frame_idx];
 
-	VulkanSwapchain& swapchain = *m_RHI->GetSwapchain();
+	VulkanSwapchain& swapchain = *m_RHI->get_swapchain();
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// PRE-RENDER
@@ -174,19 +177,19 @@ void SampleApp::Render()
 	VK_CHECK(vkBeginCommandBuffer(current_frame.cmd_buffer, &cmdBufferBeginInfo));
 	
 	/* Transition to color attachment */
-	swapchain.color_attachments[frame_idx].transition_layout(current_frame.cmd_buffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	swapchain.color_attachments[frame_idx].transition(current_frame.cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 	
 	{
 		m_model_renderer->render(frame_idx, current_frame.cmd_buffer);
 		m_cascaded_shadow_renderer.render(frame_idx, current_frame.cmd_buffer);
 		m_deferred_renderer.render(frame_idx, current_frame.cmd_buffer);
-		m_postprocess.m_postfx_downsample.render(current_frame.cmd_buffer);
+		//m_postprocess.m_postfx_downsample.render(current_frame.cmd_buffer);
 		m_cubemap_renderer.render_skybox(frame_idx, current_frame.cmd_buffer);
 		m_imgui_renderer->render(frame_idx, current_frame.cmd_buffer);
 	}
 	
 	/* Transition to present */
-	swapchain.color_attachments[frame_idx].transition_layout(current_frame.cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+	swapchain.color_attachments[frame_idx].transition(current_frame.cmd_buffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_ACCESS_NONE);
 	
 	VK_CHECK(vkEndCommandBuffer(current_frame.cmd_buffer));
 
@@ -210,17 +213,17 @@ void SampleApp::Render()
 	// Present work
 	// Waits for the GPU queue to finish execution before presenting, we wait on renderComplete semaphore
 
-	VkPresentInfoKHR presentInfo =
+	VkPresentInfoKHR present_info = {};
 	{
-		.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-		.waitSemaphoreCount = 1,
-		.pWaitSemaphores = &current_frame.smp_queue_submitted,
-		.swapchainCount = 1,
-		.pSwapchains = &swapchain.swapchain,
-		.pImageIndices = &swapchain_buffer_idx
-	};
+		present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		present_info.waitSemaphoreCount = 1;
+		present_info.pWaitSemaphores = &current_frame.smp_queue_submitted;
+		present_info.swapchainCount = 1;
+		present_info.pSwapchains = &swapchain.swapchain;
+		present_info.pImageIndices = &swapchain_buffer_idx;
+	}
 
-	vkQueuePresentKHR(context.queue, &presentInfo);
+	vkQueuePresentKHR(context.queue, &present_info);
 
 	context.frame_count++;
 	context.curr_frame_idx = (context.curr_frame_idx + 1) % NUM_FRAMES;
@@ -246,7 +249,7 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 			m_camera.controller.m_position.y,
 			m_camera.controller.m_position.z,
 			1.0);
-		VulkanRendererBase::update_frame_data(frame_data, currentImageIdx);
+		VulkanRendererBase::get_instance().update_frame_data(frame_data, currentImageIdx);
 	}
 
 	/* Update drawables */
@@ -339,6 +342,7 @@ inline void SampleApp::Terminate()
 
 inline SampleApp::~SampleApp()
 {
+
 }
 
 #endif // !SAMPLE_APP_H

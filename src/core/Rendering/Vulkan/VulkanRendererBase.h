@@ -19,14 +19,16 @@ public:
 		glm::mat4 inv_view_proj{};
 		glm::vec4 view_pos{};
 	};
-	
+
+	static VulkanRendererBase& get_instance() { static VulkanRendererBase rb; return rb; };
+
 	static inline DescriptorSetLayout m_framedata_desc_set_layout;
 	static inline DescriptorSet m_framedata_desc_set[NUM_FRAMES];
 
-	static void create_descriptor_sets();
-	static void create_samplers();
-	static void create_buffers();
-	static void update_frame_data(const PerFrameData& data, size_t current_frame_idx);
+	void create_descriptor_sets();
+	void create_samplers();
+	void create_buffers();
+	void update_frame_data(const PerFrameData& data, size_t current_frame_idx);
 	
 	~VulkanRendererBase();
 
@@ -34,7 +36,7 @@ public:
 	static VkSampler s_SamplerClampLinear;
 	static VkSampler s_SamplerClampNearest;
 	static VkSampler s_SamplerRepeatNearest;
-	static Buffer m_ubo_framedata[NUM_FRAMES];
+	Buffer m_ubo_framedata[NUM_FRAMES];
 
 	/* WIP */
 	vk::DynamicRenderPass m_dyn_renderpass[NUM_FRAMES];
@@ -110,18 +112,10 @@ static void* alignedAlloc(size_t size, size_t alignment)
 	return data;
 }
 
-class RenderObjectManager
+struct RenderObjectManager
 {
-public:
-	RenderObjectManager();
-	RenderObjectManager(const RenderObjectManager&) = delete;
-	RenderObjectManager& operator=(const RenderObjectManager&) = delete;
-	RenderObjectManager(RenderObjectManager&&) = delete;
-public:
-
-	~RenderObjectManager();
-
 	void init();
+	void destroy();
 	/* Call after adding all drawables */
 	void configure();
 	void create_buffers();
@@ -160,7 +154,6 @@ public:
 
 	static inline std::vector<TransformData> transform_datas;
 	static inline TransformDataUbo* per_object_datas;
-
 
 	static inline VkDescriptorPool descriptor_pool;
 

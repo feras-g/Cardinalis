@@ -40,8 +40,8 @@ static vk::DynamicRenderPass pass_render_skybox[NUM_FRAMES];
 uint32_t layer_width  = 0;
 uint32_t layer_height = 0;
 
-Buffer uniform_buffer;
-struct UBO
+Buffer ubo_cube_matrices;
+struct CubeMatrices
 {
 	/* View matrices for each cube face */
 	glm::mat4 view_matrices[6]
@@ -55,7 +55,7 @@ struct UBO
 	};
 	glm::mat4 cube_model;
 	glm::mat4 projection { glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f) };
-} ubo;
+} cube_matrices;
 
 VkDescriptorPool pool;
 
@@ -87,9 +87,9 @@ void CubemapRenderer::init()
 	shader_gen_cubemap.create("GenCubemap.vert.spv", "GenCubemap.frag.spv");
 
 	/* Graphics pipeline */
-	GfxPipeline::Flags flags = GfxPipeline::Flags::NONE;
+	Pipeline::Flags flags = Pipeline::Flags::NONE;
 	VkFormat color_formats[1] = { cubemap_render_attachment_format };
-	GfxPipeline::CreateDynamic(shader_gen_cubemap, color_formats, {}, flags, pipeline_layout, &gfx_ppl, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_CLOCKWISE, {}, view_mask);
+	Pipeline::create_graphics_pipeline_dynamic(shader_gen_cubemap, color_formats, {}, flags, pipeline_layout, &gfx_ppl, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_CLOCKWISE, {}, view_mask);
 
 	TransformData transform;
 	transform.model = glm::identity<glm::mat4>();
@@ -110,7 +110,7 @@ void CubemapRenderer::init()
 
 	init_skybox_rendering();
 	
-	LOG_INFO("Matrix :{}", glm::to_string(ubo.projection));
+	LOG_INFO("Matrix :{}", glm::to_string(cube_matrices.projection));
 }
 
 /* Irradiance map rendering */
@@ -153,9 +153,9 @@ void CubemapRenderer::init_irradiance_map_rendering()
 	render_irradiance_ppl_layout = create_pipeline_layout(context.device, desc_set_layouts);
 
 	/* Graphics pipeline */
-	GfxPipeline::Flags flags = GfxPipeline::Flags::NONE;
+	Pipeline::Flags flags = Pipeline::Flags::NONE;
 	VkFormat color_formats[1] = { irradiance_map_format };
-	GfxPipeline::CreateDynamic(shader_gen_irradiance_map, color_formats, {}, flags, render_irradiance_ppl_layout, &render_irradiance_gfx_ppl, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_CLOCKWISE, {}, view_mask);
+	Pipeline::create_graphics_pipeline_dynamic(shader_gen_irradiance_map, color_formats, {}, flags, render_irradiance_ppl_layout, &render_irradiance_gfx_ppl, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_CLOCKWISE, {}, view_mask);
 }
 
 void CubemapRenderer::render_irradiance_map(VkCommandBuffer cmd_buffer)
@@ -172,7 +172,8 @@ void CubemapRenderer::render_irradiance_map(VkCommandBuffer cmd_buffer)
 	
 	VkRect2D area{ .offset = { } , .extent {.width = irradiance_map_dim, .height = irradiance_map_dim } };
 
-	irradiance_map_attachment.transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	cubemap_render_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
+	irradiance_map_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 
 	pass_render_irradiance_map.begin(cmd_buffer, area, view_mask);
 
@@ -180,7 +181,7 @@ void CubemapRenderer::render_irradiance_map(VkCommandBuffer cmd_buffer)
 
 	pass_render_irradiance_map.end(cmd_buffer);
 
-	irradiance_map_attachment.transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	irradiance_map_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
 }
 
 /* Skybox rendering */
@@ -215,9 +216,9 @@ void CubemapRenderer::init_skybox_rendering()
 	render_skybox_ppl_layout = create_pipeline_layout(context.device, desc_set_layouts);
 
 	/* Graphics pipeline */
-	GfxPipeline::Flags flags = GfxPipeline::Flags::ENABLE_DEPTH_STATE;
+	Pipeline::Flags flags = Pipeline::Flags::ENABLE_DEPTH_STATE;
 	VkFormat color_formats[1] = { VulkanRendererBase::tex_deferred_lighting_format };
-	GfxPipeline::CreateDynamic(shader_render_skybox, color_formats, VulkanRendererBase::tex_gbuffer_depth_format, flags, render_skybox_ppl_layout, &render_skybox_gfx_ppl, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_CLOCKWISE, {});
+	Pipeline::create_graphics_pipeline_dynamic(shader_render_skybox, color_formats, VulkanRendererBase::tex_gbuffer_depth_format, flags, render_skybox_ppl_layout, &render_skybox_gfx_ppl, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_CLOCKWISE, {});
 }
 
 void CubemapRenderer::init_resources(const char* filename)
@@ -235,11 +236,10 @@ void CubemapRenderer::init_resources(const char* filename)
 	cubemap_render_attachment.view = Texture2D::create_texture_2d_array_view(cubemap_render_attachment, cubemap_render_attachment.info.imageFormat);
 
 	/* Uniform buffer */
-	create_buffer(Buffer::Type::UNIFORM, uniform_buffer, sizeof(ubo));
+	cube_matrices.cube_model = glm::identity<glm::mat4>();
 
-	ubo.cube_model = glm::identity<glm::mat4>();
-
-	upload_buffer_data(uniform_buffer, &ubo, sizeof(ubo), 0);
+	ubo_cube_matrices.init(Buffer::Type::UNIFORM, sizeof(cube_matrices));
+	ubo_cube_matrices.upload(context.device, &cube_matrices, 0, sizeof(cube_matrices));
 }
 
 void CubemapRenderer::init_descriptors()
@@ -260,8 +260,8 @@ void CubemapRenderer::init_descriptors()
 
 	VkDescriptorBufferInfo buffer_info = {};
 	buffer_info.offset = 0;
-	buffer_info.range = sizeof(ubo);
-	buffer_info.buffer = uniform_buffer.buffer;
+	buffer_info.range = sizeof(cube_matrices);
+	buffer_info.buffer = ubo_cube_matrices;
 
 	VkDescriptorImageInfo image_info = {};
 	image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -304,8 +304,7 @@ void CubemapRenderer::render_cubemap(VkCommandBuffer cmd_buffer, VkRect2D area)
 	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 2, desc_sets, 0, nullptr);
 	vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gfx_ppl);
 
-	/* The ith least significant view correpondons to the ith layer */
-	cubemap_render_attachment.transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	cubemap_render_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 
 	pass_render_cubemap.begin(cmd_buffer, area, view_mask);
 
@@ -313,7 +312,7 @@ void CubemapRenderer::render_cubemap(VkCommandBuffer cmd_buffer, VkRect2D area)
 
 	pass_render_cubemap.end(cmd_buffer);
 
-	cubemap_render_attachment.transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	cubemap_render_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
 	
 	/* Sampler cube */
 	tex_cubemap_view = Texture2D::create_texture_cube_view(

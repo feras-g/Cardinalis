@@ -2,6 +2,7 @@
 
 #include "Rendering/Vulkan/VulkanTools.h"
 #include "Rendering/Vulkan/VulkanDebugUtils.h"
+#include "Rendering/VkResourceManager.h"
 
 static VkAccessFlags get_src_access_mask(VkImageLayout layout);
 
@@ -18,7 +19,8 @@ void Texture2D::init(VkFormat format, uint32_t width, uint32_t height, uint32_t 
     info.imageFormat = format;
 	info.width  = width;
 	info.height = height;
-	info.mipLevels = calc_mip ? calc_mip_levels(width, height) : 1;
+	//info.mipLevels = calc_mip ? calc_mip_levels(width, height) : 1;
+	info.mipLevels = 1;
     info.layerCount = layers;
 	info.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
@@ -50,16 +52,13 @@ void Texture2D::create_from_data(
 
     upload_data(context.device, data);
 
+	transition_immediate(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
 
     if (info.mipLevels > 1)
     {
-        transition_immediate(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_TRANSFER_READ_BIT);
         generate_mipmaps();
     }
-    else
-    {
-        transition_immediate(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
-    }
+
 }
 
 void Texture2D::create_from_data(
@@ -73,8 +72,7 @@ void Texture2D::create_from_data(
 
 void Texture2D::create(VkDevice device, VkImageUsageFlags imageUsage, std::string_view debug_name)
 {
-    if(!debug_name.empty()) info.debugName = debug_name.data();
-
+    info.debugName = debug_name.data();
     create_vk_image(device, false, imageUsage);
 }
 void Texture::create_vk_image_cube(VkDevice device, VkImageUsageFlags imageUsage)
@@ -125,7 +123,9 @@ void Texture::create_vk_image(VkDevice device, bool isCubemap, VkImageUsageFlags
     VK_CHECK(vkAllocateMemory(device, &allocInfo, nullptr, &deviceMemory));
     VK_CHECK(vkBindImageMemory(device, image, deviceMemory, 0));
 
-    /* Debug name */
+    /* Add to resource manager */
+    hash = VkResourceManager::get_instance(device)->add_image(image, deviceMemory);
+
     set_object_name(VK_OBJECT_TYPE_IMAGE, (uint64_t)image, info.debugName);
 }
 
@@ -174,19 +174,9 @@ void Texture::create_view(VkDevice device, const ImageViewInitInfo& viewInfo)
 	view = create_texture_view(*this, info.imageFormat, viewInfo.viewType, viewInfo.aspectMask);
 }
 
-void Texture::destroy(VkDevice device)
+void Texture::destroy()
 {
-    if (view != VK_NULL_HANDLE)
-    {
-        vkDestroyImageView(device, view, nullptr);
-    }
-
-    if(image != VK_NULL_HANDLE)
-    {  
-        vkDestroyImage(device, image, nullptr);
-        vkFreeMemory  (device, deviceMemory, nullptr);
-        image = VK_NULL_HANDLE;
-    }
+    VkResourceManager::get_instance(context.device)->destroy_image(hash);
     *this = {};
 }
 
@@ -194,38 +184,7 @@ void Texture::generate_mipmaps()
 {
     VkCommandBuffer cbuf = begin_temp_cmd_buffer();
 
-    VkImage& img = this->image;
-
-    for (unsigned int mip = 1; mip < info.mipLevels; mip++)
-    {
-        VkImageBlit blit_region = {};
-        blit_region.srcOffsets[0] = blit_region.dstOffsets[0] = { 0,0,0 };
-
-        blit_region.srcOffsets[1] = { int32_t(info.width >> (mip - 1)), int32_t(info.height >> (mip - 1)), 1 };
-        blit_region.dstOffsets[1] = { int32_t(info.width >> mip), int32_t(info.height >> mip), 1 };
-        
-        blit_region.srcSubresource.aspectMask = blit_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        blit_region.srcSubresource.layerCount = blit_region.dstSubresource.layerCount = 1;
-
-        blit_region.srcSubresource.mipLevel = mip-1;
-        blit_region.dstSubresource.mipLevel = mip;
-
-        VkImageSubresourceRange subres_range = {};
-        subres_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        subres_range.baseArrayLayer = 0;
-        subres_range.layerCount = 1;
-        subres_range.baseMipLevel = mip - 1;
-        subres_range.levelCount = 1;
-
-        transition(cbuf, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_TRANSFER_READ_BIT, &subres_range);
-
-        subres_range.baseMipLevel = mip;
-        transition(cbuf, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_TRANSFER_WRITE_BIT, &subres_range);
-
-        vkCmdBlitImage(cbuf, img, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1u, &blit_region, VK_FILTER_LINEAR);
-    }
-
-    transition(cbuf, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
+	/* Compute shader */
 
     end_temp_cmd_buffer(cbuf);
 }
@@ -235,7 +194,7 @@ void Texture::transition(VkCommandBuffer cmdBuffer, VkImageLayout new_layout, Vk
 {
 	if (new_layout == info.imageLayout)
 		return;
-
+    
     VkImageMemoryBarrier barrier =
     {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -275,8 +234,9 @@ void Texture::transition(VkCommandBuffer cmdBuffer, VkImageLayout new_layout, Vk
 	GetSrcDstPipelineStage(info.imageLayout, new_layout, srcStageMask, dstStageMask);
 
     vkCmdPipelineBarrier(cmdBuffer, srcStageMask, dstStageMask, 0, 0, NULL, 0, NULL, 1u, &barrier);
-    
+
     info.imageLayout = new_layout;
+
 }
 
 /* The image layout transition is executed immediately */
@@ -506,6 +466,9 @@ VkImageView create_texture_view(
 
 	VkImageView out_view;
 	vkCreateImageView(context.device, &createInfo, nullptr, &out_view);
+
+    /* Add to resource manager */
+    size_t hash = VkResourceManager::get_instance(context.device)->add_image_view(out_view);
 
 	return out_view;
 }

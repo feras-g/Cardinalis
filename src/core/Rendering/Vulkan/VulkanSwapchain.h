@@ -37,7 +37,7 @@ public:
 
 	// Data
 	std::vector<Texture2D> color_attachments;
-	std::vector<Texture2D> depthTextures;
+	std::vector<Texture2D> depth_attachments;
 private:
 	// Function pointers
 	PFN_vkGetPhysicalDeviceSurfaceSupportKHR		fpGetPhysicalDeviceSurfaceSupportKHR;

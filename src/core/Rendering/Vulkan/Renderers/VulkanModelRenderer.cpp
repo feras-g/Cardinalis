@@ -66,14 +66,14 @@ VulkanModelRenderer::VulkanModelRenderer()
 		m_dyn_renderpass[i].add_depth_attachment(VulkanRendererBase::m_gbuffer_depth[i].view);
 	}
 
-	GfxPipeline::Flags ppl_flags = GfxPipeline::Flags::ENABLE_DEPTH_STATE;
+	Pipeline::Flags ppl_flags = Pipeline::Flags::ENABLE_DEPTH_STATE;
 	std::array<VkFormat, 3> color_attachment_formats
 	{
 		VulkanRendererBase::tex_base_color_format,
 		VulkanRendererBase::tex_gbuffer_normal_format,
 		VulkanRendererBase::tex_metallic_roughness_format
 	};
-	GfxPipeline::CreateDynamic(m_shader, color_attachment_formats, VulkanRendererBase::tex_gbuffer_depth_format, ppl_flags, m_ppl_layout, &m_gfx_pipeline, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+	Pipeline::create_graphics_pipeline_dynamic(m_shader, color_attachment_formats, VulkanRendererBase::tex_gbuffer_depth_format, ppl_flags, m_ppl_layout, &m_gfx_pipeline, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
 }
 
 void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buffer)
@@ -81,10 +81,10 @@ void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buf
 	VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Deferred G-Buffer Pass");
 
 	/* Transition to write */
-	VulkanRendererBase::m_gbuffer_albedo[currentImageIdx].transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_SHADER_WRITE_BIT);
-	VulkanRendererBase::m_gbuffer_normal[currentImageIdx].transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_SHADER_WRITE_BIT);
-	VulkanRendererBase::m_gbuffer_depth[currentImageIdx].transition(cmd_buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_ACCESS_SHADER_WRITE_BIT);
-	VulkanRendererBase::m_gbuffer_metallic_roughness[currentImageIdx].transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_SHADER_WRITE_BIT);
+	VulkanRendererBase::m_gbuffer_albedo[currentImageIdx].transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+	VulkanRendererBase::m_gbuffer_normal[currentImageIdx].transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+	VulkanRendererBase::m_gbuffer_depth[currentImageIdx].transition(cmd_buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
+	VulkanRendererBase::m_gbuffer_metallic_roughness[currentImageIdx].transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 
 	VkRect2D render_area{ .offset {}, .extent { VulkanRendererBase::render_width , VulkanRendererBase::render_height } };
 	set_viewport_scissor(cmd_buffer, VulkanRendererBase::render_width, VulkanRendererBase::render_height, true);

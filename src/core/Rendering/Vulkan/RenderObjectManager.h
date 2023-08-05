@@ -7,6 +7,7 @@ struct VulkanMesh;
 
 class ObjectManager
 {
+public:
 	struct InstanceData
 	{
 		glm::vec3 position;

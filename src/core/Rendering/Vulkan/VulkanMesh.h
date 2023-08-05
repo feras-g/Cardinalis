@@ -58,11 +58,11 @@ struct Node;
 /* Class describing geometry */
 struct VulkanMesh
 {
-	VulkanMesh() = default;
-	VulkanMesh(const char* filename) { create_from_file(filename); }
 	void create_from_file(const std::string& filename);
 	void create_from_file_gltf(const std::string& filename);
 	void create_from_data(std::span<VertexData> vertices, std::span<unsigned int> indices);
+	void destroy();
+
 	size_t m_vertex_buf_size_bytes;
 	size_t m_index_buf_size_bytes;
 	size_t m_num_vertices;
@@ -76,19 +76,21 @@ struct VulkanMesh
 	Buffer m_vertex_index_buffer;
 	VkDescriptorSet descriptor_set = nullptr;
 
-	GeometryData geometry_data{};
+	GeometryData geometry_data;
 	std::vector<Node*> nodes;
-
 };
 
 
 // A node represents an object in the glTF scene graph
-struct Node {
+struct Node 
+{
 	Node* parent;
 	std::vector<Node*> children;
 	glm::mat4 matrix;
-	~Node() {
-		for (auto& child : children) {
+	~Node() 
+	{
+		for (auto& child : children) 
+		{
 			delete child;
 		}
 	}

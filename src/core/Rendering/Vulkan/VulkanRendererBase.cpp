@@ -4,7 +4,6 @@ VkSampler VulkanRendererBase::s_SamplerRepeatLinear;
 VkSampler VulkanRendererBase::s_SamplerClampLinear;
 VkSampler VulkanRendererBase::s_SamplerClampNearest;
 VkSampler VulkanRendererBase::s_SamplerRepeatNearest;
-Buffer VulkanRendererBase::m_ubo_framedata[NUM_FRAMES];
 
 /** Size in pixels of the offscreen buffers */
 uint32_t VulkanRendererBase::render_width  = 2048;
@@ -39,7 +38,7 @@ void VulkanRendererBase::create_descriptor_sets()
 		m_framedata_desc_set[frame_idx].assign_layout(m_framedata_desc_set_layout);
 		m_framedata_desc_set[frame_idx].create(pool, "Framedata descriptor set");
 		
-		VkDescriptorBufferInfo info = { m_ubo_framedata[frame_idx].buffer,  0, sizeof(VulkanRendererBase::PerFrameData) };
+		VkDescriptorBufferInfo info = { m_ubo_framedata[frame_idx],  0, sizeof(VulkanRendererBase::PerFrameData) };
 		VkWriteDescriptorSet write = BufferWriteDescriptorSet(m_framedata_desc_set[frame_idx].vk_set, 0, &info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 		vkUpdateDescriptorSets(context.device, 1, &write, 0, nullptr);
 	}
@@ -57,27 +56,22 @@ void VulkanRendererBase::create_buffers()
 {
 	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
-		create_buffer(Buffer::Type::UNIFORM,m_ubo_framedata[frame_idx], sizeof(PerFrameData));
+		m_ubo_framedata[frame_idx].init(Buffer::Type::UNIFORM, sizeof(PerFrameData));
 	}
 }
 
 void VulkanRendererBase::update_frame_data(const PerFrameData& data, size_t current_frame_idx)
 {
-	upload_buffer_data(m_ubo_framedata[current_frame_idx], (void*)&data, sizeof(data), 0);
+	m_ubo_framedata[current_frame_idx].upload(context.device, (void*)&data, 0, sizeof(data));
 }
 
 VulkanRendererBase::~VulkanRendererBase()
 {
-	vkDeviceWaitIdle(context.device);
-	for (size_t i = 0; i < NUM_FRAMES; i++)
-	{
-		destroy_buffer(m_ubo_framedata[i]);
-	}
-
-	vkDestroySampler(context.device, s_SamplerRepeatLinear, nullptr);
-	vkDestroySampler(context.device, s_SamplerClampLinear, nullptr);
-	vkDestroySampler(context.device, s_SamplerClampNearest, nullptr);
-	vkDestroySampler(context.device, s_SamplerRepeatNearest, nullptr);
+	//vkDeviceWaitIdle(context.device);
+	//vkDestroySampler(context.device, s_SamplerRepeatLinear, nullptr);
+	//vkDestroySampler(context.device, s_SamplerClampLinear, nullptr);
+	//vkDestroySampler(context.device, s_SamplerClampNearest, nullptr);
+	//vkDestroySampler(context.device, s_SamplerRepeatNearest, nullptr);
 }
 
 void VulkanRendererBase::create_attachments()
@@ -111,23 +105,18 @@ void VulkanRendererBase::create_attachments()
 		m_gbuffer_metallic_roughness[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
 		m_deferred_lighting_attachment[i].create_view(context.device, {});
 
-		m_gbuffer_albedo[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		m_gbuffer_normal[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		m_gbuffer_depth[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		m_gbuffer_directional_shadow[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		m_gbuffer_metallic_roughness[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		m_deferred_lighting_attachment[i].transition_layout(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		m_gbuffer_albedo[i].transition(cmd_buffer, 					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
+		m_gbuffer_normal[i].transition(cmd_buffer, 					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
+		m_gbuffer_depth[i].transition(cmd_buffer, 					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
+		m_gbuffer_directional_shadow[i].transition(cmd_buffer, 		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
+		m_gbuffer_metallic_roughness[i].transition(cmd_buffer, 		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
+		m_deferred_lighting_attachment[i].transition(cmd_buffer, 	VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
 	}
 
 	end_temp_cmd_buffer(cmd_buffer);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-RenderObjectManager::RenderObjectManager()
-{
-
-}
-
 void RenderObjectManager::init()
 {
 	/* Mesh descriptor set layout */
@@ -168,13 +157,32 @@ void RenderObjectManager::init()
 	};
 	add_material(default_material, "Default Material");
 }
+
+void RenderObjectManager::destroy()
+{
+	vkDestroyDescriptorPool(context.device, descriptor_pool, nullptr);
+	vkDestroyDescriptorSetLayout(context.device, drawable_descriptor_set_layout, nullptr);
+	vkDestroyDescriptorSetLayout(context.device, mesh_descriptor_set_layout, nullptr);
+
+	for (VulkanMesh& mesh : meshes)
+	{
+		mesh.destroy();
+	}
+
+	for (Texture& tex : textures)
+	{
+		tex.destroy();
+	}
+}
+
+
 void RenderObjectManager::configure() {
 	/* Drawables */
 	/* Setup buffers */
 	create_buffers();
 
-	VkDescriptorBufferInfo drawable_ubo_desc_info = { .buffer = RenderObjectManager::object_data_dynamic_ubo.buffer, .offset = 0, .range = per_object_data_dynamic_aligment };
-	VkDescriptorBufferInfo material_ubo_desc_info = { .buffer = material_data_ubo.buffer, .offset = 0, .range = VK_WHOLE_SIZE };
+	VkDescriptorBufferInfo drawable_ubo_desc_info = { .buffer = RenderObjectManager::object_data_dynamic_ubo, .offset = 0, .range = per_object_data_dynamic_aligment };
+	VkDescriptorBufferInfo material_ubo_desc_info = { .buffer = material_data_ubo, .offset = 0, .range = VK_WHOLE_SIZE };
 	drawable_descriptor_set = create_descriptor_set(RenderObjectManager::descriptor_pool, RenderObjectManager::drawable_descriptor_set_layout);
 	std::array<VkWriteDescriptorSet, 1> desc_writes
 	{
@@ -188,8 +196,8 @@ void RenderObjectManager::configure() {
 	/* Setup descriptor set */
 	for (VulkanMesh& mesh : meshes)
 	{
-		VkDescriptorBufferInfo sbo_vtx_info = { .buffer = mesh.m_vertex_index_buffer.buffer, .offset = 0, .range = mesh.m_vertex_buf_size_bytes };
-		VkDescriptorBufferInfo sbo_idx_info = { .buffer = mesh.m_vertex_index_buffer.buffer, .offset = mesh.m_vertex_buf_size_bytes, .range = mesh.m_index_buf_size_bytes };
+		VkDescriptorBufferInfo sbo_vtx_info = { .buffer = mesh.m_vertex_index_buffer, .offset = 0, .range = mesh.m_vertex_buf_size_bytes };
+		VkDescriptorBufferInfo sbo_idx_info = { .buffer = mesh.m_vertex_index_buffer, .offset = mesh.m_vertex_buf_size_bytes, .range = mesh.m_index_buf_size_bytes };
 		assert(mesh.descriptor_set);
 		std::vector<VkWriteDescriptorSet> write_desc = {};
 		write_desc.push_back(BufferWriteDescriptorSet(mesh.descriptor_set, 0, &sbo_vtx_info, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
@@ -202,23 +210,14 @@ void RenderObjectManager::create_buffers()
 {
 	per_object_data_dynamic_aligment = (uint32_t)calc_dynamic_ubo_alignment(sizeof(TransformDataUbo));
 	object_data_dynamic_ubo_size_bytes = (uint32_t)drawables.size() * per_object_data_dynamic_aligment;
-	create_buffer(Buffer::Type::UNIFORM,RenderObjectManager::object_data_dynamic_ubo, object_data_dynamic_ubo_size_bytes);
+	RenderObjectManager::object_data_dynamic_ubo.init(Buffer::Type::UNIFORM, (uint32_t)object_data_dynamic_ubo_size_bytes);
 
 	per_object_datas = (TransformDataUbo*)alignedAlloc(object_data_dynamic_ubo_size_bytes, per_object_data_dynamic_aligment);
 
 	/* Material info */
-	create_buffer(Buffer::Type::UNIFORM,material_data_ubo, sizeof(Material));
+	material_data_ubo.init(Buffer::Type::UNIFORM, sizeof(Material));
 }
 
-RenderObjectManager::~RenderObjectManager()
-{
-    vkDeviceWaitIdle(context.device);
-    destroy_buffer(object_data_dynamic_ubo);
-    destroy_buffer(material_data_ubo);
-    vkDestroyDescriptorPool(context.device, descriptor_pool, nullptr);
-    vkDestroyDescriptorSetLayout(context.device, drawable_descriptor_set_layout, nullptr);
-    vkDestroyDescriptorSetLayout(context.device, mesh_descriptor_set_layout, nullptr);
-}
 void RenderObjectManager::add_drawable(std::string_view mesh_name, std::string_view name, bool visible,
                                        glm::vec3 position, glm::vec3 rotation, glm::vec3 scale)
 {
@@ -369,5 +368,5 @@ void RenderObjectManager::update_per_object_data(const VulkanRendererBase::PerFr
 		per_object_datas[i].bbox_max_WS = per_object_datas[i].model * mesh.geometry_data.bbox_max_WS;
 	}
 
-	upload_buffer_data(object_data_dynamic_ubo, per_object_datas, RenderObjectManager::object_data_dynamic_ubo_size_bytes, 0);
+	object_data_dynamic_ubo.upload(context.device, per_object_datas, 0, RenderObjectManager::object_data_dynamic_ubo_size_bytes);
 }
