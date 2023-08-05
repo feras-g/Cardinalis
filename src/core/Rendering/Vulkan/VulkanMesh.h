@@ -159,19 +159,40 @@ struct TransformData
 	glm::mat4 model = glm::identity<glm::mat4>();
 };
 
+enum class DrawFlag
+{
+	NONE = 1 << 0,
+	VISIBLE = 1 << 1,
+	CAST_SHADOW = 1 << 2,
+};
 
+inline DrawFlag operator|(DrawFlag a, DrawFlag b)
+{
+	return static_cast<DrawFlag>(static_cast<int>(a) | static_cast<int>(b));
+}
+
+inline bool operator&&(DrawFlag a, DrawFlag b)
+{
+	return (static_cast<int>(a) & static_cast<int>(b)) == static_cast<int>(b);
+}
 
 struct Drawable
 {
 	size_t id = 0;
 	size_t mesh_id = 0;
 	size_t material_id = 0;
-	bool visible = true;	// True if it is rendered by the forward/deferred renderer.
+
+	DrawFlag flags;
+
+	bool visible = true;
 	bool has_primitives() const;
 	const VulkanMesh& get_mesh() const;
 	void draw(VkCommandBuffer cmd_buffer) const;
 	void draw_primitives(VkCommandBuffer cmd_buffer) const;
 	TransformData transform;
+
+	bool is_visible() const;
+	bool cast_shadows() const;
 
 	void update_model_matrix();
 

@@ -218,17 +218,17 @@ void RenderObjectManager::create_buffers()
 	material_data_ubo.init(Buffer::Type::UNIFORM, sizeof(Material));
 }
 
-void RenderObjectManager::add_drawable(std::string_view mesh_name, std::string_view name, bool visible,
+void RenderObjectManager::add_drawable(std::string_view mesh_name, std::string_view name, DrawFlag flags,
                                        glm::vec3 position, glm::vec3 rotation, glm::vec3 scale)
 {
-	add_drawable(get_mesh_id(mesh_name.data()), name.data(), visible, position, rotation, scale);
+	add_drawable(get_mesh_id(mesh_name.data()), name.data(), flags, position, rotation, scale);
 }
-void RenderObjectManager::add_drawable(size_t mesh_id, const std::string& name, bool visible, 
+void RenderObjectManager::add_drawable(size_t mesh_id, const std::string& name, DrawFlag flags,
                                        glm::vec3 position, glm::vec3 rotation, glm::vec3 scale)
 {
 	Drawable drawable;
 	drawable.mesh_id = mesh_id;
-	drawable.visible = visible;
+	drawable.flags = flags;
 	drawable.position = position;
 	drawable.rotation = rotation;
 	drawable.scale = scale;

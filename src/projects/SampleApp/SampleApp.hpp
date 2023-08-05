@@ -29,7 +29,7 @@ public:
 	void Initialize() override;
 	void InitSceneResources();
 	void LoadMesh(std::string_view path, std::string_view name);
-	void AddDrawable(std::string_view mesh_name, bool visible = true, 
+	void AddDrawable(std::string_view mesh_name, DrawFlag flags,
 	                 glm::vec3 position = {0,0,0}, glm::vec3 rotation = {0,0,0}, glm::vec3 scale = {1,1,1});
 	void Update(float dt) override;
 	void Render() override;
@@ -70,35 +70,38 @@ void SampleApp::InitSceneResources()
 		VulkanMesh mesh;
 		mesh.create_from_file("../../../data/models/basic/unit_cube.glb");
 		uint32_t id = m_object_manager.add_mesh(mesh, "cube");
-		m_object_manager.add_drawable(id, "skybox", false);
-		m_object_manager.add_drawable(id, "placeholder_cube", false);
+		m_object_manager.add_drawable(id, "skybox",			  DrawFlag::NONE);
+		m_object_manager.add_drawable(id, "placeholder_cube", DrawFlag::NONE);
 	}
 
 	LoadMesh("../../../data/models/basic/unit_plane.glb", "Plane");
 	LoadMesh("../../../data/models/basic/column_5m.glb",  "Column");
+	LoadMesh("../../../data/models/basic/unit_sphere.glb", "Sphere");
+	LoadMesh("../../../data/models/scenes/Powerplant_GLTF/powerplant.gltf", "Powerplant");
+	LoadMesh("../../../data/models/scenes/sponza-gltf-pbr/sponza.glb", "Sponza");
 
-	AddDrawable("Floor", true, { 0, -5, 0 }, { 0, 0, 0 }, { 100.0f, 1.0f, 100.0f });
 	//LoadMesh("../../../data/models/test/metalroughspheres/MetalRoughSpheres.gltf", "MetalRoughSpheres");
 	//LoadMesh("../../../data/models/basic/duck/duck.gltf", "ColladaDuck");
-	LoadMesh("../../../data/models/scenes/sponza-gltf-pbr/sponza.glb", "Sponza");
-	AddDrawable("Sponza", true, { 0, 0, 0 }, { 0, 0, 0 }, { 0.10f, 0.10f, 0.10f });
+	
+	//AddDrawable("Sponza", true, { 0, 0, 0 }, { 0, 0, 0 }, { 0.10f, 0.10f, 0.10f });
+	//AddDrawable("Powerplant", true, { 0, 0, 0 }, { 0, 0, 0 }, { 0.10f, 0.10f, 0.10f });
 
-	LoadMesh("../../../data/models/scenes/Powerplant_GLTF/powerplant.gltf", "Powerplant");
-	AddDrawable("Powerplant", true, { 0, 0, 0 }, { 0, 0, 0 }, { 0.10f, 0.10f, 0.10f });
+	//glm::ivec3 dimensions(1,1,20);
+	//float spacing = 20;
+	//for (int x = 0; x < dimensions.x; x++)
+	//{
+	//	for (int y = 0; y < dimensions.y; y++)
+	//	{
+	//		for (int z = 0; z < dimensions.z; z++)
+	//		{
+	//			glm::vec3 position{ x, y, z };
+	//			AddDrawable("Column", true, position * spacing, { 0, 0, 0 }, { 1.0f, 1.0f, 1.0f });
+	//		}
+	//	}
+	//}
 
-	glm::ivec3 dimensions(1,1,20);
-	float spacing = 20;
-	for (int x = 0; x < dimensions.x; x++)
-	{
-		for (int y = 0; y < dimensions.y; y++)
-		{
-			for (int z = 0; z < dimensions.z; z++)
-			{
-				glm::vec3 position{ x, y, z };
-				AddDrawable("Column", true, position * spacing, { 0, 0, 0 }, { 1.0f, 1.0f, 1.0f });
-			}
-		}
-	}
+	AddDrawable("Sphere", DrawFlag::VISIBLE | DrawFlag::CAST_SHADOW, {0, 0, 0}, {0, 0, 0}, {1, 1, 1});
+	AddDrawable("Floor",  DrawFlag::VISIBLE | DrawFlag::CAST_SHADOW, { 0, -5, 0 }, { 0, 0, 0 }, { 100.0f, 1.0f, 100.0f });
 
 	m_object_manager.configure();
 }
@@ -111,10 +114,10 @@ inline void SampleApp::LoadMesh(std::string_view path, std::string_view name)
 }
 
 
-inline void SampleApp::AddDrawable(std::string_view mesh_name, bool visible, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale)
+inline void SampleApp::AddDrawable(std::string_view mesh_name, DrawFlag flags, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale)
 {
 	std::string drawable_name("Drawable" + std::to_string(m_object_manager.drawables.size()) + "_" + mesh_name.data());
-	m_object_manager.add_drawable(mesh_name, drawable_name, visible, position, rotation, scale);
+	m_object_manager.add_drawable(mesh_name, drawable_name, flags, position, rotation, scale);
 }
 
 void SampleApp::Initialize()

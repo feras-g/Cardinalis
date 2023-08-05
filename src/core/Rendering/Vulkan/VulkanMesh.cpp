@@ -63,6 +63,16 @@ void Drawable::draw_primitives(VkCommandBuffer cmd_buffer) const
 	}
 }
 
+bool Drawable::is_visible() const
+{
+	return flags && DrawFlag::VISIBLE;
+}
+
+bool Drawable::cast_shadows() const
+{
+	return flags && DrawFlag::CAST_SHADOW;
+}
+
 void Drawable::update_model_matrix()
 {
 	glm::mat4 T = glm::identity<glm::mat4>();

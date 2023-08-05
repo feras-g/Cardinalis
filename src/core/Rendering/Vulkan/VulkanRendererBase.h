@@ -120,9 +120,9 @@ struct RenderObjectManager
 	void configure();
 	void create_buffers();
 
-	static void add_drawable(size_t mesh_id, const std::string& name, bool visible = true, 
+	static void add_drawable(size_t mesh_id, const std::string& name, DrawFlag flags = DrawFlag::VISIBLE | DrawFlag::CAST_SHADOW,
 	                         glm::vec3 position = {0,0,0}, glm::vec3 rotation = {0,0,0}, glm::vec3 scale = {1,1,1});
-	static void add_drawable(std::string_view mesh_name, std::string_view name, bool visible,
+	static void add_drawable(std::string_view mesh_name, std::string_view name, DrawFlag flags,
 	                         glm::vec3 position = {0,0,0}, glm::vec3 rotation = {0,0,0}, glm::vec3 scale = {1,1,1});
 	static size_t add_texture(const std::string& filename, const std::string& name, VkFormat format = VK_FORMAT_R8G8B8A8_UNORM, bool calc_mip = true);
 	static size_t add_texture(const Texture2D& texture, const std::string& name);

@@ -127,7 +127,7 @@ void ShadowRenderer::draw_scene(VkCommandBuffer cmd_buffer)
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 
 		                        2, 1, &RenderObjectManager::drawable_descriptor_set, 1, &dynamic_offset);
 
-		if (drawable.visible)
+		if (drawable.cast_shadows())
 		{
 			if (drawable.has_primitives())
 			{
@@ -443,22 +443,26 @@ void CascadedShadowRenderer::draw_scene(VkCommandBuffer cmd_buffer)
 		const VulkanMesh& mesh = drawable.get_mesh();
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 0, 1, &mesh.descriptor_set, 0, nullptr);
 		
-		if (drawable.has_primitives())
+		if (drawable.cast_shadows())
 		{
-			for (int prim_idx = 0; prim_idx < mesh.geometry_data.primitives.size(); prim_idx++)
+			if (drawable.has_primitives())
 			{
-				const Primitive& p = mesh.geometry_data.primitives[prim_idx];
-				/* Model matrix push constant */
-				ps.model = drawable.transform.model * p.mat_model;
-				ps.dir_light_view = LightManager::view;
+				for (int prim_idx = 0; prim_idx < mesh.geometry_data.primitives.size(); prim_idx++)
+				{
+					const Primitive& p = mesh.geometry_data.primitives[prim_idx];
+					/* Model matrix push constant */
+					ps.model = drawable.transform.model * p.mat_model;
+					ps.dir_light_view = LightManager::view;
 
-				vkCmdPushConstants(cmd_buffer, m_gfx_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(push_constants), &ps);
-				vkCmdDraw(cmd_buffer, p.index_count, 1, p.first_index, 0);
+					vkCmdPushConstants(cmd_buffer, m_gfx_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(push_constants), &ps);
+					vkCmdDraw(cmd_buffer, p.index_count, 1, p.first_index, 0);
+				}
+			}
+			else
+			{
+				drawable.draw(cmd_buffer);
 			}
 		}
-		else
-		{
-			drawable.draw(cmd_buffer);
-		}
+
 	}
 }

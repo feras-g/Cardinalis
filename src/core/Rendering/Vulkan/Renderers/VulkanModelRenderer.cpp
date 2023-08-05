@@ -98,7 +98,7 @@ void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buf
 	for (size_t i = 0; i < RenderObjectManager::drawables.size(); i++)
 	{
 		Drawable& drawable = RenderObjectManager::drawables[i];
-		if (drawable.visible)
+		if (drawable.is_visible())
 		{
 			draw_scene(cmd_buffer, currentImageIdx, drawable);
 		}
