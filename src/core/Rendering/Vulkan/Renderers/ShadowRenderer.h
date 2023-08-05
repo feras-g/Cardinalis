@@ -9,28 +9,6 @@ struct LightManager;
 struct Texture2D;
 class Camera;
 
-struct ShadowRenderer
-{ 
-	void init(unsigned int width, unsigned int height, const LightManager& lightmanager);
-	void render(size_t current_frame_idx, VkCommandBuffer cmd_buffer);
-	
-	void draw_scene(VkCommandBuffer cmd_buffer);
-	void update_desc_sets();
-	glm::uvec2 m_shadow_map_size;
-
-	Texture2D m_shadow_maps[NUM_FRAMES];
-
-	VertexFragmentShader m_shadow_shader;
-	vk::DynamicRenderPass m_shadow_pass[NUM_FRAMES];
-	
-	VkDescriptorPool m_descriptor_pool;
-	VkDescriptorSet m_descriptor_set[NUM_FRAMES];
-	VkDescriptorSetLayout m_descriptor_set_layout;
-	VkPipelineLayout m_gfx_pipeline_layout;
-	VkPipeline m_gfx_pipeline;
-	const LightManager* h_light_manager;
-};
-
 static const uint32_t view_mask = 0b00001111;
 
 struct CascadedShadowRenderer
@@ -58,7 +36,6 @@ struct CascadedShadowRenderer
 	struct push_constants
 	{
 		glm::mat4 model;
-		glm::mat4 dir_light_view;
 	} ps;
 
 	void compute_cascade_splits();

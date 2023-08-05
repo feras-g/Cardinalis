@@ -52,7 +52,6 @@ protected:
 	std::unique_ptr<VulkanImGuiRenderer>		m_imgui_renderer;
 	std::unique_ptr<VulkanModelRenderer>		m_model_renderer;
 	DeferredRenderer m_deferred_renderer;
-	ShadowRenderer m_shadow_renderer;
 	CascadedShadowRenderer m_cascaded_shadow_renderer;
 	CubemapRenderer m_cubemap_renderer;
 	PostProcessRenderer m_postprocess;
@@ -77,8 +76,10 @@ void SampleApp::InitSceneResources()
 	LoadMesh("../../../data/models/basic/unit_plane.glb", "Plane");
 	LoadMesh("../../../data/models/basic/column_5m.glb",  "Column");
 	LoadMesh("../../../data/models/basic/unit_sphere.glb", "Sphere");
-	LoadMesh("../../../data/models/scenes/Powerplant_GLTF/powerplant.gltf", "Powerplant");
-	LoadMesh("../../../data/models/scenes/sponza-gltf-pbr/sponza.glb", "Sponza");
+	//LoadMesh("../../../data/models/scenes/Powerplant_GLTF/powerplant.gltf", "Powerplant");
+	//LoadMesh("../../../data/models/scenes/sponza-gltf-pbr/sponza.glb", "Sponza");
+	LoadMesh("../../../data/models/scenes/tree/scene.gltf", "Tree");
+
 
 	//LoadMesh("../../../data/models/test/metalroughspheres/MetalRoughSpheres.gltf", "MetalRoughSpheres");
 	//LoadMesh("../../../data/models/basic/duck/duck.gltf", "ColladaDuck");
@@ -102,6 +103,7 @@ void SampleApp::InitSceneResources()
 
 	AddDrawable("Sphere", DrawFlag::VISIBLE | DrawFlag::CAST_SHADOW, {0, 0, 0}, {0, 0, 0}, {1, 1, 1});
 	AddDrawable("Floor",  DrawFlag::VISIBLE | DrawFlag::CAST_SHADOW, { 0, -5, 0 }, { 0, 0, 0 }, { 100.0f, 1.0f, 100.0f });
+	AddDrawable("Tree", DrawFlag::VISIBLE | DrawFlag::CAST_SHADOW, { 0, 0, 0 }, { 0, 0, 0 }, { 1,1,1 });
 
 	m_object_manager.configure();
 }
@@ -136,7 +138,7 @@ void SampleApp::Initialize()
 		m_light_manager
 	);
 
-	m_imgui_renderer->init(m_shadow_renderer);
+	m_imgui_renderer->init();
 	m_postprocess.init();
 	m_postprocess.m_postfx_downsample.init();
 }
@@ -153,7 +155,7 @@ void SampleApp::Update(float dt)
 	if (EngineGetAsyncKeyState(Key::SPACE)) m_camera.controller.m_movement = m_camera.controller.m_movement | Movement::UP;
 	if (EngineGetAsyncKeyState(Key::LSHIFT)) m_camera.controller.m_movement = m_camera.controller.m_movement | Movement::DOWN;
 
-	m_light_manager.update(nullptr, m_light_manager.view_volume_bbox_min, m_light_manager.view_volume_bbox_max);
+	m_light_manager.update(nullptr);
 	
 	UpdateRenderersData(dt, context.curr_frame_idx);
 }

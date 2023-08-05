@@ -6,151 +6,6 @@
 #include "Rendering/Camera.h"
 
 static constexpr VkFormat shadow_map_format = VK_FORMAT_D32_SFLOAT;
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void ShadowRenderer::init(unsigned int width, unsigned int height, const LightManager& lightmanager)
-{
-	h_light_manager = &lightmanager;
-
-	VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
-
-	m_shadow_map_size = { width, height };
-
-	const char* attachment_debug_name = "Shadow Map";
-
-	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
-	{
-		/* Create shadow map */
-		m_shadow_maps[frame_idx].init(shadow_map_format, width, height, 1, false);
-		m_shadow_maps[frame_idx].create(context.device, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, attachment_debug_name);
-		m_shadow_maps[frame_idx].create_view(context.device, { .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT });
-		m_shadow_maps[frame_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-		/* Create render pass */
-		m_shadow_pass[frame_idx].add_depth_attachment(m_shadow_maps[frame_idx].view);
-	}
-
-	end_temp_cmd_buffer(cmd_buffer);
-
-	/* Shadow pass set */
-	std::vector<VkDescriptorSetLayoutBinding> bindings = {};
-	bindings.push_back({ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT }); /* Lighting data */
-
-	m_descriptor_set_layout = create_descriptor_set_layout(bindings);
-
-	std::vector<VkDescriptorSetLayout> desc_set_layouts = {};
-	desc_set_layouts.push_back(m_descriptor_set_layout);								/* Shadow pass descriptor set */
-	desc_set_layouts.push_back(RenderObjectManager::mesh_descriptor_set_layout);		/* Mesh geometry descriptor set*/
-	desc_set_layouts.push_back(RenderObjectManager::drawable_descriptor_set_layout);	/* Drawable data descriptor set */
-	desc_set_layouts.push_back(VulkanRendererBase::m_framedata_desc_set_layout.vk_set_layout);		/* Frame data */
-
-	std::vector<VkDescriptorPoolSize> pool_sizes
-	{
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2},
-		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1}
-	};
-	m_descriptor_pool       = create_descriptor_pool(pool_sizes, NUM_FRAMES);
-	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
-	{
-		m_descriptor_set[frame_idx] = create_descriptor_set(m_descriptor_pool, m_descriptor_set_layout);
-	}
-
-	update_desc_sets();
-
-
-	VkPushConstantRange pushConstantRanges[1] =
-	{
-		{
-			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-			.offset = 0,
-			.size = sizeof(glm::mat4)
-		},
-	};
-
-
-	m_gfx_pipeline_layout   = create_pipeline_layout(context.device, desc_set_layouts, pushConstantRanges);
-
-	/* Create graphics pipeline */
-	m_shadow_shader.create("GenShadowMap.vert.spv", "GenShadowMap.frag.spv");
-	Pipeline::Flags flags = Pipeline::Flags::ENABLE_DEPTH_STATE;
-	Pipeline::create_graphics_pipeline_dynamic(m_shadow_shader, {}, shadow_map_format, flags, m_gfx_pipeline_layout, &m_gfx_pipeline, VK_CULL_MODE_FRONT_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
-}
-
-void ShadowRenderer::update_desc_sets()
-{
-	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
-	{
-		std::vector<VkWriteDescriptorSet> desc_writes = {};
-
-		/* Lighting data UBO */
-		VkDescriptorBufferInfo info = { h_light_manager->m_ubo[frame_idx],  0, sizeof(LightData) };
-		desc_writes.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], 0, &info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
-
-		vkUpdateDescriptorSets(context.device, (uint32_t)desc_writes.size(), desc_writes.data(), 0, nullptr);
-	}
-}
-
-void ShadowRenderer::render(size_t current_frame_idx, VkCommandBuffer cmd_buffer)
-{
-	m_shadow_maps[current_frame_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
-
-	VkRect2D render_area{ .offset {}, .extent { m_shadow_map_size.x , m_shadow_map_size.y } };
-	set_viewport_scissor(cmd_buffer, m_shadow_map_size.x, m_shadow_map_size.y, true);
-	m_shadow_pass[current_frame_idx].begin(cmd_buffer, render_area);
-
-	/* Bind pipeline */
-	vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline);
-
-	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 0, 1, &m_descriptor_set[current_frame_idx], 0, nullptr);
-	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 3, 1, &VulkanRendererBase::m_framedata_desc_set[current_frame_idx].vk_set, 0, nullptr);
-
-	draw_scene(cmd_buffer);
-
-	m_shadow_pass[current_frame_idx].end(cmd_buffer);
-
-	m_shadow_maps[current_frame_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-}
-
-void ShadowRenderer::draw_scene(VkCommandBuffer cmd_buffer)
-{
-	VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Directional Shadow Map Render Pass");
-
-	for (size_t i = 0; i < RenderObjectManager::drawables.size(); i++)
-	{
-
-		const Drawable& drawable = RenderObjectManager::drawables[i];
-		const VulkanMesh& mesh = drawable.get_mesh();
-		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 1, 1, &mesh.descriptor_set, 0, nullptr);
-
-		/* Object descriptor set : per instance data */
-		uint32_t dynamic_offset = static_cast<uint32_t>(drawable.id * RenderObjectManager::per_object_data_dynamic_aligment);
-		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 
-		                        2, 1, &RenderObjectManager::drawable_descriptor_set, 1, &dynamic_offset);
-
-		if (drawable.cast_shadows())
-		{
-			if (drawable.has_primitives())
-			{
-				for (int prim_idx = 0; prim_idx < mesh.geometry_data.primitives.size(); prim_idx++)
-				{
-					const Primitive& p = mesh.geometry_data.primitives[prim_idx];
-					/* Model matrix push constant */
-					glm::mat4 model_mat = drawable.transform.model * p.mat_model;
-					vkCmdPushConstants(cmd_buffer, m_gfx_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &model_mat);
-					vkCmdDraw(cmd_buffer, p.index_count, 1, p.first_index, 0);
-				}
-			}
-			else
-			{
-				drawable.draw(cmd_buffer);
-			}
-		}
-
-	}
-
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void CascadedShadowRenderer::init(unsigned int width, unsigned int height,  Camera& camera, const LightManager& lightmanager)
 {
@@ -303,7 +158,7 @@ void CascadedShadowRenderer::compute_cascade_ortho_proj(size_t frame_idx)
 {
 	compute_cascade_splits();
 
-	glm::vec3 light_direction = glm::normalize(LightManager::direction);
+	glm::vec3 light_direction = glm::normalize(h_light_manager->light_data.directional_light.direction);
 	
 	glm::vec4 cascade_splits_view_space_depth;
 
@@ -452,7 +307,6 @@ void CascadedShadowRenderer::draw_scene(VkCommandBuffer cmd_buffer)
 					const Primitive& p = mesh.geometry_data.primitives[prim_idx];
 					/* Model matrix push constant */
 					ps.model = drawable.transform.model * p.mat_model;
-					ps.dir_light_view = LightManager::view;
 
 					vkCmdPushConstants(cmd_buffer, m_gfx_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(push_constants), &ps);
 					vkCmdDraw(cmd_buffer, p.index_count, 1, p.first_index, 0);
