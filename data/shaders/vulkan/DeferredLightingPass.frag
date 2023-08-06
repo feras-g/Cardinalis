@@ -17,15 +17,17 @@ layout(set = 0, binding = 4) uniform sampler2D gbuffer_metallic_roughness;
 layout(set = 0, binding = 5) uniform sampler2DArray  gbuffer_shadow_map;
 layout(set = 0, binding = 6) uniform samplerCube cubemap;
 layout(set = 0, binding = 7) uniform samplerCube irradiance_map;
-layout(set = 0, binding = 8) uniform LightData
+layout(std140, set = 0, binding = 8) readonly buffer LightData
 {
     DirectionalLight dir_light;
+    uint num_point_lights;
+    PointLight point_lights[];
 } lights;
 
-layout(set = 0, binding = 9) uniform CascadedShadowInfo
+layout(set = 0, binding = 9) uniform cube_matrices
 {
-    vec4 cascades_end_CS;
-} CSM;
+    vec4 splits;
+} ubo_cascades;
 
  layout(set = 0, binding = 10) uniform Matrices
 {
@@ -44,7 +46,8 @@ layout(set = 1, binding = 0) uniform FrameData
 struct ToggleParams
 {
     bool bViewDebugShadow;
-    bool bUseShadowPCF;
+    bool bFilterShadowPCF;
+    bool bFilterShadowPoisson;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -56,80 +59,70 @@ const mat4 bias_matrix = mat4(
 
 float sample_shadow_map(vec3 shadow_coord, vec2 offset, uint cascade_index)
 {
-    float bias = 0.0;
+    float bias = 0.001;
     float shadow = 1.0;
-    if( texture( gbuffer_shadow_map, vec3(shadow_coord.xy + offset, cascade_index) ).r < shadow_coord.z - bias)
+    float shadow_map_depth = texture( gbuffer_shadow_map, vec3(shadow_coord.xy + offset, cascade_index) ).r;
+    if( shadow_map_depth < (shadow_coord.z - bias) )
     {
-        shadow = 0.27;
+        shadow = 0.027;
     }
     return shadow;
 }
 
-const vec2 texmapscale = vec2(1.0/2048.0, 1.0/2048.0);
-float PCF(vec3 shadow_coord, uint cascade_index)
+const vec2 texmapscale = vec2(1.0/1024.0, 1.0/1024.0);
+float eval_shadow_pcf(vec3 shadow_coord, uint cascade_index)
 {
     float sum = 0;
     float x,y;
-    for(y=-1.5; y <= 1.5; y+=1.0)
+    for(y = -1.5; y <= 1.5; y += 1.0)
     {
-        for(x=-1.5; x <= 1.5; x+=1.0)
+        for(x = -1.5; x <= 1.5; x += 1.0)
         {
             vec2 offset = vec2(x, y) * texmapscale;
             sum += sample_shadow_map(shadow_coord, offset, cascade_index);
         }
     }
 
-    return sum / 16.0f;
+    return sum / 16.0;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+vec2 poissonDisk[4] = vec2[](
+  vec2( -0.94201624, -0.39906216 ),
+  vec2( 0.94558609, -0.76890725 ),
+  vec2( -0.094184101, -0.92938870 ),
+  vec2( 0.34495938, 0.29387760 )
+);
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Volumetric lighting
-
-float mie_scattering(float g, float theta)
+float eval_shadow_poisson(vec3 shadow_coord, uint cascade_index)
 {
-	float nume = (1-g) * (1-g);
-	float denom = 4 * PI * pow((1 + (g*g) - 2 * g * cos(theta)), 3/2);
-	return nume / denom;
+    float sample_spread = 700.0f + lights.dir_light.color.a;
+    float visibility = 1.0;
+    float bias = lights.dir_light.direction.a;
+    for (int i = 0;i < 4; i++)
+    {
+        float shadowmap_depth = texture( gbuffer_shadow_map, vec3(shadow_coord.xy + poissonDisk[i] / sample_spread, cascade_index) ).r;
+
+        if ( shadowmap_depth <  shadow_coord.z-bias )
+        {
+            visibility -= 0.2;
+        }
+    }
+
+    return visibility;
 }
 
-
-vec3 raymarch_volumetric_light(float g, float theta, uint cascade_index, vec3 P_WS, vec3 light_color)
-{
-		float NUM_STEPS = 128.0f;
-		vec3 V_ = P_WS - frame_data.view_pos.xyz;
-		float increment = length(V_) / NUM_STEPS;
-		V_ = normalize(V_);
-	
-		vec3 ray_start = frame_data.view_pos.xyz;
-		vec3 p = ray_start;
-	
-		vec3 volumetric_light = vec3(0,0,0);
-		for(int i=0; i < NUM_STEPS; i++)
-		{
-			vec4 p_shadow_coord = bias_matrix * CSM_mats.proj[cascade_index] * vec4(p, 1.0f);
-			p_shadow_coord /= p_shadow_coord.w;
-		
-			// Fragment is visible to the light
-			if( texture( gbuffer_shadow_map, vec3(p_shadow_coord.x, 1-p_shadow_coord.y, cascade_index) ).r > p_shadow_coord.z )
-			{
-				volumetric_light += mie_scattering(0.8, theta) * light_color * 2;
-			}
-	
-			p = p + increment * V_;
-		}
-
-		return  volumetric_light /= NUM_STEPS;
-}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void main()
 {
     ToggleParams params;
-    params.bUseShadowPCF = true;
-    params.bViewDebugShadow = false;
+    params.bViewDebugShadow     = false;
+    params.bFilterShadowPCF     = true;
+    params.bFilterShadowPoisson = false;
 
+    vec4 albedo = texture(gbuffer_color, uv).rgba;
+    
     float depthNDC = texture(gbuffer_depth, uv).x;
 
     vec3 P_WS = ws_pos_from_depth(uv, depthNDC, frame_data.inv_view_proj);
@@ -142,7 +135,6 @@ void main()
     vec3 V = normalize(cam_pos_ws - P_WS);
     vec3 H = normalize(V+L);
 
-    vec3 albedo = texture(gbuffer_color, uv).rgb;
     vec4 metallic_roughness = texture(gbuffer_metallic_roughness, uv);
 
     float metallic  = metallic_roughness.x *  metallic_roughness.z;
@@ -162,17 +154,15 @@ void main()
 
 float shadow = 1.0f;
 
-vec3 color = BRDF(N_WS, V, L, H, light_color, irradiance, albedo, metallic, roughness);
+vec3 color = BRDF(N_WS, V, L, H, light_color, irradiance, albedo.rgb, metallic, roughness);
 
 #ifdef ENABLE_SHADOWS
-    uint cascade_index = 0;
-    float z_view_space = abs(P_VS.z);
-	for(uint i = 0; i < 4; ++i) 
+	uint cascade_index = 0;
+	for(uint i = 0; i < 4 - 1; i++) 
     {
-		if(z_view_space < CSM.cascades_end_CS[i]) 
-        {
-			cascade_index = i;
-            break;
+		if(P_VS.z <= ubo_cascades.splits[i]) 
+        {	
+			cascade_index = i + 1;
 		}
 	}
 
@@ -199,9 +189,13 @@ vec3 color = BRDF(N_WS, V, L, H, light_color, irradiance, albedo, metallic, roug
 	    }
     }
     
-    if(params.bUseShadowPCF)
+    if(params.bFilterShadowPCF)
     {
-        shadow = PCF(shadow_coord.xyz, cascade_index);
+        shadow = eval_shadow_pcf(shadow_coord.xyz, cascade_index);
+    }
+    else if(params.bFilterShadowPoisson)
+    {
+       shadow = eval_shadow_poisson(shadow_coord.xyz, cascade_index); 
     }
     else
     {
@@ -210,6 +204,5 @@ vec3 color = BRDF(N_WS, V, L, H, light_color, irradiance, albedo, metallic, roug
 #endif
     
     color *= shadow;
-    // color += raymarch_volumetric_light(0.8, dot(V, -L), cascade_index, P_WS, light_color);
-    out_color = vec4(color, 1.0) ;
+    out_color = vec4(color, 1.0);
 }

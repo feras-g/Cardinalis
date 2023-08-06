@@ -5,46 +5,35 @@
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 
-/* Compute view proj matrix for directional light */
-static glm::mat4 compute_view_proj(glm::vec3 eye, glm::vec3 direction, glm::vec3 up, glm::vec3 view_volume_bbox_min, glm::vec3 view_volume_bbox_max);
-
 struct PointLight
 {
-	glm::vec4 position{};
-	glm::vec4 color{};
-	glm::vec4 props{};
+	//unsigned int num_lights;
+	//float pad[3];
+	glm::vec4 position;
+	glm::vec4 color;
 };
 
 struct DirectionalLight
 {
 	glm::vec4 direction{ -0.58f, -0.58f, 0.58f, 0.0f };
 	glm::vec4 color{ 80.f, 40.f, 20.f, 1.0 };
-	glm::mat4 view_proj{};
 };
 
 struct LightData
 {
+	unsigned num_point_lights;
 	DirectionalLight directional_light;
+	std::vector<PointLight> point_lights;
 };
 
 struct LightManager
 {
 	void init();
-	void update(LightData* data, glm::vec3 bbox_min, glm::vec3 bbox_max);
-	void update_ubo(LightData* data);
+	void update(LightData* data);
 	void destroy();
-	void update_view_proj(glm::vec3 bbox_min, glm::vec3 bbox_max);
 
-	LightData m_light_data;
-	Buffer m_ubo[NUM_FRAMES];
+	LightData light_data;
+	size_t light_data_size;
 
-	/* */
-	glm::vec3 eye = { 0,0, FLT_EPSILON };
-	glm::vec3 up  = { 0,1,0 };
-	static inline glm::vec3 direction = {};
-	glm::vec3 view_volume_bbox_min = { -20.0f, -20.0f, -20.0f };
-	glm::vec3 view_volume_bbox_max = { 20.0f,  20.0f,   20.0f };
-	/* Directional Light view / proj*/
-	static inline glm::mat4 view; 
-	static inline glm::mat4 proj;
+	Buffer ssbo_light_data[NUM_FRAMES];
 };
