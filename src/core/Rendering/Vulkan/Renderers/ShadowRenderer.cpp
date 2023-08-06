@@ -104,7 +104,7 @@ void CascadedShadowRenderer::update_desc_sets()
 
 		/* Cascades projection matrices UBO */
 		VkDescriptorBufferInfo info = { view_proj_mats_ubo[frame_idx],  0, mats_ubo_size_bytes };
-		desc_writes.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], 0, &info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+		desc_writes.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], 0, info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
 
 		vkUpdateDescriptorSets(context.device, (uint32_t)desc_writes.size(), desc_writes.data(), 0, nullptr);
 	}
@@ -115,10 +115,10 @@ void CascadedShadowRenderer::create_buffers()
 	mats_ubo_size_bytes = sizeof(glm::mat4) * NUM_CASCADES;
 	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
-		view_proj_mats_ubo[frame_idx].init(Buffer::Type::UNIFORM, mats_ubo_size_bytes);
+		view_proj_mats_ubo[frame_idx].init(Buffer::Type::UNIFORM, mats_ubo_size_bytes, "CascadedShowRenderer matrices UBO");
 	}
 	cascade_splits_ubo_size = sizeof(float) * cascade_splits.size();
-	cascade_ends_ubo.init(Buffer::Type::UNIFORM, cascade_splits_ubo_size);
+	cascade_ends_ubo.init(Buffer::Type::UNIFORM, cascade_splits_ubo_size, "CascadedShowRenderer cascade ends UBO");
 }
 
 void CascadedShadowRenderer::compute_cascade_splits()
@@ -158,7 +158,7 @@ void CascadedShadowRenderer::compute_cascade_ortho_proj(size_t frame_idx)
 {
 	compute_cascade_splits();
 
-	glm::vec3 light_direction = glm::normalize(h_light_manager->light_data.directional_light.direction);
+	glm::vec3 light_direction = h_light_manager->light_data.directional_light.direction;
 	
 	glm::vec4 cascade_splits_view_space_depth;
 

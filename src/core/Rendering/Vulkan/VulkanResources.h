@@ -9,7 +9,7 @@ struct Buffer
 		NONE, UNIFORM, STORAGE, STAGING
 	} type;
 
-	void init(Type buffer_type, size_t size, const char* name = "");
+	void init(Type buffer_type, size_t size, const char* name);
 	void destroy();
 
 	size_t hash;

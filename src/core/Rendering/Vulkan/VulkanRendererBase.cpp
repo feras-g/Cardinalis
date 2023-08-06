@@ -39,7 +39,7 @@ void VulkanRendererBase::create_descriptor_sets()
 		m_framedata_desc_set[frame_idx].create(pool, "Framedata descriptor set");
 		
 		VkDescriptorBufferInfo info = { m_ubo_framedata[frame_idx],  0, sizeof(VulkanRendererBase::PerFrameData) };
-		VkWriteDescriptorSet write = BufferWriteDescriptorSet(m_framedata_desc_set[frame_idx].vk_set, 0, &info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+		VkWriteDescriptorSet write = BufferWriteDescriptorSet(m_framedata_desc_set[frame_idx].vk_set, 0, info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 		vkUpdateDescriptorSets(context.device, 1, &write, 0, nullptr);
 	}
 }
@@ -56,7 +56,7 @@ void VulkanRendererBase::create_buffers()
 {
 	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
-		m_ubo_framedata[frame_idx].init(Buffer::Type::UNIFORM, sizeof(PerFrameData));
+		m_ubo_framedata[frame_idx].init(Buffer::Type::UNIFORM, sizeof(PerFrameData), "FrameData UBO");
 	}
 }
 
@@ -186,7 +186,7 @@ void RenderObjectManager::configure() {
 	drawable_descriptor_set = create_descriptor_set(RenderObjectManager::descriptor_pool, RenderObjectManager::drawable_descriptor_set_layout);
 	std::array<VkWriteDescriptorSet, 1> desc_writes
 	{
-		BufferWriteDescriptorSet(RenderObjectManager::drawable_descriptor_set, 0, &drawable_ubo_desc_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC),	/* Object data */
+		BufferWriteDescriptorSet(RenderObjectManager::drawable_descriptor_set, 0, drawable_ubo_desc_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC),	/* Object data */
 	};
 	vkUpdateDescriptorSets(context.device, (uint32_t)desc_writes.size(), desc_writes.data(), 0, nullptr);
 
@@ -200,8 +200,8 @@ void RenderObjectManager::configure() {
 		VkDescriptorBufferInfo sbo_idx_info = { .buffer = mesh.m_vertex_index_buffer, .offset = mesh.m_vertex_buf_size_bytes, .range = mesh.m_index_buf_size_bytes };
 		assert(mesh.descriptor_set);
 		std::vector<VkWriteDescriptorSet> write_desc = {};
-		write_desc.push_back(BufferWriteDescriptorSet(mesh.descriptor_set, 0, &sbo_vtx_info, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
-		write_desc.push_back(BufferWriteDescriptorSet(mesh.descriptor_set, 1, &sbo_idx_info, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
+		write_desc.push_back(BufferWriteDescriptorSet(mesh.descriptor_set, 0, sbo_vtx_info, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
+		write_desc.push_back(BufferWriteDescriptorSet(mesh.descriptor_set, 1, sbo_idx_info, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
 		vkUpdateDescriptorSets(context.device, (uint32_t)write_desc.size(), write_desc.data(), 0, nullptr);
 	}
 }
@@ -210,12 +210,12 @@ void RenderObjectManager::create_buffers()
 {
 	per_object_data_dynamic_aligment = (uint32_t)calc_dynamic_ubo_alignment(sizeof(TransformDataUbo));
 	object_data_dynamic_ubo_size_bytes = (uint32_t)drawables.size() * per_object_data_dynamic_aligment;
-	RenderObjectManager::object_data_dynamic_ubo.init(Buffer::Type::UNIFORM, (uint32_t)object_data_dynamic_ubo_size_bytes);
+	RenderObjectManager::object_data_dynamic_ubo.init(Buffer::Type::UNIFORM, (uint32_t)object_data_dynamic_ubo_size_bytes, "Drawable Transform Data UBO");
 
 	per_object_datas = (TransformDataUbo*)alignedAlloc(object_data_dynamic_ubo_size_bytes, per_object_data_dynamic_aligment);
 
 	/* Material info */
-	material_data_ubo.init(Buffer::Type::UNIFORM, sizeof(Material));
+	material_data_ubo.init(Buffer::Type::UNIFORM, sizeof(Material), "Drawable Material UBO");
 }
 
 void RenderObjectManager::add_drawable(std::string_view mesh_name, std::string_view name, DrawFlag flags,

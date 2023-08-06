@@ -24,7 +24,7 @@ constexpr uint32_t numStorageBuffers   = 2;
 constexpr uint32_t numUniformBuffers   = 1;
 constexpr uint32_t numCombinedSamplers = 1;
 
-void VulkanImGuiRenderer::init(const ShadowRenderer& shadow_renderer)
+void VulkanImGuiRenderer::init()
 {
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -124,8 +124,8 @@ void VulkanImGuiRenderer::render(size_t currentImageIdx, VkCommandBuffer cmdBuff
 
 void VulkanImGuiRenderer::create_buffers()
 {
-	m_storage_buffer.init(Buffer::Type::STORAGE, imgui_buffer_size);
-	m_uniform_buffer.init(Buffer::Type::UNIFORM, 1024);
+	m_storage_buffer.init(Buffer::Type::STORAGE, imgui_buffer_size, "ImGuiRenderer SSBO");
+	m_uniform_buffer.init(Buffer::Type::UNIFORM, 1024, "ImGuiRenderer UBO");
 }
 
 void VulkanImGuiRenderer::draw_scene(VkCommandBuffer cmd_buffer)
@@ -323,9 +323,9 @@ void VulkanImGuiRenderer::update_descriptor_set(VkDevice device)
 
 		std::array<VkWriteDescriptorSet, 4> descriptorWrites
 		{
-			BufferWriteDescriptorSet(m_descriptor_set[i], 0, &uboInfo0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER),
-			BufferWriteDescriptorSet(m_descriptor_set[i], 1, &sboInfo0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER),
-			BufferWriteDescriptorSet(m_descriptor_set[i], 2, &sboInfo1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER),
+			BufferWriteDescriptorSet(m_descriptor_set[i], 0, uboInfo0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER),
+			BufferWriteDescriptorSet(m_descriptor_set[i], 1, sboInfo0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER),
+			BufferWriteDescriptorSet(m_descriptor_set[i], 2, sboInfo1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER),
 			// Descriptor array
 			VkWriteDescriptorSet{
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,

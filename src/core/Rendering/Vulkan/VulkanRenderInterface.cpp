@@ -788,7 +788,7 @@ size_t create_vertex_index_buffer(Buffer& result, const void* vtxData, size_t& v
 
 	// Staging buffer
 	Buffer stagingBuffer;
-	stagingBuffer.init(Buffer::Type::STAGING, total_size_bytes);
+	stagingBuffer.init(Buffer::Type::STAGING, total_size_bytes, "Vertex/Index Staging Buffer");
 
 	// Copy vertex + index data to staging buffer
 	
@@ -798,13 +798,13 @@ size_t create_vertex_index_buffer(Buffer& result, const void* vtxData, size_t& v
 	stagingBuffer.unmap(context.device);
 
 	// Create storage buffer containing non-interleaved vertex + index data 
-	result.init(Buffer::Type::STORAGE, total_size_bytes);
+	result.init(Buffer::Type::STORAGE, total_size_bytes, "Vertex/Index SSBO");
 	copy(stagingBuffer, result, total_size_bytes);
 
 	return total_size_bytes;
 }
 
-VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, const VkDescriptorBufferInfo* bufferInfo, VkDescriptorType descriptorType)
+VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, VkDescriptorBufferInfo bufferInfo, VkDescriptorType descriptorType)
 {
 	return VkWriteDescriptorSet
 	{
@@ -816,7 +816,7 @@ VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptorSet, uin
 		.descriptorCount = 1,
 		.descriptorType = descriptorType,
 		.pImageInfo = nullptr,
-		.pBufferInfo = bufferInfo,
+		.pBufferInfo = &bufferInfo,
 		.pTexelBufferView = nullptr,
 	};
 }

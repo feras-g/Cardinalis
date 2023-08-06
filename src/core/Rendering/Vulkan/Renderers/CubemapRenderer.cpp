@@ -238,7 +238,7 @@ void CubemapRenderer::init_resources(const char* filename)
 	/* Uniform buffer */
 	cube_matrices.cube_model = glm::identity<glm::mat4>();
 
-	ubo_cube_matrices.init(Buffer::Type::UNIFORM, sizeof(cube_matrices));
+	ubo_cube_matrices.init(Buffer::Type::UNIFORM, sizeof(cube_matrices), "Cubemap Matrices UBO");
 	ubo_cube_matrices.upload(context.device, &cube_matrices, 0, sizeof(cube_matrices));
 }
 
@@ -269,7 +269,7 @@ void CubemapRenderer::init_descriptors()
 	image_info.sampler = sampler;
 
 	std::vector<VkWriteDescriptorSet> write_descriptor_set = {};
-	write_descriptor_set.push_back(BufferWriteDescriptorSet(cubemap_desc_set.vk_set, 0, &buffer_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+	write_descriptor_set.push_back(BufferWriteDescriptorSet(cubemap_desc_set.vk_set, 0, buffer_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
 	write_descriptor_set.push_back(ImageWriteDescriptorSet(cubemap_desc_set.vk_set, 1, &image_info));
 
 	vkUpdateDescriptorSets(context.device, 2, write_descriptor_set.data(), 0, nullptr);

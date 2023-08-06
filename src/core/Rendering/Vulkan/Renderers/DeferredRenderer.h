@@ -6,7 +6,6 @@
 
 struct DeferredRenderer
 { 
-	DeferredRenderer() = default;
 	/* 
 		@param g_buffers Input attachments from model renderer 
 	*/

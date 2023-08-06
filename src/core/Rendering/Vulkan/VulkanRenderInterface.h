@@ -130,7 +130,7 @@ struct Pipeline
 {
 	enum Flags
 	{
-		NONE = 0,
+		NONE = 1 << 0,
 		ENABLE_ALPHA_BLENDING	= 1 << 1,
 		ENABLE_DEPTH_STATE		= 1 << 2,
 		DISABLE_VTX_INPUT_STATE = 1 << 3
@@ -150,7 +150,7 @@ struct Pipeline
 size_t create_vertex_index_buffer(Buffer& result, const void* vtxData, size_t& vtxBufferSizeInBytes, const void* idxData, size_t& idxBufferSizeInBytes);
 
 VkPipelineShaderStageCreateInfo PipelineShaderStageCreateInfo(VkShaderModule shaderModule, VkShaderStageFlagBits shaderStage, const char* entryPoint);
-VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, const VkDescriptorBufferInfo* bufferInfo, VkDescriptorType descriptorType);
+VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, VkDescriptorBufferInfo bufferInfo, VkDescriptorType descriptorType);
 VkWriteDescriptorSet ImageWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, const VkDescriptorImageInfo* imageInfo, VkDescriptorType type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
 void create_sampler(VkDevice device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode, VkSampler& out_Sampler);

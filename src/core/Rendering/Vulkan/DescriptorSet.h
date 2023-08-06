@@ -91,7 +91,7 @@ struct DescriptorSet
 		desc_buffer_info.offset = offset;
 		desc_buffer_info.range = range;
 
-		VkWriteDescriptorSet write = BufferWriteDescriptorSet(vk_set, binding, &desc_buffer_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+		VkWriteDescriptorSet write = BufferWriteDescriptorSet(vk_set, binding, desc_buffer_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 		descriptor_writes.push_back(write);
 	}
 

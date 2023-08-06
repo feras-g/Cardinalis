@@ -20,7 +20,7 @@ class VulkanImGuiRenderer
 public:
 	VulkanImGuiRenderer() = default;
 	VulkanImGuiRenderer(const VulkanContext& vkContext);
-	void init(const ShadowRenderer& shadow_renderer);
+	void init();
 	void draw_scene(VkCommandBuffer cmd_buffer);
 	void render(size_t currentImageIdx, VkCommandBuffer cmd_buffer);
 	void create_buffers();
