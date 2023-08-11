@@ -18,7 +18,7 @@ protected:
 	static std::shared_ptr<spdlog::logger> s_Logger;
 private:
 };
-#ifdef _DEBUG
+#ifdef ENGINE_DEBUG
 	#define LOG_ERROR(...) Logger::GetLogger()->error(__VA_ARGS__)
 	#define LOG_WARN(...)  Logger::GetLogger()->warn(__VA_ARGS__)
 	#define LOG_INFO(...)  Logger::GetLogger()->info(__VA_ARGS__)
@@ -30,7 +30,7 @@ private:
 	#define LOG_INFO(...)
 	#define LOG_DEBUG(...)
 	#define EXIT_ON_ERROR(...)
-#endif // DEBUG
+#endif // ENGINE_DEBUG
 
 
 
