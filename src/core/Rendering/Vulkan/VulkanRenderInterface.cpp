@@ -707,11 +707,11 @@ bool Pipeline::create_graphics_pipeline(const VertexFragmentShader& shader, uint
 	{
 		colorBlendAttachments.push_back(
 			{
-				.blendEnable = VK_TRUE,
+				.blendEnable = !!(flags & ENABLE_ALPHA_BLENDING),
 				.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
 				.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
 				.colorBlendOp = VK_BLEND_OP_ADD,
-				.srcAlphaBlendFactor = !!(flags & ENABLE_ALPHA_BLENDING) ? VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA : VK_BLEND_FACTOR_ONE,
+				.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
 				.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
 				.alphaBlendOp = VK_BLEND_OP_ADD,
 				.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
@@ -726,7 +726,7 @@ bool Pipeline::create_graphics_pipeline(const VertexFragmentShader& shader, uint
 		.logicOp = VK_LOGIC_OP_COPY,
 		.attachmentCount = (uint32_t)colorBlendAttachments.size(),
 		.pAttachments = colorBlendAttachments.data(),
-		.blendConstants = { 0.0f, 0.0f, 0.0f, 0.0f }
+		.blendConstants = { 1.0f, 1.0f, 1.0f, 1.0f }
 	};
 
 	VkDynamicState dynamicStateElt[2] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };

@@ -137,6 +137,8 @@ struct Pipeline
 		DISABLE_VTX_INPUT_STATE = 1 << 3
 	};
 
+
+
 	static bool create_graphics_pipeline_dynamic(const VertexFragmentShader& shader, std::span<VkFormat> colorAttachmentFormats, VkFormat depthAttachmentFormat, Flags flags, VkPipelineLayout pipelineLayout,
 		VkPipeline* out_GraphicsPipeline, VkCullModeFlags cullMode, VkFrontFace frontFace, glm::vec2 customViewport = {}, uint32_t viewMask = 0);
 	static bool create_graphics_pipeline(const VertexFragmentShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPipeline* out_GraphicsPipeline,
@@ -144,6 +146,11 @@ struct Pipeline
 
 	static VkPipeline create_compute_pipeline(const Shader& shader, VkPipelineLayout pipeline_layout);
 };
+
+static Pipeline::Flags operator|(Pipeline::Flags a, Pipeline::Flags b)
+{
+	return static_cast<Pipeline::Flags>(static_cast<int>(a) | static_cast<int>(b));
+}
 
 // Create a storage buffer containing non-interleaved vertex and index data
 // Return the created buffer's size 

@@ -66,7 +66,7 @@ VulkanModelRenderer::VulkanModelRenderer()
 		m_dyn_renderpass[i].add_depth_attachment(VulkanRendererBase::m_gbuffer_depth[i].view);
 	}
 
-	Pipeline::Flags ppl_flags = Pipeline::Flags::ENABLE_DEPTH_STATE;
+	Pipeline::Flags ppl_flags = Pipeline::Flags::ENABLE_DEPTH_STATE | Pipeline::Flags::ENABLE_ALPHA_BLENDING;
 	std::array<VkFormat, 3> color_attachment_formats
 	{
 		VulkanRendererBase::tex_base_color_format,

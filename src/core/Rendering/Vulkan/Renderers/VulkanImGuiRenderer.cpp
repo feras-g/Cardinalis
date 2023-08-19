@@ -297,7 +297,7 @@ bool VulkanImGuiRenderer::CreatePipeline(VkDevice device)
 
 	m_pipeline_layout = create_pipeline_layout(device, layouts, pushConstantRanges);
 
-	Pipeline::Flags pp_flags = Pipeline::Flags::NONE;
+	Pipeline::Flags pp_flags = Pipeline::Flags::ENABLE_ALPHA_BLENDING;
 	std::array<VkFormat, 1> color_formats = { VulkanRendererBase::swapchain_color_format };
 	Pipeline::create_graphics_pipeline_dynamic(m_Shader, color_formats, {}, pp_flags, m_pipeline_layout, &m_gfx_pipeline, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
 
