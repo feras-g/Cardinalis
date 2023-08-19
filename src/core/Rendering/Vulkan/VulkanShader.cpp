@@ -83,6 +83,7 @@ void VertexFragmentShader::create(const char* vertex_shader_path, const char* fr
 
 void VertexFragmentShader::destroy()
 {
+	stages.clear();
 	VkResourceManager::get_instance(context.device)->destroy_shader_module(hash_vertex_module);
 	VkResourceManager::get_instance(context.device)->destroy_shader_module(hash_fragment_module);
 }

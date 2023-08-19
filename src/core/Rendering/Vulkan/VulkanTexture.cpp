@@ -19,7 +19,7 @@ void Texture2D::init(VkFormat format, uint32_t width, uint32_t height, uint32_t 
     info.imageFormat = format;
 	info.width  = width;
 	info.height = height;
-	//info.mipLevels = calc_mip ? calc_mip_levels(width, height) : 1;
+	info.mipLevels = calc_mip ? calc_mip_levels(width, height) : 1;
 	info.mipLevels = 1;
     info.layerCount = layers;
 	info.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;

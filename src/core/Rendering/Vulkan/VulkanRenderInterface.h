@@ -24,11 +24,12 @@
 #include <glm/mat4x4.hpp>
 #include <glm/ext.hpp>
 
-/* Function pointers*/
+#ifdef ENGINE_DEBUG
 inline PFN_vkCmdBeginDebugUtilsLabelEXT		fpCmdBeginDebugUtilsLabelEXT;
 inline PFN_vkCmdEndDebugUtilsLabelEXT		fpCmdEndDebugUtilsLabelEXT;
 inline PFN_vkCmdInsertDebugUtilsLabelEXT	fpCmdInsertDebugUtilsLabelEXT;
 inline PFN_vkSetDebugUtilsObjectNameEXT		fpSetDebugUtilsObjectNameEXT;
+#endif // ENGINE_DEBUG
 inline PFN_vkCmdBeginRenderingKHR			fpCmdBeginRenderingKHR;
 inline PFN_vkCmdEndRenderingKHR				fpCmdEndRenderingKHR;
 
@@ -150,7 +151,7 @@ struct Pipeline
 size_t create_vertex_index_buffer(Buffer& result, const void* vtxData, size_t& vtxBufferSizeInBytes, const void* idxData, size_t& idxBufferSizeInBytes);
 
 VkPipelineShaderStageCreateInfo PipelineShaderStageCreateInfo(VkShaderModule shaderModule, VkShaderStageFlagBits shaderStage, const char* entryPoint);
-VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, VkDescriptorBufferInfo bufferInfo, VkDescriptorType descriptorType);
+VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptor_set, uint32_t binding, VkDescriptorBufferInfo desc_info, VkDescriptorType desc_type);
 VkWriteDescriptorSet ImageWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, const VkDescriptorImageInfo* imageInfo, VkDescriptorType type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
 void create_sampler(VkDevice device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode, VkSampler& out_Sampler);

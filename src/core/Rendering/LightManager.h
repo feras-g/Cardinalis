@@ -7,21 +7,22 @@
 
 struct PointLight
 {
-	//unsigned int num_lights;
-	//float pad[3];
 	glm::vec4 position;
 	glm::vec4 color;
+	float radius;
+	float pad[3];
 };
 
 struct DirectionalLight
 {
 	glm::vec4 direction{ -0.58f, -0.58f, 0.58f, 0.0f };
-	glm::vec4 color{ 80.f, 40.f, 20.f, 1.0 };
+	glm::vec4 color{ 0.8f, 0.4f, 0.2f, 1.0 };
 };
 
 struct LightData
 {
-	unsigned num_point_lights;
+	uint32_t num_point_lights;
+	uint32_t pad[3];
 	DirectionalLight directional_light;
 	std::vector<PointLight> point_lights;
 };

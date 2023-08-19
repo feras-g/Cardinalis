@@ -52,11 +52,11 @@ project("CoreLib")
 		runtime "Debug"
 		symbols "on"
 		buildoptions {"/Od", "/WX", "/permissive-"}
-		defines { "DEBUG", "ENABLE_VALIDATION_LAYERS", "GLM_DEPTH_ZERO_TO_ONE" }
+		defines { "ENGINE_DEBUG", "ENABLE_VALIDATION_LAYERS", "GLM_DEPTH_ZERO_TO_ONE" }
 		libdirs { lib_list, lib_dir .. "optick/lib/x64/debug/" }
 		
 	filter "configurations:Release"
 		runtime "Release"
 		optimize "on"
-		defines { "RELEASE", "GLM_DEPTH_ZERO_TO_ONE" }
+		defines { "ENGINE_RELEASE", "GLM_DEPTH_ZERO_TO_ONE" }
 		libdirs { lib_list, lib_dir .. "optick/lib/x64/release/" }

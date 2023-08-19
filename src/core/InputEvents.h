@@ -10,12 +10,13 @@ enum class Key
 	Q = 1 << 1,
 	S = 1 << 2,
 	D = 1 << 3,
-	UP = 1 << 4,
-	DOWN = 1 << 5,
-	LEFT = 1 << 6,
-	RIGHT = 1 << 7,
-	SPACE = 1 << 8,
-	LSHIFT = 1 << 9
+	R = 1 << 4,
+	UP = 1 << 5,
+	DOWN = 1 << 6,
+	LEFT = 1 << 7,
+	RIGHT = 1 << 8,
+	SPACE = 1 << 9,
+	LSHIFT = 1 << 10
 };
 
 static std::string keyToString(Key key)
@@ -24,10 +25,11 @@ static std::string keyToString(Key key)
 
 	switch (key)
 	{
-		case Key::Z: { out += "Z"; } break;
-		case Key::S: { out += "S"; } break;
-		case Key::Q: { out += "Q"; } break;
-		case Key::D: { out += "D"; } break;
+		case Key::Z: { out += 'Z'; } break;
+		case Key::S: { out += 'S'; } break;
+		case Key::Q: { out += 'Q'; } break;
+		case Key::D: { out += 'D'; } break;
+		case Key::R: { out += 'R'; } break;
 		case Key::UP: { out += "ARROW_UP"; } break;
 		case Key::DOWN: { out += "ARROW_DOWN"; } break;
 		case Key::LEFT: { out += "ARROW_LEFT"; } break;
@@ -48,6 +50,7 @@ static int keyToWindows(Key key)
 		case Key::S: { return 'S'; }
 		case Key::Q: { return 'Q'; }
 		case Key::D: { return 'D'; }
+		case Key::R: { return 'R'; }
 		case Key::UP:	{ return 0x25; }
 		case Key::DOWN: { return 0x28; }
 		case Key::LEFT: { return 0x25; }

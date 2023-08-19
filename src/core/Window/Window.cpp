@@ -27,12 +27,12 @@ public:
 	void Show();
 	static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-	inline void UpdateGUI()  const;
-	inline void ShutdownGUI()  const;
-	inline bool IsClosed()  const;
-	inline int  GetHeight() const;
-	inline int  GetWidth()	const;
-	inline const WindowData*  GetData()	const;
+	void UpdateGUI()  const;
+	void ShutdownGUI()  const;
+	bool IsClosed()  const;
+	int  GetHeight() const;
+	int  GetWidth()	const;
+	const WindowData*  GetData()	const;
 	void HandleEvents();
 
 	double GetTime() const;
@@ -47,6 +47,8 @@ public:
 	void OnKeyEvent(KeyEvent event);
 	bool AsyncKeyState(Key key);
 
+	bool is_in_focus() const;
+
 	WindowInfo m_WinInfo;
 	WindowState m_WinState;
 	WindowData m_Data;
@@ -57,10 +59,12 @@ public:
 	HINSTANCE hInstance;
 
 	double m_PerfCounterFreq;
+
+	bool b_is_in_focus;
 };
 
 /////////////////////////////////////////////////////////////////////////
-Window::Impl::Impl(const WindowInfo& info, Application* hApp) : m_WinInfo(info), m_WinState({}), hWnd(NULL), hInstance(NULL) , hApplication(hApp)
+Window::Impl::Impl(const WindowInfo& info, Application* hApp) : m_WinInfo(info), m_WinState({}), hWnd(NULL), hInstance(NULL) , hApplication(hApp), b_is_in_focus(false)
 {
 }
 
@@ -168,6 +172,7 @@ LRESULT CALLBACK Window::Impl::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 	{
 		switch (uMsg)
 		{
+		/* Window events */
 		case WM_CLOSE:
 			self->OnClose();
 			return 0;
@@ -199,8 +204,17 @@ LRESULT CALLBACK Window::Impl::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 			EndPaint(hWnd, &ps);
 		}
 		break;
-
-		// Mouse events
+		case WM_SETFOCUS:
+		{
+			self->b_is_in_focus = true;
+		}
+		break;
+		case WM_KILLFOCUS:
+		{
+			self->b_is_in_focus = false;
+		}
+		break;
+		/* Mouse events */
 		case WM_MOUSEMOVE:
 		{
 			int x = GET_X_LPARAM(lParam);
@@ -222,7 +236,7 @@ LRESULT CALLBACK Window::Impl::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 		}
 		break;
 
-		// Keyboard events
+		/* Keyboard events */
 		case WM_KEYDOWN:
 		{
 			KeyEvent event;
@@ -309,6 +323,11 @@ bool Window::Impl::AsyncKeyState(Key key)
 	return GetAsyncKeyState(keyToWindows(key));
 }
 
+bool Window::Impl::is_in_focus() const
+{
+	return b_is_in_focus;
+}
+
 /////////////////////////////////////////////////////////////////////////
 bool Window::Impl::IsClosed()  const { return m_WinState.bIsClosed; }
 int  Window::Impl::GetHeight() const { return m_WinInfo.height; }
@@ -364,6 +383,7 @@ inline void Window::UpdateGUI() const { return pImpl->UpdateGUI(); }
 inline void Window::ShutdownGUI() const { pImpl->ShutdownGUI(); }
 inline const WindowData* Window::GetData() const { return pImpl->GetData(); }
 void Window::HandleEvents() { return pImpl->HandleEvents(); }
+bool Window::is_in_focus() const { return pImpl->is_in_focus(); }
 inline double Window::GetTime() const { return pImpl->GetTime(); }
 void Window::OnClose()  { return pImpl->OnClose(); }
 void Window::OnResize(unsigned int width, unsigned int height) { return pImpl->OnResize(width, height); }

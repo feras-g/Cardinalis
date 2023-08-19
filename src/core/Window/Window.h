@@ -62,6 +62,7 @@ public:
 	inline void ShutdownGUI()  const override;
 	inline const WindowData* GetData() const override;
 	void HandleEvents();
+	bool is_in_focus() const;
 
 	inline double GetTime() const;
 

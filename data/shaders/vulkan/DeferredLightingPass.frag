@@ -64,7 +64,7 @@ float sample_shadow_map(vec3 shadow_coord, vec2 offset, uint cascade_index)
     float shadow_map_depth = texture( gbuffer_shadow_map, vec3(shadow_coord.xy + offset, cascade_index) ).r;
     if( shadow_map_depth < (shadow_coord.z - bias) )
     {
-        shadow = 0.027;
+        shadow = 0.27;
     }
     return shadow;
 }
@@ -113,16 +113,16 @@ float eval_shadow_poisson(vec3 shadow_coord, uint cascade_index)
 }
 
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void main()
 {
     ToggleParams params;
     params.bViewDebugShadow     = false;
-    params.bFilterShadowPCF     = true;
+    params.bFilterShadowPCF     = false;
     params.bFilterShadowPoisson = false;
 
     vec4 albedo = texture(gbuffer_color, uv).rgba;
-    
     float depthNDC = texture(gbuffer_depth, uv).x;
 
     vec3 P_WS = ws_pos_from_depth(uv, depthNDC, frame_data.inv_view_proj);
@@ -139,8 +139,6 @@ void main()
 
     float metallic  = metallic_roughness.x *  metallic_roughness.z;
     float roughness = metallic_roughness.y * metallic_roughness.w;
-
-    float light_dist = length(cam_pos_ws - P_WS);
     
     vec3 irradiance = texture(irradiance_map, N_WS).rgb;
 
@@ -154,7 +152,24 @@ void main()
 
 float shadow = 1.0f;
 
-vec3 color = BRDF(N_WS, V, L, H, light_color, irradiance, albedo.rgb, metallic, roughness);
+vec3 color = vec3(0);
+vec3 directional_light_color = BRDF(N_WS, V, L, H, light_color, irradiance, albedo.rgb, metallic, roughness);
+color += directional_light_color;
+
+/////////////////////////////////////////// Accumulate point lights
+
+vec3 Lo = vec3(0.0);
+for(uint light_idx=0; light_idx < lights.num_point_lights; light_idx++)
+{   
+    vec3 L = normalize(lights.point_lights[light_idx].position.xyz - P_WS);
+    vec3 H = normalize(V+L);
+    float distance = length(lights.point_lights[light_idx].position.xyz - P_WS);
+    float attenuation = attenuation(distance);
+    vec3 light_color = lights.point_lights[light_idx].color.rgb;
+    Lo += BRDF(N_WS, V, L, H, light_color, irradiance, albedo.rgb, metallic, roughness) * attenuation;
+}
+color += Lo;
+///////////////////////////////////////////
 
 #ifdef ENABLE_SHADOWS
 	uint cascade_index = 0;
@@ -203,6 +218,6 @@ vec3 color = BRDF(N_WS, V, L, H, light_color, irradiance, albedo.rgb, metallic, 
     }
 #endif
     
-    color *= shadow;
+    //color *= shadow;
     out_color = vec4(color, 1.0);
 }

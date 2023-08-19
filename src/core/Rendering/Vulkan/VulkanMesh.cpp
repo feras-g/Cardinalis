@@ -166,7 +166,6 @@ static void load_vertices(Primitive p, cgltf_primitive* primitive, GeometryData&
 		{
 			vertex.uv = glm::vec2(texCoordBuffer[i]);
 		}
-		vertex.tangent = tangentBuffer.empty() ? glm::vec3(0) : tangentBuffer[i];
 
 		geometry.vertices.push_back(vertex);
 	}
@@ -193,32 +192,31 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 
 		std::function load_tex = [](cgltf_texture* tex, VkFormat format, bool calc_mip) -> size_t
 		{
-//			const char* uri = tex->image->uri;
-//			std::string name = uri ? base_path + uri : base_path + tex->image->name;
-//
-//			std::pair<size_t, Texture2D*> tex_object = RenderObjectManager::get_texture(name);
-//
-//			if (tex_object.second == nullptr)
-//			{
-//				if (uri)
-//				{
-//					/* Load from file path */
-//					return RenderObjectManager::add_texture(base_path + uri, name, format, calc_mip);
-//				}
-//				else
-//				{
-//					/* Load from buffer */
-//					assert(false);
-//					return 0;
-//				}
-//			}
-//			else
-//			{
-//				return tex_object.first;
-//			}
+			const char* uri = tex->image->uri;
+			std::string name = uri ? base_path + uri : base_path + tex->image->name;
 
+			std::pair<size_t, Texture2D*> tex_object = RenderObjectManager::get_texture(name);
 
-			return RenderObjectManager::get_texture("Placeholder Texture").first;
+			if (tex_object.second == nullptr)
+			{
+				if (uri)
+				{
+					/* Load from file path */
+					return RenderObjectManager::add_texture(base_path + uri, name, format, calc_mip);
+				}
+				else
+				{
+					/* Load from buffer */
+					assert(false);
+					return 0;
+				}
+			}
+			else
+			{
+				return tex_object.first;
+			}
+
+			//return RenderObjectManager::get_texture("Placeholder Texture").first;
 		};
 
 

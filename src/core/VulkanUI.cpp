@@ -265,12 +265,40 @@ VulkanUI& VulkanUI::ShowInspector()
 
 VulkanUI& VulkanUI::ShowLightSettings(LightManager* light_manager)
 {
+	static float radius = 1.0f;
+	static glm::vec3 offset = {};
+
 	if (ImGui::Begin("Lights", 0, 0))
 	{
+		/* Directional Light */
 		ImGui::SeparatorText("Directional Light");
-		
-		ImGui::DragFloat4("Direction", glm::value_ptr(light_manager->m_light_data.directional_light.direction), 0.01f);
-		ImGui::DragFloat4("Color",	  glm::value_ptr(light_manager->m_light_data.directional_light.color), 0.1f);
+		ImGui::DragFloat4("Direction", glm::value_ptr(light_manager->light_data.directional_light.direction), 0.01f);
+		ImGui::DragFloat4("Color",	  glm::value_ptr(light_manager->light_data.directional_light.color), 0.1f);
+
+		/* Point Lights */
+		ImGui::SeparatorText("Directional Light");
+		if (ImGui::Button("Add Point Light"))
+		{
+			light_manager->light_data.point_lights.push_back({});
+			light_manager->light_data.num_point_lights++;
+		}
+
+		if (ImGui::DragFloat("Radius", &radius, 0.01f))
+		{
+			for (unsigned i = 0; i < light_manager->light_data.num_point_lights; i++)
+			{
+				light_manager->light_data.point_lights[i].radius = radius;
+			}
+		}
+
+		if (ImGui::DragFloat3("Offset", glm::value_ptr(offset), 0.01f))
+		{
+			for (unsigned i = 0; i < light_manager->light_data.num_point_lights; i++)
+			{
+				light_manager->light_data.point_lights[i].position.y = offset.y;
+			}
+		}
+
 	}
 
 	ImGui::End();

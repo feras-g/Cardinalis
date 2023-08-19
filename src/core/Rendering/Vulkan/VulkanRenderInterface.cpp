@@ -94,14 +94,19 @@ void VulkanRenderInterface::create_instance()
 #ifdef _WIN32
 		"VK_KHR_win32_surface",
 #endif // _WIN32
+#ifdef ENGINE_DEBUG
 		"VK_EXT_debug_utils",
 		"VK_EXT_validation_features"
+#endif // ENGINE_DEBUG
 	};
 
 	// Instance layers
 	std::vector<const char*> instance_layers_names
 	{
+#ifdef ENGINE_DEBUG
 		"VK_LAYER_KHRONOS_validation",
+		"VK_LAYER_LUNARG_monitor"
+#endif // ENGINE_DEBUG
 	};
 
 	VkInstanceCreateInfo createInfo = {};
@@ -209,10 +214,13 @@ void VulkanRenderInterface::create_device()
 	VK_CHECK(vkCreateDevice(context.physical_device, &device_create_info, nullptr, &context.device));
 	
 	/* Initialize function pointers */
+#ifdef ENGINE_DEBUG
 	assert(fpCmdBeginDebugUtilsLabelEXT = (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetInstanceProcAddr(context.instance, "vkCmdBeginDebugUtilsLabelEXT"));
 	assert(fpCmdEndDebugUtilsLabelEXT = (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetInstanceProcAddr(context.instance, "vkCmdEndDebugUtilsLabelEXT"));
 	assert(fpCmdInsertDebugUtilsLabelEXT = (PFN_vkCmdInsertDebugUtilsLabelEXT)vkGetInstanceProcAddr(context.instance, "vkCmdInsertDebugUtilsLabelEXT"));
 	assert(fpSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(context.instance, "vkSetDebugUtilsObjectNameEXT"));
+#endif // ENGINE_DEBUG
+	
 	assert(fpCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)vkGetInstanceProcAddr(context.instance, "vkCmdBeginRenderingKHR"));
 	assert(fpCmdEndRenderingKHR = (PFN_vkCmdEndRenderingKHR)(vkGetInstanceProcAddr(context.instance, "vkCmdEndRenderingKHR")));
 
@@ -804,19 +812,19 @@ size_t create_vertex_index_buffer(Buffer& result, const void* vtxData, size_t& v
 	return total_size_bytes;
 }
 
-VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, VkDescriptorBufferInfo bufferInfo, VkDescriptorType descriptorType)
+VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptor_set, uint32_t binding, VkDescriptorBufferInfo desc_info, VkDescriptorType desc_type)
 {
 	return VkWriteDescriptorSet
 	{
 		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 		.pNext = nullptr,
-		.dstSet = descriptorSet,
-		.dstBinding = bindingIndex,
+		.dstSet = descriptor_set,
+		.dstBinding = binding,
 		.dstArrayElement = 0,
 		.descriptorCount = 1,
-		.descriptorType = descriptorType,
+		.descriptorType = desc_type,
 		.pImageInfo = nullptr,
-		.pBufferInfo = &bufferInfo,
+		.pBufferInfo = &desc_info,
 		.pTexelBufferView = nullptr,
 	};
 }
