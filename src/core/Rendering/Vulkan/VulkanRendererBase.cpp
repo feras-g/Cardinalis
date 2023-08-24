@@ -84,19 +84,19 @@ void VulkanRendererBase::create_attachments()
 	{
 		std::string s_prefix = "Frame #" + std::to_string(i) + "G-Buffer ";
 
-		m_gbuffer_albedo[i].init(tex_base_color_format, render_width, render_height, 1, false);	/* G-Buffer Color */
-		m_gbuffer_normal[i].init(tex_gbuffer_normal_format, render_width, render_height, 1, false);	/* G-Buffer Normal */
-		m_gbuffer_depth[i].init(tex_gbuffer_depth_format, render_width, render_height, 1, false);		/* G-Buffer Depth */
-		m_gbuffer_directional_shadow[i].init(tex_gbuffer_depth_format, render_width, render_height, 1, false);			/* G-Buffer Shadow map */
-		m_gbuffer_metallic_roughness[i].init(tex_metallic_roughness_format, render_width, render_height, 1, false);			/* G-Buffer Metallic/Roughness */
-		m_deferred_lighting_attachment[i].init(tex_deferred_lighting_format, 2048, 2048, 1, false); /* Final color attachment */
+		m_gbuffer_albedo[i].init(tex_base_color_format, render_width, render_height, 1, false, (s_prefix + "Albedo").c_str());	/* G-Buffer Color */
+		m_gbuffer_normal[i].init(tex_gbuffer_normal_format, render_width, render_height, 1, false, (s_prefix + "Normal").c_str());	/* G-Buffer Normal */
+		m_gbuffer_depth[i].init(tex_gbuffer_depth_format, render_width, render_height, 1, false, (s_prefix + "Depth").c_str());		/* G-Buffer Depth */
+		m_gbuffer_directional_shadow[i].init(tex_gbuffer_depth_format, render_width, render_height, 1, false, (s_prefix + "Directional Shadow Map").c_str());			/* G-Buffer Shadow map */
+		m_gbuffer_metallic_roughness[i].init(tex_metallic_roughness_format, render_width, render_height, 1, false, (s_prefix + "Metallic roughness").c_str());			/* G-Buffer Metallic/Roughness */
+		m_deferred_lighting_attachment[i].init(tex_deferred_lighting_format, 2048, 2048, 1, false, "Deferred Lighting Attachment"); /* Final color attachment */
 
-		m_gbuffer_albedo[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Albedo").c_str());
-		m_gbuffer_normal[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Normal").c_str());
-		m_gbuffer_depth[i].create(context.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Depth").c_str());
-		m_gbuffer_directional_shadow[i].create(context.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Directional Shadow Map").c_str());
-		m_gbuffer_metallic_roughness[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, (s_prefix + "Metallic roughness").c_str());
-		m_deferred_lighting_attachment[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, "Deferred Lighting Attachment");
+		m_gbuffer_albedo[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+		m_gbuffer_normal[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+		m_gbuffer_depth[i].create(context.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+		m_gbuffer_directional_shadow[i].create(context.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+		m_gbuffer_metallic_roughness[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+		m_deferred_lighting_attachment[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
 		m_gbuffer_albedo[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
 		m_gbuffer_normal[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
@@ -253,8 +253,8 @@ size_t RenderObjectManager::add_texture(const std::string& filename, const std::
 	//std::string name = filename.substr(filename.find_last_of('/') + 1);
 	Image im = load_image_from_file(filename);
 	Texture2D tex2D;
-	tex2D.init(format, im.w, im.h, 1, calc_mip);
-	tex2D.create_from_data(&im, name);
+	tex2D.init(format, im.w, im.h, 1, calc_mip, name);
+	tex2D.create_from_data(&im);
 	tex2D.create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, tex2D.info.mipLevels });
 
 	return add_texture(tex2D, name);

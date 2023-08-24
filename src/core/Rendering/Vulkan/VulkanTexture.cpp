@@ -14,7 +14,7 @@ static uint32_t calc_mip_levels(uint32_t width, uint32_t height)
     return uint32_t(std::floor(std::log2(std::max(width, height))) + 1);
 }
 
-void Texture2D::init(VkFormat format, uint32_t width, uint32_t height, uint32_t layers, bool calc_mip)
+void Texture2D::init(VkFormat format, uint32_t width, uint32_t height, uint32_t layers, bool calc_mip, std::string_view debug_name)
 {
     info.imageFormat = format;
 	info.width  = width;
@@ -23,25 +23,24 @@ void Texture2D::init(VkFormat format, uint32_t width, uint32_t height, uint32_t 
 	info.mipLevels = 1;
     info.layerCount = layers;
 	info.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    info.debugName = debug_name.data();
 
     initialized = true;
 }
 
 void Texture2D::create_from_file(
     std::string_view	filename,
-	std::string_view    debug_name,
     VkFormat			format,
     VkImageUsageFlags	imageUsage,
     VkImageLayout		layout)
 {
     assert(initialized);
     Image rawImage = load_image_from_file(filename);
-    create_from_data(&rawImage, debug_name, imageUsage, layout);
+    create_from_data(&rawImage, imageUsage, layout);
 }
 
 void Texture2D::create_from_data(
     void*               data,
-	std::string_view    debug_name,
     VkImageUsageFlags	imageUsage,
     VkImageLayout		layout)
 {
@@ -63,16 +62,14 @@ void Texture2D::create_from_data(
 
 void Texture2D::create_from_data(
 	Image*               image,
-	std::string_view    debug_name,
 	VkImageUsageFlags	imageUsage,
 	VkImageLayout		layout)
 {
-	create_from_data(image->get_data(), debug_name, imageUsage, layout);
+	create_from_data(image->get_data(), imageUsage, layout);
 }
 
-void Texture2D::create(VkDevice device, VkImageUsageFlags imageUsage, std::string_view debug_name)
+void Texture2D::create(VkDevice device, VkImageUsageFlags imageUsage)
 {
-    info.debugName = debug_name.data();
     create_vk_image(device, false, imageUsage);
 }
 void Texture::create_vk_image_cube(VkDevice device, VkImageUsageFlags imageUsage)
@@ -81,6 +78,7 @@ void Texture::create_vk_image_cube(VkDevice device, VkImageUsageFlags imageUsage
 }
 void Texture::create_vk_image(VkDevice device, bool isCubemap, VkImageUsageFlags imageUsage)
 {
+    assert(info.debugName);
     VkImageCreateFlags flags{ 0 };
     uint32_t arrayLayers = 1u;
 

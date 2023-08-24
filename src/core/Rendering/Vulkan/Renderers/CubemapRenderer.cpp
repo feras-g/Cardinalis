@@ -120,7 +120,7 @@ void CubemapRenderer::init_irradiance_map_rendering()
 	shader_gen_irradiance_map.create("GenCubemap.vert.spv", "ConvoluteCubemap.frag.spv");
 
 	/* Irrandiance map attachment */
-	irradiance_map_attachment.init(irradiance_map_format, irradiance_map_dim, irradiance_map_dim, 6, false);
+	irradiance_map_attachment.init(irradiance_map_format, irradiance_map_dim, irradiance_map_dim, 6, false, "Irradiance Map");
 	irradiance_map_attachment.create_vk_image(context.device, true, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 	irradiance_map_attachment.view = Texture2D::create_texture_2d_array_view(irradiance_map_attachment, irradiance_map_attachment.info.imageFormat);
 
@@ -231,7 +231,7 @@ void CubemapRenderer::init_resources(const char* filename)
 	layer_height = layer_width = dim;
 
 	/* Cubemap render attachment */
-	cubemap_render_attachment.init(cubemap_render_attachment_format, layer_width, layer_height, 6, false);
+	cubemap_render_attachment.init(cubemap_render_attachment_format, layer_width, layer_height, 6, false, "Cubemap Array Texture");
 	cubemap_render_attachment.create_vk_image(context.device, true, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 	cubemap_render_attachment.view = Texture2D::create_texture_2d_array_view(cubemap_render_attachment, cubemap_render_attachment.info.imageFormat);
 

@@ -4,7 +4,7 @@
 #include "Rendering/Vulkan/VulkanRenderInterface.h"
 #include "Rendering/Vulkan/VulkanRendererBase.h"
 
-static void create_default_descriptor_set(DescriptorSet& descriptor_set)
+static void create_descriptor_set_compute_shader(DescriptorSet& descriptor_set)
 {
 	/* Create default descriptor set */
 	descriptor_set.layout.add_storage_image_binding(0, "Read-Only Input image");
@@ -22,7 +22,7 @@ static void create_default_descriptor_set(DescriptorSet& descriptor_set)
 
 void PostProcessRenderer::init()
 {
-	create_default_descriptor_set(descriptor_set);
+	create_descriptor_set_compute_shader(descriptor_set);
 }
 
 void PostProcessRenderer::render(PostFX fx, VkCommandBuffer_T* cmd_buff, const Texture2D& input_image)
@@ -37,7 +37,7 @@ static Texture2D create_test_texture()
 {
 	Texture2D texture;
 	constexpr int dim = 65;
-	texture.init(VK_FORMAT_R8G8B8A8_UNORM, dim, dim, 1, false);
+	texture.init(VK_FORMAT_R8G8B8A8_UNORM, dim, dim, 1, false, "Test texture");
 
 	constexpr int bpp = 4;
 	static std::array<glm::tvec4<uint8_t>, dim*dim> data;
@@ -55,7 +55,7 @@ static Texture2D create_test_texture()
 		flat_data[j+3]  = data[i].w;
 	}
 	
-	texture.create_from_data(flat_data.data(), "Post Process Test texture", VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, VK_IMAGE_LAYOUT_UNDEFINED);
+	texture.create_from_data(flat_data.data(), VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, VK_IMAGE_LAYOUT_UNDEFINED);
 	texture.create_view(context.device, ImageViewTexture2D);
 
 	return texture;
@@ -63,7 +63,7 @@ static Texture2D create_test_texture()
 
 void PostFX_Downsample::init()
 {
-	create_default_descriptor_set(descriptor_set);
+	create_descriptor_set_compute_shader(descriptor_set);
 
 	Texture2D input_image = create_test_texture();// VulkanRendererBase::m_deferred_lighting_attachment[0];
 	input_image_handle = &input_image;
@@ -73,8 +73,8 @@ void PostFX_Downsample::init()
 	input_image_handle->transition_immediate(VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_MEMORY_READ_BIT);
 
 	shader.create("Downsample.comp.spv");
-	output_image.init(VK_FORMAT_R8G8B8A8_UNORM, width / 2, height / 2, 1, false);
-	output_image.create(context.device, VK_IMAGE_USAGE_STORAGE_BIT, "PostFX_Downsample Ouput Storage Image");
+	output_image.init(VK_FORMAT_R8G8B8A8_UNORM, width / 2, height / 2, 1, false, "PostFX_Downsample Ouput Storage Image");
+	output_image.create(context.device, VK_IMAGE_USAGE_STORAGE_BIT);
 	output_image.create_view(context.device, ImageViewTexture2D);
 
 	output_image.transition_immediate(VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_MEMORY_WRITE_BIT);
@@ -94,8 +94,6 @@ void PostFX_Downsample::init()
 
 	/* Compute pipeline */
 	pipeline = Pipeline::create_compute_pipeline(shader, pipeline_layout);
-
-
 }
 
 void PostFX_Downsample::render(VkCommandBuffer_T* cmd_buff)

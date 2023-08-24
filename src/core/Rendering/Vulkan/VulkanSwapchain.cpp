@@ -31,7 +31,7 @@ VulkanSwapchain::VulkanSwapchain(VkSurfaceKHR surface, VkPhysicalDevice physical
 
     std::vector<VkPresentModeKHR> presentModes(presentModeCount);
 	VK_CHECK(fpGetPhysicalDeviceSurfacePresentModesKHR(hPhysicalDevice, hSurface, &presentModeCount, presentModes.data()));
-	info.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+	info.presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
     LOG_WARN("Current present mode : {0}", string_VkPresentModeKHR(info.presentMode));
 }
 
@@ -106,14 +106,14 @@ void VulkanSwapchain::init(VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkF
         /* Color attachment */
 		std::string color_name = "Swapchain Color Image #" + std::to_string(i);
         color_attachments[i].image = tmp[i];
-        color_attachments[i].init(colorFormat, info.extent.width, info.extent.height, 1, false);
+        color_attachments[i].init(colorFormat, info.extent.width, info.extent.height, 1, false, color_name.c_str());
         color_attachments[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT });
-		set_object_name(VK_OBJECT_TYPE_IMAGE, (uint64_t)color_attachments[i].image, color_name.c_str());
+		set_object_name(VK_OBJECT_TYPE_IMAGE, (uint64_t)color_attachments[i].image, color_attachments[i].info.debugName);
 
         /* Depth attachment */
 		std::string ds_name = "Swapchain Depth/Stencil Image #" + std::to_string(i);
-        depth_attachments[i].init(depthStencilFormat, info.extent.width, info.extent.height, 1, false);
-        depth_attachments[i].create(context.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, ds_name.c_str());
+        depth_attachments[i].init(depthStencilFormat, info.extent.width, info.extent.height, 1, false, ds_name.c_str());
+        depth_attachments[i].create(context.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
         depth_attachments[i].create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT });
     }
 

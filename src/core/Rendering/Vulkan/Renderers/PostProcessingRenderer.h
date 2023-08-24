@@ -9,6 +9,7 @@ struct VkCommandBuffer_T;
 enum PostFX
 {
 	eDownsample,
+	eSSR,
 	eBloom,
 	eCircularDof,
 	eSSAO,
@@ -37,6 +38,12 @@ struct PostFX_Downsample : PostFX_Base
 	Texture2D output_image;
 	uint32_t width;
 	uint32_t height;
+};
+
+struct PostFX_SSR : PostFX_Base
+{
+	void init();
+	void render(VkCommandBuffer_T* cmd_buff);
 };
 
 struct PostFX_Blur : PostFX_Base

@@ -69,28 +69,25 @@ VkImageView create_texture_view(
 
 struct Texture2D : public Texture
 {
-	void init(VkFormat format, uint32_t width, uint32_t height, uint32_t layers, bool calc_mip);
+	void init(VkFormat format, uint32_t width, uint32_t height, uint32_t layers, bool calc_mip, std::string_view debug_name);
 
 	void create_from_file(
 		std::string_view	filename,
-		std::string_view    debug_name,
 		VkFormat			format,
 		VkImageUsageFlags	imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT,
 		VkImageLayout		layout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 	void create_from_data(
 		void*				data,
-		std::string_view    debug_name,
 		VkImageUsageFlags	imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT,
 		VkImageLayout		layout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 	void create_from_data(
 		Image*				pImage,
-		std::string_view    debug_name,
 		VkImageUsageFlags	imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT,
 		VkImageLayout		layout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-	void create(VkDevice device, VkImageUsageFlags imageUsage, std::string_view debug_name);
+	void create(VkDevice device, VkImageUsageFlags imageUsage);
 
 
 
