@@ -26,9 +26,9 @@ void VulkanUI::End()
 }
 
 VulkanUI& VulkanUI::ShowSceneViewportPanel(Camera& scene_camera,
-	size_t texDeferred, size_t texColorId,
-	size_t texNormalId, size_t texDepthId,
-	size_t texNormalMapId, size_t texMetallicRoughnessId)
+	VkDescriptorSet_T* texDeferred, VkDescriptorSet_T* texColorId,
+	VkDescriptorSet_T* texNormalId, VkDescriptorSet_T* texDepthId,
+	VkDescriptorSet_T* texNormalMapId, VkDescriptorSet_T* texMetallicRoughnessId)
 {
 	static ImGuiComboFlags flags = 0;
 
@@ -80,19 +80,12 @@ VulkanUI& VulkanUI::ShowSceneViewportPanel(Camera& scene_camera,
 	if (ImGui::Begin("GBuffers", 0, 0))
 	{
 		ImVec2 thumbnail_size{ 256, 256 };
-		//ImGui::SetWindowSize({ thumbnail_size.x * 5, thumbnail_size.y });
+		ImGui::SetWindowSize({ thumbnail_size.x * 5, thumbnail_size.y });
 		
 		ImGui::Image((ImTextureID)(texColorId), thumbnail_size);
-		ImGui::SameLine();
-
 		ImGui::Image((ImTextureID)(texNormalId), thumbnail_size);
-		ImGui::SameLine();
-
 		ImGui::Image((ImTextureID)(texDepthId), thumbnail_size);
-		ImGui::SameLine();
-
 		ImGui::Image((ImTextureID)(texMetallicRoughnessId), thumbnail_size);
-		ImGui::SameLine();
 	}
 	ImGui::End();
 
@@ -273,8 +266,10 @@ VulkanUI& VulkanUI::ShowLightSettings(LightManager* light_manager)
 		/* Directional Light */
 		ImGui::SeparatorText("Directional Light");
 		ImGui::DragFloat4("Direction", glm::value_ptr(light_manager->light_data.directional_light.direction), 0.01f);
-		ImGui::DragFloat4("Color",	  glm::value_ptr(light_manager->light_data.directional_light.color), 0.1f);
-
+		ImGui::DragFloat4("Color",	   glm::value_ptr(light_manager->light_data.directional_light.color), 0.1f);
+		ImGui::Checkbox("Cycle", &light_manager->b_cycle_directional_light);
+		ImGui::SameLine();
+		ImGui::DragFloat("Speed", &light_manager->cycle_speed);
 		/* Point Lights */
 		ImGui::SeparatorText("Directional Light");
 		if (ImGui::Button("Add Point Light"))

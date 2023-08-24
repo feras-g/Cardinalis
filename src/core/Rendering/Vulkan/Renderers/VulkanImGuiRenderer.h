@@ -21,26 +21,19 @@ public:
 	VulkanImGuiRenderer() = default;
 	VulkanImGuiRenderer(const VulkanContext& vkContext);
 	void init();
-	void draw_scene(VkCommandBuffer cmd_buffer);
 	void render(size_t currentImageIdx, VkCommandBuffer cmd_buffer);
-	void create_buffers();
-	void update_buffers(ImDrawData* pDrawData);
+	void update_render_pass_attachments();
 
-	float m_SceneViewAspectRatio = 1.0;
-	
-	void UpdateAttachments();
-
-	std::array<size_t, NUM_FRAMES> m_ModelRendererColorTextureId;
-	std::array<size_t, NUM_FRAMES> m_ModelRendererNormalTextureId;
-	std::array<size_t, NUM_FRAMES> m_ModelRendererDepthTextureId;
-	std::array<size_t, NUM_FRAMES> m_ModelRendererNormalMapTextureId;
-	std::array<size_t, NUM_FRAMES> m_ModelRendererMetallicRoughnessTextureId;
-	std::array<size_t, NUM_FRAMES> m_DeferredRendererOutputTextureId;
+	std::array<VkDescriptorSet, NUM_FRAMES> m_ModelRendererColorTextureId;
+	std::array<VkDescriptorSet, NUM_FRAMES> m_ModelRendererNormalTextureId;
+	std::array<VkDescriptorSet, NUM_FRAMES> m_ModelRendererDepthTextureId;
+	std::array<VkDescriptorSet, NUM_FRAMES> m_ModelRendererNormalMapTextureId;
+	std::array<VkDescriptorSet, NUM_FRAMES> m_ModelRendererMetallicRoughnessTextureId;
+	std::array<VkDescriptorSet, NUM_FRAMES> m_DeferredRendererOutputTextureId;
 
 	std::array<std::array<size_t, 4>, NUM_FRAMES> m_ShadowCascadesTextureIds;
 
-
-	~VulkanImGuiRenderer() ;
+	void destroy();
 private:
 	ImDrawData* m_pDrawData = nullptr;
 
@@ -48,22 +41,9 @@ private:
 	std::vector<VkImageView*> m_Textures;	// Textures displayed inside UI
 	std::vector<VkDescriptorImageInfo> m_TextureDescriptors;
 
-	// Storage buffers
-	Buffer m_storage_buffer;
-	Buffer m_uniform_buffer;
-
 	VertexFragmentShader m_Shader;
 
-	bool CreateFontTexture(ImGuiIO* io, const char* fontPath, Texture2D& out_Font);
-	bool CreatePipeline(VkDevice device);
-	bool CreateUniformBuffers(size_t dataSizeInBytes);
-
-	void update_descriptor_set(VkDevice device);
 
 	vk::DynamicRenderPass m_dyn_renderpass[NUM_FRAMES];
-	VkPipeline m_gfx_pipeline = VK_NULL_HANDLE;
 	VkDescriptorPool m_descriptor_pool;
-	VkPipelineLayout m_pipeline_layout;
-	VkDescriptorSetLayout m_descriptor_set_layout;
-	VkDescriptorSet m_descriptor_set[NUM_FRAMES];
 };
