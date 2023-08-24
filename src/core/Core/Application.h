@@ -10,7 +10,7 @@ class VulkanRenderInterface;
 class FrameCounter;
 struct VulkanFrame;
 
-// Renderers forward decls
+/* Renderers forward decls */
 class VulkanRendererBase;
 class VulkanImGuiRenderer;
 class VulkanModelRenderer;
@@ -32,11 +32,27 @@ public:
 	virtual ~Application();
 	void Run();
 
+	/*
+	*	Returns time in seconds.
+	*/
+	double GetTime();
+
 	/// <summary>
 	/// Application specific functions to derive in client code.
 	/// </summary>
 	virtual void Initialize() = 0;
-	virtual void Update(float dt) = 0;
+
+	/* 
+	*	Main update loop for the application.
+	* 
+	*	@param t	Time in seconds 
+	*	@param dt	Delta time in seconds
+	*/
+	virtual void Update(float t, float dt) = 0;
+
+	/*
+	*	Main render loop for the application.
+	*/
 	virtual void Render() = 0;
 	virtual void UpdateRenderersData(float dt, size_t currentImageIdx) = 0;
 	virtual void Terminate() = 0;

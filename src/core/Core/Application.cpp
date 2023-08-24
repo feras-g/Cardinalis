@@ -42,12 +42,16 @@ void Application::Run()
 		Timestep timestep = time - m_LastFrameTime;
 		m_LastFrameTime = time;
 		m_Window->HandleEvents();
-		FrameStats::UpdateFrameTimeHistory(timestep.GetSeconds());
-		Update(timestep.GetSeconds());
+		Update(time, timestep.GetSeconds());
 		Render();
 	}
 
 	Terminate();
+}
+
+double Application::GetTime()
+{
+	return m_Window->GetTime();
 }
 
 void Application::OnWindowResize()
