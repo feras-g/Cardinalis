@@ -6,9 +6,12 @@ void LightManager::init()
 {
 	int rows = 20;
 	int cols = 20;
+	int depth = 20;
+
 	light_data.num_point_lights = rows * cols;
 	light_data.point_lights.resize(light_data.num_point_lights);
 
+	for (int z = 0; z < depth;z++)
 	for (int y = 0; y < rows; y++)
 	for (int x = 0; x < cols; x++)
 	{
@@ -26,15 +29,17 @@ void LightManager::init()
 
 		float spacing = 1.5;
 
-		float px = (- (cols / 2) + x) * spacing;
-		float py = (- (rows / 2) + y) * spacing;
+		float px = (- (cols / 2.0f) + x) * spacing;
+		float py = (- (rows / 2.0f) + y) * spacing;
+		float pz = (-(depth / 2.0f) + z) ;
+
 
 
 		float radius = 1.0f;
 
-		light_data.point_lights[x + (y * rows) ] =
+		light_data.point_lights[x + (y * rows)] =
 		{
-			{ px, 1.0f, py, 1.0f }, /* Position*/
+			{ px, pz, py, 1.0f }, /* Position*/
 			{ r, g, b, 1.0f },	  /* Color */
 			radius,				  /* Radius */
 		};
@@ -47,11 +52,16 @@ void LightManager::init()
 	{
 		ssbo_light_data[frame_idx].init(Buffer::Type::STORAGE, light_data_size, "Light Data Storage Buffer");
 	}
-	update(nullptr);
+	update(1.0f, nullptr);
 }
 
-void LightManager::update(LightData* data)
+void LightManager::update(float dt, LightData* data)
 {
+	if (b_cycle_directional_light)
+	{
+		cycle_directional_light(dt);
+	}
+
 	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
 		size_t directional_light_size = sizeof(DirectionalLight);
@@ -71,5 +81,12 @@ void LightManager::destroy()
 	{
 		ssbo_light_data[frame_idx].destroy();
 	}
+}
+
+void LightManager::cycle_directional_light(float dt)
+{
+	float rot_angle_per_frame = cycle_speed * glm::radians(1.0f) * dt;
+	glm::mat4 rot_mat = glm::rotate(glm::mat4(1.0f), rot_angle_per_frame, glm::vec3(0.0f, 1.0f, 0.0f));
+	light_data.directional_light.direction = rot_mat * light_data.directional_light.direction;
 }
 

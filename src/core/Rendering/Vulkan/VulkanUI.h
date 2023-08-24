@@ -7,6 +7,7 @@
 class Camera;
 struct LightManager;
 struct CascadedShadowRenderer;
+struct VkDescriptorSet_T;
 
 class VulkanUI
 {
@@ -15,9 +16,9 @@ public:
 
 	VulkanUI& Start();
 	VulkanUI& ShowSceneViewportPanel(Camera& scene_camera,
-		size_t texDeferred, size_t texColorId,
-		size_t texNormalId, size_t texDepthId,
-		size_t texNormalMapId, size_t texMetallicRoughnessId);
+		VkDescriptorSet_T* texDeferred, VkDescriptorSet_T* texColorId,
+		VkDescriptorSet_T* texNormalId, VkDescriptorSet_T* texDepthId,
+		VkDescriptorSet_T* texNormalMapId, VkDescriptorSet_T* texMetallicRoughnessId);
 	VulkanUI& ShowMenuBar();
 	VulkanUI& AddHierarchyPanel();
 	VulkanUI& AddInspectorPanel();
