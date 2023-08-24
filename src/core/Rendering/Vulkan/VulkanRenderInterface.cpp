@@ -105,8 +105,8 @@ void VulkanRenderInterface::create_instance()
 	{
 #ifdef ENGINE_DEBUG
 		"VK_LAYER_KHRONOS_validation",
-		"VK_LAYER_LUNARG_monitor"
 #endif // ENGINE_DEBUG
+		"VK_LAYER_LUNARG_monitor"
 	};
 
 	VkInstanceCreateInfo createInfo = {};
@@ -791,7 +791,6 @@ VkPipeline Pipeline::create_compute_pipeline(const Shader& shader, VkPipelineLay
 size_t create_vertex_index_buffer(Buffer& result, const void* vtxData, size_t& vtxBufferSizeInBytes, const void* idxData, size_t& idxBufferSizeInBytes)
 {
 	/* Compute a good alignment */
-	size_t min_alignment = VulkanRenderInterface::device_limits.minStorageBufferOffsetAlignment;
 	size_t total_size_bytes = vtxBufferSizeInBytes + idxBufferSizeInBytes;
 
 	// Staging buffer

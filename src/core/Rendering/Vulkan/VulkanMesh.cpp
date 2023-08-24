@@ -37,9 +37,9 @@ void VulkanMesh::create_from_data(std::span<VertexData> vertices, std::span<unsi
 {
 	m_num_vertices = vertices.size();
 	m_num_indices = indices.size();
-	m_index_buf_size_bytes = indices.size() * sizeof(unsigned int);
-	m_vertex_buf_size_bytes = vertices.size() * sizeof(VertexData);
-
+	m_index_buf_size_bytes  = EngineUtils::round_to(indices.size() * sizeof(unsigned int), VulkanRenderInterface::device_limits.minStorageBufferOffsetAlignment);
+	m_vertex_buf_size_bytes = EngineUtils::round_to(vertices.size() * sizeof(VertexData), VulkanRenderInterface::device_limits.minStorageBufferOffsetAlignment);
+	
 	create_vertex_index_buffer(m_vertex_index_buffer, vertices.data(), m_vertex_buf_size_bytes, indices.data(), m_index_buf_size_bytes);
 }
 

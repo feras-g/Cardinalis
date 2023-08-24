@@ -345,6 +345,7 @@ void Window::Impl::HandleEvents()
 	}
 }
 
+/* Time in seconds */
 double Window::Impl::GetTime() const
 {
 	LARGE_INTEGER now;

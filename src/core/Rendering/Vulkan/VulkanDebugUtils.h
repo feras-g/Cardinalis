@@ -51,3 +51,12 @@ static void set_object_name(VkObjectType obj_type, uint64_t obj_handle, const ch
 	fpSetDebugUtilsObjectNameEXT(context.device, &debug_info);
 #endif // ENGINE_DEBUG
 }
+
+struct EngineUtils
+{
+	static inline size_t round_to(size_t size, size_t alignment)
+	{
+		size_t sz = (size + alignment);
+		return sz - (sz % alignment);
+	}
+};
