@@ -10,7 +10,6 @@ layout(location = 2) in vec4 positionCS;
 layout(location = 3) in vec4 depthCS;
 layout(location = 4) in vec4 positionWS;
 layout(location = 5) in vec3 vertexToEye;
-layout(location = 6) in mat3 TBN;
 
 layout(location = 0) out vec4  gbuffer_base_color;
 layout(location = 1) out vec4  gbuffer_normalWS;
@@ -43,7 +42,7 @@ layout(set = 2, binding = 0) uniform texture2D textures[];
 layout(set = 2, binding = 1) uniform sampler smp_clamp_nearest;
 layout(set = 2, binding = 2) uniform sampler smp_clamp_linear;
 layout(set = 2, binding = 3) uniform sampler smp_repeat_nearest;
-layout(set = 2, binding = 4) uniform sampler smp_repeat_linear;
+layout(set = 2, binding = 4) uniform sampler smp_repeat_vertexToEyelinear;
 
 layout(set = 3, binding = 0) uniform FrameData 
 { 
@@ -69,18 +68,26 @@ void main()
 		vec3 N_map = sample_nearest(material.tex_normal_id, uv.xy).xyz * 2.0 - 1.0;
 		N = perturb_normal(N, N_map, vertexToEye, uv.xy);
     }
-    gbuffer_base_color = vec4(sample_nearest(material.tex_base_color_id, uv.xy).rgba);
+    // if(material.tex_base_color_id != 0)
+    {
+        gbuffer_base_color = vec4(sample_nearest(material.tex_base_color_id, uv.xy).rgba);
+        if(gbuffer_base_color.a < 1) discard;
+    }
+    // else
+    // {
+    //     gbuffer_base_color = vec4(0.27, 0.27, 0.27, 1.0f);
+    // }
     gbuffer_normalWS   = vec4(N, 1.0f);
     gbuffer_depthNDC   = depthCS.z/depthCS.w;
     /* https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#metallic-roughness-material */
     /* Metallic : G, Roughness: B */
 
-    if(material.tex_metallic_roughness_id != 0)
+    // if(material.tex_metallic_roughness_id != 0)
     {
         gbuffer_metallic_roughness = vec4(sample_nearest(material.tex_metallic_roughness_id, uv.xy).bg, material.metallic_factor, material.roughness_factor);
     }
-    else
-    {
-        gbuffer_metallic_roughness = vec4(0, 0, 0, 1);
-    }
+    // else
+    // {
+    //     gbuffer_metallic_roughness = vec4(0, 0.1, 0, 1);
+    // }
 }

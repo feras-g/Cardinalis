@@ -8,7 +8,6 @@ layout(location = 2) out vec4 positionCS;
 layout(location = 3) out vec4 depthCS;
 layout(location = 4) out vec4 positionWS;
 layout(location = 5) out vec3 vertexToEye;
-layout(location = 6) out mat3 TBN;
 
 layout(set = 0, binding = 0) readonly buffer VBO { Vertex data[]; } vbo;
 layout(set = 0, binding = 1) readonly buffer IBO { uint data[]; } ibo;
@@ -41,11 +40,8 @@ void main()
     vec4 positionOS = vec4(v.px, v.py, v.pz, 1.0);
     vec4 normalOS   = vec4(v.nx, v.ny, v.nz, 0.0);
 
-    vec3 tangentWS = normalize(vec3(pushConstant.model * vec4(v.tx, v.ty, v.tz, 0.0)));
     normalWS       = normalize(pushConstant.model * normalOS);
-    vec3 bitangentWS = cross(normalWS.xyz, tangentWS);
 
-    TBN = mat3(tangentWS, bitangentWS, normalWS);
 
     uv.xy = vec2(v.u, v.v);
     positionCS =  frame_data.proj * frame_data.view * pushConstant.model * positionOS;
