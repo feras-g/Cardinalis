@@ -30,13 +30,19 @@ struct LightData
 struct LightManager
 {
 	void init();
-	void update(float dt, LightData* data);
+	void update(float time, float delta_time);
+	void update_ssbo();
 	void destroy();
 
 	/* Cycles directional light direction with time. */
 	bool b_cycle_directional_light = false;
 	float cycle_speed = 1.0f;
-	void cycle_directional_light(float dt);
+	void cycle_directional_light(float delta_time);
+
+	/* Animate point lights */
+	bool b_animate_point_lights = false;
+	void animate_point_lights(float time);
+	float anim_freq = 0.01f;
 
 	LightData light_data;
 	size_t light_data_size;

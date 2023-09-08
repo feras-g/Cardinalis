@@ -42,7 +42,6 @@ void main()
 
     normalWS       = normalize(pushConstant.model * normalOS);
 
-
     uv.xy = vec2(v.u, v.v);
     positionCS =  frame_data.proj * frame_data.view * pushConstant.model * positionOS;
     depthCS.xy = positionCS.zw;

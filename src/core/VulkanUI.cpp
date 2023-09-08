@@ -67,11 +67,8 @@ VulkanUI& VulkanUI::ShowSceneViewportPanel(Camera& scene_camera,
 			default_scene_view_aspect_ratio = curr_aspect_ratio;
 			scene_camera.UpdateAspectRatio(default_scene_view_aspect_ratio);
 		}
-
-		//if (combo_preview_value == "Deferred Output")
-		{
-			ImGui::Image(reinterpret_cast<ImTextureID>(texDeferred), sceneViewPanelSize );
-		}
+		
+		ImGui::Image(reinterpret_cast<ImTextureID>(texDeferred), sceneViewPanelSize);
 	}
 	ImGui::PopStyleVar();
 
@@ -267,32 +264,43 @@ VulkanUI& VulkanUI::ShowLightSettings(LightManager* light_manager)
 		ImGui::SeparatorText("Directional Light");
 		ImGui::DragFloat4("Direction", glm::value_ptr(light_manager->light_data.directional_light.direction), 0.01f);
 		ImGui::DragFloat4("Color",	   glm::value_ptr(light_manager->light_data.directional_light.color), 0.1f);
-		ImGui::Checkbox("Cycle", &light_manager->b_cycle_directional_light);
+		ImGui::DragFloat("Cycle Speed", &light_manager->cycle_speed);
 		ImGui::SameLine();
-		ImGui::DragFloat("Speed", &light_manager->cycle_speed);
+		ImGui::Checkbox("Cycle", &light_manager->b_cycle_directional_light);
+		
 		/* Point Lights */
-		ImGui::SeparatorText("Directional Light");
+		ImGui::SeparatorText("Point Lights");
 		if (ImGui::Button("Add Point Light"))
 		{
 			light_manager->light_data.point_lights.push_back({});
 			light_manager->light_data.num_point_lights++;
 		}
 
-		if (ImGui::DragFloat("Radius", &radius, 0.01f))
+		if (ImGui::DragFloat("Global Radius", &radius, 0.01f))
 		{
 			for (unsigned i = 0; i < light_manager->light_data.num_point_lights; i++)
 			{
 				light_manager->light_data.point_lights[i].radius = radius;
 			}
+			light_manager->update_ssbo();
 		}
 
-		if (ImGui::DragFloat3("Offset", glm::value_ptr(offset), 0.01f))
+		if (ImGui::DragFloat3("Global Offset", glm::value_ptr(offset), 0.01f))
 		{
 			for (unsigned i = 0; i < light_manager->light_data.num_point_lights; i++)
 			{
-				light_manager->light_data.point_lights[i].position.y = offset.y;
+				light_manager->light_data.point_lights[i].position.x += offset.x;
+				light_manager->light_data.point_lights[i].position.y += offset.y;
+				light_manager->light_data.point_lights[i].position.z += offset.z;
 			}
+
+			light_manager->update_ssbo();
+			offset = {};
 		}
+
+		ImGui::Checkbox("Animate", &light_manager->b_animate_point_lights);
+		ImGui::SameLine();
+		ImGui::DragFloat("Animate Speed", &light_manager->anim_freq, 0.01f);
 
 	}
 
@@ -301,7 +309,7 @@ VulkanUI& VulkanUI::ShowLightSettings(LightManager* light_manager)
 	return *this;
 }
 
-VulkanUI& VulkanUI::ShowShadowPanel(CascadedShadowRenderer* shadow_renderer, std::span<size_t> texShadowCascades)
+VulkanUI& VulkanUI::ShowShadowPanel(CascadedShadowRenderer* shadow_renderer, std::span<VkDescriptorSet> texShadowCascades)
 {
 	if (ImGui::Begin("Shadow Settings", 0, 0))
 	{
@@ -312,20 +320,12 @@ VulkanUI& VulkanUI::ShowShadowPanel(CascadedShadowRenderer* shadow_renderer, std
 			shadow_renderer->compute_cascade_splits();
 		}
 
-		float* v[2] { &shadow_renderer->frustum_near, &shadow_renderer->frustum_far };
-		if (ImGui::DragFloat2("Near/Far", v[0], 0.01f))
-		{
-			shadow_renderer->compute_cascade_splits();
-		}
-
-		ImGui::Checkbox("Use Per Cascade Projection", &shadow_renderer->b_use_per_cascade_projection);
-
 		/* Display shadow cascades */
-		for (int i = 0; i < texShadowCascades.size(); i++)
-		{
-			ImGui::Image(reinterpret_cast<ImTextureID>(texShadowCascades[i]), { 256, 256 });
-			ImGui::SameLine();
-		}
+		//for (int i = 0; i < texShadowCascades.size(); i++)
+		//{
+		//	ImGui::Image(reinterpret_cast<ImTextureID>(texShadowCascades[i]), { 256, 256 });
+		//	ImGui::SameLine();
+		//}
 	}
 
 

@@ -9,7 +9,8 @@ struct LightManager;
 struct Texture2D;
 class Camera;
 
-static const uint32_t view_mask = 0b00001111;
+static constexpr uint32_t view_mask = 0b00001111;
+static constexpr int NUM_CASCADES = 4;
 
 struct CascadedShadowRenderer
 {
@@ -17,10 +18,9 @@ struct CascadedShadowRenderer
 	void update_desc_sets();
 	void create_buffers();
 
-	static constexpr int NUM_CASCADES = 4;
 
-	Texture2D m_shadow_maps[NUM_FRAMES];
-	vk::DynamicRenderPass m_CSM_pass[NUM_FRAMES];
+	static inline Texture2D m_shadow_maps[NUM_FRAMES];
+	vk::DynamicRenderPass m_renderpass[NUM_FRAMES];
 	VkDescriptorSetLayout m_descriptor_set_layout;
 	VkDescriptorPool m_descriptor_pool;
 	VkDescriptorSet m_descriptor_set[NUM_FRAMES];
@@ -30,24 +30,26 @@ struct CascadedShadowRenderer
 	/* Orthographic projection matrices for each cascade */
 	float lambda = 0.9f;
 
-	float frustum_near = 16.0f;
-	float frustum_far  = 100.0f;
-
 	struct push_constants
 	{
 		glm::mat4 model;
 	} ps;
 
+	struct CascadesData
+	{
+		glm::mat4 view_proj[NUM_CASCADES];
+		glm::vec4 splits;					
+		glm::uvec4 num_cascades;				
+	} cascades_data;
+
+	static inline Buffer cascades_ssbo[NUM_FRAMES];
+	static inline size_t cascades_ssbo_size_bytes = 0;
+
 	void compute_cascade_splits();
 	void compute_cascade_ortho_proj(size_t current_frame_idx);
 	void render(size_t current_frame_idx, VkCommandBuffer cmd_buffer);
 	void draw_scene(VkCommandBuffer cmd_buffer);
-	static inline Buffer view_proj_mats_ubo[NUM_FRAMES];
-	static inline Buffer cascade_ends_ubo;
 
-	static inline size_t mats_ubo_size_bytes = 0;
-
-	static inline size_t cascade_splits_ubo_size = 0;
 	glm::ivec2 m_shadow_map_size;
 	const LightManager* h_light_manager;
 	Camera* h_camera;

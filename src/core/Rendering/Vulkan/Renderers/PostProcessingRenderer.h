@@ -24,7 +24,7 @@ struct PostFX_Inputs
 
 struct PostFX_Base
 {
-	DescriptorSet descriptor_set = VK_NULL_HANDLE;
+	DescriptorSet descriptor_set;
 	VkPipeline pipeline = VK_NULL_HANDLE;
 	VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
 	ComputeShader shader;
@@ -32,12 +32,16 @@ struct PostFX_Base
 
 struct PostFX_Downsample : PostFX_Base
 {
+	/* Data used by this technique */
+	struct Data
+	{
+		Texture* input_image;
+		Texture* output_image;
+	} m_data;
+
 	void init();
 	void render(VkCommandBuffer_T* cmd_buff);
-	Texture2D* input_image_handle = nullptr;
-	Texture2D output_image;
-	uint32_t width;
-	uint32_t height;
+	void update_data(PostFX_Downsample::Data data);
 };
 
 struct PostFX_SSR : PostFX_Base

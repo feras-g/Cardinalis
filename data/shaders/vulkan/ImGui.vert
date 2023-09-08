@@ -1,21 +1,15 @@
-#version 460
+#version 450 core
+layout(location = 0) in vec2 aPos;
+layout(location = 1) in vec2 aUV;
+layout(location = 2) in vec4 aColor;
+layout(push_constant) uniform uPushConstant { vec2 uScale; vec2 uTranslate; } pc;
 
-layout(location = 0) out vec2 uv;
-layout(location = 1) out vec4 color;
-
-struct ImDrawVert{ float x, y, u, v; uint color; };
-
-layout(binding = 0) uniform  UniformBuffer { mat4   inMtx; } cube_matrices;
-layout(binding = 1) readonly buffer SBO    { ImDrawVert data[]; } sbo;
-layout(binding = 2) readonly buffer IBO    { uint   data[]; } ibo;
+out gl_PerVertex { vec4 gl_Position; };
+layout(location = 0) out struct { vec4 Color; vec2 UV; } Out;
 
 void main()
 {
-	uint idx = ibo.data[gl_VertexIndex] + gl_BaseInstance;
-
-	ImDrawVert v = sbo.data[idx];
-	uv     = vec2(v.u, v.v);
-	color  = pow(unpackUnorm4x8(v.color), vec4(vec3(2.2), 1.0)); 
-	gl_Position = cube_matrices.inMtx * vec4(v.x, v.y, 0.0, 1.0);
+    Out.Color = pow(aColor, vec4(vec3(2.2), 1.0));
+    Out.UV = aUV;
+    gl_Position = vec4(aPos * pc.uScale + pc.uTranslate, 0, 1);
 }
- 

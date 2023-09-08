@@ -8,6 +8,16 @@
 
 const uint32_t num_descriptors = 4;
 
+void DeferredRenderer::reload_shader()
+{
+	vkQueueWaitIdle(context.queue);
+	m_shader_deferred.destroy();
+	m_shader_deferred.create("DeferredLightingPass.vert.spv", "DeferredLightingPass.frag.spv");
+	Pipeline::Flags ppl_flags = Pipeline::NONE;
+	std::array<VkFormat, 1> color_formats = { VulkanRendererBase::tex_deferred_lighting_format };
+	Pipeline::create_graphics_pipeline_dynamic(m_shader_deferred, color_formats, {}, ppl_flags, m_pipeline_layout, &m_gfx_pipeline, VK_CULL_MODE_FRONT_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+}
+
 void DeferredRenderer::init(std::span<Texture2D> g_buffers_shadow_map, const LightManager& light_manager)
 {
 	h_light_manager = &light_manager;
@@ -18,7 +28,7 @@ void DeferredRenderer::init(std::span<Texture2D> g_buffers_shadow_map, const Lig
 
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
-		m_dyn_renderpass[i].add_color_attachment(VulkanRendererBase::m_deferred_lighting_attachment[i].view);
+		m_lighting_pass[i].add_color_attachment(VulkanRendererBase::m_deferred_lighting_attachment[i].view);
 	}
 
 	/* Create shader */
@@ -43,8 +53,7 @@ void DeferredRenderer::init(std::span<Texture2D> g_buffers_shadow_map, const Lig
 	bindings.push_back({ 6, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerRepeatLinear }); /*  Cube map */
 	bindings.push_back({ 7, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &VulkanRendererBase::s_SamplerRepeatLinear }); /*  Irradiance map */
 	bindings.push_back({ 8, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT }); /* Light data */
-	bindings.push_back({ 9, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT }); /* Shadow cascade info */
-	bindings.push_back({ 10, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT });
+	bindings.push_back({ 9, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT }); /* Shadow cascade info */
 
 	m_descriptor_set_layout = create_descriptor_set_layout(bindings);
 
@@ -69,23 +78,12 @@ void DeferredRenderer::init(std::span<Texture2D> g_buffers_shadow_map, const Lig
 	Pipeline::create_graphics_pipeline_dynamic(m_shader_deferred, color_formats, {}, ppl_flags, m_pipeline_layout, &m_gfx_pipeline, VK_CULL_MODE_FRONT_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
 }
 
-void DeferredRenderer::draw_scene(size_t current_backbuffer_idx, VkCommandBuffer cmd_buffer)
+void DeferredRenderer::draw_scene(size_t frame_idx, VkCommandBuffer cmd_buffer)
 {
-	set_viewport_scissor(cmd_buffer, VulkanRendererBase::render_width, VulkanRendererBase::render_height);
 	vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline);
-	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_descriptor_set[current_backbuffer_idx], 0, nullptr);
-	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 1, 1, &VulkanRendererBase::m_framedata_desc_set[current_backbuffer_idx].vk_set, 0, nullptr);
+	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_descriptor_set[frame_idx], 0, nullptr);
+	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 1, 1, VulkanRendererBase::m_framedata_desc_set[frame_idx], 0, nullptr);
 	vkCmdDraw(cmd_buffer, 3, 1, 0, 0);
-}
-
-void DeferredRenderer::create_uniform_buffers()
-{
-
-}
-
-void DeferredRenderer::update(size_t frame_idx)
-{
-	//update_descriptor_set(frame_idx);
 }
 
 void DeferredRenderer::update_descriptor_set(size_t frame_idx)
@@ -100,7 +98,7 @@ void DeferredRenderer::update_descriptor_set(size_t frame_idx)
 	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampNearest, VulkanRendererBase::m_gbuffer_depth[frame_idx].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
 	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampNearest, VulkanRendererBase::m_gbuffer_normal[frame_idx].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }); // TODO : replace with emissive
 	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampNearest, VulkanRendererBase::m_gbuffer_metallic_roughness[frame_idx].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
-	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampNearest, m_g_buffers_shadow_map[frame_idx]->view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampNearest, CascadedShadowRenderer::m_shadow_maps[frame_idx].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
 	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampLinear,  CubemapRenderer::tex_cubemap_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
 	descriptor_image_infos.push_back({ VulkanRendererBase::s_SamplerClampLinear,  CubemapRenderer::tex_irradiance_map_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
 
@@ -115,33 +113,29 @@ void DeferredRenderer::update_descriptor_set(size_t frame_idx)
 	VkDescriptorBufferInfo buffer_write = {};
 	buffer_write.buffer = h_light_manager->ssbo_light_data[frame_idx];
 	buffer_write.offset = 0;
-	buffer_write.range = h_light_manager->light_data_size;
+	buffer_write.range  = h_light_manager->light_data_size;
 	write_descriptor_set.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], (uint32_t)binding++, buffer_write, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
 
 	/* Shadow cascade info */
-	buffer_write.buffer = CascadedShadowRenderer::cascade_ends_ubo;
+	buffer_write = {};
+	buffer_write.buffer = CascadedShadowRenderer::cascades_ssbo[frame_idx];
 	buffer_write.offset = 0;
-	buffer_write.range  = CascadedShadowRenderer::cascade_splits_ubo_size;
-	write_descriptor_set.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], (uint32_t)binding++, buffer_write, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
-
-	buffer_write.buffer = CascadedShadowRenderer::view_proj_mats_ubo[frame_idx];
-	buffer_write.offset = 0;
-	buffer_write.range = CascadedShadowRenderer::mats_ubo_size_bytes;
-	write_descriptor_set.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], (uint32_t)binding++, buffer_write, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
+	buffer_write.range  = CascadedShadowRenderer::cascades_ssbo_size_bytes;
+	write_descriptor_set.push_back(BufferWriteDescriptorSet(m_descriptor_set[frame_idx], (uint32_t)binding++, buffer_write, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER));
 
 	vkUpdateDescriptorSets(context.device, (uint32_t)write_descriptor_set.size(), write_descriptor_set.data(), 0, nullptr);
 }
 
-void DeferredRenderer::render(size_t current_backbuffer_idx, VkCommandBuffer cmd_buffer)
+void DeferredRenderer::render(size_t frame_idx, VkCommandBuffer cmd_buffer)
 {
 	VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Deferred Lighting Pass");
 
-	VulkanRendererBase::m_deferred_lighting_attachment[current_backbuffer_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
-
 	VkRect2D render_area{ .offset {}, .extent { VulkanRendererBase::render_width , VulkanRendererBase::render_height } };
-	m_dyn_renderpass[current_backbuffer_idx].begin(cmd_buffer, render_area);
-	draw_scene(current_backbuffer_idx, cmd_buffer);
-	m_dyn_renderpass[current_backbuffer_idx].end(cmd_buffer);
+	set_viewport_scissor(cmd_buffer, VulkanRendererBase::render_width, VulkanRendererBase::render_height);
 
-	VulkanRendererBase::m_deferred_lighting_attachment[current_backbuffer_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
+	VulkanRendererBase::m_deferred_lighting_attachment[frame_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+	m_lighting_pass[frame_idx].begin(cmd_buffer, render_area);
+	draw_scene(frame_idx, cmd_buffer);
+	m_lighting_pass[frame_idx].end(cmd_buffer);
+	VulkanRendererBase::m_deferred_lighting_attachment[frame_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
 }

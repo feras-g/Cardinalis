@@ -1,3 +1,11 @@
+const uint max_cascades = 4;
+
+struct CascadeData
+{
+    mat4 view_proj[max_cascades];
+    vec4 splits;
+    uvec4 num_cascades;
+};
 
 const mat4 bias_matrix = mat4( 
 	0.5, 0.0, 0.0, 0.0,
@@ -41,18 +49,18 @@ float sample_shadow_map_pcf(vec4 shadow_coord, uint cascade_index, sampler2DArra
 	return acc / 16.0f;
 }
 
-float GetShadowFactor(vec3 ws_position, float vs_depth, vec4 cascade_splits, mat4 cascade_projs[4], sampler2DArray shadow_maps_array)
+float GetShadowFactor(vec3 ws_position, float vs_depth, uint num_cascades, mat4 view_proj[max_cascades], vec4 splits, sampler2DArray shadow_maps_array)
 {
 	uint cascade_index = 0;
-	for(uint i = 0; i < 4 - 1; ++i) 
+	for(uint i = 0; i < num_cascades - 1; ++i) 
     {
-		if(vs_depth <= cascade_splits[i]) 
+		if(vs_depth <= splits[i]) 
         {	
 			cascade_index = i + 1;
 		}
 	}
 
-    vec4 shadow_coord = (bias_matrix * cascade_projs[cascade_index]) * vec4(ws_position, 1.0);
+    vec4 shadow_coord = (bias_matrix * view_proj[cascade_index]) * vec4(ws_position, 1.0);
 	shadow_coord.y = 1-shadow_coord.y;
     //return sample_shadow_map(shadow_coord / shadow_coord.w, vec2(0, 0), cascade_index, shadow_maps_array);
     return sample_shadow_map_pcf(shadow_coord / shadow_coord.w, cascade_index, shadow_maps_array);

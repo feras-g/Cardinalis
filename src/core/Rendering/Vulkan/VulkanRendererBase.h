@@ -56,7 +56,6 @@ public:
 	static inline std::array<Texture2D, NUM_FRAMES> m_gbuffer_albedo;
 	static inline std::array<Texture2D, NUM_FRAMES> m_gbuffer_normal;
 	static inline std::array<Texture2D, NUM_FRAMES> m_gbuffer_depth;
-	static inline std::array<Texture2D, NUM_FRAMES> m_gbuffer_directional_shadow;
 	static inline std::array<Texture2D, NUM_FRAMES> m_gbuffer_metallic_roughness;
 	//static inline std::array<Texture2D, NUM_FRAMES> m_gbuffer_emissive;
 

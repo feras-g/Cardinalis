@@ -77,7 +77,7 @@ Drawable* d_placeholder_cube;
 /* Cubemap rendering */
 void CubemapRenderer::init()
 {
-	init_resources("../../../data/textures/env/pisa.hdr");
+	init_resources("../../../data/textures/env/san_giuseppe_bridge_4k.hdr");
 	init_descriptors();
 
 	pass_render_cubemap.add_color_attachment(cubemap_render_attachment.view);
@@ -337,7 +337,6 @@ void CubemapRenderer::render_skybox(size_t currentImageIdx, VkCommandBuffer cmd_
 
 	vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_skybox_gfx_ppl);
 
-	/* The ith least significant view correpondons to the ith layer */
 	VkRect2D area{ .offset = { } , .extent {.width = VulkanRendererBase::render_width, .height = VulkanRendererBase::render_height } };
 	pass_render_skybox[currentImageIdx].begin(cmd_buffer, area);
 

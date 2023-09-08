@@ -20,7 +20,6 @@ void Texture2D::init(VkFormat format, uint32_t width, uint32_t height, uint32_t 
 	info.width  = width;
 	info.height = height;
 	info.mipLevels = calc_mip ? calc_mip_levels(width, height) : 1;
-	info.mipLevels = 1;
     info.layerCount = layers;
 	info.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     info.debugName = debug_name.data();
@@ -180,18 +179,98 @@ void Texture::destroy()
 
 void Texture::generate_mipmaps()
 {
-    VkCommandBuffer cbuf = begin_temp_cmd_buffer();
 
-	/* Compute shader */
 
-    end_temp_cmd_buffer(cbuf);
+
+
+    //   VkCommandBuffer cbuf = begin_temp_cmd_buffer();
+
+	///* TODO : Compute shader */
+
+    //   end_temp_cmd_buffer(cbuf);
+
+    //VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
+
+    //int32_t mip_height = info.height;
+    //int32_t mip_width = info.width;
+    //for (uint32_t mip_level = 1; mip_level < info.mipLevels; mip_level++)
+    //{
+    //    /* Transition source mip-level */
+    //    uint32_t src_mip_level = mip_level - 1;
+    //    uint32_t dst_mip_level = mip_level;
+    //    VkImageSubresourceRange src_subresouce_range =
+    //    {
+    //        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+    //        .baseMipLevel = mip_level - 1,
+    //        .levelCount = 1,
+    //        .baseArrayLayer = 0,
+    //        .layerCount = 1,
+    //    };
+
+    //    transition(cmd_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_MEMORY_READ_BIT, &src_subresouce_range);
+
+    //    /* Blit from mip level N to N-1 */
+    //    VkImageBlit blit =
+    //    {
+    //        /* source */
+    //        .srcSubresource =
+    //        {
+    //            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+    //            .mipLevel = src_mip_level,
+    //            .baseArrayLayer = 0,
+    //            .layerCount = 1,
+    //        },
+    //        .srcOffsets =   /* bounds of the source region */
+    //        {
+    //            { 0, 0, 0 },
+    //            { mip_width, mip_height, 1 }
+    //        },
+    //        /* destination */
+    //        .dstSubresource =
+    //        {
+    //            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+    //            .mipLevel = dst_mip_level,
+    //            .baseArrayLayer = 0,
+    //            .layerCount = 1,
+    //        },
+    //        .dstOffsets = /* bounds of the destination region */
+    //        {
+    //            { 0, 0, 0 },
+    //            { mip_width > 1 ? mip_width / 2 : 1, mip_height > 1 ? mip_height / 2 : 1, 1 }
+    //        }
+    //    };
+    //    vkCmdBlitImage(cmd_buffer,
+    //        this->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,  /* source */
+    //        this->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,  /* destination */
+    //        1, &blit, VK_FILTER_LINEAR);
+
+    //    /* Transition source to final state */
+    //    transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT , &src_subresouce_range);
+
+    //    /* Prepare for next blit. */
+    //    mip_width = mip_width > 1 ? mip_width / 2 : 1;
+    //    mip_height = mip_height > 1 ? mip_height / 2 : 1;
+    //}
+
+    ///* Transition last mip level */
+    //VkImageSubresourceRange subresouce_range =
+    //{
+    //    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+    //    .baseMipLevel = info.mipLevels - 1,
+    //    .levelCount = 1,
+    //    .baseArrayLayer = 0,
+    //    .layerCount = 1,
+    //};
+    //transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, &subresouce_range);
+
+    //end_temp_cmd_buffer(cmd_buffer);
 }
 
 // Helper to transition images and remember the current layout
 void Texture::transition(VkCommandBuffer cmdBuffer, VkImageLayout new_layout, VkAccessFlags dst_access_mask, VkImageSubresourceRange* subresourceRange)
 {
-	if (new_layout == info.imageLayout)
-		return;
+	//if (new_layout == info.imageLayout)
+	//	return;
     
     VkImageMemoryBarrier barrier =
     {

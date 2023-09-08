@@ -26,15 +26,13 @@ layout(set = 1, binding = 0) uniform ObjectData
 
 layout(push_constant) uniform PushConstants
 {
-    mat4 mat;
-    uint tex_base_color_id;
+    layout(offset = 64) uint tex_base_color_id;
 	uint tex_metallic_roughness_id;
 	uint tex_normal_id;
 	uint tex_emissive_id;
 	vec4 base_color_factor;
 	float metallic_factor;
 	float roughness_factor;
-   
 } material;
 
 /* texture & Samplers */
@@ -82,12 +80,12 @@ void main()
     /* https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#metallic-roughness-material */
     /* Metallic : G, Roughness: B */
 
-    // if(material.tex_metallic_roughness_id != 0)
+    if(material.tex_metallic_roughness_id != 0)
     {
-        gbuffer_metallic_roughness = vec4(sample_nearest(material.tex_metallic_roughness_id, uv.xy).bg, material.metallic_factor, material.roughness_factor);
+        gbuffer_metallic_roughness = vec4(sample_nearest(material.tex_metallic_roughness_id, uv.xy).bg, 1.0, 1.0);
     }
-    // else
-    // {
-    //     gbuffer_metallic_roughness = vec4(0, 0.1, 0, 1);
-    // }
+    else
+    {
+        gbuffer_metallic_roughness = vec4(0, 0.01, 1.0, 1.0);
+    }
 }

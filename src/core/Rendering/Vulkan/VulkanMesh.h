@@ -41,6 +41,9 @@ struct GeometryData
 	std::vector<VertexData> vertices{};
 	std::vector<unsigned int> indices{};
 	std::vector<Primitive>  primitives{};
+	std::vector<glm::vec4> punctual_lights_positions;
+	std::vector<glm::vec4> punctual_lights_colors;
+
 
 	glm::mat4 world_mat = glm::identity<glm::mat4>();
 	glm::vec3 translation;
@@ -49,7 +52,6 @@ struct GeometryData
 
 	glm::vec4 bbox_min_WS {};
 	glm::vec4 bbox_max_WS {};
-
 };
 
 struct Node;

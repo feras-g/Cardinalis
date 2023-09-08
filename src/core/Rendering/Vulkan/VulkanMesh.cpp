@@ -320,6 +320,36 @@ static void process_node(cgltf_node* p_Node, Node* parent, VulkanMesh& model)
 		}
 	}
 
+	static int num = 0;
+	if (p_Node->light)
+	{
+		cgltf_light* light = p_Node->light;
+		
+		if (light->type == cgltf_light_type_point)
+		{
+			model.geometry_data.punctual_lights_positions.push_back
+			(
+				glm::vec4(
+					p_Node->translation[0],
+					p_Node->translation[1],
+					p_Node->translation[2],
+					1.0
+				)
+			);
+			
+			model.geometry_data.punctual_lights_colors.push_back
+			(
+				glm::vec4(
+					light->color[0],
+					light->color[1],
+					light->color[2],
+					1.0
+				)
+			);
+		}
+	}
+	
+
 	if (parent) 
 	{
 		parent->children.push_back(node);

@@ -95,7 +95,6 @@ void VulkanSwapchain::init(VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkF
     for (size_t i = 0; i < tmp.size(); i++)
     {
         std::string name = "Swapchain Image " + std::to_string(i);
-        set_object_name(VK_OBJECT_TYPE_IMAGE, (uint64_t)tmp[i], name.c_str());
     }
 
     /* Swapchain images */

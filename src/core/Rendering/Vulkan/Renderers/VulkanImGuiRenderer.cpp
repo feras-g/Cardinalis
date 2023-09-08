@@ -36,8 +36,8 @@ void VulkanImGuiRenderer::init()
 	imgui_vk_info.QueueFamily = context.gfxQueueFamily;
 	imgui_vk_info.Queue = context.queue;
 	imgui_vk_info.DescriptorPool = m_descriptor_pool;
-	imgui_vk_info.MinImageCount = NUM_FRAMES;
-	imgui_vk_info.ImageCount = NUM_FRAMES;
+	imgui_vk_info.MinImageCount = 2;
+	imgui_vk_info.ImageCount = 2;
 	imgui_vk_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
 	imgui_vk_info.UseDynamicRendering = true;    // Need to explicitly enable VK_KHR_dynamic_rendering extension to use this, even for Vulkan 1.3.
@@ -50,7 +50,7 @@ void VulkanImGuiRenderer::init()
 	end_temp_cmd_buffer(cbuf);
 
 	/* Add textures that will be used by ImGui */
-	for (size_t frame_idx = 0; frame_idx < 2; frame_idx++)
+	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
 		m_DeferredRendererOutputTextureId[frame_idx] = ImGui_ImplVulkan_AddTexture(VulkanRendererBase::s_SamplerClampNearest, VulkanRendererBase::m_deferred_lighting_attachment[frame_idx].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		m_ModelRendererColorTextureId[frame_idx] = ImGui_ImplVulkan_AddTexture(VulkanRendererBase::s_SamplerClampLinear, VulkanRendererBase::m_gbuffer_albedo[frame_idx].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);

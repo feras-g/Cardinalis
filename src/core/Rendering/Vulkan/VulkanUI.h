@@ -27,7 +27,7 @@ public:
 	VulkanUI& ShowCameraSettings(Camera* camera);
 	VulkanUI& ShowInspector();
 	VulkanUI& ShowLightSettings(LightManager* light_manager);
-	VulkanUI& ShowShadowPanel(CascadedShadowRenderer* shadow_renderer, std::span<size_t> texShadowCascades);
+	VulkanUI& ShowShadowPanel(CascadedShadowRenderer* shadow_renderer, std::span<VkDescriptorSet_T*> texShadowCascades);
 	void End();
 
 	bool is_scene_viewport_hovered = false;

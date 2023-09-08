@@ -4,6 +4,9 @@
 #include "Rendering/Vulkan/VulkanRenderInterface.h"
 #include "Rendering/Vulkan/VulkanRendererBase.h"
 
+/* 
+	Generic descriptor set for post-processing.
+*/
 static void create_descriptor_set_compute_shader(DescriptorSet& descriptor_set)
 {
 	/* Create default descriptor set */
@@ -61,33 +64,13 @@ static Texture2D create_test_texture()
 	return texture;
 }
 
+/*
+	Create the pipeline objects for the downsample.
+*/
 void PostFX_Downsample::init()
 {
+	/* Descriptor set */
 	create_descriptor_set_compute_shader(descriptor_set);
-
-	Texture2D input_image = create_test_texture();// VulkanRendererBase::m_deferred_lighting_attachment[0];
-	input_image_handle = &input_image;
-	width  = input_image.info.width;
-	height = input_image.info.height;
-
-	input_image_handle->transition_immediate(VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_MEMORY_READ_BIT);
-
-	shader.create("Downsample.comp.spv");
-	output_image.init(VK_FORMAT_R8G8B8A8_UNORM, width / 2, height / 2, 1, false, "PostFX_Downsample Ouput Storage Image");
-	output_image.create(context.device, VK_IMAGE_USAGE_STORAGE_BIT);
-	output_image.create_view(context.device, ImageViewTexture2D);
-
-	output_image.transition_immediate(VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_MEMORY_WRITE_BIT);
-
-	VkDescriptorImageInfo input_image_desc_info = { VK_NULL_HANDLE, input_image.view,  VK_IMAGE_LAYOUT_GENERAL  };
-	VkDescriptorImageInfo ouput_image_desc_info = { VK_NULL_HANDLE, output_image.view, VK_IMAGE_LAYOUT_GENERAL  };
-
-	std::vector<VkWriteDescriptorSet> write_descriptor_set 
-	{
-		ImageWriteDescriptorSet(descriptor_set, 0, &input_image_desc_info, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE),
-		ImageWriteDescriptorSet(descriptor_set, 1, &ouput_image_desc_info, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
-	};
-	vkUpdateDescriptorSets(context.device, (uint32_t)write_descriptor_set.size(), write_descriptor_set.data(), 0, nullptr);
 
 	/* Pipeline layout */
 	pipeline_layout = create_pipeline_layout(context.device, descriptor_set.layout, {});
@@ -96,11 +79,32 @@ void PostFX_Downsample::init()
 	pipeline = Pipeline::create_compute_pipeline(shader, pipeline_layout);
 }
 
+/*
+	Link the descriptors to actual data.
+*/
+void PostFX_Downsample::update_data(PostFX_Downsample::Data data)
+{
+	m_data = data;
+
+	VkDescriptorImageInfo input_image_desc_info = { VK_NULL_HANDLE, m_data.input_image->view,  VK_IMAGE_LAYOUT_GENERAL };
+	VkDescriptorImageInfo ouput_image_desc_info = { VK_NULL_HANDLE, m_data.output_image->view, VK_IMAGE_LAYOUT_GENERAL };
+
+	std::vector<VkWriteDescriptorSet> write_descriptor_set
+	{
+		ImageWriteDescriptorSet(descriptor_set, 0, &input_image_desc_info, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE),
+		ImageWriteDescriptorSet(descriptor_set, 1, &ouput_image_desc_info, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
+	};
+	vkUpdateDescriptorSets(context.device, (uint32_t)write_descriptor_set.size(), write_descriptor_set.data(), 0, nullptr);
+}
+
+/*
+	Perform the compute pass.
+*/
 void PostFX_Downsample::render(VkCommandBuffer_T* cmd_buff)
 {
 	static int workgroup_dim = 8;
-	static int num_threads_X = width / 2;
-	static int num_threads_Y = height / 2;
+	int num_threads_X = m_data.input_image->info.width  / 2;
+	int num_threads_Y = m_data.input_image->info.height / 2;
 
 	static int dispatch_size_x = num_threads_X / workgroup_dim;
 	static int dispatch_size_y = num_threads_Y / workgroup_dim;

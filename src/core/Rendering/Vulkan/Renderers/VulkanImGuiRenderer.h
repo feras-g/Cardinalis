@@ -31,7 +31,7 @@ public:
 	std::array<VkDescriptorSet, NUM_FRAMES> m_ModelRendererMetallicRoughnessTextureId;
 	std::array<VkDescriptorSet, NUM_FRAMES> m_DeferredRendererOutputTextureId;
 
-	std::array<std::array<size_t, 4>, NUM_FRAMES> m_ShadowCascadesTextureIds;
+	std::array<std::array<VkDescriptorSet, 4>, NUM_FRAMES> m_CascadedShadowRenderer_Textures;
 
 	void destroy();
 private:

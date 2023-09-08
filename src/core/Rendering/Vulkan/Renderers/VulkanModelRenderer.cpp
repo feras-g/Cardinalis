@@ -41,7 +41,7 @@ VulkanModelRenderer::VulkanModelRenderer()
 		{
 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
 			.offset = 0,
-			.size = sizeof(glm::mat4)
+			.size   = sizeof(glm::mat4)
 		},
 		{
 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -66,7 +66,7 @@ VulkanModelRenderer::VulkanModelRenderer()
 		m_dyn_renderpass[i].add_depth_attachment(VulkanRendererBase::m_gbuffer_depth[i].view);
 	}
 
-	Pipeline::Flags ppl_flags = Pipeline::Flags::ENABLE_DEPTH_STATE | Pipeline::Flags::ENABLE_ALPHA_BLENDING;
+	Pipeline::Flags ppl_flags = Pipeline::Flags::ENABLE_DEPTH_STATE ;
 	std::array<VkFormat, 3> color_attachment_formats
 	{
 		VulkanRendererBase::tex_base_color_format,
@@ -88,12 +88,12 @@ void VulkanModelRenderer::render(size_t currentImageIdx, VkCommandBuffer cmd_buf
 
 	VkRect2D render_area{ .offset {}, .extent { VulkanRendererBase::render_width , VulkanRendererBase::render_height } };
 	set_viewport_scissor(cmd_buffer, VulkanRendererBase::render_width, VulkanRendererBase::render_height, true);
-	m_dyn_renderpass[currentImageIdx].begin(cmd_buffer, render_area);
 
 	vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline);
 
 	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ppl_layout, 2, 1, &m_pass_descriptor_set, 0, nullptr);
 	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ppl_layout, 3, 1, &VulkanRendererBase::m_framedata_desc_set[currentImageIdx].vk_set, 0, nullptr);
+	m_dyn_renderpass[currentImageIdx].begin(cmd_buffer, render_area);
 
 	for (size_t i = 0; i < RenderObjectManager::drawables.size(); i++)
 	{
