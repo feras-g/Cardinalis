@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Rendering/Vulkan/VulkanRendererBase.h"
-#include "Rendering/Vulkan/RenderPass.h"
-#include "Rendering/Vulkan/VulkanShader.h"
-#include "Rendering/Vulkan/Renderers/ShadowRenderer.h"
+#include "core/rendering/vulkan/VulkanRendererBase.h"
+#include "core/rendering/vulkan/RenderPass.h"
+#include "core/rendering/vulkan/VulkanShader.h"
+#include "core/rendering/vulkan/Renderers/ShadowRenderer.h"
 
 #include "../imgui/imgui.h"
 #include "../imgui/backends/imgui_impl_win32.h"

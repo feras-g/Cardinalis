@@ -1,6 +1,6 @@
 #include "RenderPass.h"
-#include "Rendering/Vulkan/VulkanTools.h"
-#include "Rendering/Vulkan/VulkanRenderInterface.h"
+#include "core/rendering/vulkan/VulkanTools.h"
+#include "core/rendering/vulkan/VulkanRenderInterface.h"
 
 using namespace vk;
 

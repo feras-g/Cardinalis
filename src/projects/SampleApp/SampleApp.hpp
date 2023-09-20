@@ -1,27 +1,27 @@
 #ifndef SAMPLE_APP_H
 #define SAMPLE_APP_H
 
-#include "Core/Application.h"
-#include "Window/Window.h"
-#include "Rendering/Vulkan/VulkanRenderInterface.h"
-#include "Rendering/Vulkan/VulkanShader.h"
+#include "core/engine/Application.h"
+#include "core/engine/Window.h"
+#include "core/rendering/vulkan/VulkanRenderInterface.h"
+#include "core/rendering/vulkan/VulkanShader.h"
 
-#include "Rendering/Vulkan/VulkanUI.h"
-#include "Rendering/Camera.h"
-#include "Rendering/FrameCounter.h"
-#include "Rendering/LightManager.h"
+#include "core/rendering/vulkan/VulkanUI.h"
+#include "core/rendering/Camera.h"
+#include "core/rendering/FrameCounter.h"
+#include "core/rendering/vulkan/LightManager.h"
 
-#include "Rendering/Vulkan/Renderers/VulkanImGuiRenderer.h"
-#include "Rendering/Vulkan/Renderers/VulkanModelRenderer.h"
-#include "Rendering/Vulkan/Renderers/DeferredRenderer.h"
-#include "Rendering/Vulkan/Renderers/ShadowRenderer.h"
-#include "Rendering/Vulkan/Renderers/CubemapRenderer.h"
-#include "Rendering/Vulkan/Renderers/PostProcessingRenderer.h"
+#include "core/rendering/vulkan/Renderers/VulkanImGuiRenderer.h"
+#include "core/rendering/vulkan/Renderers/VulkanModelRenderer.h"
+#include "core/rendering/vulkan/Renderers/DeferredRenderer.h"
+#include "core/rendering/vulkan/Renderers/ShadowRenderer.h"
+#include "core/rendering/vulkan/Renderers/CubemapRenderer.h"
+#include "core/rendering/vulkan/Renderers/PostProcessingRenderer.h"
 
 class SampleApp final : public Application
 {
 public:
-	SampleApp() : Application("SampleApp", 1280, 720)
+	SampleApp() : Application("SampleApp", 2560, 1440)
 	{
 
 	}
@@ -31,7 +31,7 @@ public:
 	void LoadMesh(std::string_view path, std::string_view name);
 	void AddDrawable(std::string_view mesh_name, DrawFlag flags,
 	                 glm::vec3 position = {0,0,0}, glm::vec3 rotation = {0,0,0}, glm::vec3 scale = {1,1,1});
-	void Update(float dt) override;
+	void Update(float t, float dt) override;
 	void Render() override;
 	void UpdateRenderersData(float dt, size_t currentImageIdx) override;
 	void Terminate() override;
@@ -60,7 +60,7 @@ protected:
 void SampleApp::InitSceneResources()
 {
 	CameraController fpsController = CameraController( { 10, 1, 0 }, { 0, -90, 0 }, { 0, 0, 1 }, { 0, -1, 0 });
-	m_camera = Camera(fpsController, 45.0f, 1.0f, 0.25f, 250.0f);
+	m_camera = Camera(fpsController, 45.0f, 1.0f, 0.5f, 250.0f);
 
 	m_object_manager.init();
 
@@ -68,7 +68,7 @@ void SampleApp::InitSceneResources()
 	{
 		VulkanMesh mesh;
 		mesh.create_from_file("../../../data/models/basic/unit_cube.glb");
-		uint32_t id = m_object_manager.add_mesh(mesh, "cube");
+		uint32_t id = (uint32_t)m_object_manager.add_mesh(mesh, "cube");
 		m_object_manager.add_drawable(id, "skybox",			  DrawFlag::NONE);
 		m_object_manager.add_drawable(id, "placeholder_cube", DrawFlag::NONE);
 	}
@@ -76,16 +76,20 @@ void SampleApp::InitSceneResources()
 	LoadMesh("../../../data/models/basic/unit_plane.glb", "Plane");
 	LoadMesh("../../../data/models/basic/column_5m.glb",  "Column");
 	LoadMesh("../../../data/models/basic/unit_sphere.glb", "Sphere");
+	LoadMesh("../../../data/models/test/metalroughspheres/MetalRoughSpheres.gltf", "MetalRoughSpheres");
+
 	//LoadMesh("../../../data/models/scenes/Powerplant_GLTF/powerplant.gltf", "Powerplant");
+	//LoadMesh("../../../data/models/scenes/bistro_lit/bistro_lights.gltf", "Bistro");
 	//LoadMesh("../../../data/models/scenes/sponza-gltf-pbr/sponza.glb", "Sponza");
-	LoadMesh("../../../data/models/scenes/tree/scene.gltf", "Tree");
+	//LoadMesh("../../../data/models/scenes/tree/scene.gltf", "Tree");
+	//LoadMesh("../../../data/models/scenes/subway/scene.gltf", "Subway");
 
 
 	//LoadMesh("../../../data/models/test/metalroughspheres/MetalRoughSpheres.gltf", "MetalRoughSpheres");
-	//LoadMesh("../../../data/models/basic/duck/duck.gltf", "ColladaDuck");
-	
-	//AddDrawable("Sponza", true, { 0, 0, 0 }, { 0, 0, 0 }, { 0.10f, 0.10f, 0.10f });
-	//AddDrawable("Powerplant", true, { 0, 0, 0 }, { 0, 0, 0 }, { 0.10f, 0.10f, 0.10f });
+	LoadMesh("../../../data/models/basic/duck/duck.gltf", "ColladaDuck");
+	//LoadMesh("../../../data/models/scenes/book/scene.gltf", "Book");
+	//LoadMesh("../../../data/models/scenes/building/scene.gltf", "Building");
+
 
 	//glm::ivec3 dimensions(1,1,20);
 	//float spacing = 20;
@@ -96,41 +100,68 @@ void SampleApp::InitSceneResources()
 	//		for (int z = 0; z < dimensions.z; z++)
 	//		{
 	//			glm::vec3 position{ x, y, z };
-	//			AddDrawable("Column", true, position * spacing, { 0, 0, 0 }, { 1.0f, 1.0f, 1.0f });
+	//			AddDrawable("Column", DrawFlag::VISIBLE | DrawFlag::CAST_SHADOW, position * spacing, { 0, 0, 0 }, { 1.0f, 1.0f, 1.0f });
 	//		}
 	//	}
 	//}
 
-	AddDrawable("Sphere", DrawFlag::VISIBLE | DrawFlag::CAST_SHADOW, {0, 0, 0}, {0, 0, 0}, {1, 1, 1});
+	//AddDrawable("Powerplant", DrawFlag::VISIBLE | DrawFlag::CAST_SHADOW, { 0, 0, 0 }, { 0, 0, 0 }, { 0.10f, 0.10f, 0.10f });
+	AddDrawable("Sphere", DrawFlag::VISIBLE | DrawFlag::CAST_SHADOW, {0, 5, 0}, {0, 0, 0}, {1, 1, 1});
 	AddDrawable("Floor",  DrawFlag::VISIBLE | DrawFlag::CAST_SHADOW, { 0, -5, 0 }, { 0, 0, 0 }, { 100.0f, 1.0f, 100.0f });
-	AddDrawable("Tree", DrawFlag::VISIBLE | DrawFlag::CAST_SHADOW, { 0, 0, 0 }, { 0, 0, 0 }, { 1,1,1 });
+	AddDrawable("MetalRoughSpheres", DrawFlag::VISIBLE | DrawFlag::CAST_SHADOW, { 0, 0, 0 }, { 0, 0, 0 }, { 1, 1, 1 });
+	AddDrawable("ColladaDuck", DrawFlag::VISIBLE | DrawFlag::CAST_SHADOW, { 0, 0, 0 }, { 0, 0, 0 }, { 1,1,1 });
+	//AddDrawable("Sponza", DrawFlag::VISIBLE | DrawFlag::CAST_SHADOW, { 0, 0, 0 }, { 0, 0, 0 }, { 1.0f, 1.0f, 1.0f });
+	//AddDrawable("Book", DrawFlag::VISIBLE | DrawFlag::CAST_SHADOW, { 0, 0, 0 }, { 0, 0, 0 }, { 1.0f, 1.0f, 1.0f });
+	//AddDrawable("Building", DrawFlag::VISIBLE | DrawFlag::CAST_SHADOW, { 0, 0, 0 }, { 0, 0, 0 }, { 1.0f, 1.0f, 1.0f });
+
+
+	//AddDrawable("Bistro", DrawFlag::VISIBLE | DrawFlag::CAST_SHADOW, { 0, 0, 0 }, { 0, 0, 0 }, { 1.0f, 1.0f, 1.0f });
+	//AddDrawable("Subway", DrawFlag::VISIBLE | DrawFlag::CAST_SHADOW, { 0, 0, 0 }, { 0, 0, 0 }, { 1.0f, 1.0f, 1.0f });
+	
+	//AddDrawable("Tree", DrawFlag::VISIBLE | DrawFlag::CAST_SHADOW, { 0, 0, 0 }, { 0, 0, 0 }, { 1,1,1 });
 
 	m_object_manager.configure();
+
+
+	/* Temp: add manually point lights */
+	//VulkanMesh* bistro = m_object_manager.get_mesh("Bistro");
+	//for (int i=0; i < bistro->geometry_data.punctual_lights_positions.size(); i++)
+	//{
+	//	m_light_manager.light_data.point_lights.push_back
+	//	(
+	//		{
+	//			bistro->geometry_data.punctual_lights_positions[i],
+	//			bistro->geometry_data.punctual_lights_colors[i],
+	//			1.0
+	//		}
+	//	);
+	//}
+	
 }
 
 inline void SampleApp::LoadMesh(std::string_view path, std::string_view name)
 {
 	VulkanMesh mesh;
 	mesh.create_from_file(path.data());
-	uint32_t id = m_object_manager.add_mesh(mesh, name.data());
+	uint32_t id = (uint32_t)m_object_manager.add_mesh(mesh, name.data());
 }
 
 
 inline void SampleApp::AddDrawable(std::string_view mesh_name, DrawFlag flags, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale)
 {
-	std::string drawable_name("Drawable" + std::to_string(m_object_manager.drawables.size()) + "_" + mesh_name.data());
+	std::string drawable_name(mesh_name.data());
 	m_object_manager.add_drawable(mesh_name, drawable_name, flags, position, rotation, scale);
 }
 
 void SampleApp::Initialize()
 {
 	InitSceneResources();
-
 	m_light_manager.init();
+
 	m_model_renderer.reset(new VulkanModelRenderer);
 	m_imgui_renderer.reset(new VulkanImGuiRenderer(context));
 	
-	m_cascaded_shadow_renderer.init(1024, 1024, m_camera, m_light_manager);
+	m_cascaded_shadow_renderer.init(2048, 2048, m_camera, m_light_manager);
 	m_cubemap_renderer.init(); //!\ Before deferred renderer
 
 	m_deferred_renderer.init(
@@ -139,25 +170,34 @@ void SampleApp::Initialize()
 	);
 
 	m_imgui_renderer->init();
-	m_postprocess.init();
-	m_postprocess.m_postfx_downsample.init();
+	//m_postprocess.init();
+	//m_postprocess.m_postfx_downsample.init();
 }
 
-void SampleApp::Update(float dt)
+void SampleApp::Update(float t, float dt)
 {
 	// Update keyboard, mouse interaction
 	m_Window->UpdateGUI();
 
-	if (EngineGetAsyncKeyState(Key::Z))     m_camera.controller.m_movement = m_camera.controller.m_movement | Movement::FORWARD;
-	if (EngineGetAsyncKeyState(Key::Q))     m_camera.controller.m_movement = m_camera.controller.m_movement | Movement::LEFT;
-	if (EngineGetAsyncKeyState(Key::S))     m_camera.controller.m_movement = m_camera.controller.m_movement | Movement::BACKWARD;
-	if (EngineGetAsyncKeyState(Key::D))     m_camera.controller.m_movement = m_camera.controller.m_movement | Movement::RIGHT;
-	if (EngineGetAsyncKeyState(Key::SPACE)) m_camera.controller.m_movement = m_camera.controller.m_movement | Movement::UP;
-	if (EngineGetAsyncKeyState(Key::LSHIFT)) m_camera.controller.m_movement = m_camera.controller.m_movement | Movement::DOWN;
+	if (m_Window->is_in_focus())
+	{
+		if (EngineGetAsyncKeyState(Key::Z))     m_camera.controller.m_movement = m_camera.controller.m_movement | Movement::FORWARD;
+		if (EngineGetAsyncKeyState(Key::Q))     m_camera.controller.m_movement = m_camera.controller.m_movement | Movement::LEFT;
+		if (EngineGetAsyncKeyState(Key::S))     m_camera.controller.m_movement = m_camera.controller.m_movement | Movement::BACKWARD;
+		if (EngineGetAsyncKeyState(Key::D))     m_camera.controller.m_movement = m_camera.controller.m_movement | Movement::RIGHT;
+		if (EngineGetAsyncKeyState(Key::SPACE)) m_camera.controller.m_movement = m_camera.controller.m_movement | Movement::UP;
+		if (EngineGetAsyncKeyState(Key::LSHIFT)) m_camera.controller.m_movement = m_camera.controller.m_movement | Movement::DOWN;
+	}
 
-	m_light_manager.update(nullptr);
-	
+	m_light_manager.update(t, dt);
+
 	UpdateRenderersData(dt, context.curr_frame_idx);
+
+	// TODO : Remove temporary reload shader thingy
+	if (EngineGetAsyncKeyState(Key::R))
+	{
+		m_deferred_renderer.reload_shader();
+	}
 }
 
 void SampleApp::Render()
@@ -171,7 +211,7 @@ void SampleApp::Render()
 	// PRE-RENDER
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	VK_CHECK(vkWaitForFences(context.device, 1, &current_frame.fence_queue_submitted, true, OneSecondInNanoSeconds));
+	VK_CHECK(vkWaitForFences(context.device, 1, &current_frame.fence_queue_submitted, true, 1000000000ull));
 	VK_CHECK(vkResetFences(context.device, 1, &current_frame.fence_queue_submitted));
 
 	uint32_t swapchain_buffer_idx = 0;
@@ -182,20 +222,17 @@ void SampleApp::Render()
 	VK_CHECK(vkBeginCommandBuffer(current_frame.cmd_buffer, &cmdBufferBeginInfo));
 	
 	/* Transition to color attachment */
-	swapchain.color_attachments[frame_idx].transition(current_frame.cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+	swapchain.color_attachments[swapchain_buffer_idx].transition(current_frame.cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 	
-	{
-		m_model_renderer->render(frame_idx, current_frame.cmd_buffer);
-		m_cascaded_shadow_renderer.render(frame_idx, current_frame.cmd_buffer);
-		m_deferred_renderer.render(frame_idx, current_frame.cmd_buffer);
-		//m_postprocess.m_postfx_downsample.render(current_frame.cmd_buffer);
-		m_cubemap_renderer.render_skybox(frame_idx, current_frame.cmd_buffer);
-		m_imgui_renderer->render(frame_idx, current_frame.cmd_buffer);
-	}
+	m_model_renderer->render(frame_idx, current_frame.cmd_buffer);
+	m_cascaded_shadow_renderer.render(frame_idx, current_frame.cmd_buffer);
+	m_deferred_renderer.render(frame_idx, current_frame.cmd_buffer);
+	//m_postprocess.m_postfx_downsample.render(current_frame.cmd_buffer);
+	m_cubemap_renderer.render_skybox(frame_idx, current_frame.cmd_buffer);
+	m_imgui_renderer->render(frame_idx, current_frame.cmd_buffer);
 	
 	/* Transition to present */
-	swapchain.color_attachments[frame_idx].transition(current_frame.cmd_buffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_ACCESS_NONE);
-	
+	swapchain.color_attachments[swapchain_buffer_idx].transition(current_frame.cmd_buffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_ACCESS_NONE);
 	VK_CHECK(vkEndCommandBuffer(current_frame.cmd_buffer));
 
 	// Submit commands for the GPU to work on the current backbuffer
@@ -213,20 +250,20 @@ void SampleApp::Render()
 		.signalSemaphoreCount = 1,
 		.pSignalSemaphores = &current_frame.smp_queue_submitted
 	};
+
 	vkQueueSubmit(context.queue, 1, &submit_info, current_frame.fence_queue_submitted);
 
 	// Present work
 	// Waits for the GPU queue to finish execution before presenting, we wait on renderComplete semaphore
-
 	VkPresentInfoKHR present_info = {};
-	{
-		present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-		present_info.waitSemaphoreCount = 1;
-		present_info.pWaitSemaphores = &current_frame.smp_queue_submitted;
-		present_info.swapchainCount = 1;
-		present_info.pSwapchains = &swapchain.swapchain;
-		present_info.pImageIndices = &swapchain_buffer_idx;
-	}
+	
+	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	present_info.waitSemaphoreCount = 1;
+	present_info.pWaitSemaphores = &current_frame.smp_queue_submitted;
+	present_info.swapchainCount = 1;
+	present_info.pSwapchains = &swapchain.swapchain;
+	present_info.pImageIndices = &swapchain_buffer_idx;
+	
 
 	vkQueuePresentKHR(context.queue, &present_info);
 
@@ -260,7 +297,6 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 	/* Update drawables */
 	m_object_manager.update_per_object_data(frame_data);
 
-	m_deferred_renderer.update(currentImageIdx);
 	m_model_renderer->update(currentImageIdx, frame_data);
 
 	// ImGui composition
@@ -268,7 +304,7 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 		m_ui.Start();
 		//m_UI.AddHierarchyPanel();
 		//m_UI.ShowMenuBar();
-		//m_UI.AddInspectorPanel();
+		m_ui.AddInspectorPanel();
 		m_ui.ShowStatistics(m_DebugName, dt, context.frame_count);
 		m_ui.ShowSceneViewportPanel(m_camera,
 			m_imgui_renderer->m_DeferredRendererOutputTextureId[currentImageIdx],
@@ -278,17 +314,16 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 			m_imgui_renderer->m_ModelRendererNormalMapTextureId[currentImageIdx],
 			m_imgui_renderer->m_ModelRendererMetallicRoughnessTextureId[currentImageIdx]
 		);
-		//m_UI.ShowFrameTimeGraph(FrameStats::History.data(), FrameStats::History.size());
 		m_ui.ShowCameraSettings(&m_camera);
 		m_ui.ShowInspector();
 		m_ui.ShowLightSettings(&m_light_manager);
-		m_ui.ShowShadowPanel(&m_cascaded_shadow_renderer, m_imgui_renderer->m_ShadowCascadesTextureIds[currentImageIdx]);
+		m_ui.ShowShadowPanel(&m_cascaded_shadow_renderer, m_imgui_renderer->m_CascadedShadowRenderer_Textures[currentImageIdx]);
 		m_ui.End();
 	}
 
-	{
-		m_imgui_renderer->update_buffers(ImGui::GetDrawData());
-	}
+	//{
+	//	m_imgui_renderer->update_buffers(ImGui::GetDrawData());
+	//}
 
 	/* Temp */
 	//m_rbo.get_drawable("frustum")->transform.model  = glm::inverse(m_light_manager.proj * m_light_manager.view);
@@ -299,7 +334,7 @@ inline void SampleApp::UpdateRenderersData(float dt, size_t currentImageIdx)
 inline void SampleApp::OnWindowResize()
 {
 	context.swapchain->Reinitialize();
-	m_imgui_renderer->UpdateAttachments();
+	m_imgui_renderer->update_render_pass_attachments();
 }
 
 inline void SampleApp::OnLeftMouseButtonUp()
@@ -342,6 +377,8 @@ inline void SampleApp::OnKeyEvent(KeyEvent event)
 
 inline void SampleApp::Terminate()
 {
+	vkDeviceWaitIdle(context.device);
+	m_imgui_renderer->destroy();
 	m_Window->ShutdownGUI();
 }
 

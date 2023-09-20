@@ -1,6 +1,6 @@
 #include "Camera.h"
 
-#include "Core/EngineLogger.h"
+#include "core/engine/EngineLogger.h"
 
 #include <glm/gtx/rotate_vector.hpp>
 

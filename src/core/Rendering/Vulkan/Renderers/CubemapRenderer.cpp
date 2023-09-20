@@ -1,6 +1,6 @@
 #include "CubemapRenderer.h"
-#include "Rendering/Vulkan/VulkanRendererBase.h"
-#include "Rendering/Vulkan/DescriptorSet.h"
+#include "core/rendering/vulkan/VulkanRendererBase.h"
+#include "core/rendering/vulkan/DescriptorSet.h"
 #include "DeferredRenderer.h"
 
 #include <glm/gtx/string_cast.hpp>

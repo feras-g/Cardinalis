@@ -1,8 +1,8 @@
 #include "PostProcessingRenderer.h"
-#include "Rendering/Vulkan/VulkanShader.h"
-#include "Rendering/Vulkan/VulkanTexture.h"
-#include "Rendering/Vulkan/VulkanRenderInterface.h"
-#include "Rendering/Vulkan/VulkanRendererBase.h"
+#include "core/rendering/vulkan/VulkanShader.h"
+#include "core/rendering/vulkan/VulkanTexture.h"
+#include "core/rendering/vulkan/VulkanRenderInterface.h"
+#include "core/rendering/vulkan/VulkanRendererBase.h"
 
 /* 
 	Generic descriptor set for post-processing.

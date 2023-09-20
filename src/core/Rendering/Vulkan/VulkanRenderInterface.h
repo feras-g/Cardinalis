@@ -11,13 +11,13 @@
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vk_enum_string_helper.h>
 
-#include "Core/EngineLogger.h"
-#include "Rendering/Vulkan/VulkanResources.h"
-#include "Rendering/Vulkan/VulkanSwapchain.h"
-#include "Rendering/Vulkan/VulkanTexture.h"
-#include "Rendering/Vulkan/VulkanTools.h"
-#include "Rendering/Vulkan/VulkanFrame.hpp"
-#include "Rendering/Vulkan/VulkanShader.h"
+#include "core/engine/EngineLogger.h"
+#include "core/rendering/vulkan/VulkanResources.h"
+#include "core/rendering/vulkan/VulkanSwapchain.h"
+#include "core/rendering/vulkan/VulkanTexture.h"
+#include "core/rendering/vulkan/VulkanTools.h"
+#include "core/rendering/vulkan/VulkanFrame.hpp"
+#include "core/rendering/vulkan/VulkanShader.h"
 
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>

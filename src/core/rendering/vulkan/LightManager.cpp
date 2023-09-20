@@ -1,5 +1,5 @@
 #include "LightManager.h"
-#include "Vulkan/VulkanRenderInterface.h"
+#include "core/rendering/vulkan/VulkanRenderInterface.h"
 #include <random>
 
 void LightManager::init()

@@ -16,11 +16,22 @@ Image::Image(void* imdata, bool b_is_float)
     }
 }
 
-Image::Image(void* data, int _w, int _h, int _n, bool b_is_float) : Image(data, b_is_float)
+Image::Image(void* data, int _w, int _h, bool b_is_float) : Image(data, b_is_float)
 {
     w = _w;
     h = _h;
-    n = _n;
+}
+
+void* Image::get_data() const
+{
+    if (is_float)
+    {
+        return float_data;
+    }
+    else
+    {
+        return uchar_data;
+    }
 }
 
 Image load_image_from_file(std::string_view filename)
@@ -33,33 +44,31 @@ Image load_image_from_file(std::string_view filename)
     {
         float* data = stbi_loadf(filename.data(), &w, &h, &n, 4);
         assert(data);
-        return Image{ data, w, h, n, true };
+        return Image{ data, w, h,true };
     }
     else
     {
         unsigned char* data = stbi_load(filename.data(), &w, &h, &n, 4);
         assert(data);
-        return Image{ data, w, h, n, false };
+        return Image{ data, w, h, false };
     }
-}
-
-uint32_t FindMemoryType(VkPhysicalDevice physDevice, uint32_t memoryTypeBits, VkMemoryPropertyFlags memoryProperties)
-{
-    VkPhysicalDeviceMemoryProperties deviceMemProperties;
-    vkGetPhysicalDeviceMemoryProperties(physDevice, &deviceMemProperties);
-
-    for (uint32_t i = 0; i < deviceMemProperties.memoryTypeCount; i++)
-    {
-        if ((memoryTypeBits & (1 << i) && (deviceMemProperties.memoryTypes[i].propertyFlags & memoryProperties) == memoryProperties))
-        {
-            return i;
-        }
-    }
-
-    return 0;
 }
 
 std::string_view get_extension(std::string_view filename)
 {
     return filename.substr(filename.find_last_of('.') + 1);
+}
+
+Image::~Image()
+{
+	if (uchar_data)
+	{
+		delete uchar_data;
+		uchar_data = nullptr;
+	}
+	if (float_data)
+	{
+		delete float_data;
+		float_data = nullptr;
+	}
 }

@@ -1,6 +1,6 @@
 #include "VulkanMesh.h"
-#include "Rendering/Vulkan/VulkanRenderInterface.h"
-#include "Rendering/Vulkan/VulkanRendererBase.h"
+#include "core/rendering/vulkan/VulkanRenderInterface.h"
+#include "core/rendering/vulkan/VulkanRendererBase.h"
 #include "VulkanTools.h"
 
 #include "glm/gtx/euler_angles.hpp"

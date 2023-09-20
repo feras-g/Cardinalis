@@ -2,7 +2,7 @@
 #include "VulkanTools.h"
 #include "VulkanRenderInterface.h"
 #include "VulkanDebugUtils.h"
-#include "Rendering/VkResourceManager.h"
+#include "core/rendering/vulkan/VkResourceManager.h"
 
 
 void Buffer::init(Type buffer_type, size_t size, const char* name)
@@ -86,7 +86,7 @@ void Buffer::create_vk_buffer_impl(size_t size, VkBufferUsageFlags usage, VkMemo
 	VkMemoryAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	allocInfo.allocationSize = memRequirements.size;
-	allocInfo.memoryTypeIndex = FindMemoryType(context.physical_device, memRequirements.memoryTypeBits, memProperties);
+	allocInfo.memoryTypeIndex = EngineUtils::FindMemoryType(context.physical_device, memRequirements.memoryTypeBits, memProperties);
 	VK_CHECK(vkAllocateMemory(context.device, &allocInfo, nullptr, &vk_device_memory));
 
 	VK_CHECK(vkBindBufferMemory(context.device, vk_buffer, vk_device_memory, 0));

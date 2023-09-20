@@ -1,12 +1,12 @@
 #include "Window.h"
-#include "Core/EngineLogger.h"
+#include "core/engine/EngineLogger.h"
 
 ///// Window Implementation
 #if defined(_WIN32)	
 
 #include <Windowsx.h>
 #include <ShellScalingApi.h>
-#include "Core/Application.h"
+#include "core/engine/Application.h"
 #include "backends/imgui_impl_win32.h"
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 

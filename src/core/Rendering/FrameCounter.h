@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Windows.h>
-#include "Core/EngineLogger.h"
+#include "core/engine/EngineLogger.h"
 #include <array>
 
 class Timestep

@@ -1,10 +1,10 @@
-#include "Rendering/Vulkan/Renderers/DeferredRenderer.h"
-#include "Rendering/Vulkan/Renderers/VulkanModelRenderer.h"
-#include "Rendering/Vulkan/Renderers/CubemapRenderer.h"
-#include "Rendering/Vulkan/Renderers/ShadowRenderer.h"
-#include "Rendering/Vulkan/VulkanRendererBase.h"
-#include "Rendering/Vulkan/VulkanDebugUtils.h"
-#include "Rendering/Vulkan/VulkanRenderInterface.h"
+#include "core/rendering/vulkan/Renderers/DeferredRenderer.h"
+#include "core/rendering/vulkan/Renderers/VulkanModelRenderer.h"
+#include "core/rendering/vulkan/Renderers/CubemapRenderer.h"
+#include "core/rendering/vulkan/Renderers/ShadowRenderer.h"
+#include "core/rendering/vulkan/VulkanRendererBase.h"
+#include "core/rendering/vulkan/VulkanDebugUtils.h"
+#include "core/rendering/vulkan/VulkanRenderInterface.h"
 
 const uint32_t num_descriptors = 4;
 

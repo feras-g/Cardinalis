@@ -1,8 +1,8 @@
 #include "VulkanRenderInterface.h"
 #include "VulkanRendererBase.h"
-#include "Rendering/VkResourceManager.h"
+#include "core/rendering/vulkan/VkResourceManager.h"
 
-#include "Window/Window.h"
+#include "core/engine/Window.h"
 
 #include <vector>
 
@@ -143,7 +143,7 @@ void VulkanRenderInterface::create_device()
 		vkGetPhysicalDeviceProperties(physical_devices[i], &device_props);
 		VulkanRenderInterface::device_limits = device_props.limits;
 		LOG_DEBUG("{0} {1} {2}. Driver version = {3}. API Version = {4}.{5}.{6}", 
-			string_VkPhysicalDeviceType(device_props.deviceType), device_props.deviceName, device_props.deviceID, device_props.driverVersion,
+			vk_object_to_string(device_props.deviceType), device_props.deviceName, device_props.deviceID, device_props.driverVersion,
 			VK_VERSION_MAJOR(device_props.apiVersion), VK_VERSION_MINOR(device_props.apiVersion), VK_VERSION_PATCH(device_props.apiVersion));
 	}
 
@@ -374,7 +374,7 @@ void end_temp_cmd_buffer(VkCommandBuffer cmd_buffer)
 	VK_CHECK(vkQueueSubmit(context.queue, 1, &submit_info, submit_fence));
 
 	/* Destroy temporary command buffers */
-	vkWaitForFences(context.device, 1, &submit_fence, VK_TRUE, OneSecondInNanoSeconds);
+	vkWaitForFences(context.device, 1, &submit_fence, VK_TRUE, 1000000000ull);
 
 	vkFreeCommandBuffers(context.device, context.temp_cmd_pool, 1, &cmd_buffer);
 	vkDestroyFence(context.device, submit_fence, nullptr);

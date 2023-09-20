@@ -1,5 +1,5 @@
 #include "VkResourceManager.h"
-#include "Core/EngineLogger.h"
+#include "core/engine/EngineLogger.h"
 
 VkResourceManager* VkResourceManager::s_instance;
 

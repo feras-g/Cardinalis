@@ -4,9 +4,9 @@
 #include <string_view>
 #include <unordered_map>
 
-#include <Rendering/Vulkan/VulkanRenderInterface.h>
-#include <Rendering/Vulkan/RenderPass.h>
-#include <Rendering/Vulkan/VulkanMesh.h>
+#include <core/rendering/vulkan/VulkanRenderInterface.h>
+#include <core/rendering/vulkan/RenderPass.h>
+#include <core/rendering/vulkan/VulkanMesh.h>
 #include "DescriptorSet.h"
 
 class VulkanRendererBase

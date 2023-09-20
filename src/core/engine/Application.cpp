@@ -1,13 +1,13 @@
 #include "Application.h"
-#include "Window/Window.h"
+#include "core/engine/Window.h"
 #include <iostream>
-#include "Core/EngineLogger.h"
-#include "Rendering/Vulkan/VulkanRenderInterface.h"
-#include "Rendering/Vulkan/VulkanFrame.hpp"
-#include "Rendering/Vulkan/VulkanRendererBase.h"
-#include "Rendering/Vulkan/Renderers/VulkanImGuiRenderer.h"
-#include "Rendering/Vulkan/Renderers/VulkanModelRenderer.h"
-#include "Rendering/FrameCounter.h"
+#include "core/engine/EngineLogger.h"
+#include "core/rendering/vulkan/VulkanRenderInterface.h"
+#include "core/rendering/vulkan/VulkanFrame.hpp"
+#include "core/rendering/vulkan/VulkanRendererBase.h"
+#include "core/rendering/vulkan/Renderers/VulkanImGuiRenderer.h"
+#include "core/rendering/vulkan/Renderers/VulkanModelRenderer.h"
+#include "core/rendering/FrameCounter.h"
 
 Application::Application(const char* title, uint32_t width, uint32_t height) : bInitSuccess(false), m_DebugName(title)
 {

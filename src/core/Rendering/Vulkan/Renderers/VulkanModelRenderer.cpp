@@ -1,5 +1,5 @@
 #include "VulkanModelRenderer.h"
-#include "Rendering/Vulkan/VulkanDebugUtils.h"
+#include "core/rendering/vulkan/VulkanDebugUtils.h"
 
 #include <glm/mat4x4.hpp>
 

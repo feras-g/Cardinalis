@@ -1,8 +1,8 @@
 #include "VulkanTexture.h"
 
-#include "Rendering/Vulkan/VulkanTools.h"
-#include "Rendering/Vulkan/VulkanDebugUtils.h"
-#include "Rendering/VkResourceManager.h"
+#include "core/rendering/vulkan/VulkanTools.h"
+#include "core/rendering/vulkan/VulkanDebugUtils.h"
+#include "core/rendering/vulkan/VkResourceManager.h"
 
 static VkAccessFlags get_src_access_mask(VkImageLayout layout);
 
@@ -114,7 +114,7 @@ void Texture::create_vk_image(VkDevice device, bool isCubemap, VkImageUsageFlags
     {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize = imageMemReq.size,
-        .memoryTypeIndex = FindMemoryType(context.physical_device, imageMemReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+        .memoryTypeIndex = EngineUtils::FindMemoryType(context.physical_device, imageMemReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
     };
     
     VK_CHECK(vkAllocateMemory(device, &allocInfo, nullptr, &deviceMemory));

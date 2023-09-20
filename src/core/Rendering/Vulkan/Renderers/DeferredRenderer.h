@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Rendering/Vulkan/RenderPass.h"
-#include "Rendering/Vulkan/VulkanMesh.h"
-#include "Rendering/LightManager.h"
+#include "core/rendering/vulkan/RenderPass.h"
+#include "core/rendering/vulkan/VulkanMesh.h"
+#include "core/rendering/vulkan/LightManager.h"
 
 struct DeferredRenderer
 { 

@@ -1,6 +1,6 @@
 #pragma once
-#include "Vulkan/VulkanResources.h"
-#include "Vulkan/VulkanRenderInterface.h"
+#include "core/rendering/vulkan/VulkanResources.h"
+#include "core/rendering/vulkan/VulkanRenderInterface.h"
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>

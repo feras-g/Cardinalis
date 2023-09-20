@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.hpp>
 #include <string_view>
 
-struct Image;
+class Image;
 
 struct TextureInfo
 {

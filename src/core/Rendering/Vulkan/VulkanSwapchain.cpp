@@ -32,7 +32,7 @@ VulkanSwapchain::VulkanSwapchain(VkSurfaceKHR surface, VkPhysicalDevice physical
     std::vector<VkPresentModeKHR> presentModes(presentModeCount);
 	VK_CHECK(fpGetPhysicalDeviceSurfacePresentModesKHR(hPhysicalDevice, hSurface, &presentModeCount, presentModes.data()));
 	info.presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
-    LOG_WARN("Current present mode : {0}", string_VkPresentModeKHR(info.presentMode));
+    LOG_WARN("Current present mode : {0}", vk_object_to_string(info.presentMode));
 }
 
 void VulkanSwapchain::init(VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkFormat depthStencilFormat)
@@ -139,7 +139,7 @@ void VulkanSwapchain::Destroy()
 
 VkResult VulkanSwapchain::AcquireNextImage(VkSemaphore imageAcquiredSmp, uint32_t* pBackbufferIndex) const
 {
-    return fpAcquireNextImageKHR(context.device, swapchain, OneSecondInNanoSeconds, imageAcquiredSmp, VK_NULL_HANDLE, pBackbufferIndex);
+    return fpAcquireNextImageKHR(context.device, swapchain, 1000000000ull, imageAcquiredSmp, VK_NULL_HANDLE, pBackbufferIndex);
 }
 
 void VulkanSwapchain::Present(VkCommandBuffer cmdBuffer, VkQueue queue, uint32_t imageIndices)

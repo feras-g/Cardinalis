@@ -1,9 +1,9 @@
 #include "ShadowRenderer.h"
-#include "Rendering/LightManager.h"
-#include "Rendering/Vulkan/VulkanMesh.h"
-#include "Rendering/Vulkan/VulkanRendererBase.h"
-#include "Rendering/Vulkan/VulkanDebugUtils.h"
-#include "Rendering/Camera.h"
+#include "core/rendering/vulkan/LightManager.h"
+#include "core/rendering/vulkan/VulkanMesh.h"
+#include "core/rendering/vulkan/VulkanRendererBase.h"
+#include "core/rendering/vulkan/VulkanDebugUtils.h"
+#include "core/rendering/Camera.h"
 
 static constexpr VkFormat shadow_map_format = VK_FORMAT_D32_SFLOAT;
 

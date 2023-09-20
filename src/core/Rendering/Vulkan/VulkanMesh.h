@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vulkan/vulkan.hpp> 
-#include "Rendering/Vulkan/VulkanResources.h"
+#include "core/rendering/vulkan/VulkanResources.h"
 
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>

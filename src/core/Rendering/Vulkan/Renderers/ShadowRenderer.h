@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Rendering/Vulkan/RenderPass.h"
-#include "Rendering/Vulkan/VulkanRenderInterface.h"
+#include "core/rendering/vulkan/RenderPass.h"
+#include "core/rendering/vulkan/VulkanRenderInterface.h"
 #include <span>
 
 struct Drawable;

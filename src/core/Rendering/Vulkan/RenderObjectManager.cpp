@@ -13,7 +13,7 @@ void ObjectManager::add_mesh(const VulkanMesh& mesh, std::string_view mesh_name,
 	add_instance(mesh_name, data, "BaseInstance");
 }
 
-void ObjectManager::add_instance(std::string_view mesh_name, InstanceData data, std::string_view name)
+void ObjectManager::add_instance(std::string_view mesh_name, InstanceData data, std::string_view instance_name)
 {
 	if (m_mesh_id_from_name.contains(mesh_name.data()))
 	{

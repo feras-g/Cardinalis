@@ -1,7 +1,7 @@
 #include "VulkanShader.h"
-
-#include "Core/EngineLogger.h"
-#include "Rendering/VkResourceManager.h"
+#include "VulkanDebugUtils.h"
+#include "core/engine/EngineLogger.h"
+#include "core/rendering/vulkan/VkResourceManager.h"
 #include "VulkanRenderInterface.h"
 
 static constexpr uint32_t SPIRV_FOURCC = 0x07230203;
@@ -68,7 +68,7 @@ bool Shader::create_shader_module(const VkShaderStageFlagBits stage, const char*
 	/* Add to resource manager */
 	module_hash = VkResourceManager::get_instance(context.device)->add_shader_module(out_module);
 
-	LOG_INFO("{1} : Created {0} module successfully.", string_VkShaderStageFlagBits(stage), filename);
+	LOG_INFO("{1} : Created {0} module successfully.", vk_object_to_string(stage), filename);
 
 	delete [] bytecode;
 

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Rendering/Vulkan/VulkanRendererBase.h"
-#include "Rendering/Vulkan/VulkanMesh.h"
-#include "Rendering/Vulkan/VulkanShader.h"
-#include "Rendering/Vulkan/RenderPass.h"
-#include "Rendering/LightManager.h"
+#include "core/rendering/vulkan/VulkanRendererBase.h"
+#include "core/rendering/vulkan/VulkanMesh.h"
+#include "core/rendering/vulkan/VulkanShader.h"
+#include "core/rendering/vulkan/RenderPass.h"
+#include "core/rendering/vulkan/LightManager.h"
 
 class VulkanModelRenderer 
 {

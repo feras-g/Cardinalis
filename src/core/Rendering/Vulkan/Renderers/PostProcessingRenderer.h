@@ -1,6 +1,6 @@
-#include "Rendering/Vulkan/VulkanShader.h"
-#include "Rendering/Vulkan/VulkanTexture.h"
-#include "Rendering/Vulkan/DescriptorSet.h"
+#include "core/rendering/vulkan/VulkanShader.h"
+#include "core/rendering/vulkan/VulkanTexture.h"
+#include "core/rendering/vulkan/DescriptorSet.h"
 
 
 struct Texture2D;
