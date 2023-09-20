@@ -1,13 +1,12 @@
 -- https://premake.github.io/docs/Tokens/
 
-project("CoreLib") 
+project("corelib") 
 	kind "StaticLib"
 	language "C++"
 	cppdialect "C++20"
 
 	project_path = engine_root .. "src/core/"
 	lib_dir = engine_root .. "src/thirdparty/"
-	rendering_path = project_path .. "Rendering/"
 
 	lib_list = {
 		os.getenv("VULKAN_SDK") .. "/Lib",
@@ -16,29 +15,26 @@ project("CoreLib")
 	location(project_path)
 
 	files { 
-		project_path .. "**.h", project_path .. "**.cpp", engine_root .. "data/**"
+		project_path .. "**.h", 
+		project_path .. "**.cpp", 
+		engine_root .. "data/**",
 	}
 
 	vpaths { 
-		["Rendering/Vulkan/*"] = { rendering_path .. "Vulkan/*" }, 
-		["Window/*"] = { project_path .. "Window/*" }, 
-		["Core"] = { project_path .. "Core/*" }, 
-		["Assets/*"] = { engine_root .. "data/*" } 
+		["core"] = { project_path .. "/*" }, 
+		["data/*"] = { engine_root .. "data/*" },
 	}
 
 	includedirs {
-		project_path,
+		engine_root .. "src",
 		lib_dir .. "glm",
 		lib_dir .. "stb",
 		lib_dir .. "optick/include",
 		lib_dir .. "spdlog",
 		lib_dir .. "imgui",
-		--lib_dir .. "assimp/include",
 		lib_dir .. "cgltf",
 		os.getenv("VULKAN_SDK") .. "/Include"
 	}
-	
-	
 	
 	targetdir	(engine_root .. "build/bin/" .. outputdir )
 	objdir		(engine_root .. "build/obj/" .. outputdir )

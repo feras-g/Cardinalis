@@ -8,19 +8,15 @@ workspace "Cardinalis"
 	outputdir = "%{cfg.buildcfg}-%{prj.name}-%{cfg.system}-%{cfg.architecture}" -- ex: Debug-Windows-x64
 
 
--- Generate projects based on a list of scripts
-	scripts = 
-	{
-		--"assimp-lib.lua",
-		"imgui-lib.lua",
-		"core.lua",
-		"projects.lua"
-	}
+-- Generate projects from scripts
+	group "Core"
+		include(premake_dir .. "imgui-lib.lua")
+		include(premake_dir .. "core.lua")
+	group "" -- end of "Core"
 
-	for i, script in ipairs(scripts) do
-		include(premake_dir .. script)
-	end
-
+	group "Projects"
+		include(premake_dir .. "projects.lua")
+	group "" -- end of "Projects"
 ------------------------------------------------------------------------------
 
 -- Clean Function --

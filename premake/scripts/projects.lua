@@ -2,16 +2,17 @@
 
 projects = 
 {
-	"SampleApp"
+	"SampleApp",
+	"PBR"
 }
 
 -- Generate projects 
-
 for i, name in ipairs(projects) do
 	project(name) 
-		lib_dir = engine_root .. "src/thirdparty/"
-		core_dir = engine_root .. "src/core/"
-		project_dir  = engine_root .. "src/projects/" .. name .. "/"
+		src_dir = engine_root .. "src/"
+		lib_dir = src_dir .. "thirdparty/"
+		core_dir = src_dir .. "core/"
+		project_dir  = src_dir .. "projects/" .. name .. "/"
 		
 		location (project_dir)
 		kind "ConsoleApp"
@@ -34,6 +35,7 @@ for i, name in ipairs(projects) do
 
 
 		includedirs {
+			src_dir,
 			core_dir,
 			project_dir,
 			lib_dir .. "glm",
@@ -45,7 +47,7 @@ for i, name in ipairs(projects) do
 
 		links
 		{
-			"CoreLib"
+			"corelib"
 		}
 
 		filter "system:windows"
@@ -63,7 +65,6 @@ for i, name in ipairs(projects) do
 			optimize "on"
 			defines { "RELEASE" }
 end
-
 ------------------------------------------------------------------------------
 
 -- Clean Function --
