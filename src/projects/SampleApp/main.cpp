@@ -1,10 +1,9 @@
-#include "engine/Application.h"
-
 #include "SampleApp.hpp"
+#include "engine/Application.h"
 
 int main(int argc, char* argv[])
 {
-	SampleApp app;
-	app.Run();
-	return 0;
+    SampleApp app;
+    app.run();
+    return 0;
 }

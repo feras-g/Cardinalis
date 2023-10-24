@@ -46,6 +46,9 @@ struct VulkanContext
 	VkQueue	   queue			= VK_NULL_HANDLE;
 	VkCommandPool frames_cmd_pool = VK_NULL_HANDLE;
 	VkCommandPool temp_cmd_pool	= VK_NULL_HANDLE;
+
+	VulkanFrame& get_current_frame() { return frames[curr_frame_idx]; }
+
 	std::unique_ptr<VulkanSwapchain> swapchain;
 
 	uint32_t frame_count= 0;
@@ -56,10 +59,10 @@ struct VulkanContext
 };
 extern VulkanContext context;
 
-class VulkanRenderInterface
+class RenderInterface
 {
 public:
-	VulkanRenderInterface(const char* name, int maj, int min, int patch);
+	RenderInterface(const char* name, int maj, int min, int patch);
 
 	void initialize();
 	void terminate();
@@ -124,7 +127,7 @@ bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, VkRenderPass* out
 bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const VulkanSwapchain* swapchain, VkFramebuffer* out_Framebuffers, bool useDepth);
 bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colorAttachments, const Texture2D* depthAttachments, VkFramebuffer* out_Framebuffers, bool useDepth);
 
-VkDescriptorPool create_descriptor_pool(uint32_t num_ssbo, uint32_t num_ubo, uint32_t num_combined_img_smp, uint32_t num_dynamic_ubo, uint32_t num_storage_image, uint32_t max_sets = NUM_FRAMES);
+VkDescriptorPool create_descriptor_pool(VkDescriptorPoolCreateFlags flags, uint32_t num_ssbo, uint32_t num_ubo, uint32_t num_combined_img_smp, uint32_t num_dynamic_ubo, uint32_t num_storage_image, uint32_t max_sets = NUM_FRAMES);
 VkDescriptorPool create_descriptor_pool(std::span<VkDescriptorPoolSize> pool_sizes, uint32_t max_sets);
 
 struct Pipeline
@@ -137,14 +140,50 @@ struct Pipeline
 		DISABLE_VTX_INPUT_STATE = 1 << 3
 	};
 
+	struct Layout
+	{
+		operator VkPipelineLayout() { return vk_pipeline_layout; }
 
+		void add_push_constant_range(const std::string& name, VkPushConstantRange range)
+		{
+			ranges[name] = range;
+			push_constant_ranges.push_back(range);
+		}
 
-	static bool create_graphics_pipeline_dynamic(const VertexFragmentShader& shader, std::span<VkFormat> colorAttachmentFormats, VkFormat depthAttachmentFormat, Flags flags, VkPipelineLayout pipelineLayout,
-		VkPipeline* out_GraphicsPipeline, VkCullModeFlags cullMode, VkFrontFace frontFace, glm::vec2 customViewport = {}, uint32_t viewMask = 0);
-	static bool create_graphics_pipeline(const VertexFragmentShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPipeline* out_GraphicsPipeline,
-		VkCullModeFlags cullMode, VkFrontFace frontFace, VkPipelineRenderingCreateInfoKHR* dynamic_pipeline_create = nullptr, glm::vec2 customViewport = {});
+		void cmd_push_constants(VkCommandBuffer cmd_buffer, std::string_view push_constant_range_name, const void* p_values)
+		{
+			if (ranges.contains(push_constant_range_name.data()))
+			{
+				VkPushConstantRange& range = ranges.at(push_constant_range_name.data());
+				vkCmdPushConstants(cmd_buffer, vk_pipeline_layout, range.stageFlags, range.offset, range.size, p_values);
+			}
+		}
 
-	static VkPipeline create_compute_pipeline(const Shader& shader, VkPipelineLayout pipeline_layout);
+		void create(std::span<VkDescriptorSetLayout> set_layouts)
+		{
+			VkPipelineLayoutCreateInfo pipeline_layout_info = {};
+			pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+			pipeline_layout_info.setLayoutCount = (uint32_t)set_layouts.size();
+			pipeline_layout_info.pSetLayouts = set_layouts.data();
+			pipeline_layout_info.pPushConstantRanges = push_constant_ranges.empty() ? nullptr : push_constant_ranges.data();
+			pipeline_layout_info.pushConstantRangeCount = (uint32_t)push_constant_ranges.size();
+
+			vkCreatePipelineLayout(context.device, &pipeline_layout_info, nullptr, &vk_pipeline_layout);
+		}
+
+		std::unordered_map<std::string, VkPushConstantRange> ranges;
+		std::vector<VkPushConstantRange> push_constant_ranges;
+
+		VkPipelineLayout vk_pipeline_layout = VK_NULL_HANDLE;
+	} layout;
+
+	VkPipeline pipeline;
+
+	void create_graphics_pipeline_dynamic(const VertexFragmentShader& shader, std::span<VkFormat> color_formats, VkFormat depth_format, Flags flags, VkPipelineLayout pipeline_layout,
+		VkPrimitiveTopology topology, VkCullModeFlags cull_mode, VkFrontFace front_face, uint32_t view_mask = 0);
+	void create_graphics_pipeline(const VertexFragmentShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPrimitiveTopology topology,
+		VkCullModeFlags cullMode, VkFrontFace frontFace, VkPipelineRenderingCreateInfoKHR* dynamic_pipeline_create);
+	void create_compute_pipeline(const Shader& shader);
 };
 
 static Pipeline::Flags operator|(Pipeline::Flags a, Pipeline::Flags b)
@@ -158,8 +197,8 @@ static Pipeline::Flags operator|(Pipeline::Flags a, Pipeline::Flags b)
 size_t create_vertex_index_buffer(Buffer& result, const void* vtxData, size_t& vtxBufferSizeInBytes, const void* idxData, size_t& idxBufferSizeInBytes);
 
 VkPipelineShaderStageCreateInfo PipelineShaderStageCreateInfo(VkShaderModule shaderModule, VkShaderStageFlagBits shaderStage, const char* entryPoint);
-VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptor_set, uint32_t binding, VkDescriptorBufferInfo desc_info, VkDescriptorType desc_type);
-VkWriteDescriptorSet ImageWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, const VkDescriptorImageInfo* imageInfo, VkDescriptorType type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptor_set, uint32_t binding, const VkDescriptorBufferInfo& desc_info, VkDescriptorType desc_type);
+VkWriteDescriptorSet ImageWriteDescriptorSet(VkDescriptorSet& descriptorSet, uint32_t bindingIndex, const VkDescriptorImageInfo& imageInfo, VkDescriptorType type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, uint32_t array_offset = 0, uint32_t descriptor_count = 1);
 
 void create_sampler(VkDevice device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode, VkSampler& out_Sampler);
 void BeginRenderpass(VkCommandBuffer cmdBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer, VkRect2D renderArea, const VkClearValue* clearValues, uint32_t clearValueCount);
@@ -170,6 +209,6 @@ void set_viewport_scissor(VkCommandBuffer cmdBuffer, uint32_t width, uint32_t he
 VkPipelineLayout create_pipeline_layout(VkDevice device, std::span<VkDescriptorSetLayout> descSetLayout, std::span<VkPushConstantRange> push_constant_ranges = {});
 VkPipelineLayout create_pipeline_layout(VkDevice device, VkDescriptorSetLayout descSetLayout, std::span<VkPushConstantRange> push_constant_ranges );
 
-VkDescriptorSetLayout create_descriptor_set_layout(std::span<VkDescriptorSetLayoutBinding> layout_bindings);
+VkDescriptorSetLayout create_descriptor_set_layout(std::span<VkDescriptorSetLayoutBinding> layout_bindings, VkDescriptorSetLayoutBindingFlagsCreateInfoEXT bindings_flags = {});
 
 VkDescriptorSet create_descriptor_set(VkDescriptorPool pool, VkDescriptorSetLayout layout);

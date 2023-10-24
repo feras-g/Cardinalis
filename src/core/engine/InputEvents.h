@@ -1,8 +1,8 @@
 #pragma once
 
 #include <string>
+#include <glm/vec2.hpp>
 
-// States
 enum class Key
 {
 	NONE = 0,
@@ -17,28 +17,6 @@ enum class Key
 	RIGHT = 1 << 8,
 	SPACE = 1 << 9,
 	LSHIFT = 1 << 10
-};
-
-static std::string keyToString(Key key)
-{
-	std::string out;
-
-	switch (key)
-	{
-		case Key::Z: { out += 'Z'; } break;
-		case Key::S: { out += 'S'; } break;
-		case Key::Q: { out += 'Q'; } break;
-		case Key::D: { out += 'D'; } break;
-		case Key::R: { out += 'R'; } break;
-		case Key::UP: { out += "ARROW_UP"; } break;
-		case Key::DOWN: { out += "ARROW_DOWN"; } break;
-		case Key::LEFT: { out += "ARROW_LEFT"; } break;
-		case Key::RIGHT: { out += "ARROW_RIGHT"; } break;
-		case Key::LSHIFT: { out += "LEFT_SHIFT"; } break;
-		default: out += "Unknown"; 
-	}
-
-	return out;
 };
 
 static int keyToWindows(Key key)
@@ -63,23 +41,63 @@ static int keyToWindows(Key key)
 }
 
 
-inline Key operator|(Key a, Key b)
+static Key operator|(Key a, Key b)
 {
 	return static_cast<Key>(static_cast<int>(a) | static_cast<int>(b));
 }
 
+static Key operator&(Key a, Key b)
+{
+	return static_cast<Key>(static_cast<int>(a) & static_cast<int>(b));
+}
+
+static bool operator==(Key a, Key b)
+{
+	return static_cast<int>(a) == static_cast<int>(b);
+}
+
+static Key operator~(Key a)
+{
+	return static_cast<Key>(static_cast<int>(a));
+}
+
+class Window;
+
 struct MouseEvent
 {
 	int px, py;
-	int lastClickPosX;
-	int lastClickPosY;
+	int last_click_px;
+	int last_click_py;
 
-	bool bFirstClick = false;
-	bool bLeftClick = false;
+	bool b_first_lmb_click = false;
+	bool b_lmb_click  = false;
 };
 
 struct KeyEvent
 {
+	void append(Key other) { key = key | other; };
+	void remove(Key other) { key = key & ~other; };
+	bool contains(Key other) const { return (key & other) == other; };
+	bool is_key_pressed_async(Key key) const;
+	std::string to_string();
+
 	Key key = Key::NONE;
 	bool pressed = false;
+
+	Window const* h_window;
 };
+
+
+class EventManager
+{
+public:
+	EventManager(Window const* window_handle) : h_window(window_handle) { key_event.h_window = window_handle; }
+
+	MouseEvent mouse_event;
+	KeyEvent key_event;
+
+protected:
+	Window const* h_window;
+};
+
+

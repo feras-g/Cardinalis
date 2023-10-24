@@ -99,3 +99,14 @@ vec3 BRDF(vec3 n, vec3 v, vec3 l, vec3 h, vec3 light_color, vec3 irradiance, vec
 
     return (diffuse + specular) * light_color * NoL;
 }
+
+
+vec3 BlinnPhong(vec3 n, vec3 v, vec3 l, vec3 h, vec3 light_color, vec3 base_color)
+{
+    float NoL = clamp(dot(n, l), 1e-5, 1.0);
+    float NoH = clamp(dot(n, h), 1e-5, 1.0);
+
+    vec3 diffuse =  Diffuse_Lambert(base_color);
+
+    return diffuse * light_color * NoL;
+}

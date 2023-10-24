@@ -7,32 +7,31 @@ struct Texture2D;
 
 struct VulkanSwapchainInfo
 {
-	uint32_t imageCount;
+	uint32_t image_count;
+	uint32_t width;
+	uint32_t height;
 	VkFormat color_format;
 	VkFormat depth_format;
-	VkColorSpaceKHR colorSpace;
-	VkExtent2D extent;
-	VkPresentModeKHR presentMode;
+	VkColorSpaceKHR color_space;
+	VkPresentModeKHR present_mode;
 };
 
 class VulkanSwapchain
 {
 public:
 	VulkanSwapchain() = default;
-	VulkanSwapchain(VkSurfaceKHR surface, VkPhysicalDevice physDevice);
+	VulkanSwapchain(VkSurfaceKHR surface);
 	void init(VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkFormat depthStencilFormat);
-	void Reinitialize();
+	void reinitialize();
+	void destroy();
 
-	// Reset metadata and destroy images and framebuffers
-	void Destroy();
-	VkResult AcquireNextImage(VkSemaphore imageAcquiredSmp, uint32_t* pImageIndex) const;
-	void Present(VkCommandBuffer cmdBuffer, VkQueue queue, uint32_t imageIndices);
+	uint32_t current_backbuffer_idx = 0;
 
-	inline VkSwapchainKHR Get() const;
+	VkResult acquire_next_image(VkSemaphore imageAcquiredSmp);
+	void present(VkCommandBuffer cmdBuffer, VkQueue queue, uint32_t imageIndices);
 	
-	VkPhysicalDevice hPhysicalDevice;
-	VkSurfaceKHR hSurface;
-	VkSwapchainKHR swapchain;
+	VkSurfaceKHR h_surface;
+	VkSwapchainKHR vk_swapchain;
 	VulkanSwapchainInfo info;
 
 	// Data

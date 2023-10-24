@@ -6,7 +6,7 @@
 
 std::shared_ptr<spdlog::logger> Logger::s_Logger;
 
-void Logger::Init(const char* loggerName, spdlog::level::level_enum e_LogLevel)
+void Logger::init(const char* loggerName, spdlog::level::level_enum e_LogLevel)
 {
 	// https://github.com/gabime/spdlog#create-stdoutstderr-logger-object
 	// https://github.com/gabime/spdlog/wiki/3.-Custom-formatting
@@ -19,7 +19,7 @@ void Logger::Init(const char* loggerName, spdlog::level::level_enum e_LogLevel)
 	s_Logger->flush();
 }
 
-void Logger::ExitOnError(const char* msg)
+void Logger::exit_on_error(const char* msg)
 {
 #if defined(_WIN32)
 		MessageBoxA(nullptr, msg, "Error", MB_ICONERROR);

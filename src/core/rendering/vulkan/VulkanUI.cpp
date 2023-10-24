@@ -4,28 +4,93 @@
 #include "core/rendering/vulkan/VulkanRendererBase.h"
 #include "core/rendering/vulkan/Renderers/DeferredRenderer.h"
 #include "core/rendering/vulkan/Renderers/ShadowRenderer.h"
+#include "core/engine/InputEvents.h"
+#include "core/rendering/vulkan/RenderObjectManager.h"
+
 
 #include "../imgui/imgui.h"
+#include "../imgui/widgets/imguizmo/ImGuizmo.h"
 #include "../imgui/backends/imgui_impl_win32.h"
 #include "../imgui/backends/imgui_impl_vulkan.h"
 
-VulkanUI& VulkanUI::Start()
+#include "glm/gtx/quaternion.hpp"
+
+VulkanGUI::VulkanGUI()
+{
+	m_renderer.init();
+}
+
+void VulkanGUI::begin()
 {
 	ImGui::NewFrame();
 	ImGui::StyleColorsDark();
-	// Global user interface consisting of multiple viewports
 	ImGui::DockSpaceOverViewport(0, ImGuiDockNodeFlags_PassthruCentralNode);
-
-	return *this;
 }
 
+void VulkanGUI::show_demo()
+{
+	ImGui::ShowDemoWindow();
+}
 
-void VulkanUI::End()
+void VulkanGUI::end()
 {
 	ImGui::Render();
 }
 
-VulkanUI& VulkanUI::ShowSceneViewportPanel(Camera& scene_camera,
+void VulkanGUI::exit()
+{
+	m_renderer.destroy();
+}
+
+void VulkanGUI::show_gizmo(const Camera& camera, const KeyEvent& event, glm::mat4& selected_object_transform)
+{
+	ImGuizmo::OPERATION current_gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
+	ImGuizmo::MODE current_gizmo_mode = ImGuizmo::MODE::WORLD;
+
+	ImGuizmo::BeginFrame();
+	ImGuizmo::SetDrawlist(ImGui::GetBackgroundDrawList());
+	ImGuizmo::SetRect(0, 0, m_renderer.get_render_area().x, m_renderer.get_render_area().y);
+
+	ImGuizmo::SetOrthographic(false);
+
+	const glm::f32* view   = glm::value_ptr(camera.get_view());
+	const glm::f32* proj   = glm::value_ptr(camera.get_proj());
+
+	glm::mat4 transform = glm::identity<glm::mat4>();
+	ImGuizmo::DrawGrid(view, proj, glm::value_ptr(transform), 10.0f);
+
+	static ImGuizmo::OPERATION gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
+
+	ImGuizmo::Manipulate(view, proj, gizmo_operation, ImGuizmo::MODE::WORLD, glm::value_ptr(selected_object_transform));
+}
+
+void VulkanGUI::show_inspector(const ObjectManager& object_manager)
+{
+
+}
+
+void VulkanGUI::render(VkCommandBuffer cmd_buffer)
+{
+	m_renderer.render(cmd_buffer);
+}
+
+void VulkanGUI::on_window_resize()
+{
+	m_renderer.create_renderpass();
+}
+
+const glm::vec2& VulkanGUI::get_render_area() const
+{
+	return m_renderer.get_render_area();
+}
+
+bool VulkanGUI::is_in_focus()
+{
+	assert(false);
+	return false;
+}
+
+VulkanGUI& VulkanGUI::ShowSceneViewportPanel(Camera& scene_camera,
 	VkDescriptorSet_T* texDeferred, VkDescriptorSet_T* texColorId,
 	VkDescriptorSet_T* texNormalId, VkDescriptorSet_T* texDepthId,
 	VkDescriptorSet_T* texNormalMapId, VkDescriptorSet_T* texMetallicRoughnessId)
@@ -65,7 +130,7 @@ VulkanUI& VulkanUI::ShowSceneViewportPanel(Camera& scene_camera,
 		if (curr_aspect_ratio != default_scene_view_aspect_ratio)
 		{
 			default_scene_view_aspect_ratio = curr_aspect_ratio;
-			scene_camera.UpdateAspectRatio(default_scene_view_aspect_ratio);
+			scene_camera.update_aspect_ratio(default_scene_view_aspect_ratio);
 		}
 		
 		ImGui::Image(reinterpret_cast<ImTextureID>(texDeferred), sceneViewPanelSize);
@@ -89,7 +154,7 @@ VulkanUI& VulkanUI::ShowSceneViewportPanel(Camera& scene_camera,
 	return *this;
 }
 
-VulkanUI& VulkanUI::ShowMenuBar()
+VulkanGUI& VulkanGUI::ShowMenuBar()
 {
 	if (ImGui::BeginMainMenuBar())
 	{
@@ -112,7 +177,7 @@ VulkanUI& VulkanUI::ShowMenuBar()
 	return *this;
 }
 
-VulkanUI& VulkanUI::AddHierarchyPanel()
+VulkanGUI& VulkanGUI::AddHierarchyPanel()
 {
 	// Hierachy panel
 	if (ImGui::Begin("Hierarchy", 0, 0))
@@ -124,7 +189,7 @@ VulkanUI& VulkanUI::AddHierarchyPanel()
 	return *this;
 }
 
-VulkanUI& VulkanUI::AddInspectorPanel()
+VulkanGUI& VulkanGUI::AddInspectorPanel()
 {
 	// Inspector panel
 	if (ImGui::Begin("Inspector", 0, 0))
@@ -136,7 +201,7 @@ VulkanUI& VulkanUI::AddInspectorPanel()
 	return *this;
 }
 
-VulkanUI& VulkanUI::ShowStatistics(const char* title, float cpuDeltaSecs, size_t frameNumber)
+VulkanGUI& VulkanGUI::show_overlay(const char* title, float cpuDeltaSecs, size_t frameNumber)
 {
 	ImGuiViewport* viewport = ImGui::GetMainViewport();
 
@@ -169,7 +234,7 @@ VulkanUI& VulkanUI::ShowStatistics(const char* title, float cpuDeltaSecs, size_t
 	return *this;
 }
 
-VulkanUI& VulkanUI::ShowFrameTimeGraph(float* values, size_t nbValues)
+VulkanGUI& VulkanGUI::ShowFrameTimeGraph(float* values, size_t nbValues)
 {
 	const float width = ImGui::GetWindowWidth();
 
@@ -182,69 +247,80 @@ VulkanUI& VulkanUI::ShowFrameTimeGraph(float* values, size_t nbValues)
 	return *this;
 }
 
-VulkanUI& VulkanUI::ShowCameraSettings(Camera* camera)
+void VulkanGUI::show_camera_settings(Camera& camera)
 {
 	if (ImGui::Begin("Camera", 0, 0))
 	{
-		ImGui::SetNextItemOpen(true);
-		if (ImGui::TreeNode("Controller Settings"))
+		ImGui::SeparatorText("Transform");
 		{
-			ImGuiSliderFlags flags = ImGuiSliderFlags_AlwaysClamp;
-			
-			ImGui::SeparatorText("Transform");
-			ImGui::DragFloat3("Location", glm::value_ptr(camera->controller.m_position), 0.1f);
-			ImGui::DragFloat3("Rotation", glm::value_ptr(camera->controller.m_rotation), 0.1f);
+			if (ImGui::DragFloat3("Position", glm::value_ptr(camera.controller.m_position), 0.1f))
+			{
+				camera.controller.update_view();
+			}
 
-			ImGui::TreePop();
+			float& yaw   = camera.controller.yaw;
+			float& pitch = camera.controller.pitch;
+			float yaw_pitch[] = { yaw, pitch };
+
+			if (ImGui::DragFloat2("Rotation", yaw_pitch, 0.1f))
+			{
+				camera.controller.update_view();
+			}
 		}
 
-		ImGui::SetNextItemOpen(true);
-		if (ImGui::TreeNode("Camera Settings"))
+		ImGui::SeparatorText("Camera");
 		{
-			ImGui::InputFloat("FOV", &camera->fov);
-			ImGui::InputFloat2("Near-Far", glm::value_ptr(camera->near_far));
+			if (ImGui::SliderFloat("Fov", &camera.fov, 1.0f, 120.0f))
+			{
+				camera.update_proj();
+			}
 
-			ImGui::TreePop();
+			float& znear = camera.znear;
+			float& zfar  = camera.zfar;
+			float near_far[2] = { znear, zfar };
+			ImGui::DragFloat2("Near/Far", near_far, 0.1f);
+
+			Camera::ProjectionMode& mode = camera.projection_mode;
+
+			if (ImGui::RadioButton("Perspective", mode == Camera::ProjectionMode::PERSPECTIVE))  
+			{
+				mode = Camera::ProjectionMode::PERSPECTIVE;
+				camera.update_proj();
+			}
+
+			ImGui::SameLine();
+			if (ImGui::RadioButton("Orthographic", mode == Camera::ProjectionMode::ORTHOGRAPHIC))
+			{ 
+				mode = Camera::ProjectionMode::ORTHOGRAPHIC;
+			} 
+
+			if (mode == Camera::ProjectionMode::ORTHOGRAPHIC)
+			{
+				float& left = camera.left;
+				float& right = camera.right;
+				float& top = camera.top;
+				float& bottom = camera.bottom;
+
+				float planes[4] = { left, right, top, bottom };
+
+				ImGui::SliderFloat4("Orthographic Planes", planes, -10.0f, 10.0f);
+
+				camera.update_proj();
+			}
+
 		}
 	}
 
 	ImGui::End();
-
-	return *this;
 }
 
-VulkanUI& VulkanUI::ShowInspector()
+VulkanGUI& VulkanGUI::ShowInspector()
 {
 	if (ImGui::Begin("Inspector", 0, 0))
 	{
 		if (ImGui::TreeNode("Hierarchy"))
 		{
-			for (int i = 0; i < RenderObjectManager::drawables.size(); i++)
-			{
-				// Use SetNextItemOpen() so set the default state of a node to be open. We could
-				// also use TreeNodeEx() with the ImGuiTreeNodeFlags_DefaultOpen flag to achieve the same thing!
-				if (i == 0)
-					ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 
-				std::string_view name = RenderObjectManager::drawable_names[i];
-				Drawable& drawable = RenderObjectManager::drawables[i];
-				if (ImGui::TreeNode((void*)(intptr_t)i, name.data(), i))
-				{
-					bool modified = false;
-					modified |= ImGui::DragFloat3("Translation", glm::value_ptr(drawable.position), 0.1f);
-					modified |= ImGui::DragFloat3("Scale", glm::value_ptr(drawable.scale), 0.1f);
-					modified |= ImGui::DragFloat3("Rotation", glm::value_ptr(drawable.rotation), 0.1f);
-					//ImGui::SliderFloat4("Rotation",  glm::value_ptr(RenderObjectManager::transform_datas[i].rotation), 0.0f, 1.0f);
-					//ImGui::DragFloat3("Scale", glm::value_ptr(RenderObjectManager::transform_datas[i].scale), 0.1f);
-
-					if (modified)
-					{
-						drawable.update_model_matrix();
-					}
-					ImGui::TreePop();
-				}
-			}
-			ImGui::TreePop();
 		}
 	}
 	ImGui::End();
@@ -253,7 +329,7 @@ VulkanUI& VulkanUI::ShowInspector()
 	return *this;
 }
 
-VulkanUI& VulkanUI::ShowLightSettings(LightManager* light_manager)
+VulkanGUI& VulkanGUI::ShowLightSettings(LightManager* light_manager)
 {
 	static float radius = 1.0f;
 	static glm::vec3 offset = {};
@@ -309,7 +385,7 @@ VulkanUI& VulkanUI::ShowLightSettings(LightManager* light_manager)
 	return *this;
 }
 
-VulkanUI& VulkanUI::ShowShadowPanel(CascadedShadowRenderer* shadow_renderer, std::span<VkDescriptorSet> texShadowCascades)
+VulkanGUI& VulkanGUI::ShowShadowPanel(CascadedShadowRenderer* shadow_renderer, std::span<VkDescriptorSet> texShadowCascades)
 {
 	if (ImGui::Begin("Shadow Settings", 0, 0))
 	{

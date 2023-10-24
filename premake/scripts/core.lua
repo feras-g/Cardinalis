@@ -16,7 +16,8 @@ project("corelib")
 
 	files { 
 		project_path .. "**.h", 
-		project_path .. "**.cpp", 
+		project_path .. "**.cpp",
+		project_path .. "**.hpp",
 		engine_root .. "data/**",
 	}
 
@@ -32,6 +33,7 @@ project("corelib")
 		lib_dir .. "optick/include",
 		lib_dir .. "spdlog",
 		lib_dir .. "imgui",
+		lib_dir .. "imgui/widgets/imguizmo",
 		lib_dir .. "cgltf",
 		os.getenv("VULKAN_SDK") .. "/Include"
 	}

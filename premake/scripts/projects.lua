@@ -3,7 +3,7 @@
 projects = 
 {
 	"SampleApp",
-	"PBR"
+	"SampleProject"
 }
 
 -- Generate projects 
@@ -30,9 +30,20 @@ for i, name in ipairs(projects) do
 		files 
 		{ 
 			project_dir .. "main.cpp",
-			project_dir .. name ..".hpp",
 		}
 
+		
+		if os.isfile(project_dir .. name ..".h") then
+			files { project_dir .. name ..".h" }
+		end
+
+		if os.isfile(project_dir .. name ..".cpp") then
+			files { project_dir .. name ..".cpp" }
+		end
+
+		if os.isfile(project_dir .. name ..".hpp") then
+			files { project_dir .. name ..".hpp" }
+		end
 
 		includedirs {
 			src_dir,

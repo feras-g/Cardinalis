@@ -132,6 +132,8 @@ void VkResourceManager::destroy_image(size_t image_hash)
 			memory = VK_NULL_HANDLE;
 		}
 	}
+
+	m_images.erase(ite->first);
 }
 
 void VkResourceManager::destroy_image_view(size_t image_view_hash)
@@ -146,6 +148,9 @@ void VkResourceManager::destroy_image_view(size_t image_view_hash)
 			image_view = VK_NULL_HANDLE;
 		}
 	}
+
+	m_image_views.erase(ite->first);
+
 	LOG_INFO("Destroyed image view. Total image views: {}", m_image_views.size());
 }
 

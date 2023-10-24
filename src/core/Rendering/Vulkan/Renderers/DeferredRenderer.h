@@ -20,7 +20,7 @@ struct DeferredRenderer
 	VertexFragmentShader m_shader_deferred;
 
 	VkDescriptorPool m_descriptor_pool;
-	std::array <vk::DynamicRenderPass, NUM_FRAMES> m_lighting_pass;
+	std::array <VulkanRenderPassDynamic, NUM_FRAMES> m_lighting_pass;
 	VkDescriptorSet m_descriptor_set[NUM_FRAMES];
 
 	std::array<Texture2D*, NUM_FRAMES> m_g_buffers_shadow_map;

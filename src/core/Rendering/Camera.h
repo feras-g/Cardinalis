@@ -3,6 +3,9 @@
 #include "glm/gtc/quaternion.hpp"
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
+#include "../engine/InputEvents.h"
+
+class Application;
 
 enum class Movement
 {
@@ -34,26 +37,22 @@ class CameraController
 {
 public:
 	CameraController()
-	: m_position( { 0, 0, 5 }), m_forward( { 0, 0, 0 }), m_up( { 0, 1, 0 }), m_rotation { 0.0f, -180.0f, 0.0f }, m_last_mouse_pos(0.0f), m_velocity(0.0f)
+	: m_position( { 0, 0, 5 }), m_forward( { 0, 0, 0 }), m_up( { 0, 1, 0 }), yaw(0.0f), pitch(0.0f), m_last_mouse_pos(0.0f)
 	{
-		GetView();
+		update_view();
 	}
 	CameraController(glm::vec3 pos, glm::vec3 rot, glm::vec3 target, glm::vec3 up)
-	: m_position(pos), m_rotation(rot), m_forward(target), m_up(up), m_last_mouse_pos(0.0f), m_velocity(0.0f)
+	: m_position(pos), yaw(0.0f), pitch(0.0f), m_forward(target), m_up(up), m_last_mouse_pos(0.0f)
 	{
-		GetView();
+		update_view();
 	}
 
-	void UpdateTranslation(float dt);
-	void UpdateRotation(const glm::vec2 &mouse_pos);
-	glm::mat4 &GetView();
-	struct
-	{
-		float mouse_speed = 0.1f;
-		float accel_factor = 15.0f;
-		float damping = 0.1f;
-		float max_velocity = 15.0f;
-	} params;
+	void translate(float dt, KeyEvent event);
+	void rotate(float dt, MouseEvent event);
+
+	glm::mat4& update_view();
+
+	float mouse_speed = 1.0f;
 
 	Movement m_movement = Movement::NONE;
 	glm::mat4 m_view;
@@ -61,14 +60,14 @@ public:
 	glm::vec3 m_forward = { 0, 0, -1 };
 	glm::vec3 m_up = { 0, 1, 0 };
 	glm::vec3 m_right = { 1, 0, 0 };
-	glm::vec3 m_velocity;
 	glm::vec2 m_last_mouse_pos;
 
-	float deltaTime;
 
-	bool m_rotate = false;
+	float move_speed = 100.f;
+	bool b_first_click = true;
 
-	glm::vec3 m_rotation;
+	float yaw = 0.0f;
+	float pitch = 0.0f;
 };
 
 constexpr float ASPECT_16_9 = 16.0F / 9;
@@ -79,26 +78,34 @@ public:
 	Camera();
 	Camera(CameraController controller, float fov, float aspect_ratio, float n, float f);
 
-	glm::mat4& GetProj();
-	glm::mat4& GetView();
+	const glm::mat4& get_proj() const;
+	const glm::mat4& get_view() const;
 
-	void UpdateAspectRatio(float aspect);
-	void UpdateProjection();
+	void update_aspect_ratio(float aspect);
+	void update_proj();
+
+	void translate(float dt, KeyEvent event);
+	void rotate(float dt, MouseEvent event);
 
 	CameraController controller;
 
 	float fov;
 	float aspect_ratio;
 
-	glm::vec2 near_far;
+	float znear;
+	float zfar;
 
-	enum ProjectionType
+	enum class ProjectionMode
 	{
-		PERSPECTIVE = 0,
-		ORTHOGRAPHIC = 1
-	};
+		NONE = 0,
+		PERSPECTIVE  = 1,
+		ORTHOGRAPHIC = 2
+	} projection_mode;
 
 	glm::mat4 projection;
+
+	/* Orthographic */
+	float left = -1, right = 1, bottom = -1, top = 1;
 
 protected:
 };

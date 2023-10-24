@@ -20,7 +20,7 @@ struct CascadedShadowRenderer
 
 
 	static inline Texture2D m_shadow_maps[NUM_FRAMES];
-	vk::DynamicRenderPass m_renderpass[NUM_FRAMES];
+	VulkanRenderPassDynamic m_renderpass[NUM_FRAMES];
 	VkDescriptorSetLayout m_descriptor_set_layout;
 	VkDescriptorPool m_descriptor_pool;
 	VkDescriptorSet m_descriptor_set[NUM_FRAMES];

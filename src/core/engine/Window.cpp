@@ -32,6 +32,7 @@ public:
 	bool IsClosed()  const;
 	int  GetHeight() const;
 	int  GetWidth()	const;
+	float GetAspectRatio() const;
 	const WindowData*  GetData()	const;
 	void HandleEvents();
 
@@ -41,11 +42,11 @@ public:
 	void OnResize(unsigned int width, unsigned int height);
 
 
-	void OnLeftMouseButtonUp();
-	void OnLeftMouseButtonDown();
-	void OnMouseMove(int x, int y);
+	void OnLeftMouseButtonUp(MouseEvent event);
+	void OnLeftMouseButtonDown(MouseEvent event);
+	void OnMouseMove(MouseEvent event);
 	void OnKeyEvent(KeyEvent event);
-	bool AsyncKeyState(Key key);
+	bool AsyncKeyState(Key key) const;
 
 	bool is_in_focus() const;
 
@@ -112,15 +113,18 @@ void Window::Impl::Create()
 	m_Data.hInstance = GetModuleHandle(nullptr);
 
 	// Creation
-	DWORD style = WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_THICKFRAME;// | WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+	DWORD style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MAXIMIZEBOX | WS_SIZEBOX;
 
 	// Coordinates of the top-left corner in a centered window
-	int top  = (GetSystemMetrics(SM_CYSCREEN)  - h) / 2;
+	int top  = (GetSystemMetrics(SM_CYSCREEN) - h) / 2;
 	int left = (GetSystemMetrics(SM_CXSCREEN) - w) / 2;
 
-	m_WinInfo.aspect = (float)w / h;
-	
+	m_WinInfo.aspect_ratio = (float)w / h;
+
 	CreateWindowA(title, title, style, left, top, w, h, nullptr, nullptr, m_Data.hInstance, this);
+
+	SetWindowLongA(hWnd, GWL_STYLE, style);
+	SetWindowPos(hWnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
 
 	// Init performance counter
 	LARGE_INTEGER perfCountFreq;
@@ -139,7 +143,7 @@ void Window::Impl::Create()
 
 void Window::Impl::Show()
 {
-	ShowWindow(m_Data.hWnd, SW_SHOWDEFAULT);
+	ShowWindow(m_Data.hWnd, SW_SHOW);
 	SetForegroundWindow(m_Data.hWnd);
 	SetFocus(m_Data.hWnd);
 }
@@ -168,100 +172,140 @@ LRESULT CALLBACK Window::Impl::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 	ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam);
 
 	// Handle messages
-	if (self)
+	if (nullptr != self)
 	{
 		switch (uMsg)
 		{
-		/* Window events */
-		case WM_CLOSE:
-			self->OnClose();
-			return 0;
-		case WM_SIZE:
-		{
-			// Don't change window size on minimization
-			if (wParam != SIZE_MINIMIZED)
+			case WM_GETMINMAXINFO:
 			{
-				UINT width  = LOWORD(lParam);
-				UINT height = HIWORD(lParam);
-
-				// Size doesn't change when restoring a minimized window in my implementation
-				// but it is still recognized as a WM_SIZE event, so don't handle that case
-				if (self->m_WinInfo.width != width || self->m_WinInfo.height != height)
+				LPMINMAXINFO lpMMI = (LPMINMAXINFO)lParam;
+				lpMMI->ptMinTrackSize.x = 100;
+				lpMMI->ptMinTrackSize.y = 100;
+			}
+			break;
+			/* Window events */
+			case WM_CLOSE:
+			{
+				self->OnClose();
+				return 0;
+			}
+			case WM_SIZE:
+			{
+				// Don't change window size on minimization
+				if (wParam != SIZE_MINIMIZED)
 				{
-					self->m_WinInfo.width  = width;
-					self->m_WinInfo.height = height;
+					UINT width  = LOWORD(lParam);
+					UINT height = HIWORD(lParam);
 
-					self->OnResize(width, height);
+					if (self->m_WinInfo.width != width || self->m_WinInfo.height != height)
+					{
+						self->m_WinInfo.width  = width;
+						self->m_WinInfo.height = height;
+						self->m_WinInfo.aspect_ratio = width / (float)height;
+
+						self->OnResize(width, height);
+					}
 				}
 			}
 			break;
-		}
-		case WM_PAINT:
-		{
-			PAINTSTRUCT ps;
-			HDC hdc = BeginPaint(hWnd, &ps);
-			FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 6));
-			EndPaint(hWnd, &ps);
-		}
-		break;
-		case WM_SETFOCUS:
-		{
-			self->b_is_in_focus = true;
-		}
-		break;
-		case WM_KILLFOCUS:
-		{
-			self->b_is_in_focus = false;
-		}
-		break;
-		/* Mouse events */
-		case WM_MOUSEMOVE:
-		{
-			int x = GET_X_LPARAM(lParam);
-			int y = GET_Y_LPARAM(lParam);
-			self->OnMouseMove(x, y);
-		}
-		break;
+			case WM_PAINT:
+			{
+				PAINTSTRUCT ps;
+				HDC hdc = BeginPaint(hWnd, &ps);
+				FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 6));
+				EndPaint(hWnd, &ps);
+			}
+			break;
+			case WM_SETFOCUS:
+			{
+				self->b_is_in_focus = true;
+			}
+			break;
+			case WM_KILLFOCUS:
+			{
+				self->b_is_in_focus = false;
+			}
+			break;
+			/* Mouse events */
+			case WM_MOUSEMOVE:
+			{
+				MouseEvent& event = self->hApplication->m_event_manager->mouse_event;
 
-		case WM_LBUTTONDOWN:
-		{
-			self->OnLeftMouseButtonDown();
-		};
-		break;
+				event.px = GET_X_LPARAM(lParam);
+				event.py = GET_Y_LPARAM(lParam);
 
-		case WM_LBUTTONUP:
-		{
-			self->OnLeftMouseButtonUp();
+				self->OnMouseMove(event);
+			}
+			break;
 
-		}
-		break;
+			case WM_LBUTTONDOWN:
+			{
+				MouseEvent& event = self->hApplication->m_event_manager->mouse_event;
 
-		/* Keyboard events */
-		case WM_KEYDOWN:
-		{
-			KeyEvent event;
+				event.b_lmb_click = true;
+				event.b_first_lmb_click = true;
 
-			if(uMsg == WM_KEYDOWN) event.pressed = true;
+				POINT pt;
+				pt.x = GET_X_LPARAM(lParam);
+				pt.y = GET_Y_LPARAM(lParam);
+				ScreenToClient(self->hWnd, &pt);
 
-			if (wParam == 'Z')		event.key = event.key | Key::Z;
-			if (wParam == 'Q')		event.key = event.key | Key::Q;
-			if (wParam == 'S')		event.key = event.key | Key::S;
-			if (wParam == 'D')		event.key = event.key | Key::D;
-			if (wParam == VK_LEFT)	event.key = event.key | Key::LEFT;
-			if (wParam == VK_RIGHT)	event.key = event.key | Key::RIGHT;
-			if (wParam == VK_UP)	event.key = event.key | Key::UP;
-			if (wParam == VK_DOWN)	event.key = event.key | Key::DOWN;
+				event.px = pt.x;
+				event.py = pt.y;
+				self->OnLeftMouseButtonDown(event);
+			}
+			break;
 
-			self->OnKeyEvent(event);
-		}
-		break;
-		case WM_KEYUP:
-		{
-			KeyEvent event;
-			event.pressed = false;
-			self->OnKeyEvent(event);
-		}
-		break;
+			case WM_LBUTTONUP:
+			{
+				MouseEvent& event = self->hApplication->m_event_manager->mouse_event;
+
+				event.b_lmb_click = false;
+				event.b_first_lmb_click = false;
+				event.px = GET_X_LPARAM(lParam);
+				event.py = GET_Y_LPARAM(lParam);
+
+				self->OnLeftMouseButtonUp(event);
+			}
+			break;
+
+			/* Keyboard events */
+			case WM_KEYDOWN:
+			{
+				KeyEvent& event = self->hApplication->m_event_manager->key_event;
+
+				if(uMsg == WM_KEYDOWN) event.pressed = true;
+
+				if (wParam == 'Z')		event.append(Key::Z);
+				if (wParam == 'Q')		event.append(Key::Q);
+				if (wParam == 'S')		event.append(Key::S);
+				if (wParam == 'D')		event.append(Key::D);
+				if (wParam == VK_LEFT)	event.append(Key::LEFT);
+				if (wParam == VK_RIGHT)	event.append(Key::RIGHT);
+				if (wParam == VK_UP)	event.append(Key::UP);
+				if (wParam == VK_DOWN)	event.append(Key::DOWN);
+
+				self->OnKeyEvent(event);
+			}
+			break;
+			case WM_KEYUP:
+			{
+				KeyEvent& event = self->hApplication->m_event_manager->key_event;
+
+				event.pressed = false;
+
+				if (wParam == 'Z')		event.append( Key::Z);
+				if (wParam == 'Q')		event.append( Key::Q);
+				if (wParam == 'S')		event.append( Key::S);
+				if (wParam == 'D')		event.append( Key::D);
+				if (wParam == VK_LEFT)	event.append( Key::LEFT);
+				if (wParam == VK_RIGHT)	event.append( Key::RIGHT);
+				if (wParam == VK_UP)	event.append( Key::UP);
+				if (wParam == VK_DOWN)	event.append( Key::DOWN);
+
+				self->OnKeyEvent(event);
+			}
+			break;
 		}
 	}
 
@@ -271,7 +315,7 @@ LRESULT CALLBACK Window::Impl::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 /////////////////////////////////////////////////////////////////////////
 void Window::Impl::OnClose()
 {
-	m_WinState.bIsClosed = true;
+	m_WinState.b_is_closed = true;
 	DestroyWindow(m_Data.hWnd);
 	PostQuitMessage(0);
 }
@@ -279,12 +323,12 @@ void Window::Impl::OnClose()
 /////////////////////////////////////////////////////////////////////////
 void Window::Impl::OnResize(unsigned int width, unsigned int height)
 {
-	if (hApplication->bInitSuccess)
+	if (hApplication->b_init_success)
 	{
-		hApplication->OnWindowResize();
+		hApplication->on_window_resize();
 	}
 
-	printf("%dx%d aspect=%f\n", m_WinInfo.width, m_WinInfo.height, m_WinInfo.aspect);
+	printf("%dx%d aspect=%f\n", m_WinInfo.width, m_WinInfo.height, m_WinInfo.aspect_ratio);
 }
 
 inline void Window::Impl::UpdateGUI() const
@@ -301,24 +345,24 @@ inline void Window::Impl::ShutdownGUI() const
 
 /////////////////////////////////////////////////////////////////////////
 
-void Window::Impl::OnLeftMouseButtonUp() 
+void Window::Impl::OnLeftMouseButtonUp(MouseEvent event)
 { 
-	hApplication->OnLeftMouseButtonUp();
+	hApplication->on_lmb_up(event);
 };
-void Window::Impl::OnLeftMouseButtonDown() 
+void Window::Impl::OnLeftMouseButtonDown(MouseEvent event)
 { 
-	hApplication->OnLeftMouseButtonDown();
+	hApplication->on_lmb_down(event);
 };
-void Window::Impl::OnMouseMove(int x, int y) 
+void Window::Impl::OnMouseMove(MouseEvent event) 
 { 
-	hApplication->OnMouseMove(x, y);
+	hApplication->on_mouse_move(event);
 }
 void Window::Impl::OnKeyEvent(KeyEvent event)
 {
-	hApplication->OnKeyEvent(event);
+	hApplication->on_key_event(event);
 }
 
-bool Window::Impl::AsyncKeyState(Key key)
+bool Window::Impl::AsyncKeyState(Key key) const
 {
 	return GetAsyncKeyState(keyToWindows(key));
 }
@@ -329,9 +373,10 @@ bool Window::Impl::is_in_focus() const
 }
 
 /////////////////////////////////////////////////////////////////////////
-bool Window::Impl::IsClosed()  const { return m_WinState.bIsClosed; }
+bool Window::Impl::IsClosed()  const { return m_WinState.b_is_closed; }
 int  Window::Impl::GetHeight() const { return m_WinInfo.height; }
 int  Window::Impl::GetWidth()  const { return m_WinInfo.width; }
+float Window::Impl::GetAspectRatio() const { return m_WinInfo.aspect_ratio; };
 inline const WindowData* Window::Impl::GetData() const { return &m_Data; }
 
 void Window::Impl::HandleEvents()
@@ -377,28 +422,29 @@ void Window::Initialize()
 }
 
 /////////////////////////////////////////////////////////////////////////
-inline bool Window::IsClosed() const { return pImpl->IsClosed(); }
-inline int Window::GetHeight() const { return pImpl->GetHeight(); }
-inline int Window::GetWidth()  const { return pImpl->GetWidth(); }
-inline void Window::UpdateGUI() const { return pImpl->UpdateGUI(); }
-inline void Window::ShutdownGUI() const { pImpl->ShutdownGUI(); }
-inline const WindowData* Window::GetData() const { return pImpl->GetData(); }
-void Window::HandleEvents() { return pImpl->HandleEvents(); }
+bool Window::is_closed() const { return pImpl->IsClosed(); }
+int Window::GetHeight() const { return pImpl->GetHeight(); }
+int Window::GetWidth()  const { return pImpl->GetWidth(); }
+float Window::GetAspectRatio() const { return pImpl->GetAspectRatio(); }
+void Window::update() const { return pImpl->UpdateGUI(); }
+void Window::ShutdownGUI() const { pImpl->ShutdownGUI(); }
+const WindowData* Window::GetData() const { return pImpl->GetData(); }
+void Window::handle_events() { return pImpl->HandleEvents(); }
 bool Window::is_in_focus() const { return pImpl->is_in_focus(); }
-inline double Window::GetTime() const { return pImpl->GetTime(); }
+double Window::GetTime() const { return pImpl->GetTime(); }
 void Window::OnClose()  { return pImpl->OnClose(); }
 void Window::OnResize(unsigned int width, unsigned int height) { return pImpl->OnResize(width, height); }
 
-bool Window::AsyncKeyState(Key key)
+bool Window::AsyncKeyState(Key key) const
 {
 	return pImpl->AsyncKeyState(key);
 }
 
 void Window::OnKeyEvent(KeyEvent keypress) { pImpl->OnKeyEvent(keypress); }
 
-void Window::OnLeftMouseButtonUp()   { pImpl->OnLeftMouseButtonUp(); };
-void Window::OnLeftMouseButtonDown() { pImpl->OnLeftMouseButtonDown(); };
-void Window::OnMouseMove(int x, int y) { pImpl->OnMouseMove(x, y); };
+void Window::OnLeftMouseButtonUp(MouseEvent event)   { pImpl->OnLeftMouseButtonUp(event); };
+void Window::OnLeftMouseButtonDown(MouseEvent event) { pImpl->OnLeftMouseButtonDown(event); };
+void Window::OnMouseMove(MouseEvent event) { pImpl->OnMouseMove(event); };
 
 IWindow::IWindow()
 {

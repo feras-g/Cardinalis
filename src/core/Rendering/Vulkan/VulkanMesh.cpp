@@ -2,6 +2,7 @@
 #include "core/rendering/vulkan/VulkanRenderInterface.h"
 #include "core/rendering/vulkan/VulkanRendererBase.h"
 #include "VulkanTools.h"
+#include "RenderObjectManager.h"
 
 #include "glm/gtx/euler_angles.hpp"
 
@@ -22,10 +23,12 @@ static std::string base_path;
 void VulkanMesh::create_from_file(const std::string& filename)
 {
 	std::string_view ext = get_extension(filename);
+
+	std::string models_path = "../../../data/models/";
 	
 	if (ext == "glb" || ext == "gltf")
 	{
-		create_from_file_gltf(filename);
+		create_from_file_gltf(models_path + filename);
 	}
 	else
 	{
@@ -37,8 +40,8 @@ void VulkanMesh::create_from_data(std::span<VertexData> vertices, std::span<unsi
 {
 	m_num_vertices = vertices.size();
 	m_num_indices = indices.size();
-	m_index_buf_size_bytes  = EngineUtils::round_to(indices.size() * sizeof(unsigned int), VulkanRenderInterface::device_limits.minStorageBufferOffsetAlignment);
-	m_vertex_buf_size_bytes = EngineUtils::round_to(vertices.size() * sizeof(VertexData), VulkanRenderInterface::device_limits.minStorageBufferOffsetAlignment);
+	m_index_buf_size_bytes  = EngineUtils::round_to(indices.size() * sizeof(unsigned int), RenderInterface::device_limits.minStorageBufferOffsetAlignment);
+	m_vertex_buf_size_bytes = EngineUtils::round_to(vertices.size() * sizeof(VertexData), RenderInterface::device_limits.minStorageBufferOffsetAlignment);
 	
 	create_vertex_index_buffer(m_vertex_index_buffer, vertices.data(), m_vertex_buf_size_bytes, indices.data(), m_index_buf_size_bytes);
 }
@@ -46,40 +49,6 @@ void VulkanMesh::create_from_data(std::span<VertexData> vertices, std::span<unsi
 void VulkanMesh::destroy()
 {
 	m_vertex_index_buffer.destroy();
-}
-void Drawable::draw(VkCommandBuffer cmd_buffer) const
-{
-	VulkanMesh& mesh = RenderObjectManager::meshes[mesh_id];
-	vkCmdDraw(cmd_buffer, (uint32_t)mesh.m_num_indices, 1, 0, 0);
-}
-
-void Drawable::draw_primitives(VkCommandBuffer cmd_buffer) const
-{
-	VulkanMesh& mesh = RenderObjectManager::meshes[mesh_id];
-	for (int i = 0; i < mesh.geometry_data.primitives.size(); i++)
-	{
-		const Primitive& p = mesh.geometry_data.primitives[i];
-		vkCmdDraw(cmd_buffer, p.index_count, 1, p.first_index, 0);
-	}
-}
-
-bool Drawable::is_visible() const
-{
-	return flags && DrawFlag::VISIBLE;
-}
-
-bool Drawable::cast_shadows() const
-{
-	return flags && DrawFlag::CAST_SHADOW;
-}
-
-void Drawable::update_model_matrix()
-{
-	glm::mat4 T = glm::identity<glm::mat4>();
-	T  = glm::translate(T, position);
-	T *= glm::eulerAngleXYZ(glm::radians(rotation.x), glm::radians(rotation.y), glm::radians(rotation.z));
-	T  = glm::scale(T, scale);
-	transform.model = T;
 }
 
 static void load_vertices(Primitive p, cgltf_primitive* primitive, GeometryData& geometry)
@@ -164,7 +133,7 @@ static void load_vertices(Primitive p, cgltf_primitive* primitive, GeometryData&
 		vertex.normal = normalsBuffer[i];
 		if (texCoordBuffer.size())
 		{
-			vertex.uv = glm::vec2(texCoordBuffer[i]);
+			vertex.uv = glm::vec3(texCoordBuffer[i], 0.0);
 		}
 
 		geometry.vertices.push_back(vertex);
@@ -177,59 +146,60 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 	cgltf_material* gltf_mat = gltf_primitive->material;
 	
 	Material material;
-	if (!gltf_mat)
+
+	if (nullptr == gltf_mat)
 	{
-		primitive.material_id = RenderObjectManager::get_material("Default Material").first;
+		primitive.material_id = ObjectManager::get_instance().default_material_id;
 	}
 	else
 	{
-		/*
-			Base Color
-			Normal
-			MetallicRoughness
-			Emissive
-		*/
-
-		std::function load_tex = [](cgltf_texture* tex, VkFormat format, bool calc_mip) -> size_t
+		std::function load_tex = [](cgltf_texture* tex, VkFormat format, bool calc_mip) -> int
 		{
+			return 0;
 			const char* uri = tex->image->uri;
 			std::string name = uri ? base_path + uri : base_path + tex->image->name;
 
-			std::pair<size_t, Texture2D*> tex_object = RenderObjectManager::get_texture(name);
+			const ObjectManager& object_manager = ObjectManager::get_instance();
 
-			if (tex_object.second == nullptr)
+			/* Load from file path */
+			int texture_id = ObjectManager::get_instance().get_texture_id(name.c_str());
+
+			if (texture_id != -1)
 			{
-				if (uri)
-				{
-					/* Load from file path */
-					return RenderObjectManager::add_texture(base_path + uri, name, format, calc_mip);
-				}
-				else
-				{
-					/* Load from buffer */
-					assert(false);
-					return 0;
-				}
+				return texture_id;
+			}
+
+			if (uri)
+			{
+				Image im = load_image_from_file(base_path + uri);
+				Texture2D texture;
+				texture.init(format, im.w, im.h, 1, false, name);
+				texture.create_from_data(&im);
+				texture.create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, texture.info.mipLevels });
+				texture.sampler = VulkanRendererCommon::get_instance().s_SamplerRepeatLinear;
+				texture.info.debugName = name.c_str();
+
+				return ObjectManager::get_instance().add_texture(texture);
 			}
 			else
 			{
-				return tex_object.first;
+				/* Load from buffer */
+				assert(false);
+				return 0;
 			}
-
-			//return RenderObjectManager::get_texture("Placeholder Texture").first;
 		};
 
 
 		cgltf_texture* tex_normal = gltf_mat->normal_texture.texture;
 		if (tex_normal)
 		{
-			material.tex_normal_id = (unsigned int)load_tex(tex_normal, VulkanRendererBase::tex_normal_map_format, true);
+			material.texture_normal_map_idx = load_tex(tex_normal, VulkanRendererCommon::get_instance().tex_normal_map_format, true);
 		}
 
 		cgltf_texture* tex_emissive = gltf_mat->emissive_texture.texture;
 		if (tex_emissive)
 		{
-			material.tex_emissive_id = (unsigned int)load_tex(tex_emissive, VulkanRendererBase::tex_emissive_format, true);
+			material.texture_emissive_map_idx = load_tex(tex_emissive, VulkanRendererCommon::get_instance().tex_emissive_format, true);
 		}
 
 		if (gltf_mat->has_pbr_metallic_roughness)
@@ -237,21 +207,21 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 			cgltf_texture* tex_base_color = gltf_mat->pbr_metallic_roughness.base_color_texture.texture;
 			if (tex_base_color)
 			{
-				material.tex_base_color_id = (unsigned int)load_tex(tex_base_color, VulkanRendererBase::tex_base_color_format, true);
+				material.texture_base_color_idx = load_tex(tex_base_color, VulkanRendererCommon::get_instance().tex_base_color_format, true);
 			}
 
 			cgltf_texture* tex_metallic_roughness = gltf_mat->pbr_metallic_roughness.metallic_roughness_texture.texture;
 			if (tex_metallic_roughness)
 			{
-				material.tex_metallic_roughness_id = (unsigned int)load_tex(tex_metallic_roughness, VulkanRendererBase::tex_metallic_roughness_format, false);
+				material.texture_metalness_roughness_idx = load_tex(tex_metallic_roughness, VulkanRendererCommon::get_instance().tex_metallic_roughness_format, false);
 			}
 
 			/* Factors */
 			{
-				float* v = gltf_mat->pbr_metallic_roughness.base_color_factor;
-				material.base_color_factor = glm::vec4(v[0], v[1], v[2], v[3]);
-				material.metallic_factor = gltf_mat->pbr_metallic_roughness.metallic_factor;
-				material.roughness_factor = gltf_mat->pbr_metallic_roughness.roughness_factor;
+				//float* v = gltf_mat->pbr_metallic_roughness.base_color_factor;
+				//material.base_color_factor = glm::vec4(v[0], v[1], v[2], v[3]);
+				//material.metallic_factor = gltf_mat->pbr_metallic_roughness.metallic_factor;
+				//material.roughness_factor = gltf_mat->pbr_metallic_roughness.roughness_factor;
 			}
 		}
 
@@ -260,18 +230,7 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 			assert(false);
 		}
 
-		std::size_t hash = MyHash<Material>{}(material);
-		std::string material_name = std::to_string(hash);
-
-		std::pair<size_t, Material*> mat_object = RenderObjectManager::get_material(material_name);
-		if (mat_object.second == nullptr)
-		{
-			primitive.material_id = RenderObjectManager::add_material(material, material_name);
-		}
-		else
-		{
-			primitive.material_id = mat_object.first;
-		}
+		primitive.material_id = ObjectManager::get_instance().add_material(material);
 	}
 }
 
@@ -280,10 +239,10 @@ static void load_primitive(cgltf_node* node, cgltf_primitive* primitive, Node* e
 	Primitive p = {};
 	p.first_index = (uint32_t)geometry.indices.size();
 	p.index_count = (uint32_t)primitive->indices->count;
-
+	
 	glm::mat4 mesh_local_mat;
 	cgltf_node_transform_world(node, glm::value_ptr(mesh_local_mat));
-	p.mat_model = mesh_local_mat;
+	p.model = mesh_local_mat;
 
 	/* Load indices */
 	for (uint32_t idx = 0; idx < p.index_count; idx++)
@@ -297,42 +256,33 @@ static void load_primitive(cgltf_node* node, cgltf_primitive* primitive, Node* e
 	geometry.primitives.push_back(p);
 }
 
-static void process_node(cgltf_node* p_Node, Node* parent, VulkanMesh& model)
+static void process_node(cgltf_node* p_node, Node* parent, VulkanMesh& model)
 {
 	Node* node = new Node{};
 	
-	cgltf_node_transform_world(p_Node, glm::value_ptr(node->matrix));
+	cgltf_node_transform_world(p_node, glm::value_ptr(node->matrix));
 	node->parent = parent;
 
-	if (p_Node->children_count > 0)
-	{
-		for (size_t i = 0; i < p_Node->children_count; i++)
+	if (p_node->mesh)
+	{	
+		for (int i = 0; i < p_node->mesh->primitives_count; ++i)
 		{
-			process_node(p_Node->children[i], node, model);
+			load_primitive(p_node, &p_node->mesh->primitives[i], node, model.geometry_data);
 		}
 	}
 
-	if (p_Node->mesh)
-	{		
-		for (int i = 0; i < p_Node->mesh->primitives_count; ++i)
-		{
-			load_primitive(p_Node, &p_Node->mesh->primitives[i], node, model.geometry_data);
-		}
-	}
-
-	static int num = 0;
-	if (p_Node->light)
+	if (p_node->light)
 	{
-		cgltf_light* light = p_Node->light;
+		cgltf_light* light = p_node->light;
 		
 		if (light->type == cgltf_light_type_point)
 		{
 			model.geometry_data.punctual_lights_positions.push_back
 			(
 				glm::vec4(
-					p_Node->translation[0],
-					p_Node->translation[1],
-					p_Node->translation[2],
+					p_node->translation[0],
+					p_node->translation[1],
+					p_node->translation[2],
 					1.0
 				)
 			);
@@ -348,7 +298,6 @@ static void process_node(cgltf_node* p_Node, Node* parent, VulkanMesh& model)
 			);
 		}
 	}
-	
 
 	if (parent) 
 	{
@@ -358,51 +307,55 @@ static void process_node(cgltf_node* p_Node, Node* parent, VulkanMesh& model)
 	{
 		model.nodes.push_back(node);
 	}
+
+	//for (size_t i = 0; i < p_node->children_count; i++)
+	//{
+	//	process_node(p_node->children[i], node, model);
+	//}
 }
 
 
-static void load_textures(cgltf_texture* textures, size_t size)
+static void load_textures(cgltf_texture* textures, size_t texture_count)
 {
-//	std::function load_tex = [](cgltf_texture* tex, VkFormat format, bool calc_mip) -> size_t
-//	{
-//		const char* uri = tex->image->uri;
-//		std::string name = uri ? base_path + uri : base_path + tex->image->name;
-//
-//		std::pair<size_t, Texture2D*> tex_object = RenderObjectManager::get_texture(name);
-//
-//		if (tex_object.second == nullptr)
-//		{
-//			if (uri)
-//			{
-//				/* Load from file path */
-//				return RenderObjectManager::add_texture(base_path + uri, name, format, calc_mip);
-//			}
-//			else
-//			{
-//				/* Load from buffer */
-//				assert(false);
-//				return 0;
-//			}
-//		}
-//		else
-//		{
-//			return tex_object.first;
-//		}
-//	};
-//
-//	assert(textures != nullptr);
-//	
-//	std::unordered_map<const char*, Image> image_datas;
-//
-//	for (size_t i = 0; i < size; i++)
-//	{
-//		cgltf_texture* tex = textures[i];
-//		const char* uri = tex->image->uri;
-//		std::string name = uri ? base_path + uri : base_path + tex->image->name;
-//		Image im = load_image_from_file(base_path + uri);
-//		image_datas.insert({ name, im });
-//	}
+	std::function load_tex = [](cgltf_texture* tex, VkFormat format, bool calc_mip) -> int
+		{
+			const char* uri = tex->image->uri;
+			std::string name = uri ? base_path + uri : base_path + tex->image->name;
 
+			const ObjectManager& object_manager = ObjectManager::get_instance();
+
+			/* Load from file path */
+			int texture_id = ObjectManager::get_instance().get_texture_id(name.c_str());
+
+			if (texture_id != -1)
+			{
+				return texture_id;
+			}
+
+			if (uri)
+			{
+				Image im = load_image_from_file(base_path + uri);
+				Texture2D texture;
+				texture.init(format, im.w, im.h, 1, false, name);
+				texture.create_from_data(&im);
+				texture.create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, texture.info.mipLevels });
+				texture.sampler = VulkanRendererCommon::get_instance().s_SamplerRepeatLinear;
+				texture.info.debugName = name.c_str();
+
+				return ObjectManager::get_instance().add_texture(texture);
+			}
+			else
+			{
+				/* Load from buffer */
+				assert(false);
+				return 0;
+			}
+		};
+
+
+	for (size_t i = 0; i < texture_count; i++)
+	{
+	}
 }
 
 
@@ -456,9 +409,3 @@ void VulkanMesh::create_from_file_gltf(const std::string& filename)
 	std::chrono::duration<double> elapsed_seconds = end-start;
 	LOG_WARN("Loaded GLTF model in {} s", elapsed_seconds.count());
 }
-
-bool Drawable::has_primitives() const { return RenderObjectManager::meshes[mesh_id].geometry_data.primitives.size() > 0; }
-const VulkanMesh& Drawable::get_mesh() const { return RenderObjectManager::meshes[mesh_id]; }
-
-
-

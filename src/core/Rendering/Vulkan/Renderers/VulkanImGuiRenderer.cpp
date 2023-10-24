@@ -12,10 +12,6 @@
 
 #define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 
-VulkanImGuiRenderer::VulkanImGuiRenderer(const VulkanContext& vkContext)
-{
-}
-
 void VulkanImGuiRenderer::init()
 {
 	ImGuiIO& io = ImGui::GetIO();
@@ -39,58 +35,46 @@ void VulkanImGuiRenderer::init()
 	imgui_vk_info.MinImageCount = 2;
 	imgui_vk_info.ImageCount = 2;
 	imgui_vk_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
-
 	imgui_vk_info.UseDynamicRendering = true;    // Need to explicitly enable VK_KHR_dynamic_rendering extension to use this, even for Vulkan 1.3.
-	imgui_vk_info.ColorAttachmentFormat = VulkanRendererBase::swapchain_color_format;  // Required for dynamic rendering
-
+	imgui_vk_info.ColorAttachmentFormat = VulkanRendererCommon::get_instance().swapchain_color_format;  // Required for dynamic rendering
+	
 	assert(ImGui_ImplVulkan_Init(&imgui_vk_info, VK_NULL_HANDLE));
 
 	VkCommandBuffer cbuf = begin_temp_cmd_buffer();
 	ImGui_ImplVulkan_CreateFontsTexture(cbuf);
 	end_temp_cmd_buffer(cbuf);
 
-	/* Add textures that will be used by ImGui */
-	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
-	{
-		m_DeferredRendererOutputTextureId[frame_idx] = ImGui_ImplVulkan_AddTexture(VulkanRendererBase::s_SamplerClampNearest, VulkanRendererBase::m_deferred_lighting_attachment[frame_idx].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		m_ModelRendererColorTextureId[frame_idx] = ImGui_ImplVulkan_AddTexture(VulkanRendererBase::s_SamplerClampLinear, VulkanRendererBase::m_gbuffer_albedo[frame_idx].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		m_ModelRendererNormalTextureId[frame_idx] = ImGui_ImplVulkan_AddTexture(VulkanRendererBase::s_SamplerClampLinear, VulkanRendererBase::m_gbuffer_normal[frame_idx].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		m_ModelRendererDepthTextureId[frame_idx] = ImGui_ImplVulkan_AddTexture(VulkanRendererBase::s_SamplerClampLinear, VulkanRendererBase::m_gbuffer_depth[frame_idx].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		m_ModelRendererMetallicRoughnessTextureId[frame_idx] = ImGui_ImplVulkan_AddTexture(VulkanRendererBase::s_SamplerClampLinear, VulkanRendererBase::m_gbuffer_metallic_roughness[frame_idx].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-	}
-
 	/* Dynamic renderpass setup */
-	update_render_pass_attachments();
+	create_renderpass();
 }
 
-void  VulkanImGuiRenderer::update_render_pass_attachments()
+void  VulkanImGuiRenderer::create_renderpass()
 {
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
-		m_dyn_renderpass[i].color_attachments.clear();
-		m_dyn_renderpass[i].has_depth_attachment = false;
-		m_dyn_renderpass[i].has_stencil_attachment = false;
-
-		m_dyn_renderpass[i].add_color_attachment(context.swapchain->color_attachments[i].view);
+		m_renderpass[i].reset();
+		render_area = { context.swapchain->color_attachments[i].info.width, context.swapchain->color_attachments[i].info.height };
+		m_renderpass[i].add_color_attachment(context.swapchain->color_attachments[i].view, VK_ATTACHMENT_LOAD_OP_LOAD);
 	}
 }
-void VulkanImGuiRenderer::render(size_t currentImageIdx, VkCommandBuffer cmdBuffer) 
+void VulkanImGuiRenderer::render(VkCommandBuffer cmdBuffer) 
 {
-	VULKAN_RENDER_DEBUG_MARKER(cmdBuffer, "ImGui");
-	
-	const uint32_t width  = context.swapchain->info.extent.width;
-	const uint32_t height = context.swapchain->info.extent.height;
-	VkRect2D renderArea{ .offset {0, 0}, .extent { width, height } };
+	VULKAN_RENDER_DEBUG_MARKER(cmdBuffer, "ImGui Pass");
 
-	m_dyn_renderpass[currentImageIdx].begin(cmdBuffer, renderArea);
+	m_renderpass[context.curr_frame_idx].begin(cmdBuffer, render_area);
 
-	m_pDrawData = ImGui::GetDrawData();
-	ImGui_ImplVulkan_RenderDrawData(m_pDrawData, cmdBuffer);
+	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuffer);
 
-	m_dyn_renderpass[currentImageIdx].end(cmdBuffer);
+	m_renderpass[context.curr_frame_idx].end(cmdBuffer);
 }
 
 void VulkanImGuiRenderer::destroy()
 {
+	vkDeviceWaitIdle(context.device);
 	ImGui_ImplVulkan_Shutdown();
+}
+
+const glm::vec2& VulkanImGuiRenderer::get_render_area() const
+{
+	return render_area;
 }

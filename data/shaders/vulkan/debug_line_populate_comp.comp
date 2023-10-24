@@ -1,0 +1,9 @@
+#version 460
+
+#include "headers/debug_line_rendering.glsl"
+
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+void main()
+{
+    DrawAxisAlignedBox(vec3(0,0,0), vec3(1,0,0), vec3(10,10,10));
+}

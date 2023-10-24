@@ -18,8 +18,7 @@ struct VertexData
 {
 	glm::vec3 pos;
 	glm::vec3 normal;
-	glm::vec2 uv;
-	float pad;
+	glm::vec3 uv;
 };
 
 struct SimpleVertexData
@@ -32,8 +31,8 @@ struct Primitive
 {
 	uint32_t first_index;
 	uint32_t index_count;
-	glm::mat4 mat_model = glm::identity<glm::mat4>();
-	size_t material_id = 0;
+	glm::mat4 model = glm::identity<glm::mat4>();
+	int material_id = 0;
 };
 
 struct GeometryData
@@ -75,7 +74,6 @@ struct VulkanMesh
 
 	/* Non-interleaved vertex and index data. Used for vertex pulling. */
 	Buffer m_vertex_index_buffer;
-	VkDescriptorSet descriptor_set = nullptr;
 
 	GeometryData geometry_data;
 	std::vector<Node*> nodes;
@@ -97,24 +95,10 @@ struct Node
 	}
 };
 
-
-
 struct MaterialFactors
 {
 	unsigned int base_color;
 	unsigned int diffuse;
-};
-
-struct Material
-{
-	unsigned int tex_base_color_id = 0;
-	unsigned int tex_metallic_roughness_id = 0;
-	unsigned int tex_normal_id = 0;
-	unsigned int tex_emissive_id = 0;
-
-	glm::vec4 base_color_factor;
-	float metallic_factor  = 0;
-	float roughness_factor = 0;
 };
 
 struct TransformDataUbo
@@ -126,33 +110,6 @@ struct TransformDataUbo
 	glm::mat4 pad0;
 	glm::vec4 pad1;
 	glm::vec4 pad2;
-};
-
-template <class T>
-inline void hash_combine(std::size_t& s, const T& v)
-{
-	std::hash<T> h;
-	s ^= h(v) + 0x9e3779b9 + (s << 6) + (s >> 2);
-}
-
-template <class T>
-class MyHash;
-
-template<>
-struct MyHash<Material>
-{
-	std::size_t operator()(Material const& s) const
-	{
-		std::size_t res = 0;
-		hash_combine(res, s.tex_base_color_id);
-		hash_combine(res, s.tex_metallic_roughness_id);
-		hash_combine(res, s.tex_normal_id);
-		hash_combine(res, s.tex_emissive_id);
-		hash_combine(res, s.base_color_factor);
-		hash_combine(res, s.metallic_factor);
-		hash_combine(res, s.roughness_factor);
-		return res;
-	}
 };
 
 struct TransformData
@@ -177,35 +134,6 @@ inline bool operator&&(DrawFlag a, DrawFlag b)
 	return (static_cast<int>(a) & static_cast<int>(b)) == static_cast<int>(b);
 }
 
-struct Drawable
-{
-	size_t id = 0;
-	size_t mesh_id = 0;
-	size_t material_id = 0;
-
-	DrawFlag flags;
-
-	bool visible = true;
-	bool has_primitives() const;
-	const VulkanMesh& get_mesh() const;
-	void draw(VkCommandBuffer cmd_buffer) const;
-	void draw_primitives(VkCommandBuffer cmd_buffer) const;
-	TransformData transform;
-
-	bool is_visible() const;
-	bool cast_shadows() const;
-
-	void update_model_matrix();
-
-	glm::vec3 position = {0.0f, 0.0f, 0.0f};
-	glm::vec3 scale = {1.0f, 1.0f, 1.0f};
-	glm::vec3 rotation = {0.0f, 0.0f, 0.0f};
-};
-
-struct Materials
-{
-	std::vector<std::string> names;
-};
 
 
 

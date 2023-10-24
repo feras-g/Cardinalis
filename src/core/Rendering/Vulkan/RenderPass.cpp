@@ -2,13 +2,15 @@
 #include "core/rendering/vulkan/VulkanTools.h"
 #include "core/rendering/vulkan/VulkanRenderInterface.h"
 
-using namespace vk;
-
-void DynamicRenderPass::begin(VkCommandBuffer cmd_buffer, VkRect2D render_area, uint32_t viewMask)
+void VulkanRenderPassDynamic::begin(VkCommandBuffer cmd_buffer, glm::vec2 extent, uint32_t viewMask)
 {
+	VkRect2D area = {};
+	area.extent.width  = (uint32_t)extent.x;
+	area.extent.height = (uint32_t)extent.y;
+
 	VkRenderingInfo render_info = {};
 	render_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-	render_info.renderArea = render_area;
+	render_info.renderArea = area;
 	render_info.layerCount = 1;
 	render_info.colorAttachmentCount = (uint32_t)color_attachments.size();
 	render_info.pColorAttachments = color_attachments.data();
@@ -19,12 +21,19 @@ void DynamicRenderPass::begin(VkCommandBuffer cmd_buffer, VkRect2D render_area, 
 	fpCmdBeginRenderingKHR(cmd_buffer, &render_info);
 }
 
-void DynamicRenderPass::end(VkCommandBuffer cmd_buffer) const
+void VulkanRenderPassDynamic::end(VkCommandBuffer cmd_buffer) const
 {
 	fpCmdEndRenderingKHR(cmd_buffer);
 }
 
-void DynamicRenderPass::add_attachment(VkImageView view, VkImageLayout layout, VkAttachmentLoadOp loadOp)
+void  VulkanRenderPassDynamic::reset()
+{
+	color_attachments.clear();
+	has_depth_attachment = false;
+	has_stencil_attachment = false;
+}
+
+void VulkanRenderPassDynamic::add_attachment(VkImageView view, VkImageLayout layout, VkAttachmentLoadOp loadOp)
 {
 	assert(view);
 
@@ -37,7 +46,7 @@ void DynamicRenderPass::add_attachment(VkImageView view, VkImageLayout layout, V
 	
 	if (layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 	{
-		attachment_info.clearValue.color = { 1.0f, 0.0f, 1.0f, 1.0f };
+		attachment_info.clearValue.color = { 0.1f, 0.0f, 1.0f, 1.0f };
 		color_attachments.push_back(attachment_info);
 	}
 	else if (layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL || VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
@@ -58,17 +67,17 @@ void DynamicRenderPass::add_attachment(VkImageView view, VkImageLayout layout, V
 		assert(false);
 	}
 }
-void DynamicRenderPass::add_color_attachment(VkImageView view, VkAttachmentLoadOp loadOp)
+void VulkanRenderPassDynamic::add_color_attachment(VkImageView view, VkAttachmentLoadOp loadOp)
 {
 	add_attachment(view, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, loadOp);
 }
 
-void DynamicRenderPass::add_depth_attachment(VkImageView view, VkAttachmentLoadOp loadOp)
+void VulkanRenderPassDynamic::add_depth_attachment(VkImageView view, VkAttachmentLoadOp loadOp)
 {
 	add_attachment(view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, loadOp);
 }
 
-void DynamicRenderPass::add_stencil_attachment(VkImageView view, VkAttachmentLoadOp loadOp)
+void VulkanRenderPassDynamic::add_stencil_attachment(VkImageView view, VkAttachmentLoadOp loadOp)
 {
 	add_attachment(view, VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL, loadOp);
 }

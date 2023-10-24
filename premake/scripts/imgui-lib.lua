@@ -1,5 +1,6 @@
 project "imgui"
     imgui_dir = engine_root .. "src/thirdparty/imgui/" 
+    widgets_dir = imgui_dir .. "widgets/" 
     location (imgui_dir)
 
     targetdir	(engine_root .. "build/bin/" .. outputdir)
@@ -17,7 +18,8 @@ project "imgui"
         imgui_dir .. "backends/imgui_impl_win32.h", 
         imgui_dir .. "backends/imgui_impl_vulkan.h", 
         imgui_dir .. "backends/imgui_impl_win32.cpp",
-        imgui_dir .. "backends/imgui_impl_vulkan.cpp" 
+        imgui_dir .. "backends/imgui_impl_vulkan.cpp", 
+        widgets_dir .. "imguizmo/" .. "*.h", widgets_dir .. "imguizmo/" .. "*.cpp",
     }
 
  

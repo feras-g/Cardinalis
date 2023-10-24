@@ -9,9 +9,9 @@
 class Logger
 {
 public:
-	static void Init(const char* loggerName, spdlog::level::level_enum e_LogLevel = spdlog::level::trace);
+	static void init(const char* loggerName, spdlog::level::level_enum e_LogLevel = spdlog::level::trace);
 	static std::shared_ptr<spdlog::logger>& GetLogger() { return s_Logger; }
-	static void ExitOnError(const char* msg);
+	static void exit_on_error(const char* msg);
 
 	Logger() = delete;
 protected:
@@ -23,7 +23,7 @@ private:
 	#define LOG_WARN(...)  Logger::GetLogger()->warn(__VA_ARGS__)
 	#define LOG_INFO(...)  Logger::GetLogger()->info(__VA_ARGS__)
 	#define LOG_DEBUG(...) Logger::GetLogger()->debug(__VA_ARGS__)
-	#define EXIT_ON_ERROR(...) Logger::ExitOnError(__VA_ARGS__)
+	#define EXIT_ON_ERROR(...) Logger::exit_on_error(__VA_ARGS__)
 #else
 	#define LOG_ERROR(...) 
 	#define LOG_WARN(...)  

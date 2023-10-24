@@ -11,12 +11,12 @@ VulkanContext context;
 static void GetInstanceExtensionNames(std::vector<const char*>& extensions);
 static void GetInstanceLayerNames(std::vector<const char*>& layers);
 
-VulkanRenderInterface::VulkanRenderInterface(const char* name, int maj, int min, int patch)
+RenderInterface::RenderInterface(const char* name, int maj, int min, int patch)
 	: m_name(name), min_ver(min), maj_ver(maj), patch_ver(patch), m_init_success(false)
 {
 }
 
-void VulkanRenderInterface::initialize()
+void RenderInterface::initialize()
 {
 	// Init Vulkan context
 	create_instance();
@@ -26,20 +26,12 @@ void VulkanRenderInterface::initialize()
 	create_command_structures();
 	create_synchronization_structures();
 
-
-	VulkanRendererBase& renderer_base = VulkanRendererBase::get_instance();
-
-	renderer_base.create_samplers();
-	renderer_base.create_buffers();
-	renderer_base.create_attachments();
-	renderer_base.create_descriptor_sets();
-
 	m_init_success = true;
 
 	LOG_INFO("Vulkan init successful.");
 }
 
-void VulkanRenderInterface::terminate()
+void RenderInterface::terminate()
 {
 	vkDeviceWaitIdle(context.device);
 	VkResourceManager::get_instance(context.device)->destroy_all_resources();
@@ -51,7 +43,7 @@ void VulkanRenderInterface::terminate()
 
 	vkDestroyCommandPool(context.device, context.temp_cmd_pool, nullptr);
 
-	context.swapchain->Destroy();
+	context.swapchain->destroy();
 	vkDestroySurfaceKHR(context.instance, surface, nullptr);
 
 
@@ -59,7 +51,7 @@ void VulkanRenderInterface::terminate()
 	vkDestroyInstance(context.instance, nullptr);
 }
 
-void VulkanRenderInterface::create_instance()
+void RenderInterface::create_instance()
 {
 	uint32_t version = VK_MAKE_VERSION(maj_ver, min_ver, patch_ver);
 	VkApplicationInfo appInfo =
@@ -122,7 +114,7 @@ void VulkanRenderInterface::create_instance()
 	LOG_INFO("vkCreateInstance() : success.");
 }
 
-void VulkanRenderInterface::create_device()
+void RenderInterface::create_device()
 {
 	uint32_t deviceCount = 0;
 	vkEnumeratePhysicalDevices(context.instance, &deviceCount, nullptr);
@@ -141,7 +133,7 @@ void VulkanRenderInterface::create_device()
 	for (uint32_t i=0; i < deviceCount; i++)
 	{
 		vkGetPhysicalDeviceProperties(physical_devices[i], &device_props);
-		VulkanRenderInterface::device_limits = device_props.limits;
+		RenderInterface::device_limits = device_props.limits;
 		LOG_DEBUG("{0} {1} {2}. Driver version = {3}. API Version = {4}.{5}.{6}", 
 			vk_object_to_string(device_props.deviceType), device_props.deviceName, device_props.deviceID, device_props.driverVersion,
 			VK_VERSION_MAJOR(device_props.apiVersion), VK_VERSION_MINOR(device_props.apiVersion), VK_VERSION_PATCH(device_props.apiVersion));
@@ -185,6 +177,7 @@ void VulkanRenderInterface::create_device()
 	descriptor_indexing_feature.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
 	descriptor_indexing_feature.descriptorBindingPartiallyBound = VK_TRUE;
 	descriptor_indexing_feature.runtimeDescriptorArray = VK_TRUE;
+	descriptor_indexing_feature.descriptorBindingVariableDescriptorCount = VK_TRUE;
 	
 	/* Dynamic rendering */
 	dynamic_rendering_feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
@@ -227,7 +220,7 @@ void VulkanRenderInterface::create_device()
 	LOG_INFO("vkCreateDevice() : success.");
 }
 
-void VulkanRenderInterface::create_command_structures()
+void RenderInterface::create_command_structures()
 {
 	// Command queue
 	vkGetDeviceQueue(context.device, context.gfxQueueFamily, 0, &context.queue);
@@ -262,7 +255,7 @@ void VulkanRenderInterface::create_command_structures()
 	}
 }
 
-void VulkanRenderInterface::create_synchronization_structures()
+void RenderInterface::create_synchronization_structures()
 {
 	VkFenceCreateInfo fenceInfo			= { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,		.flags = VK_FENCE_CREATE_SIGNALED_BIT };
 	VkSemaphoreCreateInfo semaphoreInfo = { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,	.flags = 0 };
@@ -282,7 +275,7 @@ struct WindowData
 	HINSTANCE hInstance;
 };
 
-void VulkanRenderInterface::create_surface(Window* window)
+void RenderInterface::create_surface(Window* window)
 {
 #ifdef _WIN32
 	assert(window->GetData()->hWnd);
@@ -303,15 +296,15 @@ void VulkanRenderInterface::create_surface(Window* window)
 #endif // _WIN32
 }
 
-void VulkanRenderInterface::create_swapchain()
+void RenderInterface::create_swapchain()
 {
-	context.swapchain.reset(new VulkanSwapchain(surface, context.physical_device));
-	context.swapchain->init(VulkanRendererBase::swapchain_color_format, 
-	                        VulkanRendererBase::swapchain_colorspace, 
-	                        VulkanRendererBase::swapchain_depth_format);
+	context.swapchain.reset(new VulkanSwapchain(surface));
+	context.swapchain->init(VulkanRendererCommon::get_instance().swapchain_color_format, 
+	                        VulkanRendererCommon::get_instance().swapchain_colorspace, 
+	                        VulkanRendererCommon::get_instance().swapchain_depth_format);
 }
 
-VulkanFrame& VulkanRenderInterface::get_current_frame()
+VulkanFrame& RenderInterface::get_current_frame()
 {
 	return context.frames[context.frame_count % NUM_FRAMES];
 }
@@ -494,11 +487,14 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const VulkanSwapchain
 	return CreateColorDepthFramebuffers(renderPass, swapchain->color_attachments.data(), swapchain->depth_attachments.data(), out_Framebuffers, useDepth);
 }
 
-[[nodiscard]] VkDescriptorSetLayout create_descriptor_set_layout(std::span<VkDescriptorSetLayoutBinding> layout_bindings)
+[[nodiscard]] VkDescriptorSetLayout create_descriptor_set_layout(std::span<VkDescriptorSetLayoutBinding> layout_bindings, VkDescriptorSetLayoutBindingFlagsCreateInfoEXT bindings_flags)
 {
+	bindings_flags.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT;
+
 	VkDescriptorSetLayoutCreateInfo layout_info =
 	{
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		.pNext = &bindings_flags,
 		.flags = 0,
 		.bindingCount	= (uint32_t)layout_bindings.size(),
 		.pBindings		= layout_bindings.data()
@@ -578,7 +574,7 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colo
 }
 
 
-[[nodiscard]] VkDescriptorPool create_descriptor_pool(uint32_t num_ssbo, uint32_t num_ubo, uint32_t num_combined_img_smp, uint32_t num_dynamic_ubo, uint32_t max_sets, uint32_t num_storage_image)
+[[nodiscard]] VkDescriptorPool create_descriptor_pool(VkDescriptorPoolCreateFlags flags, uint32_t num_ssbo, uint32_t num_ubo, uint32_t num_combined_img_smp, uint32_t num_dynamic_ubo, uint32_t max_sets, uint32_t num_storage_image)
 {
 	VkDescriptorPool out;
 
@@ -608,7 +604,7 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colo
 	VkDescriptorPoolCreateInfo poolInfo =
 	{
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-		.flags = 0,
+		.flags = flags,
 		.maxSets = max_sets,
 		.poolSizeCount = (uint32_t)(poolSizes.size()),
 		.pPoolSizes = poolSizes.data()
@@ -622,15 +618,15 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colo
 	return out;
 }
 
-bool Pipeline::create_graphics_pipeline_dynamic(const VertexFragmentShader& shader, std::span<VkFormat> colorAttachmentFormats, VkFormat depth_format, Flags flags, VkPipelineLayout pipelineLayout,
-	VkPipeline* out_GraphicsPipeline, VkCullModeFlags cullMode, VkFrontFace frontFace, glm::vec2 customViewport, uint32_t viewMask)
+void Pipeline::create_graphics_pipeline_dynamic(const VertexFragmentShader& shader, std::span<VkFormat> color_formats, VkFormat depth_format, Flags flags, VkPipelineLayout pipeline_layout, VkPrimitiveTopology topology,
+	VkCullModeFlags cull_mode, VkFrontFace front_face, uint32_t view_mask)
 {
 	VkPipelineRenderingCreateInfoKHR pipeline_create{ VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR };
 	pipeline_create.pNext = VK_NULL_HANDLE;
-	pipeline_create.colorAttachmentCount = (uint32_t)colorAttachmentFormats.size();
-	pipeline_create.pColorAttachmentFormats = colorAttachmentFormats.data();
+	pipeline_create.colorAttachmentCount = (uint32_t)color_formats.size();
+	pipeline_create.pColorAttachmentFormats = color_formats.data();
 	pipeline_create.depthAttachmentFormat = depth_format;
-	pipeline_create.viewMask = viewMask;
+	pipeline_create.viewMask = view_mask;
 	//pipeline_create.stencilAttachmentFormat = VK_NULL_HANDLE;
 	
 	if (depth_format != VK_FORMAT_UNDEFINED)
@@ -638,11 +634,11 @@ bool Pipeline::create_graphics_pipeline_dynamic(const VertexFragmentShader& shad
 		flags = Flags(( (int)flags | (int)Flags::ENABLE_DEPTH_STATE));
 	}
 
-	return create_graphics_pipeline(shader, (uint32_t)colorAttachmentFormats.size(), flags, nullptr, pipelineLayout, out_GraphicsPipeline, cullMode, frontFace, &pipeline_create, customViewport);
+	create_graphics_pipeline(shader, (uint32_t)color_formats.size(), flags, nullptr, pipeline_layout, topology, cull_mode, front_face, &pipeline_create);
 }
 
-bool Pipeline::create_graphics_pipeline(const VertexFragmentShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPipeline* out_GraphicsPipeline,
-	VkCullModeFlags cullMode, VkFrontFace frontFace, VkPipelineRenderingCreateInfoKHR* dynamic_pipeline_create, glm::vec2 customViewport)
+void Pipeline::create_graphics_pipeline(const VertexFragmentShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPrimitiveTopology topology,
+	VkCullModeFlags cullMode, VkFrontFace frontFace, VkPipelineRenderingCreateInfoKHR* dynamic_pipeline_create)
 {
 	// Pipeline stages
 	// Vertex Input -> Input Assembly -> Viewport -> Rasterization -> Depth-Stencil -> Color Blending
@@ -653,6 +649,17 @@ bool Pipeline::create_graphics_pipeline(const VertexFragmentShader& shader, uint
 	VkPipelineColorBlendStateCreateInfo colorBlendState;
 	VkPipelineDynamicStateCreateInfo dynamicState;
 
+	VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL;
+
+	if (topology == VK_PRIMITIVE_TOPOLOGY_POINT_LIST)
+	{
+		polygonMode = VK_POLYGON_MODE_POINT;
+	}
+	else if((topology == VK_PRIMITIVE_TOPOLOGY_LINE_LIST) || (topology == VK_PRIMITIVE_TOPOLOGY_LINE_STRIP) || (topology == VK_PRIMITIVE_TOPOLOGY_LINE_LIST_WITH_ADJACENCY) || (topology == VK_PRIMITIVE_TOPOLOGY_LINE_STRIP_WITH_ADJACENCY))
+	{
+		polygonMode = VK_POLYGON_MODE_LINE;
+	}
+
 	vertexInputState =
 	{
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO
@@ -661,13 +668,11 @@ bool Pipeline::create_graphics_pipeline(const VertexFragmentShader& shader, uint
 	inputAssemblyState =
 	{
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-		.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+		.topology = topology,
 		.primitiveRestartEnable = VK_FALSE
 	};
 
 	VkViewport viewport = { .x = 0, .y = 0, .width = 0, .height = 0, .minDepth=0.0f, .maxDepth=1.0f };
-	viewport.width  = customViewport.x > 0 ? customViewport.x : context.swapchain->info.extent.width;
-	viewport.height = customViewport.y > 0 ? customViewport.y : context.swapchain->info.extent.height;
 
 	VkRect2D scissor = { .offset = {0,0}, .extent = {.width = (uint32_t)viewport.width, .height = (uint32_t)viewport.height } };
 
@@ -680,7 +685,7 @@ bool Pipeline::create_graphics_pipeline(const VertexFragmentShader& shader, uint
 
 	VkPipelineRasterizationStateCreateInfo raster_state_info = {};
 	raster_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-	raster_state_info.polygonMode = VK_POLYGON_MODE_FILL;
+	raster_state_info.polygonMode = polygonMode;
 	raster_state_info.cullMode = cullMode;
 	raster_state_info.frontFace = frontFace;
 	raster_state_info.lineWidth = 1.0f;
@@ -762,30 +767,25 @@ bool Pipeline::create_graphics_pipeline(const VertexFragmentShader& shader, uint
 		.basePipelineIndex=0
 	};
 
-
-	VK_CHECK(vkCreateGraphicsPipelines(context.device, VK_NULL_HANDLE, 1, &gfxPipeline, nullptr, out_GraphicsPipeline));
+	VK_CHECK(vkCreateGraphicsPipelines(context.device, VK_NULL_HANDLE, 1, &gfxPipeline, nullptr, &pipeline));
 
 	/* Add to resource manager */
-	VkResourceManager::get_instance(context.device)->add_pipeline(*out_GraphicsPipeline);
-
-	return true;
+	VkResourceManager::get_instance(context.device)->add_pipeline(pipeline);
 }
 
-VkPipeline Pipeline::create_compute_pipeline(const Shader& shader, VkPipelineLayout pipeline_layout)
+void Pipeline::create_compute_pipeline(const Shader& shader)
 {
-	VkPipeline pipeline = VK_NULL_HANDLE;
+	assert(layout);
 
 	VkComputePipelineCreateInfo compute_ppl_info = {};
 	compute_ppl_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
 	compute_ppl_info.stage = shader.stages[0];
-	compute_ppl_info.layout = pipeline_layout;
+	compute_ppl_info.layout = layout;
 
 	VK_CHECK(vkCreateComputePipelines(context.device, VK_NULL_HANDLE, 1, &compute_ppl_info, nullptr, &pipeline));
 
 	/* Add to resource manager */
 	VkResourceManager::get_instance(context.device)->add_pipeline(pipeline);
-
-	return pipeline;
 }
 
 size_t create_vertex_index_buffer(Buffer& result, const void* vtxData, size_t& vtxBufferSizeInBytes, const void* idxData, size_t& idxBufferSizeInBytes)
@@ -796,7 +796,7 @@ size_t create_vertex_index_buffer(Buffer& result, const void* vtxData, size_t& v
 	// Staging buffer
 	Buffer stagingBuffer;
 	stagingBuffer.init(Buffer::Type::STAGING, total_size_bytes, "Vertex/Index Staging Buffer");
-
+	stagingBuffer.create();
 	// Copy vertex + index data to staging buffer
 	
 	void* pData = stagingBuffer.map(context.device, 0, total_size_bytes);
@@ -806,12 +806,13 @@ size_t create_vertex_index_buffer(Buffer& result, const void* vtxData, size_t& v
 
 	// Create storage buffer containing non-interleaved vertex + index data 
 	result.init(Buffer::Type::STORAGE, total_size_bytes, "Vertex/Index SSBO");
-	copy(stagingBuffer, result, total_size_bytes);
+	result.create();
+	copy_from_buffer(stagingBuffer, result, total_size_bytes);
 
 	return total_size_bytes;
 }
 
-VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptor_set, uint32_t binding, VkDescriptorBufferInfo desc_info, VkDescriptorType desc_type)
+VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptor_set, uint32_t binding, const VkDescriptorBufferInfo& desc_info, VkDescriptorType desc_type)
 {
 	return VkWriteDescriptorSet
 	{
@@ -828,7 +829,7 @@ VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptor_set, ui
 	};
 }
 
-VkWriteDescriptorSet ImageWriteDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bindingIndex, const VkDescriptorImageInfo* imageInfo, VkDescriptorType type)
+VkWriteDescriptorSet ImageWriteDescriptorSet(VkDescriptorSet& descriptorSet, uint32_t bindingIndex, const VkDescriptorImageInfo& imageInfo, VkDescriptorType type, uint32_t array_offset, uint32_t descriptor_count)
 {
 	return VkWriteDescriptorSet
 	{
@@ -836,10 +837,10 @@ VkWriteDescriptorSet ImageWriteDescriptorSet(VkDescriptorSet descriptorSet, uint
 		.pNext = nullptr,
 		.dstSet = descriptorSet,
 		.dstBinding = bindingIndex,
-		.dstArrayElement = 0,
-		.descriptorCount = 1,
+		.dstArrayElement = array_offset,
+		.descriptorCount = descriptor_count,
 		.descriptorType = type,
-		.pImageInfo = imageInfo,
+		.pImageInfo = &imageInfo,
 		.pBufferInfo = nullptr,
 		.pTexelBufferView = nullptr,
 	};

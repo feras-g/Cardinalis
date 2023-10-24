@@ -60,11 +60,12 @@ struct Texture
 	void create_vk_image_cube(VkDevice device, VkImageUsageFlags imageUsage);
 
 	/* Identifier in Resource manager */
-	size_t hash;
+	size_t hash = 0;
+	size_t view_hash = 0;
 };
 
 VkImageView create_texture_view(
-	Texture texture, VkFormat format, VkImageViewType view_type, 
+	Texture& texture, VkFormat format, VkImageViewType view_type, 
 	VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT, VkImageSubresourceRange* subresourceRange = nullptr);
 
 struct Texture2D : public Texture

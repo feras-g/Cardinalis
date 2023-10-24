@@ -19,12 +19,12 @@ VkFormat cubemap_render_attachment_format = VK_FORMAT_R32G32B32A32_SFLOAT;
 
 /* Generate a cubemap using VK_KHR_multiview */
 static const uint32_t view_mask = 0b00111111;
-static vk::DynamicRenderPass pass_render_cubemap;
+static VulkanRenderPassDynamic pass_render_cubemap;
 
 /* Generate the irradiance map from the generated cubemap*/
 static Texture2D irradiance_map_attachment;
 VkFormat irradiance_map_format = VK_FORMAT_R32G32B32A32_SFLOAT;
-static vk::DynamicRenderPass pass_render_irradiance_map;
+static VulkanRenderPassDynamic pass_render_irradiance_map;
 uint32_t irradiance_map_dim = 32;
 
 
@@ -33,7 +33,7 @@ VkPipelineLayout render_irradiance_ppl_layout;
 VkPipeline render_irradiance_gfx_ppl;
 
 /* Render skybox sampling cubemap */
-static vk::DynamicRenderPass pass_render_skybox[NUM_FRAMES];
+static VulkanRenderPassDynamic pass_render_skybox[NUM_FRAMES];
 
 
 /* Params */
@@ -71,8 +71,8 @@ VkPipeline			render_skybox_gfx_ppl;
 VkPipelineLayout    render_skybox_ppl_layout;
 
 /* Drawable */
-Drawable* d_skybox;
-Drawable* d_placeholder_cube;
+//Drawable* d_skybox;
+//Drawable* d_placeholder_cube;
 
 /* Cubemap rendering */
 void CubemapRenderer::init()
@@ -89,12 +89,12 @@ void CubemapRenderer::init()
 	/* Graphics pipeline */
 	Pipeline::Flags flags = Pipeline::Flags::NONE;
 	VkFormat color_formats[1] = { cubemap_render_attachment_format };
-	Pipeline::create_graphics_pipeline_dynamic(shader_gen_cubemap, color_formats, {}, flags, pipeline_layout, &gfx_ppl, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_CLOCKWISE, {}, view_mask);
+	//Pipeline::create_graphics_pipeline_dynamic(shader_gen_cubemap, color_formats, {}, flags, pipeline_layout, &gfx_ppl, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_CLOCKWISE, view_mask);
 
 	TransformData transform;
 	transform.model = glm::identity<glm::mat4>();
-	d_skybox = RenderObjectManager::get_drawable("skybox");
-	d_placeholder_cube = RenderObjectManager::get_drawable("placeholder_cube");
+	//d_skybox = RenderObjectManager::get_drawable("skybox");
+	//d_placeholder_cube = RenderObjectManager::get_drawable("placeholder_cube");
 
 	VkCommandBuffer tmp = begin_temp_cmd_buffer();
 
@@ -130,8 +130,8 @@ void CubemapRenderer::init_irradiance_map_rendering()
 	tex_irradiance_map_view = Texture2D::create_texture_cube_view(
 		irradiance_map_attachment, irradiance_map_attachment.info.imageFormat);
 
-	const VkSampler sampler = VulkanRendererBase::s_SamplerClampLinear;
-	irradiance_desc_set.layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, sampler, "Cubemap");
+	VkSampler sampler = VulkanRendererCommon::get_instance().s_SamplerClampLinear;
+	irradiance_desc_set.layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler, "Cubemap");
 	irradiance_desc_set.create(pool, "Gen Irradiance");
 
 	//irradiance_desc_set.write_descriptor_combined_image_sampler(0, tex_irradiance_map_view, sampler);
@@ -142,12 +142,12 @@ void CubemapRenderer::init_irradiance_map_rendering()
 	image_info.imageView = tex_cubemap_view;
 	image_info.sampler = sampler;
 
-	VkWriteDescriptorSet write = ImageWriteDescriptorSet(irradiance_desc_set, 0, &image_info);
+	VkWriteDescriptorSet write = ImageWriteDescriptorSet(irradiance_desc_set.vk_set, 0, image_info);
 	vkUpdateDescriptorSets(context.device, 1, &write, 0, nullptr);
 
 	/* Pipeline layout */
 	std::vector<VkDescriptorSetLayout> desc_set_layouts = {};
-	desc_set_layouts.push_back(RenderObjectManager::mesh_descriptor_set_layout);
+	//desc_set_layouts.push_back(RenderObjectManager::mesh_descriptor_set_layout);
 	desc_set_layouts.push_back(cubemap_desc_set.layout);
 	desc_set_layouts.push_back(irradiance_desc_set.layout);
 	render_irradiance_ppl_layout = create_pipeline_layout(context.device, desc_set_layouts);
@@ -155,7 +155,7 @@ void CubemapRenderer::init_irradiance_map_rendering()
 	/* Graphics pipeline */
 	Pipeline::Flags flags = Pipeline::Flags::NONE;
 	VkFormat color_formats[1] = { irradiance_map_format };
-	Pipeline::create_graphics_pipeline_dynamic(shader_gen_irradiance_map, color_formats, {}, flags, render_irradiance_ppl_layout, &render_irradiance_gfx_ppl, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_CLOCKWISE, {}, view_mask);
+	//Pipeline::create_graphics_pipeline_dynamic(shader_gen_irradiance_map, color_formats, {}, flags, render_irradiance_ppl_layout, &render_irradiance_gfx_ppl, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_CLOCKWISE, view_mask);
 }
 
 void CubemapRenderer::render_irradiance_map(VkCommandBuffer cmd_buffer)
@@ -164,20 +164,18 @@ void CubemapRenderer::render_irradiance_map(VkCommandBuffer cmd_buffer)
 
 	set_viewport_scissor(cmd_buffer, irradiance_map_dim, irradiance_map_dim, true);
 
-	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_irradiance_ppl_layout, 0, 1, &d_placeholder_cube->get_mesh().descriptor_set, 0, nullptr);
+	//vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_irradiance_ppl_layout, 0, 1, &d_placeholder_cube->get_mesh().descriptor_set, 0, nullptr);
 	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_irradiance_ppl_layout, 1, 1, &cubemap_desc_set.vk_set, 0, nullptr);
 	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_irradiance_ppl_layout, 2, 1, &irradiance_desc_set.vk_set, 0, nullptr);
 
 	vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_irradiance_gfx_ppl);
 	
-	VkRect2D area{ .offset = { } , .extent {.width = irradiance_map_dim, .height = irradiance_map_dim } };
-
 	cubemap_render_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
 	irradiance_map_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 
-	pass_render_irradiance_map.begin(cmd_buffer, area, view_mask);
+	pass_render_irradiance_map.begin(cmd_buffer, { irradiance_map_dim, irradiance_map_dim }, view_mask);
 
-	d_placeholder_cube->draw(cmd_buffer);
+	//d_placeholder_cube->draw(cmd_buffer);
 
 	pass_render_irradiance_map.end(cmd_buffer);
 
@@ -192,13 +190,13 @@ void CubemapRenderer::init_skybox_rendering()
 
 	for (int i = 0; i < NUM_FRAMES; i++)
 	{
-		pass_render_skybox[i].add_color_attachment(VulkanRendererBase::m_deferred_lighting_attachment[i].view, VK_ATTACHMENT_LOAD_OP_LOAD);
-		pass_render_skybox[i].add_depth_attachment(VulkanRendererBase::m_gbuffer_depth[i].view, VK_ATTACHMENT_LOAD_OP_LOAD);
+		pass_render_skybox[i].add_color_attachment(VulkanRendererCommon::get_instance().m_deferred_lighting_attachment[i].view, VK_ATTACHMENT_LOAD_OP_LOAD);
+		pass_render_skybox[i].add_depth_attachment(VulkanRendererCommon::get_instance().m_gbuffer_depth[i].view, VK_ATTACHMENT_LOAD_OP_LOAD);
 	}
-	const VkSampler sampler = VulkanRendererBase::s_SamplerClampLinear;
+	VkSampler sampler = VulkanRendererCommon::get_instance().s_SamplerClampLinear;
 
 	///* Descriptor */
-	render_skybox_desc_set.layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, sampler, "SamplerCube");
+	render_skybox_desc_set.layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler, "SamplerCube");
 	render_skybox_desc_set.create(pool, "Render Skybox");
 	
 	VkDescriptorImageInfo image_info = {};
@@ -206,29 +204,29 @@ void CubemapRenderer::init_skybox_rendering()
 	image_info.imageView = tex_cubemap_view;// tex_irradiance_map_view;
 	image_info.sampler = sampler;
 
-	VkWriteDescriptorSet write = ImageWriteDescriptorSet(render_skybox_desc_set.vk_set, 0, &image_info);
+	VkWriteDescriptorSet write = ImageWriteDescriptorSet(render_skybox_desc_set.vk_set, 0, image_info);
 	vkUpdateDescriptorSets(context.device, 1, &write, 0, nullptr);
 
 	std::vector<VkDescriptorSetLayout> desc_set_layouts = {};
-	desc_set_layouts.push_back(RenderObjectManager::mesh_descriptor_set_layout);
-	desc_set_layouts.push_back(VulkanRendererBase::m_framedata_desc_set_layout);
+	//desc_set_layouts.push_back(RenderObjectManager::mesh_descriptor_set_layout);
+	desc_set_layouts.push_back(VulkanRendererCommon::get_instance().m_framedata_desc_set_layout);
 	desc_set_layouts.push_back(render_skybox_desc_set.layout);
 	render_skybox_ppl_layout = create_pipeline_layout(context.device, desc_set_layouts);
 
 	/* Graphics pipeline */
 	Pipeline::Flags flags = Pipeline::Flags::ENABLE_DEPTH_STATE;
-	VkFormat color_formats[1] = { VulkanRendererBase::tex_deferred_lighting_format };
-	Pipeline::create_graphics_pipeline_dynamic(shader_render_skybox, color_formats, VulkanRendererBase::tex_gbuffer_depth_format, flags, render_skybox_ppl_layout, &render_skybox_gfx_ppl, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_CLOCKWISE, {});
+	VkFormat color_formats[1] = { VulkanRendererCommon::get_instance().tex_deferred_lighting_format };
+	//Pipeline::create_graphics_pipeline_dynamic(shader_render_skybox, color_formats, VulkanRendererBase::tex_gbuffer_depth_format, flags, render_skybox_ppl_layout, &render_skybox_gfx_ppl, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_CLOCKWISE, {});
 }
 
 void CubemapRenderer::init_resources(const char* filename)
 {
 	/* Equirectangular map */
-	equirect_map_id = RenderObjectManager::add_texture(filename, "Cubemap_Newport_Loft_HDR", VK_FORMAT_R32G32B32A32_SFLOAT, false);
-	
-	uint32_t dim = std::max(RenderObjectManager::textures[equirect_map_id].info.width, RenderObjectManager::textures[equirect_map_id].info.height);
+	//equirect_map_id = RenderObjectManager::add_texture(filename, "Cubemap_Newport_Loft_HDR", VK_FORMAT_R32G32B32A32_SFLOAT, false);
+	//
+	//uint32_t dim = std::max(RenderObjectManager::textures[equirect_map_id].info.width, RenderObjectManager::textures[equirect_map_id].info.height);
 
-	layer_height = layer_width = dim;
+	//layer_height = layer_width = dim;
 
 	/* Cubemap render attachment */
 	cubemap_render_attachment.init(cubemap_render_attachment_format, layer_width, layer_height, 6, false, "Cubemap Array Texture");
@@ -244,12 +242,12 @@ void CubemapRenderer::init_resources(const char* filename)
 
 void CubemapRenderer::init_descriptors()
 {
-	pool = create_descriptor_pool(0, 1, 2, 0, 3);
+	pool = create_descriptor_pool(0, 0, 1, 2, 0, 3);
 	
-	const VkSampler& sampler = VulkanRendererBase::s_SamplerRepeatNearest;
+	VkSampler& sampler = VulkanRendererCommon::get_instance().s_SamplerRepeatNearest;
 	
 	cubemap_desc_set.layout.add_uniform_buffer_binding(0, VK_SHADER_STAGE_VERTEX_BIT, "View matrices UBO");
-	cubemap_desc_set.layout.add_combined_image_sampler_binding(1, VK_SHADER_STAGE_FRAGMENT_BIT, sampler, "HDR map texture");
+	cubemap_desc_set.layout.add_combined_image_sampler_binding(1, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler, "HDR map texture");
 	cubemap_desc_set.layout.create("GenCubemap");
 
 	cubemap_desc_set.create(pool, "GenCubemap");
@@ -265,17 +263,17 @@ void CubemapRenderer::init_descriptors()
 
 	VkDescriptorImageInfo image_info = {};
 	image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	image_info.imageView = RenderObjectManager::textures[equirect_map_id].view;
+	//image_info.imageView = RenderObjectManager::textures[equirect_map_id].view;
 	image_info.sampler = sampler;
 
 	std::vector<VkWriteDescriptorSet> write_descriptor_set = {};
 	write_descriptor_set.push_back(BufferWriteDescriptorSet(cubemap_desc_set.vk_set, 0, buffer_info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER));
-	write_descriptor_set.push_back(ImageWriteDescriptorSet(cubemap_desc_set.vk_set, 1, &image_info));
+	write_descriptor_set.push_back(ImageWriteDescriptorSet(cubemap_desc_set.vk_set, 1, image_info));
 
 	vkUpdateDescriptorSets(context.device, 2, write_descriptor_set.data(), 0, nullptr);
 
 	std::vector<VkDescriptorSetLayout> desc_set_layouts = {};
-	desc_set_layouts.push_back(RenderObjectManager::mesh_descriptor_set_layout);								
+	//desc_set_layouts.push_back(RenderObjectManager::mesh_descriptor_set_layout);								
 	desc_set_layouts.push_back(cubemap_desc_set.layout);	
 	pipeline_layout = create_pipeline_layout(context.device, desc_set_layouts);
 }
@@ -297,7 +295,7 @@ void CubemapRenderer::render_cubemap(VkCommandBuffer cmd_buffer, VkRect2D area)
 	set_viewport_scissor(cmd_buffer, layer_width, layer_height, true);
 	VkDescriptorSet desc_sets[2] =
 	{
-		d_placeholder_cube->get_mesh().descriptor_set,
+		//d_placeholder_cube->get_mesh().descriptor_set,
 		cubemap_desc_set.vk_set
 	};
 
@@ -306,9 +304,9 @@ void CubemapRenderer::render_cubemap(VkCommandBuffer cmd_buffer, VkRect2D area)
 
 	cubemap_render_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 
-	pass_render_cubemap.begin(cmd_buffer, area, view_mask);
+	pass_render_cubemap.begin(cmd_buffer, {area.extent.width, area.extent.height }, view_mask);
 
-	d_placeholder_cube->draw(cmd_buffer);
+	//d_placeholder_cube->draw(cmd_buffer);
 
 	pass_render_cubemap.end(cmd_buffer);
 
@@ -324,12 +322,12 @@ void CubemapRenderer::render_skybox(size_t currentImageIdx, VkCommandBuffer cmd_
 {
 	VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Skybox Render Pass");
 
-	set_viewport_scissor(cmd_buffer, VulkanRendererBase::render_width, VulkanRendererBase::render_height, true);
+	set_viewport_scissor(cmd_buffer, VulkanRendererCommon::get_instance().render_width, VulkanRendererCommon::get_instance().render_height, true);
 
 	const VkDescriptorSet descriptor_sets[3] 
 	{
-		d_skybox->get_mesh().descriptor_set,
-		VulkanRendererBase::m_framedata_desc_set[currentImageIdx].vk_set,
+		//d_skybox->get_mesh().descriptor_set,
+		VulkanRendererCommon::get_instance().m_framedata_desc_set[currentImageIdx].vk_set,
 		render_skybox_desc_set.vk_set
 	};
 
@@ -337,10 +335,9 @@ void CubemapRenderer::render_skybox(size_t currentImageIdx, VkCommandBuffer cmd_
 
 	vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_skybox_gfx_ppl);
 
-	VkRect2D area{ .offset = { } , .extent {.width = VulkanRendererBase::render_width, .height = VulkanRendererBase::render_height } };
-	pass_render_skybox[currentImageIdx].begin(cmd_buffer, area);
+	pass_render_skybox[currentImageIdx].begin(cmd_buffer, { VulkanRendererCommon::get_instance().render_width, VulkanRendererCommon::get_instance().render_height });
 
-	d_skybox->draw(cmd_buffer);
+	//d_skybox->draw(cmd_buffer);
 
 	pass_render_skybox[currentImageIdx].end(cmd_buffer);
 }

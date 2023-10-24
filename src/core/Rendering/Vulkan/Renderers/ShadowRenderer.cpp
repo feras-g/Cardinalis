@@ -5,6 +5,8 @@
 #include "core/rendering/vulkan/VulkanDebugUtils.h"
 #include "core/rendering/Camera.h"
 
+#include "glm/gtx/quaternion.hpp"
+
 static constexpr VkFormat shadow_map_format = VK_FORMAT_D32_SFLOAT;
 
 void CascadedShadowRenderer::init(unsigned int width, unsigned int height,  Camera& camera, const LightManager& lightmanager)
@@ -56,7 +58,7 @@ void CascadedShadowRenderer::init(unsigned int width, unsigned int height,  Came
 	m_descriptor_set_layout = create_descriptor_set_layout(bindings);
 
 	std::vector<VkDescriptorSetLayout> desc_set_layouts = {};
-	desc_set_layouts.push_back(RenderObjectManager::mesh_descriptor_set_layout);			/* Mesh geometry descriptor set*/
+	//desc_set_layouts.push_back(RenderObjectManager::mesh_descriptor_set_layout);			/* Mesh geometry descriptor set*/
 	desc_set_layouts.push_back(m_descriptor_set_layout);									/* Shadow pass descriptor set */
 
 	std::vector<VkDescriptorPoolSize> pool_sizes
@@ -92,7 +94,7 @@ void CascadedShadowRenderer::init(unsigned int width, unsigned int height,  Came
 	/* Create graphics pipeline */
 	m_csm_shader.create("GenCascadedShadowMap.vert.spv", "GenShadowMap.frag.spv");
 	Pipeline::Flags flags = Pipeline::Flags::ENABLE_DEPTH_STATE;
-	Pipeline::create_graphics_pipeline_dynamic(m_csm_shader, {}, shadow_map_format, flags, m_gfx_pipeline_layout, &m_gfx_pipeline, VK_CULL_MODE_FRONT_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE, {}, view_mask);
+	//Pipeline::create_graphics_pipeline_dynamic(m_csm_shader, {}, shadow_map_format, flags, m_gfx_pipeline_layout, &m_gfx_pipeline, VK_CULL_MODE_FRONT_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE, {}, view_mask);
 }
 
 void CascadedShadowRenderer::update_desc_sets()
@@ -122,8 +124,8 @@ void CascadedShadowRenderer::compute_cascade_splits()
 	// Use Practical Split Scheme method
 	// https://developer.download.nvidia.com/SDK/10.5/opengl/src/cascaded_shadow_maps/doc/cascaded_shadow_maps.pdf, page 6
 	
-	near_clip  = h_camera->near_far.x;
-	far_clip   = h_camera->near_far.y;
+	near_clip  = h_camera->znear;
+	far_clip   = h_camera->zfar;
 	clip_range = far_clip - near_clip;
 
 	float z_min = near_clip;
@@ -253,11 +255,10 @@ void CascadedShadowRenderer::render(size_t current_frame_idx, VkCommandBuffer cm
 	compute_cascade_ortho_proj(current_frame_idx);
 
 
-	VkRect2D render_area{ .offset {}, .extent { (uint32_t)m_shadow_map_size.x , (uint32_t)m_shadow_map_size.y } };
 	set_viewport_scissor(cmd_buffer, (uint32_t)m_shadow_map_size.x, (uint32_t)m_shadow_map_size.y, true);
 
 	m_shadow_maps[current_frame_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
-	m_renderpass[current_frame_idx].begin(cmd_buffer, render_area, view_mask);
+	m_renderpass[current_frame_idx].begin(cmd_buffer, { (uint32_t)m_shadow_map_size.x , (uint32_t)m_shadow_map_size.y }, view_mask);
 
 	/* Bind pipeline */
 	vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline);
@@ -274,33 +275,33 @@ void CascadedShadowRenderer::draw_scene(VkCommandBuffer cmd_buffer)
 {
 	VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Cascaded Shadow Map Render Pass");
 
-	for (size_t i = 0; i < RenderObjectManager::drawables.size(); i++)
-	{
-		const Drawable& drawable = RenderObjectManager::drawables[i];
-		const VulkanMesh& mesh = drawable.get_mesh();
-		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 0, 1, &mesh.descriptor_set, 0, nullptr);
+	//for (size_t i = 0; i < RenderObjectManager::drawables.size(); i++)
+	//{
+		//const Drawable& drawable = RenderObjectManager::drawables[i];
+		//const VulkanMesh& mesh = drawable.get_mesh();
+		//vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfx_pipeline_layout, 0, 1, &mesh.descriptor_set, 0, nullptr);
 		
-		if (drawable.cast_shadows())
-		{
-			if (drawable.has_primitives())
-			{
-				for (int prim_idx = 0; prim_idx < mesh.geometry_data.primitives.size(); prim_idx++)
-				{
-					const Primitive& p = mesh.geometry_data.primitives[prim_idx];
-					/* Model matrix push constant */
-					ps.model = drawable.transform.model * p.mat_model;
+	//	if (drawable.cast_shadows())
+	//	{
+	//		if (drawable.has_primitives())
+	//		{
+	//			for (int prim_idx = 0; prim_idx < mesh.geometry_data.primitives.size(); prim_idx++)
+	//			{
+	//				const Primitive& p = mesh.geometry_data.primitives[prim_idx];
+	//				/* Model matrix push constant */
+	//				ps.model = drawable.transform.model * p.mat_model;
 
-					vkCmdPushConstants(cmd_buffer, m_gfx_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(push_constants), &ps);
-					vkCmdDraw(cmd_buffer, p.index_count, 1, p.first_index, 0);
-				}
-			}
-			else
-			{
-				drawable.draw(cmd_buffer);
-			}
-		}
+	//				vkCmdPushConstants(cmd_buffer, m_gfx_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(push_constants), &ps);
+	//				vkCmdDraw(cmd_buffer, p.index_count, 1, p.first_index, 0);
+	//			}
+	//		}
+	//		else
+	//		{
+	//			drawable.draw(cmd_buffer);
+	//		}
+	//	}
 
-	}
+	//}
 }
 
 //void CascadedShadowRenderer::compute_cascade_ortho_proj(size_t frame_idx)

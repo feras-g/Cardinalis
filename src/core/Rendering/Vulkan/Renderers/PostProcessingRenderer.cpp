@@ -76,7 +76,7 @@ void PostFX_Downsample::init()
 	pipeline_layout = create_pipeline_layout(context.device, descriptor_set.layout, {});
 
 	/* Compute pipeline */
-	pipeline = Pipeline::create_compute_pipeline(shader, pipeline_layout);
+	//pipeline = Pipeline::create_compute_pipeline(shader, pipeline_layout);
 }
 
 /*
@@ -84,17 +84,17 @@ void PostFX_Downsample::init()
 */
 void PostFX_Downsample::update_data(PostFX_Downsample::Data data)
 {
-	m_data = data;
+	//m_data = data;
 
-	VkDescriptorImageInfo input_image_desc_info = { VK_NULL_HANDLE, m_data.input_image->view,  VK_IMAGE_LAYOUT_GENERAL };
-	VkDescriptorImageInfo ouput_image_desc_info = { VK_NULL_HANDLE, m_data.output_image->view, VK_IMAGE_LAYOUT_GENERAL };
+	//VkDescriptorImageInfo input_image_desc_info = { VK_NULL_HANDLE, m_data.input_image->view,  VK_IMAGE_LAYOUT_GENERAL };
+	//VkDescriptorImageInfo ouput_image_desc_info = { VK_NULL_HANDLE, m_data.output_image->view, VK_IMAGE_LAYOUT_GENERAL };
 
-	std::vector<VkWriteDescriptorSet> write_descriptor_set
-	{
-		ImageWriteDescriptorSet(descriptor_set, 0, &input_image_desc_info, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE),
-		ImageWriteDescriptorSet(descriptor_set, 1, &ouput_image_desc_info, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
-	};
-	vkUpdateDescriptorSets(context.device, (uint32_t)write_descriptor_set.size(), write_descriptor_set.data(), 0, nullptr);
+	//std::vector<VkWriteDescriptorSet> write_descriptor_set
+	//{
+	//	ImageWriteDescriptorSet(descriptor_set, 0, input_image_desc_info, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE),
+	//	ImageWriteDescriptorSet(descriptor_set, 1, ouput_image_desc_info, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
+	//};
+	//vkUpdateDescriptorSets(context.device, (uint32_t)write_descriptor_set.size(), write_descriptor_set.data(), 0, nullptr);
 }
 
 /*

@@ -159,6 +159,7 @@ void Texture::upload_data(VkDevice device, void* data)
     // Create temp CPU-GPU visible buffer holding image data 
     Buffer stagingBuffer;
 	stagingBuffer.init(Buffer::Type::STAGING, imageSizeInBytes, "Image Staging Buffer");
+    stagingBuffer.create();
 	stagingBuffer.upload(context.device, data, 0, imageSizeInBytes);
 
     VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
@@ -173,7 +174,16 @@ void Texture::create_view(VkDevice device, const ImageViewInitInfo& viewInfo)
 
 void Texture::destroy()
 {
-    VkResourceManager::get_instance(context.device)->destroy_image(hash);
+    if (hash)
+    {
+        VkResourceManager::get_instance(context.device)->destroy_image(hash);
+    }
+
+    if (view_hash)
+    {
+        VkResourceManager::get_instance(context.device)->destroy_image_view(view_hash);
+    }
+
     *this = {};
 }
 
@@ -189,81 +199,81 @@ void Texture::generate_mipmaps()
 
     //   end_temp_cmd_buffer(cbuf);
 
-    //VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
+    VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
 
-    //int32_t mip_height = info.height;
-    //int32_t mip_width = info.width;
-    //for (uint32_t mip_level = 1; mip_level < info.mipLevels; mip_level++)
-    //{
-    //    /* Transition source mip-level */
-    //    uint32_t src_mip_level = mip_level - 1;
-    //    uint32_t dst_mip_level = mip_level;
-    //    VkImageSubresourceRange src_subresouce_range =
-    //    {
-    //        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-    //        .baseMipLevel = mip_level - 1,
-    //        .levelCount = 1,
-    //        .baseArrayLayer = 0,
-    //        .layerCount = 1,
-    //    };
+    int32_t mip_height = info.height;
+    int32_t mip_width = info.width;
+    for (uint32_t mip_level = 1; mip_level < info.mipLevels; mip_level++)
+    {
+        /* Transition source mip-level */
+        uint32_t src_mip_level = mip_level - 1;
+        uint32_t dst_mip_level = mip_level;
+        VkImageSubresourceRange src_subresouce_range =
+        {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = mip_level - 1,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        };
 
-    //    transition(cmd_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_MEMORY_READ_BIT, &src_subresouce_range);
+        transition(cmd_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_MEMORY_READ_BIT, &src_subresouce_range);
 
-    //    /* Blit from mip level N to N-1 */
-    //    VkImageBlit blit =
-    //    {
-    //        /* source */
-    //        .srcSubresource =
-    //        {
-    //            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-    //            .mipLevel = src_mip_level,
-    //            .baseArrayLayer = 0,
-    //            .layerCount = 1,
-    //        },
-    //        .srcOffsets =   /* bounds of the source region */
-    //        {
-    //            { 0, 0, 0 },
-    //            { mip_width, mip_height, 1 }
-    //        },
-    //        /* destination */
-    //        .dstSubresource =
-    //        {
-    //            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-    //            .mipLevel = dst_mip_level,
-    //            .baseArrayLayer = 0,
-    //            .layerCount = 1,
-    //        },
-    //        .dstOffsets = /* bounds of the destination region */
-    //        {
-    //            { 0, 0, 0 },
-    //            { mip_width > 1 ? mip_width / 2 : 1, mip_height > 1 ? mip_height / 2 : 1, 1 }
-    //        }
-    //    };
-    //    vkCmdBlitImage(cmd_buffer,
-    //        this->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,  /* source */
-    //        this->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,  /* destination */
-    //        1, &blit, VK_FILTER_LINEAR);
+        /* Blit from mip level N to N-1 */
+        VkImageBlit blit =
+        {
+            /* source */
+            .srcSubresource =
+            {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .mipLevel = src_mip_level,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+            .srcOffsets =   /* bounds of the source region */
+            {
+                { 0, 0, 0 },
+                { mip_width, mip_height, 1 }
+            },
+            /* destination */
+            .dstSubresource =
+            {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .mipLevel = dst_mip_level,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+            .dstOffsets = /* bounds of the destination region */
+            {
+                { 0, 0, 0 },
+                { mip_width > 1 ? mip_width / 2 : 1, mip_height > 1 ? mip_height / 2 : 1, 1 }
+            }
+        };
+        vkCmdBlitImage(cmd_buffer,
+            this->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,  /* source */
+            this->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,  /* destination */
+            1, &blit, VK_FILTER_LINEAR);
 
-    //    /* Transition source to final state */
-    //    transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT , &src_subresouce_range);
+        /* Transition source to final state */
+        transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT , &src_subresouce_range);
 
-    //    /* Prepare for next blit. */
-    //    mip_width = mip_width > 1 ? mip_width / 2 : 1;
-    //    mip_height = mip_height > 1 ? mip_height / 2 : 1;
-    //}
+        /* Prepare for next blit. */
+        mip_width = mip_width > 1 ? mip_width / 2 : 1;
+        mip_height = mip_height > 1 ? mip_height / 2 : 1;
+    }
 
-    ///* Transition last mip level */
-    //VkImageSubresourceRange subresouce_range =
-    //{
-    //    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-    //    .baseMipLevel = info.mipLevels - 1,
-    //    .levelCount = 1,
-    //    .baseArrayLayer = 0,
-    //    .layerCount = 1,
-    //};
-    //transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, &subresouce_range);
+    /* Transition last mip level */
+    VkImageSubresourceRange subresouce_range =
+    {
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .baseMipLevel = info.mipLevels - 1,
+        .levelCount = 1,
+        .baseArrayLayer = 0,
+        .layerCount = 1,
+    };
+    transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, &subresouce_range);
 
-    //end_temp_cmd_buffer(cmd_buffer);
+    end_temp_cmd_buffer(cmd_buffer);
 }
 
 // Helper to transition images and remember the current layout
@@ -506,7 +516,7 @@ void GetSrcDstPipelineStage(VkImageLayout oldLayout, VkImageLayout newLayout, Vk
 }
 
 VkImageView create_texture_view(
-	Texture texture, VkFormat format, VkImageViewType view_type,
+	Texture& texture, VkFormat format, VkImageViewType view_type,
 	VkImageAspectFlags aspect, VkImageSubresourceRange* subresourceRange)
 {
 	VkImageViewCreateInfo createInfo =
@@ -545,7 +555,7 @@ VkImageView create_texture_view(
 	vkCreateImageView(context.device, &createInfo, nullptr, &out_view);
 
     /* Add to resource manager */
-    size_t hash = VkResourceManager::get_instance(context.device)->add_image_view(out_view);
+    texture.view_hash = VkResourceManager::get_instance(context.device)->add_image_view(out_view);
 
 	return out_view;
 }

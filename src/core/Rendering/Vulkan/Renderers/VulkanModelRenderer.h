@@ -13,11 +13,11 @@ public:
 	explicit VulkanModelRenderer();
 	void render(size_t currentImageIdx, VkCommandBuffer cmd_buffer);
 
-	void draw_scene(VkCommandBuffer cmdBuffer, size_t current_frame_idx,  Drawable& drawable);
-	void update(size_t frame_idx, const VulkanRendererBase::PerFrameData& frame_data);
+	//void draw_scene(VkCommandBuffer cmdBuffer, size_t current_frame_idx,  Drawable& drawable);
+	void update(size_t frame_idx, const VulkanRendererCommon::FrameData& frame_data);
 	void update_descriptor_set(VkDevice device, size_t frame_idx);
 
-	vk::DynamicRenderPass m_dyn_renderpass[NUM_FRAMES];
+	VulkanRenderPassDynamic m_dyn_renderpass[NUM_FRAMES];
 
 	static inline VkWriteDescriptorSet texture_array_write_descriptor_set;
 
