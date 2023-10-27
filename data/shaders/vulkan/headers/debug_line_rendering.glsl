@@ -18,7 +18,7 @@ layout(set = 0, binding = 1) buffer DebugLinesCommand { VkDrawIndirectCommand da
 void DrawLine(in DebugPoint p0, in DebugPoint p1)
 {
     uint vertex_offset = atomicAdd(command.data.vertexCount, 2);
-    vertex_buffer.data[vertex_offset + 0]     = p0;
+    vertex_buffer.data[vertex_offset + 0] = p0;
     vertex_buffer.data[vertex_offset + 1] = p1;
 }
 

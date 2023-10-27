@@ -1,8 +1,8 @@
 #version 460
 #extension GL_EXT_nonuniform_qualifier : enable
 
-#include "Headers/LightDefinitions.glsl" 
-#include "Headers/Maths.glsl" 
+#include "headers/LightDefinitions.glsl" 
+#include "headers/normal_mapping.glsl" 
 
 layout(location = 0) in vec4 uv;
 layout(location = 1) in vec4 normalWS;

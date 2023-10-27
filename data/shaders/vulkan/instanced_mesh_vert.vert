@@ -1,6 +1,7 @@
 #version 460
 
 #include "headers/vertex.glsl"
+#include "headers/framedata.glsl"
 
 layout(location = 0) out vec4 position_ws;
 layout(location = 1) out vec4 normal_ws;
@@ -19,20 +20,16 @@ layout(set = 0, binding = 2) readonly buffer InstanceData
 { 
     Instance  data[];
 } instances;
-layout(set = 1, binding = 0) uniform FrameData 
+
+layout(set = 1, binding = 0) uniform FrameDataBlock 
 { 
-    mat4 view_proj;
-    mat4 inv_view_proj;
-} frame_data;
+    FrameData data;
+} frame;
 
 layout (push_constant) uniform constants
 {
-    int texture_base_color_idx;
-    int texture_normal_map_idx;
-    int texture_metalness_roughness_idx;
-    int texture_emissive_map_idx;
     mat4 model;
-} push_constants;
+} primitive_push_constants;
 
 void main()
 {
@@ -40,10 +37,10 @@ void main()
     Vertex v = vtx_buffer.data[index];
     vec4 position_os = vec4(v.px, v.py, v.pz, 1.0);
 
-    mat4 model = instances.data[gl_InstanceIndex].model * push_constants.model;
+    mat4 model = instances.data[gl_InstanceIndex].model * primitive_push_constants.model;
     instance_color = instances.data[gl_InstanceIndex].color;
     position_ws = model * position_os;
-    vec4 position_cs = frame_data.view_proj * position_ws;
+    vec4 position_cs = frame.data.view_proj * position_ws;
     normal_ws        = model * vec4(v.nx, v.ny, v.nz, 0.0);
     vec2 depth_cs    = position_cs.zw;
 
