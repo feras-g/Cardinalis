@@ -1,6 +1,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-#include "VulkanTools.h"
+#include "Image.h"
 
 Image::Image(void* imdata, bool b_is_float)
 {

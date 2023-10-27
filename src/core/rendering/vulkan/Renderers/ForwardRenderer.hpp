@@ -38,8 +38,8 @@ struct ForwardRenderer
 			descriptor_set.layout.vk_set_layout
 		};
 
-		pipeline.layout.add_push_constant_range("Material", { .stageFlags =  VK_SHADER_STAGE_FRAGMENT_BIT, .offset = 0, .size = sizeof(Material) });
-		pipeline.layout.add_push_constant_range("Primitive Model Matrix", { .stageFlags = VK_SHADER_STAGE_VERTEX_BIT, .offset = sizeof(Material), .size = sizeof(glm::mat4) });
+		pipeline.layout.add_push_constant_range("Primitive Model Matrix", { .stageFlags = VK_SHADER_STAGE_VERTEX_BIT, .offset = 0, .size = sizeof(glm::mat4) });
+		pipeline.layout.add_push_constant_range("Material", { .stageFlags =  VK_SHADER_STAGE_FRAGMENT_BIT, .offset = sizeof(glm::mat4), .size = sizeof(Material) });
 
 		pipeline.layout.create(layouts);
 		pipeline.create_graphics_pipeline_dynamic(shader, std::span<VkFormat>(&color_format, 1), depth_format, Pipeline::Flags::ENABLE_DEPTH_STATE, pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
@@ -62,7 +62,6 @@ struct ForwardRenderer
 	{
 		VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Forward Pass");
 
-		renderpass[context.curr_frame_idx].begin(cmd_buffer, { context.swapchain->info.width, context.swapchain->info.height });
 		
 		vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
 
@@ -75,6 +74,7 @@ struct ForwardRenderer
 		};
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 1, 3, frame_sets, 0, nullptr);
 
+		renderpass[context.curr_frame_idx].begin(cmd_buffer, { context.swapchain->info.width, context.swapchain->info.height });
 		for (size_t mesh_idx = 0; mesh_idx < object_manager.m_meshes.size(); mesh_idx++)
 		{
 			/* Mesh descriptor set */
@@ -93,9 +93,10 @@ struct ForwardRenderer
 
 
 				vkCmdDraw(cmd_buffer, p.index_count, instance_count, p.first_index, 0);
+
+
 			}
 		}
-
 		renderpass[context.curr_frame_idx].end(cmd_buffer);
 	}
 

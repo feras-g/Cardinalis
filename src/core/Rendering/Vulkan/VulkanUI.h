@@ -32,7 +32,7 @@ public:
 	const glm::vec2& get_render_area() const;
 
 	/* State */
-	bool is_in_focus();
+	bool is_active();
 
 	VulkanGUI& ShowSceneViewportPanel(Camera& scene_camera,
 		VkDescriptorSet_T* texDeferred, VkDescriptorSet_T* texColorId,

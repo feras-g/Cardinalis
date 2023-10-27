@@ -32,6 +32,8 @@ public:
 	{
 		glm::mat4 view_proj;
 		glm::mat4 view_proj_inv;
+		glm::vec4 camera_pos_ws;
+		float time; /* Time in seconds */
 	};
 
 	DescriptorSetLayout m_framedata_desc_set_layout;

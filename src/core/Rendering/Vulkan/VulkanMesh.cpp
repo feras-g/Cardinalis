@@ -1,7 +1,7 @@
 #include "VulkanMesh.h"
 #include "core/rendering/vulkan/VulkanRenderInterface.h"
 #include "core/rendering/vulkan/VulkanRendererBase.h"
-#include "VulkanTools.h"
+#include "core/engine/Image.h"
 #include "RenderObjectManager.h"
 
 #include "glm/gtx/euler_angles.hpp"
@@ -153,9 +153,8 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 	}
 	else
 	{
-		std::function load_tex = [](cgltf_texture* tex, VkFormat format, bool calc_mip) -> int
+		std::function load_tex = [](TextureType tex_type, cgltf_texture* tex, VkFormat format, bool calc_mip) -> int
 		{
-			return 0;
 			const char* uri = tex->image->uri;
 			std::string name = uri ? base_path + uri : base_path + tex->image->name;
 
@@ -176,7 +175,15 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 				texture.init(format, im.w, im.h, 1, false, name);
 				texture.create_from_data(&im);
 				texture.create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, texture.info.mipLevels });
-				texture.sampler = VulkanRendererCommon::get_instance().s_SamplerRepeatLinear;
+
+				if (tex_type == TextureType::NORMAL_MAP || tex_type == TextureType::METALLIC_ROUGHNESS_MAP)
+				{
+					texture.sampler = VulkanRendererCommon::get_instance().s_SamplerRepeatNearest;
+				}
+				else
+				{
+					texture.sampler = VulkanRendererCommon::get_instance().s_SamplerRepeatLinear;
+				}
 				texture.info.debugName = name.c_str();
 
 				return ObjectManager::get_instance().add_texture(texture);
@@ -193,13 +200,13 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 		cgltf_texture* tex_normal = gltf_mat->normal_texture.texture;
 		if (tex_normal)
 		{
-			material.texture_normal_map_idx = load_tex(tex_normal, VulkanRendererCommon::get_instance().tex_normal_map_format, true);
+			material.texture_normal_map_idx = load_tex(TextureType::NORMAL_MAP, tex_normal, VulkanRendererCommon::get_instance().tex_normal_map_format, true);
 		}
 
 		cgltf_texture* tex_emissive = gltf_mat->emissive_texture.texture;
 		if (tex_emissive)
 		{
-			material.texture_emissive_map_idx = load_tex(tex_emissive, VulkanRendererCommon::get_instance().tex_emissive_format, true);
+			material.texture_emissive_map_idx = load_tex(TextureType::EMISSIVE_MAP, tex_emissive, VulkanRendererCommon::get_instance().tex_emissive_format, true);
 		}
 
 		if (gltf_mat->has_pbr_metallic_roughness)
@@ -207,13 +214,13 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 			cgltf_texture* tex_base_color = gltf_mat->pbr_metallic_roughness.base_color_texture.texture;
 			if (tex_base_color)
 			{
-				material.texture_base_color_idx = load_tex(tex_base_color, VulkanRendererCommon::get_instance().tex_base_color_format, true);
+				material.texture_base_color_idx = load_tex(TextureType::ALBEDO_MAP, tex_base_color, VulkanRendererCommon::get_instance().tex_base_color_format, true);
 			}
 
 			cgltf_texture* tex_metallic_roughness = gltf_mat->pbr_metallic_roughness.metallic_roughness_texture.texture;
 			if (tex_metallic_roughness)
 			{
-				material.texture_metalness_roughness_idx = load_tex(tex_metallic_roughness, VulkanRendererCommon::get_instance().tex_metallic_roughness_format, false);
+				material.texture_metalness_roughness_idx = load_tex(TextureType::METALLIC_ROUGHNESS_MAP, tex_metallic_roughness, VulkanRendererCommon::get_instance().tex_metallic_roughness_format, false);
 			}
 
 			/* Factors */

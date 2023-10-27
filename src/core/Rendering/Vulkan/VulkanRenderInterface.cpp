@@ -153,10 +153,7 @@ void RenderInterface::create_device()
 	extensions = 
 	{ 
 		"VK_KHR_swapchain", 
-		"VK_KHR_shader_draw_parameters", 
-		"VK_EXT_descriptor_indexing", 
 		"VK_KHR_dynamic_rendering", 
-		"VK_KHR_multiview"
 	};
 
 	/* Enabled device features */

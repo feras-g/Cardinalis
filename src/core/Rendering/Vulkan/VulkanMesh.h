@@ -53,6 +53,15 @@ struct GeometryData
 	glm::vec4 bbox_max_WS {};
 };
 
+enum class TextureType
+{
+	NONE = 0,
+	ALBEDO_MAP = 1,
+	NORMAL_MAP = 2,
+	METALLIC_ROUGHNESS_MAP = 3,
+	EMISSIVE_MAP = 4
+};
+
 struct Node;
 
 /* Class describing geometry */

@@ -1,6 +1,6 @@
 #include "VulkanTexture.h"
 
-#include "core/rendering/vulkan/VulkanTools.h"
+#include "core/engine/Image.h"
 #include "core/rendering/vulkan/VulkanDebugUtils.h"
 #include "core/rendering/vulkan/VkResourceManager.h"
 
@@ -84,7 +84,7 @@ void Texture::create_vk_image(VkDevice device, bool isCubemap, VkImageUsageFlags
     VkImageCreateInfo createInfo =
     {
         .sType                  { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO },
-		.flags                  { VK_IMAGE_CREATE_EXTENDED_USAGE_BIT },
+		.flags                  { },
         .imageType              { VK_IMAGE_TYPE_2D },
         .format                 { info.imageFormat },
         .extent                 { info.width, info.height, 1 },

@@ -16,7 +16,8 @@ enum class Key
 	LEFT = 1 << 7,
 	RIGHT = 1 << 8,
 	SPACE = 1 << 9,
-	LSHIFT = 1 << 10
+	LSHIFT = 1 << 10,
+	T = 1 << 11,
 };
 
 static int keyToWindows(Key key)
@@ -29,6 +30,7 @@ static int keyToWindows(Key key)
 		case Key::Q: { return 'Q'; }
 		case Key::D: { return 'D'; }
 		case Key::R: { return 'R'; }
+		case Key::T: { return 'T'; }
 		case Key::UP:	{ return 0x25; }
 		case Key::DOWN: { return 0x28; }
 		case Key::LEFT: { return 0x25; }

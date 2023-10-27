@@ -3,7 +3,7 @@
 #include "VulkanMesh.h"
 #include "VulkanRendererBase.h"
 
-#include "VulkanTools.h"
+#include "core/engine/Image.h"
 
 uint32_t ObjectManager::add_material(const Material& material)
 {

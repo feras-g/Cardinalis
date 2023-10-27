@@ -15,7 +15,7 @@
 #include "core/rendering/vulkan/VulkanResources.h"
 #include "core/rendering/vulkan/VulkanSwapchain.h"
 #include "core/rendering/vulkan/VulkanTexture.h"
-#include "core/rendering/vulkan/VulkanTools.h"
+#include "core/engine/Image.h"
 #include "core/rendering/vulkan/VulkanFrame.hpp"
 #include "core/rendering/vulkan/VulkanShader.h"
 
@@ -156,6 +156,10 @@ struct Pipeline
 			{
 				VkPushConstantRange& range = ranges.at(push_constant_range_name.data());
 				vkCmdPushConstants(cmd_buffer, vk_pipeline_layout, range.stageFlags, range.offset, range.size, p_values);
+			}
+			else
+			{
+				assert(false);
 			}
 		}
 

@@ -61,6 +61,15 @@ void VulkanGUI::show_gizmo(const Camera& camera, const KeyEvent& event, glm::mat
 
 	static ImGuizmo::OPERATION gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
 
+	if (event.is_key_pressed_async(Key::R))
+	{
+		gizmo_operation = ImGuizmo::OPERATION::ROTATE;
+	}
+	else if (event.is_key_pressed_async(Key::T))
+	{
+		gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
+	}
+
 	ImGuizmo::Manipulate(view, proj, gizmo_operation, ImGuizmo::MODE::WORLD, glm::value_ptr(selected_object_transform));
 }
 
@@ -84,10 +93,9 @@ const glm::vec2& VulkanGUI::get_render_area() const
 	return m_renderer.get_render_area();
 }
 
-bool VulkanGUI::is_in_focus()
+bool VulkanGUI::is_active()
 {
-	assert(false);
-	return false;
+	return ImGui::IsAnyItemActive() || ImGuizmo::IsUsing();
 }
 
 VulkanGUI& VulkanGUI::ShowSceneViewportPanel(Camera& scene_camera,
@@ -254,15 +262,6 @@ void VulkanGUI::show_camera_settings(Camera& camera)
 		ImGui::SeparatorText("Transform");
 		{
 			if (ImGui::DragFloat3("Position", glm::value_ptr(camera.controller.m_position), 0.1f))
-			{
-				camera.controller.update_view();
-			}
-
-			float& yaw   = camera.controller.yaw;
-			float& pitch = camera.controller.pitch;
-			float yaw_pitch[] = { yaw, pitch };
-
-			if (ImGui::DragFloat2("Rotation", yaw_pitch, 0.1f))
 			{
 				camera.controller.update_view();
 			}

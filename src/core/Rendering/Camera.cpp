@@ -26,7 +26,7 @@ void CameraController::translate(float dt, KeyEvent event)
 	if ((m_movement & Movement::FORWARD)  == Movement::FORWARD)   direction += m_forward * move_speed;
 	if ((m_movement & Movement::BACKWARD) == Movement::BACKWARD)  direction -= m_forward * move_speed;
 
-	m_position += direction * dt;
+	m_position += direction ;
 
 	m_movement = Movement::NONE;
 
@@ -67,9 +67,9 @@ void CameraController::rotate(float dt, MouseEvent event)
 glm::mat4& CameraController::update_view()
 {
 	m_right   = glm::normalize(glm::cross(m_forward, { 0,1,0 }));
-	m_forward = glm::normalize(m_forward);
 	m_up      = glm::normalize(glm::cross(m_right, m_forward));
-	
+	m_forward = glm::cross(m_up, m_right);
+
 	m_view = glm::lookAt(m_position, m_position + m_forward, m_up);
 
 	return m_view;

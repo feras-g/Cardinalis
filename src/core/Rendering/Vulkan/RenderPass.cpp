@@ -1,5 +1,5 @@
 #include "RenderPass.h"
-#include "core/rendering/vulkan/VulkanTools.h"
+#include "core/engine/Image.h"
 #include "core/rendering/vulkan/VulkanRenderInterface.h"
 
 void VulkanRenderPassDynamic::begin(VkCommandBuffer cmd_buffer, glm::vec2 extent, uint32_t viewMask)

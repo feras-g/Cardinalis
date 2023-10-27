@@ -44,6 +44,8 @@ void SampleProject::update_frame_data()
 	VulkanRendererCommon::FrameData frame_data;
 	frame_data.view_proj     = m_camera.get_proj() * m_camera.get_view();
 	frame_data.view_proj_inv = glm::inverse(frame_data.view_proj);
+	frame_data.camera_pos_ws = glm::vec4(m_camera.controller.m_position, 1);
+	frame_data.time = m_time;
 	VulkanRendererCommon::get_instance().update_frame_data(frame_data, context.curr_frame_idx);
 }
 
@@ -60,7 +62,7 @@ void SampleProject::render()
 	set_viewport_scissor(cmd_buffer, context.swapchain->info.width, context.swapchain->info.height, true);
 
 	forward_renderer.render(cmd_buffer, ObjectManager::get_instance());
-	debug_line_renderer.render(cmd_buffer);
+	//debug_line_renderer.render(cmd_buffer);
 
 	m_gui.render(cmd_buffer);
 }
@@ -68,19 +70,36 @@ void SampleProject::render()
 void SampleProject::create_scene()
 {
 	VulkanMesh meshes[10];
-	meshes[0].create_from_file("scenes/sponza-gltf-pbr/scene.glb");
+	//meshes[0].create_from_file("basic/unit_sphere.glb");
+	//meshes[1].create_from_file("basic/unit_cube.glb");
+	//meshes[2].create_from_file("scenes/goggles/scene.gltf");
+	meshes[3].create_from_file("scenes/sponza-gltf-pbr/scene.glb");
+	//meshes[4].create_from_file("basic/armor/scene.gltf");
+	//meshes[5].create_from_file("basic/lantern/scene.gltf");
 
-	ObjectManager::get_instance().add_mesh(meshes[0], "sphere", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 1.0f, 1.0f, 1.0f } });
+	//ObjectManager::get_instance().add_mesh(meshes[0], "sphere", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 1.0f, 1.0f, 1.0f } });
+	//ObjectManager::get_instance().add_mesh(meshes[1], "cube", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 1.0f, 1.0f, 1.0f } });
+	ObjectManager::get_instance().add_mesh(meshes[3], "goggles", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 1.0f, 1.0f, 1.0f } });
+	//ObjectManager::get_instance().add_mesh(meshes[4], "armor", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 1.0f, 1.0f, 1.0f } });
+	//ObjectManager::get_instance().add_mesh_instance("sphere", ObjectManager::GPUInstanceData{ .model = {}, .color = glm::vec4(glm::sphericalRand(1.0f), 1.0f)});
+
 
 	//for (int x = -15; x < 15; x++)
 	//for (int y = -15; y < 15; y++)
 	//for (int z = -15; z < 15; z++)
-	{
-		{
-			Transform t = { .position = glm::vec3(0,0,0), .rotation = {0,0,0}, .scale = glm::vec3{ 1.0f, 1.0f, 1.0f } };
-			ObjectManager::get_instance().add_mesh_instance("sphere", ObjectManager::GPUInstanceData{ .model = glm::mat4(t), .color = glm::vec4(glm::sphericalRand(1.0f), 1.0f)});
-		}
-	}
+	//{
+	//	float spacing = 5.0f;
+	//	Transform t = { .position = spacing * glm::vec3(x, y, z), .rotation = {0,0,0}, .scale = glm::vec3{ 1.0f, 1.0f, 1.0f } };
+
+	//	if ((x + y + z) % 2 == 0)
+	//	{
+	//		ObjectManager::get_instance().add_mesh_instance("cube", ObjectManager::GPUInstanceData{ .model = glm::mat4(t), .color = glm::vec4(glm::sphericalRand(1.0f), 1.0f) });
+	//	}
+	//	else
+	//	{
+	//		ObjectManager::get_instance().add_mesh_instance("sphere", ObjectManager::GPUInstanceData{ .model = glm::mat4(t), .color = glm::vec4(glm::sphericalRand(1.0f), 1.0f)});
+	//	}
+	//}
 }
 
 void SampleProject::update_scene(float t, float dt)
@@ -89,9 +108,9 @@ void SampleProject::update_scene(float t, float dt)
 	
 	{
 		std::string mesh_name = "sphere";
-		size_t mesh_idx = object_manager.m_mesh_id_from_name.at(mesh_name);
+		//size_t mesh_idx = object_manager.m_mesh_id_from_name.at(mesh_name);
 
-		for (size_t instance_idx = 0; instance_idx < object_manager.m_mesh_instance_data[mesh_idx].size(); instance_idx++)
+		//for (size_t instance_idx = 0; instance_idx < object_manager.m_mesh_instance_data[mesh_idx].size(); instance_idx++)
 		{
 			//float freq = t;
 			//float instance_id_norm = instance_idx / (float)object_manager.m_mesh_instance_data[mesh_idx].size();
@@ -99,8 +118,7 @@ void SampleProject::update_scene(float t, float dt)
 			//object_manager.m_mesh_instance_data[mesh_idx][instance_idx].model[3].z += sin(freq * 10 * instance_id_norm) * 0.1f;
 		}
 
-
-		//object_manager.update_instances_ssbo(mesh_name);
+		object_manager.update_instances_ssbo(mesh_name);
 	}
 }
 
@@ -121,18 +139,21 @@ void SampleProject::on_window_resize()
 void SampleProject::on_lmb_down(MouseEvent event)
 {
 	m_camera.controller.b_first_click = true;
-	
     m_camera.controller.m_last_mouse_pos = { (float)event.px, (float)event.py };
 }
 
 void SampleProject::on_mouse_move(MouseEvent event)
 {
 	Application::on_mouse_move(event);
-
-	if (event.b_lmb_click)
+	
+	if (!m_gui.is_active())
 	{
-		m_camera.rotate(m_delta_time, m_event_manager->mouse_event);
+		if (event.b_lmb_click)
+		{
+			m_camera.rotate(m_delta_time, m_event_manager->mouse_event);
+		}
 	}
+
 }
 
 void SampleProject::on_key_event(KeyEvent event)

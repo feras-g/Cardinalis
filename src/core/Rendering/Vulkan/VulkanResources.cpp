@@ -1,5 +1,5 @@
 #include "VulkanResources.h"
-#include "VulkanTools.h"
+#include "core/engine/Image.h"
 #include "VulkanRenderInterface.h"
 #include "VulkanDebugUtils.h"
 #include "core/rendering/vulkan/VkResourceManager.h"
