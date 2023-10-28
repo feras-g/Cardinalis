@@ -69,29 +69,26 @@ void SampleProject::render()
 
 void SampleProject::create_scene()
 {
-	VulkanMesh meshes[10];
-	//meshes[0].create_from_file("basic/unit_sphere.glb");
-	//meshes[1].create_from_file("basic/unit_cube.glb");
+	VulkanMesh mesh;
+	//mesh.create_from_file("basic/unit_sphere.glb");
+	//mesh.create_from_file("basic/unit_cube.glb");
 	//meshes[2].create_from_file("scenes/goggles/scene.gltf");
-	meshes[3].create_from_file("scenes/sponza-gltf-pbr/scene.glb");
+	//meshes[3].create_from_file("scenes/sponza-gltf-pbr/scene.glb");
 	//meshes[4].create_from_file("basic/armor/scene.gltf");
-	//meshes[5].create_from_file("basic/lantern/scene.gltf");
+	//mesh.create_from_file("basic/lantern/scene.gltf");
+	mesh.create_from_file("test/metallic_roughness_test/scene.gltf");
 
-	//ObjectManager::get_instance().add_mesh(meshes[0], "sphere", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 1.0f, 1.0f, 1.0f } });
-	//ObjectManager::get_instance().add_mesh(meshes[1], "cube", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 1.0f, 1.0f, 1.0f } });
-	ObjectManager::get_instance().add_mesh(meshes[3], "goggles", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 1.0f, 1.0f, 1.0f } });
-	//ObjectManager::get_instance().add_mesh(meshes[4], "armor", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 1.0f, 1.0f, 1.0f } });
-	//ObjectManager::get_instance().add_mesh_instance("sphere", ObjectManager::GPUInstanceData{ .model = {}, .color = glm::vec4(glm::sphericalRand(1.0f), 1.0f)});
+	ObjectManager::get_instance().add_mesh(mesh, "mesh", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 10.0f, 10.0f, 10.0f } });
 
 
 	//for (int x = -15; x < 15; x++)
-	//for (int y = -15; y < 15; y++)
 	//for (int z = -15; z < 15; z++)
+	////for (int z = -15; z < 15; z++)
 	//{
 	//	float spacing = 5.0f;
-	//	Transform t = { .position = spacing * glm::vec3(x, y, z), .rotation = {0,0,0}, .scale = glm::vec3{ 1.0f, 1.0f, 1.0f } };
+	//	Transform t = { .position = spacing * glm::vec3(x, 0, z), .rotation = {0,0,0}, .scale = glm::vec3{ 1.0f, 1.0f, 1.0f } };
 
-	//	if ((x + y + z) % 2 == 0)
+	//	if ((x + z + 0) % 2 == 0)
 	//	{
 	//		ObjectManager::get_instance().add_mesh_instance("cube", ObjectManager::GPUInstanceData{ .model = glm::mat4(t), .color = glm::vec4(glm::sphericalRand(1.0f), 1.0f) });
 	//	}
@@ -107,8 +104,11 @@ void SampleProject::update_scene(float t, float dt)
 	ObjectManager& object_manager = ObjectManager::get_instance();
 	
 	{
-		std::string mesh_name = "sphere";
-		//size_t mesh_idx = object_manager.m_mesh_id_from_name.at(mesh_name);
+		std::string mesh_name = "mesh";
+		size_t mesh_idx = object_manager.m_mesh_id_from_name.at(mesh_name);
+
+		object_manager.m_mesh_instance_data[mesh_idx][0].model = glm::rotate(object_manager.m_mesh_instance_data[mesh_idx][0].model, dt , glm::vec3(0,1,0));
+		object_manager.update_instances_ssbo(mesh_name);
 
 		//for (size_t instance_idx = 0; instance_idx < object_manager.m_mesh_instance_data[mesh_idx].size(); instance_idx++)
 		{
@@ -117,8 +117,6 @@ void SampleProject::update_scene(float t, float dt)
 			//object_manager.m_mesh_instance_data[mesh_idx][instance_idx].model[3].y += cos(freq * 10 * instance_id_norm) * 0.1f;
 			//object_manager.m_mesh_instance_data[mesh_idx][instance_idx].model[3].z += sin(freq * 10 * instance_id_norm) * 0.1f;
 		}
-
-		object_manager.update_instances_ssbo(mesh_name);
 	}
 }
 

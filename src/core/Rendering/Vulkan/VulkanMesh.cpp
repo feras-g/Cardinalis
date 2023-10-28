@@ -172,7 +172,7 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 			{
 				Image im = load_image_from_file(base_path + uri);
 				Texture2D texture;
-				texture.init(format, im.w, im.h, 1, false, name);
+				texture.init(format, im.w, im.h, 1, calc_mip, name);
 				texture.create_from_data(&im);
 				texture.create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, texture.info.mipLevels });
 
@@ -220,7 +220,7 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 			cgltf_texture* tex_metallic_roughness = gltf_mat->pbr_metallic_roughness.metallic_roughness_texture.texture;
 			if (tex_metallic_roughness)
 			{
-				material.texture_metalness_roughness_idx = load_tex(TextureType::METALLIC_ROUGHNESS_MAP, tex_metallic_roughness, VulkanRendererCommon::get_instance().tex_metallic_roughness_format, false);
+				material.texture_metalness_roughness_idx = load_tex(TextureType::METALLIC_ROUGHNESS_MAP, tex_metallic_roughness, VulkanRendererCommon::get_instance().tex_metallic_roughness_format, true);
 			}
 
 			/* Factors */

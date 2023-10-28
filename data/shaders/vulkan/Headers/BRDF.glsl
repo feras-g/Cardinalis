@@ -15,9 +15,9 @@ const float INV_PI = 1.0 / PI;
 
 /* Diffuse term */
 
-vec3 Diffuse_Lambert(vec3 diffuse_reflectance)
+float brdf_lambert()
 {
-    return diffuse_reflectance * INV_PI;
+    return INV_PI;
 }
 
 /* Specular term */
@@ -26,7 +26,7 @@ vec3 Diffuse_Lambert(vec3 diffuse_reflectance)
 *   Microfacet distribution function and is responsible for the shape of the specular peak
 *   GGX/Trowbridge-Reitz NDF 
 */
-float SpecularD(float NoH, float roughness)
+float specular_D(float NoH, float roughness)
 {
     float alpha = roughness * roughness; /* Disney reparametrization */
     float alpha_sq = alpha * alpha;
@@ -38,7 +38,7 @@ float SpecularD(float NoH, float roughness)
 /* 
 *   Fresnel reflection coefficient
 */
-vec3 SpecularF(vec3 F0, float VoH)
+vec3 specular_F(vec3 F0, float VoH)
 {	
 	float e = (-5.55473 * VoH - 6.98316) * VoH;
 	return F0 + (1 - F0) * pow(2, e);
@@ -47,7 +47,7 @@ vec3 SpecularF(vec3 F0, float VoH)
 /* 
 *   Geometric attenuation/Shadowing factor
 */
-float SpecularG(float NoV, float NoL, float roughness)
+float specular_G(float NoV, float NoL, float roughness)
 {
 	float k = ((roughness + 1.f) * (roughness + 1.f)) / 8.f;
 	float G_v = NoV / (NoV * (1.f - k) + k);
@@ -59,12 +59,12 @@ float SpecularG(float NoV, float NoL, float roughness)
 *   Diffuse reflectance represents light that is refracted into the surface, scattered, partially absorbed, and re-emitted.
 *
 */
-vec3 GetDiffuseReflectance(vec3 base_color, float metalness)
+vec3 get_diffuse_reflectance(vec3 base_color, float metalness)
 {
     return base_color * (1.0f - metalness);
 }
 
-vec3 GetSpecularReflectance(vec3 base_color, float metalness)
+vec3 get_specular_reflectance(vec3 base_color, float metalness)
 {
     vec3 f0_dielectric = vec3(0.04);
     return mix(f0_dielectric, base_color, metalness);
@@ -76,7 +76,7 @@ struct BRDFData
     vec3 specular_reflectance;  // Specular F0 at normal incidence
 };
 
-vec3 BRDF(vec3 n, vec3 v, vec3 l, vec3 h, vec3 light_color, vec3 irradiance, vec3 base_color, float metalness, float roughness)
+vec3 brdf_cook_torrance(vec3 n, vec3 v, vec3 l, vec3 h, vec3 light_color, vec3 irradiance, vec3 base_color, float metalness, float roughness)
 {
     float NoV = abs(dot(n, v)) + 1e-5;
     float NoL = clamp(dot(n, l), 1e-5, 1.0);
@@ -85,28 +85,28 @@ vec3 BRDF(vec3 n, vec3 v, vec3 l, vec3 h, vec3 light_color, vec3 irradiance, vec
     float VoH = clamp(dot(v, h), 1e-5, 1.0);
 
     /* Diffuse reflection */
-    vec3 diffuse_reflectance = GetDiffuseReflectance(base_color, metalness);
-    vec3 diffuse = Diffuse_Lambert(diffuse_reflectance);
+    vec3 diffuse_reflectance = get_diffuse_reflectance(base_color, metalness);
+    vec3 diffuse = diffuse_reflectance * brdf_lambert();
 
     /* Specular reflection */
     // https://google.github.io/filament/Filament.md.html#table_commonmatreflectance
-    vec3 specular_reflectance = GetSpecularReflectance(base_color, metalness);
+    vec3 specular_reflectance = get_specular_reflectance(base_color, metalness);
     
-    float D = SpecularD(NoH, roughness);
-    vec3  F = SpecularF(specular_reflectance, VoH);
-    float G = SpecularG(NoV, NoL, roughness);
+    float D = specular_D(NoH, roughness);
+    vec3  F = specular_F(specular_reflectance, VoH);
+    float G = specular_G(NoV, NoL, roughness);
     vec3 specular = (D * G * F) / (4 * NoL * NoV);
 
     return (diffuse + specular) * light_color * NoL;
 }
 
-
-vec3 BlinnPhong(vec3 n, vec3 v, vec3 l, vec3 h, vec3 light_color, vec3 base_color)
+/* To multiply with specular color */
+vec3 brdf_blinn_phong(vec3 diffuse_reflectance, vec3 specular_reflectance, vec3 n, vec3 l, vec3 h, float shininess)
 {
     float NoL = clamp(dot(n, l), 1e-5, 1.0);
     float NoH = clamp(dot(n, h), 1e-5, 1.0);
 
-    vec3 diffuse =  Diffuse_Lambert(base_color);
+    float blinn = pow(clamp(dot(n, h), 0, 1), shininess);
 
-    return diffuse * light_color * NoL;
+    return (diffuse_reflectance * NoL) + blinn * specular_reflectance;
 }
