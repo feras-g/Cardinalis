@@ -11,20 +11,18 @@ class VulkanRenderDebugMarker
 public:
 	VulkanRenderDebugMarker(VkCommandBuffer cmd_buffer, const char* name, std::array<float, 4> color = { 1.0f, 1.0f, 1.0f, 1.0f })
 	{
-#ifdef ENGINE_DEBUG
+#if ENGINE_DEBUG
 		this->m_cmd_buffer = cmd_buffer;
 		VkDebugUtilsLabelEXT info = { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT, nullptr, name, *color.data() };
 		fpCmdBeginDebugUtilsLabelEXT(m_cmd_buffer, &info);
 #endif // ENGINE_DEBUG
-
 	}
 
 	~VulkanRenderDebugMarker()
 	{
-#ifdef ENGINE_DEBUG
+#if ENGINE_DEBUG
 		fpCmdEndDebugUtilsLabelEXT(m_cmd_buffer);
 #endif // ENGINE_DEBUG
-
 	}
 private:
 	const char* m_name = nullptr;
@@ -38,7 +36,7 @@ private:
 */
 static void set_object_name(VkObjectType obj_type, uint64_t obj_handle, const char* obj_name)
 {
-#ifdef ENGINE_DEBUG
+#if ENGINE_DEBUG
 	const VkDebugUtilsObjectNameInfoEXT debug_info = 
 	{
 		.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,

@@ -69,12 +69,12 @@ for i, name in ipairs(projects) do
 			runtime "Debug"
 			symbols "on"
 			buildoptions {"/Od"}
-			defines { "DEBUG", "ENABLE_VALIDATION_LAYERS" }
+			defines { "ENGINE_DEBUG", "ENABLE_VALIDATION_LAYERS" }
 		
 		filter "configurations:Release"
 			runtime "Release"
 			optimize "on"
-			defines { "RELEASE" }
+			defines { "ENGINE_RELEASE" }
 end
 ------------------------------------------------------------------------------
 

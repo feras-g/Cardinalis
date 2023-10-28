@@ -33,16 +33,20 @@ layout(set = 3, binding = 0) buffer ShaderParams { uint a; } shader_params;
 void main()
 {
     ivec4 mat = ivec4(push_constants.texture_base_color_idx, push_constants.texture_normal_map_idx, push_constants.texture_metalness_roughness_idx, push_constants.texture_emissive_map_idx);
+
+    vec4 L = vec4(cos(frame.data.time), -1, 0, 0);
     
     /* Normal mapping */
     vec4 N_ws = vec4(0);
     if(mat.y > -1)
     {
         vec4 vertex_to_eye = frame.data.camera_pos_ws - position_ws;
-        N_ws.xyz = perturb_normal(normalize(normal_ws).xyz * 2.0 - 1.0, texture(textures[mat.y], uv).xyz, vertex_to_eye.xyz, uv);
+        /* Tangent space normals must be mapped to { [-1, 1], [-1, 1], [0, 1] } and normalized 
+        *  see https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#additional-textures
+        */
+        vec3 tangent_space_normal = normalize(texture(textures[mat.y], uv).xyz  * 2.0 - 1.0);
+        N_ws.xyz = perturb_normal(normalize(normal_ws).xyz, tangent_space_normal, vertex_to_eye.xyz, uv);
     }
-
-    vec4 L_ws = normalize(position_ws - vec4(0, cos(frame.data.time),0,0));
 
     vec4 base_color = vec4(1,0,1,1);
      
@@ -51,10 +55,11 @@ void main()
         base_color = texture(textures[mat.x], uv);
     }
 
-    out_color  = base_color * max(0, dot(N_ws, L_ws));
+    out_color  = base_color * max(0, dot(N_ws, -L));
 
     if (mat.a > -1)
     {
         out_color += texture(textures[mat.a], uv);
     }
+
 }
