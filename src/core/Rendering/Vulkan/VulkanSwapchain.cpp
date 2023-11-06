@@ -30,7 +30,7 @@ VulkanSwapchain::VulkanSwapchain(VkSurfaceKHR surface)
 
     std::vector<VkPresentModeKHR> presentModes(presentModeCount);
 	VK_CHECK(fpGetPhysicalDeviceSurfacePresentModesKHR(context.physical_device, h_surface, &presentModeCount, presentModes.data()));
-	info.present_mode = VK_PRESENT_MODE_MAILBOX_KHR;
+	info.present_mode = VK_PRESENT_MODE_FIFO_KHR;
     LOG_WARN("Current present mode : {0}", vk_object_to_string(info.present_mode));
 }
 
