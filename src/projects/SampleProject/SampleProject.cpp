@@ -72,13 +72,13 @@ void SampleProject::create_scene()
 	VulkanMesh mesh;
 	//mesh.create_from_file("basic/unit_sphere.glb");
 	//mesh.create_from_file("basic/unit_cube.glb");
-	//meshes[2].create_from_file("scenes/goggles/scene.gltf");
-	//meshes[3].create_from_file("scenes/sponza-gltf-pbr/scene.glb");
-	//meshes[4].create_from_file("basic/armor/scene.gltf");
+	//mesh.create_from_file("scenes/goggles/scene.gltf");
+	//mesh.create_from_file("scenes/sponza-gltf-pbr/scene.glb");
+	//mesh.create_from_file("basic/armor/scene.gltf");
 	//mesh.create_from_file("basic/lantern/scene.gltf");
 	mesh.create_from_file("test/metallic_roughness_test/scene.gltf");
 
-	ObjectManager::get_instance().add_mesh(mesh, "mesh", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 10.0f, 10.0f, 10.0f } });
+	ObjectManager::get_instance().add_mesh(mesh, "mesh", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 0.1f, 0.1f, 0.1f } });
 
 
 	//for (int x = -15; x < 15; x++)

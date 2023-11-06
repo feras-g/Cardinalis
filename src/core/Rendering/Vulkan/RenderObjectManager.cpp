@@ -82,7 +82,6 @@ void ObjectManager::add_mesh(const VulkanMesh& mesh, std::string_view mesh_name,
 	if (m_mesh_id_from_name.contains(mesh_name.data()))
 	{
 		size_t mesh_idx = m_mesh_id_from_name.at(mesh_name.data());
-		m_mesh_instance_data[mesh_idx].push_back({ .model = data.model });
 		size_t offset = std::max(0ull, (m_mesh_instance_data[mesh_idx].size() - 1) * sizeof(GPUInstanceData));
 
 		if ((offset + sizeof(GPUInstanceData)) < (max_instance_count * sizeof(GPUInstanceData)))
