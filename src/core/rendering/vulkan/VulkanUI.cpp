@@ -51,22 +51,40 @@ void VulkanGUI::show_gizmo(const Camera& camera, const KeyEvent& event, glm::mat
 
 	ImGuizmo::SetOrthographic(false);
 
-	const glm::f32* view   = glm::value_ptr(camera.get_view());
-	const glm::f32* proj   = glm::value_ptr(camera.get_proj());
+	const glm::f32* view = glm::value_ptr(camera.get_view());
+	const glm::f32* proj = glm::value_ptr(camera.get_proj());
 
 	glm::mat4 transform = glm::identity<glm::mat4>();
-	ImGuizmo::DrawGrid(view, proj, glm::value_ptr(transform), 10.0f);
 
 	static ImGuizmo::OPERATION gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
 
-	if (event.is_key_pressed_async(Key::R))
+	const char* items[] = { "Translate", "Rotate", "Scale" };
+	static int current_item = 0;
+	if (ImGui::ListBox("Controls", &current_item, items, 3, 3))
 	{
-		gizmo_operation = ImGuizmo::OPERATION::ROTATE;
+		if (current_item == 0)
+		{
+			gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
+		}
+		else if (current_item == 1)
+		{
+			gizmo_operation = ImGuizmo::OPERATION::ROTATE;
+		}
+		else if (current_item == 2)
+		{
+			gizmo_operation = ImGuizmo::OPERATION::SCALE;
+		}
 	}
-	else if (event.is_key_pressed_async(Key::T))
-	{
-		gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
-	}
+
+	//if (event.is_key_pressed_async(Key::R))
+	//{
+	//	gizmo_operation = ImGuizmo::OPERATION::ROTATE;
+	//}
+	//else if (event.is_key_pressed_async(Key::T))
+	//{
+	//	gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
+	//}
+
 
 	ImGuizmo::Manipulate(view, proj, gizmo_operation, ImGuizmo::MODE::WORLD, glm::value_ptr(selected_object_transform));
 }
@@ -226,7 +244,7 @@ void VulkanGUI::start_overlay(const char* title)
 	window_pos_pivot.y = 1.0f;
 
 	ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
-	ImGui::SetNextWindowBgAlpha(0.66f); // Transparent background
+	ImGui::SetNextWindowBgAlpha(1.0f); // Transparent background
 
 	ImGui::Begin(title, 0, overlayFlags);
 }
@@ -260,10 +278,15 @@ void VulkanGUI::show_camera_settings(Camera& camera)
 				camera.update_proj();
 			}
 
-			float& znear = camera.znear;
-			float& zfar  = camera.zfar;
-			float near_far[2] = { znear, zfar };
-			ImGui::DragFloat2("Near/Far", near_far, 0.1f);
+			if (ImGui::SliderFloat("Near", &camera.znear, 0.1f, 1000.0f, "%.2f"))
+			{
+				camera.update_proj();
+			}
+
+			if(ImGui::SliderFloat("Far", &camera.zfar, 0.0f, 1000.0f, "%.2f"))
+			{
+				camera.update_proj();
+			}
 
 			Camera::ProjectionMode& mode = camera.projection_mode;
 
