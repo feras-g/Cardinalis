@@ -14,14 +14,14 @@ struct Instance
     vec4  color;
 };
 
-layout(set = 0, binding = 0) readonly buffer VertexBuffer { Vertex data[]; } vtx_buffer;
-layout(set = 0, binding = 1) readonly buffer IndexBuffer  { uint   data[]; } idx_buffer;
-layout(set = 0, binding = 2) readonly buffer InstanceData 
+layout(set = 3, binding = 0) readonly buffer VertexBuffer { Vertex data[]; } vtx_buffer;
+layout(set = 3, binding = 1) readonly buffer IndexBuffer  { uint   data[]; } idx_buffer;
+layout(set = 3, binding = 2) readonly buffer InstanceData 
 { 
     Instance  data[];
 } instances;
 
-layout(set = 1, binding = 0) uniform FrameDataBlock 
+layout(set = 0, binding = 0) uniform FrameDataBlock 
 { 
     FrameData data;
 } frame;

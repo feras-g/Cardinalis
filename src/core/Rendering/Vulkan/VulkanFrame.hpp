@@ -4,18 +4,17 @@
 
 struct VulkanFrame
 {
-	VkSemaphore smp_image_acquired	 = VK_NULL_HANDLE;
-	VkSemaphore smp_queue_submitted	 = VK_NULL_HANDLE;
-	VkFence fence_queue_submitted					 = VK_NULL_HANDLE;
-								 
-	VkCommandPool cmd_pool		 = VK_NULL_HANDLE;
-	VkCommandBuffer cmd_buffer = VK_NULL_HANDLE;
+	VkFence fence_queue_submitted;
+	VkCommandPool cmd_pool;
+	VkCommandBuffer cmd_buffer;
+	VkSemaphore semaphore_swapchain_acquire;
+	VkSemaphore smp_queue_submitted;
 };
 
-static void Destroy(VkDevice device, VulkanFrame frame)
+static void destroy(VkDevice device, VulkanFrame frame)
 {
 	vkDestroyCommandPool(device, frame.cmd_pool, nullptr);
 	vkDestroyFence(device, frame.fence_queue_submitted, nullptr);
-	vkDestroySemaphore(device, frame.smp_image_acquired, nullptr);
+	vkDestroySemaphore(device, frame.semaphore_swapchain_acquire, nullptr);
 	vkDestroySemaphore(device, frame.smp_queue_submitted, nullptr);
 }

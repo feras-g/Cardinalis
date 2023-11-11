@@ -63,7 +63,8 @@ public:
 	glm::vec2 m_last_mouse_pos;
 
 
-	float move_speed = 1.f;
+
+	float move_speed = 1.0f;
 	bool b_first_click = true;
 
 	float yaw = 0.0f;

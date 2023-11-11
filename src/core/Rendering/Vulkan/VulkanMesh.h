@@ -29,8 +29,8 @@ struct SimpleVertexData
 
 struct Primitive
 {
-	uint32_t first_index;
-	uint32_t index_count;
+	uint32_t first_vertex;
+	uint32_t vertex_count;
 	glm::mat4 model = glm::identity<glm::mat4>();
 	int material_id = 0;
 };

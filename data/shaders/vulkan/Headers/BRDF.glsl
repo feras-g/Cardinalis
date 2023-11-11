@@ -106,7 +106,8 @@ vec3 brdf_blinn_phong(vec3 diffuse_reflectance, vec3 specular_reflectance, vec3 
     float NoL = clamp(dot(n, l), 1e-5, 1.0);
     float NoH = clamp(dot(n, h), 1e-5, 1.0);
 
-    float blinn = pow(clamp(dot(n, h), 0, 1), shininess);
+    float blinn = pow(max(dot(n, h), 0), shininess);
 
-    return (diffuse_reflectance * NoL) + blinn * specular_reflectance;
+    vec3 specular = blinn * specular_reflectance;
+    return (diffuse_reflectance * NoL);
 }

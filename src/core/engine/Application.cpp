@@ -6,10 +6,10 @@
 #include "core/engine/Window.h"
 #include "core/rendering/FrameCounter.h"
 #include "core/rendering/vulkan/Renderers/VulkanImGuiRenderer.h"
-#include "core/rendering/vulkan/Renderers/VulkanModelRenderer.h"
 #include "core/rendering/vulkan/VulkanFrame.hpp"
 #include "core/rendering/vulkan/VulkanRenderInterface.h"
 #include "core/rendering/vulkan/VulkanRendererBase.h"
+#include "core/rendering/vulkan/VulkanDebugUtils.h"
 
 Application::Application(const char* title, uint32_t width, uint32_t height)
     : b_init_success(false), m_debug_name(title)
@@ -21,7 +21,7 @@ Application::Application(const char* title, uint32_t width, uint32_t height)
 
     Logger::init("Engine");
 
-    m_rhi.reset(new RenderInterface(title, 1, 2, 196));
+    m_rhi.reset(new RenderInterface(title, 1, 3, 0));
     m_rhi->initialize();
 #ifdef _WIN32
     m_rhi->create_surface(m_window.get());
@@ -63,30 +63,23 @@ void Application::run()
 
 void Application::prerender()
 {
-    const uint32_t& frame_idx = context.curr_frame_idx;
-    VulkanFrame current_frame = context.frames[frame_idx];
+    VulkanFrame& current_frame = context.get_current_frame();
 
     VulkanSwapchain& swapchain = *m_rhi->get_swapchain();
 
-    VK_CHECK(vkWaitForFences(context.device, 1, &current_frame.fence_queue_submitted, true, 1000000000ull));
+    VK_CHECK(vkWaitForFences(context.device, 1, &current_frame.fence_queue_submitted, true, UINT64_MAX));
     VK_CHECK(vkResetFences(context.device, 1, &current_frame.fence_queue_submitted));
 
-    uint32_t swapchain_buffer_idx = 0;
-    VkResult result = swapchain.acquire_next_image(current_frame.smp_image_acquired);
-
+    swapchain.acquire_next_image(current_frame.semaphore_swapchain_acquire);
+    
     VkCommandBufferBeginInfo cmdBufferBeginInfo = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
     VK_CHECK(vkResetCommandPool(context.device, current_frame.cmd_pool, 0));
     VK_CHECK(vkBeginCommandBuffer(current_frame.cmd_buffer, &cmdBufferBeginInfo));
-
-    /* Transition to color attachment */
-    swapchain.color_attachments[swapchain.current_backbuffer_idx].transition(current_frame.cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
-
 }
 
 void Application::postrender()
 {
-    const uint32_t& frame_idx = context.curr_frame_idx;
-    VulkanFrame current_frame = context.frames[frame_idx];
+    VulkanFrame& current_frame = context.get_current_frame();
     VulkanSwapchain& swapchain = *m_rhi->get_swapchain();
 
     /* Transition to present */
@@ -96,36 +89,33 @@ void Application::postrender()
     // Submit commands for the GPU to work on the current backbuffer
     // Has to wait for the swapchain image to be acquired before beginning, we wait on imageAcquired semaphore.
     // Signals a renderComplete semaphore to let the next operation know that it finished
-    VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    VkSubmitInfo submit_info =
-    {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .waitSemaphoreCount = 1,
-        .pWaitSemaphores = &current_frame.smp_image_acquired,
-        .pWaitDstStageMask = &waitDstStageMask,
-        .commandBufferCount = 1,
-        .pCommandBuffers = &current_frame.cmd_buffer,
-        .signalSemaphoreCount = 1,
-        .pSignalSemaphores = &current_frame.smp_queue_submitted
-    };
+    VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkSubmitInfo submit_info = {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &current_frame.cmd_buffer;
+    submit_info.waitSemaphoreCount = 1;
+    submit_info.pWaitSemaphores = &current_frame.semaphore_swapchain_acquire;
+    submit_info.pWaitDstStageMask = &wait_stage;
+    submit_info.signalSemaphoreCount = 1;
+    submit_info.pSignalSemaphores = &current_frame.smp_queue_submitted;
 
     vkQueueSubmit(context.queue, 1, &submit_info, current_frame.fence_queue_submitted);
 
     // Present work
     // Waits for the GPU queue to finish execution before presenting, we wait on renderComplete semaphore
     VkPresentInfoKHR present_info = {};
-
     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    present_info.waitSemaphoreCount = 1;
-    present_info.pWaitSemaphores = &current_frame.smp_queue_submitted;
     present_info.swapchainCount = 1;
     present_info.pSwapchains = &swapchain.vk_swapchain;
     present_info.pImageIndices = &swapchain.current_backbuffer_idx;
+    present_info.waitSemaphoreCount = 1;
+    present_info.pWaitSemaphores = &current_frame.smp_queue_submitted;
 
     vkQueuePresentKHR(context.queue, &present_info);
 
     context.frame_count++;
-    context.curr_frame_idx = (context.curr_frame_idx + 1) % NUM_FRAMES;
+    context.update_frame_index();
 }
 
 double Application::get_time_secs() 

@@ -22,14 +22,17 @@ layout(push_constant) uniform constants
     int texture_emissive_map_idx;
 } push_constants;
 
-layout(set = 1, binding = 0) uniform FrameDataBlock 
+layout(set = 0, binding = 0) uniform FrameDataBlock 
 { 
     FrameData data;
 } frame;
 
-layout(set = 2, binding = 0) uniform sampler2D textures[];
+layout(set = 1, binding = 0) uniform sampler2D textures[];
 
-layout(set = 3, binding = 0) buffer ShaderParams { uint a; } shader_params;
+layout(set = 2, binding = 0) buffer ShaderParams 
+{ 
+    bool enable_normal_mapping; 
+} shader_params;
 
 void main()
 {
@@ -66,13 +69,14 @@ void main()
         roughness = texture(textures[mat.z], uv).g;
     }
 
-    float specular_power = (2 / (roughness*roughness)) - 2; /* Blinn-Phong [2]: https://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html */
+    float specular_power = (2 / (roughness*roughness*roughness*roughness)) - 2; /* Blinn-Phong [2]: https://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html */
     vec3 color_blinn_phong = brdf_blinn_phong(base_color.rgb, light_color, N_WS, L_WS, H_WS, specular_power);
 
     out_color  = vec4(color_blinn_phong, 1);
 
     if (mat.a > -1)
     {
-        out_color += texture(textures[mat.a], uv);
+        out_color.rgb += texture(textures[mat.a], uv).rgb;
     }
+    
 }

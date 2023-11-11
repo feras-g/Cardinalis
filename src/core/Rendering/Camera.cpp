@@ -8,25 +8,24 @@
 
 void CameraController::translate(float dt, KeyEvent event)
 {
+	glm::vec3 curr_translation(0.0f);
 	if (event.is_key_pressed_async(Key::Z))      m_movement = m_movement | Movement::FORWARD;
 	if (event.is_key_pressed_async(Key::Q))      m_movement = m_movement | Movement::LEFT;
 	if (event.is_key_pressed_async(Key::S))      m_movement = m_movement | Movement::BACKWARD;
 	if (event.is_key_pressed_async(Key::D))      m_movement = m_movement | Movement::RIGHT;
 	if (event.is_key_pressed_async(Key::SPACE))  m_movement = m_movement | Movement::UP;
 	if (event.is_key_pressed_async(Key::LSHIFT)) m_movement = m_movement | Movement::DOWN;
+	
+	if ((m_movement & Movement::UP)   == Movement::UP)			  curr_translation += m_up * move_speed ;
+	if ((m_movement & Movement::DOWN) == Movement::DOWN)		  curr_translation -= m_up * move_speed ;
 
-	glm::vec3 direction(0.0f);
+	if ((m_movement & Movement::RIGHT) == Movement::RIGHT)		  curr_translation += m_right * move_speed ;
+	if ((m_movement & Movement::LEFT)  == Movement::LEFT)		  curr_translation -= m_right * move_speed ;
 
-	if ((m_movement & Movement::UP)   == Movement::UP)			  direction += m_up * move_speed;
-	if ((m_movement & Movement::DOWN) == Movement::DOWN)		  direction -= m_up * move_speed;
+	if ((m_movement & Movement::FORWARD)  == Movement::FORWARD)   curr_translation += m_forward * move_speed ;
+	if ((m_movement & Movement::BACKWARD) == Movement::BACKWARD)  curr_translation -= m_forward * move_speed ;
 
-	if ((m_movement & Movement::RIGHT) == Movement::RIGHT)		  direction += m_right * move_speed;
-	if ((m_movement & Movement::LEFT)  == Movement::LEFT)		  direction -= m_right * move_speed;
-
-	if ((m_movement & Movement::FORWARD)  == Movement::FORWARD)   direction += m_forward * move_speed;
-	if ((m_movement & Movement::BACKWARD) == Movement::BACKWARD)  direction -= m_forward * move_speed;
-
-	m_position += direction ;
+	m_position += curr_translation * dt;
 
 	m_movement = Movement::NONE;
 
@@ -56,11 +55,11 @@ void CameraController::rotate(float dt, MouseEvent event)
 
 	pitch = std::clamp(pitch, -89.0f, 89.0f);
 
-	glm::vec3 direction;
-	direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-	direction.y = sin(glm::radians(pitch));
-	direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-	m_forward = glm::normalize(direction);
+	glm::vec3 dir;
+	dir.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+	dir.y = sin(glm::radians(pitch));
+	dir.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+	m_forward = glm::normalize(dir);
 	update_view();
 }
 

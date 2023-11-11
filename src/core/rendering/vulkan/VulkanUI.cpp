@@ -1,19 +1,17 @@
-#include "core/rendering/vulkan/VulkanUI.h"
-#include "core/rendering/FrameCounter.h"
-#include "core/rendering/Camera.h"
-#include "core/rendering/vulkan/VulkanRendererBase.h"
-#include "core/rendering/vulkan/Renderers/DeferredRenderer.h"
-#include "core/rendering/vulkan/Renderers/ShadowRenderer.h"
 #include "core/engine/InputEvents.h"
+#include "core/rendering/Camera.h"
+#include "core/rendering/FrameCounter.h"
+#include "core/rendering/vulkan/LightManager.h"
 #include "core/rendering/vulkan/RenderObjectManager.h"
+#include "core/rendering/vulkan/VulkanRendererBase.h"
+#include "core/rendering/vulkan/VulkanUI.h"
 
+#include "glm/gtx/quaternion.hpp"
 
 #include "../imgui/imgui.h"
 #include "../imgui/widgets/imguizmo/ImGuizmo.h"
 #include "../imgui/backends/imgui_impl_win32.h"
 #include "../imgui/backends/imgui_impl_vulkan.h"
-
-#include "glm/gtx/quaternion.hpp"
 
 VulkanGUI::VulkanGUI()
 {
@@ -209,37 +207,28 @@ VulkanGUI& VulkanGUI::AddInspectorPanel()
 	return *this;
 }
 
-VulkanGUI& VulkanGUI::show_overlay(const char* title, float cpuDeltaSecs, size_t frameNumber)
+void VulkanGUI::start_overlay(const char* title)
 {
 	ImGuiViewport* viewport = ImGui::GetMainViewport();
 
 	ImGuiWindowFlags overlayFlags =
 		ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings |
-		 ImGuiWindowFlags_NoNav;
+		 ImGuiWindowFlags_NoNav | ImGuiWindowFlags_AlwaysAutoResize;
 	const float PAD = 10.0f;
 
 	ImVec2 work_pos =  viewport->WorkPos;
 	ImVec2 work_size = viewport->WorkSize;
 	ImVec2 window_pos, window_pos_pivot;
 	window_pos.x = (work_pos.x + PAD);
-	window_pos.y = (work_pos.y + work_size.y - PAD);
+	window_pos.y = (work_size.y - PAD);
 
 	window_pos_pivot.x = 0.0f;
 	window_pos_pivot.y = 1.0f;
 
 	ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
-	ImGui::SetNextWindowBgAlpha(0.33f); // Transparent background
-	if (ImGui::Begin("Overlay", 0, overlayFlags))
-	{
-		ImGui::Text(title);
-		ImGui::AlignTextToFramePadding();
-		ImGui::Text("Frame: %d", frameNumber);
-		ImGui::Text("Avg CPU Frame-Time (ms): %.2f", FrameStats::CurrentFrameTimeAvg);
-	}
+	ImGui::SetNextWindowBgAlpha(0.66f); // Transparent background
 
-	ImGui::End();
-
-	return *this;
+	ImGui::Begin(title, 0, overlayFlags);
 }
 
 VulkanGUI& VulkanGUI::ShowFrameTimeGraph(float* values, size_t nbValues)
@@ -261,10 +250,7 @@ void VulkanGUI::show_camera_settings(Camera& camera)
 	{
 		ImGui::SeparatorText("Transform");
 		{
-			if (ImGui::DragFloat3("Position", glm::value_ptr(camera.controller.m_position), 0.1f))
-			{
-				camera.controller.update_view();
-			}
+
 		}
 
 		ImGui::SeparatorText("Camera");
@@ -313,6 +299,31 @@ void VulkanGUI::show_camera_settings(Camera& camera)
 	ImGui::End();
 }
 
+void VulkanGUI::show_draw_statistics(IRenderer::DrawStats draw_stats)
+{
+	start_overlay("Draw statistics");
+
+	ImGui::Text("DRAW STATISTICS");
+	for (size_t i = 0; i < draw_stats.renderer_names.size(); i++)
+	{
+		ImGui::Text("%s", draw_stats.renderer_names[i]);
+		ImGui::Indent();
+		ImGui::BulletText("Draw calls : %u", draw_stats.num_drawcalls[i]);
+		ImGui::BulletText("Num Vertices : %u", draw_stats.num_vertices[i]);
+		ImGui::BulletText("Num Instances : %u", draw_stats.num_instances[i]);
+
+		ImGui::Unindent();
+	}
+
+	ImGui::Text("Total:");
+	ImGui::BulletText("Draw calls : %u", draw_stats.total_drawcalls);
+	ImGui::BulletText("Num Vertices : %u", draw_stats.total_vertices);
+	ImGui::BulletText("Num Instances : %u", draw_stats.total_instances);
+
+
+	ImGui::End();
+}
+
 VulkanGUI& VulkanGUI::ShowInspector()
 {
 	if (ImGui::Begin("Inspector", 0, 0))
@@ -323,7 +334,6 @@ VulkanGUI& VulkanGUI::ShowInspector()
 		}
 	}
 	ImGui::End();
-
 
 	return *this;
 }
@@ -384,27 +394,3 @@ VulkanGUI& VulkanGUI::ShowLightSettings(LightManager* light_manager)
 	return *this;
 }
 
-VulkanGUI& VulkanGUI::ShowShadowPanel(CascadedShadowRenderer* shadow_renderer, std::span<VkDescriptorSet> texShadowCascades)
-{
-	if (ImGui::Begin("Shadow Settings", 0, 0))
-	{
-		ImGui::SeparatorText("Cascaded Shadows");
-
-		if (ImGui::DragFloat("Z-Split Interpolation Factor", &shadow_renderer->lambda, 0.01f))
-		{
-			shadow_renderer->compute_cascade_splits();
-		}
-
-		/* Display shadow cascades */
-		//for (int i = 0; i < texShadowCascades.size(); i++)
-		//{
-		//	ImGui::Image(reinterpret_cast<ImTextureID>(texShadowCascades[i]), { 256, 256 });
-		//	ImGui::SameLine();
-		//}
-	}
-
-
-	ImGui::End();
-
-	return *this;
-}

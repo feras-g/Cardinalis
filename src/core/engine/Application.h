@@ -58,6 +58,8 @@ public:
 
 	std::unique_ptr<EventManager> m_event_manager;
 
+	uint32_t m_backbuffer_idx = 0;
+
 public:
 	Application() = delete;
 	Application(const Application&) = delete;

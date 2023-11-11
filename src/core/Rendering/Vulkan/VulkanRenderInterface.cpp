@@ -38,7 +38,7 @@ void RenderInterface::terminate()
 
 	for (uint32_t i = 0; i < NUM_FRAMES; i++)
 	{
-		Destroy(context.device, context.frames[i]);
+		destroy(context.device, context.frames[i]);
 	}
 
 	vkDestroyCommandPool(context.device, context.temp_cmd_pool, nullptr);
@@ -167,6 +167,8 @@ void RenderInterface::create_device()
 	VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamic_rendering_feature = {};
 	VkPhysicalDeviceMultiviewFeaturesKHR multiview_feature = {};
 	VkPhysicalDeviceDepthClampZeroOneFeaturesEXT depth_clamp_feature = {};
+	VkPhysicalDeviceSynchronization2Features synchronization2_feature = {};
+
 
 	/* Descriptor indexing */
 	descriptor_indexing_feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
@@ -188,8 +190,12 @@ void RenderInterface::create_device()
 
 	/* Depth clamp */
 	depth_clamp_feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_CLAMP_ZERO_ONE_FEATURES_EXT;
-	depth_clamp_feature.pNext = VK_NULL_HANDLE;
 	depth_clamp_feature.depthClampZeroOne = VK_TRUE;
+	depth_clamp_feature.pNext = &synchronization2_feature;
+
+	synchronization2_feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
+	synchronization2_feature.synchronization2 = VK_TRUE;
+	synchronization2_feature.pNext = VK_NULL_HANDLE;
 
 	VkDeviceCreateInfo device_create_info = {};
 	device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -261,7 +267,7 @@ void RenderInterface::create_synchronization_structures()
 	{
 		VK_CHECK(vkCreateFence(context.device, &fenceInfo, nullptr, &context.frames[i].fence_queue_submitted));
 
-		VK_CHECK(vkCreateSemaphore(context.device, &semaphoreInfo, nullptr, &context.frames[i].smp_image_acquired));
+		VK_CHECK(vkCreateSemaphore(context.device, &semaphoreInfo, nullptr, &context.frames[i].semaphore_swapchain_acquire));
 		VK_CHECK(vkCreateSemaphore(context.device, &semaphoreInfo, nullptr, &context.frames[i].smp_queue_submitted));
 	}
 }

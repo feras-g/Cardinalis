@@ -155,6 +155,12 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 	{
 		std::function load_tex = [](TextureType tex_type, cgltf_texture* tex, VkFormat format, bool calc_mip) -> int
 		{
+			calc_mip = false;
+
+
+
+
+
 			const char* uri = tex->image->uri;
 			std::string name = uri ? base_path + uri : base_path + tex->image->name;
 
@@ -244,15 +250,15 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 static void load_primitive(cgltf_node* node, cgltf_primitive* primitive, Node* engine_node, GeometryData& geometry)
 {
 	Primitive p = {};
-	p.first_index = (uint32_t)geometry.indices.size();
-	p.index_count = (uint32_t)primitive->indices->count;
+	p.first_vertex = (uint32_t)geometry.indices.size();
+	p.vertex_count = (uint32_t)primitive->indices->count;
 	
 	glm::mat4 mesh_local_mat;
 	cgltf_node_transform_world(node, glm::value_ptr(mesh_local_mat));
 	p.model = mesh_local_mat;
 
 	/* Load indices */
-	for (uint32_t idx = 0; idx < p.index_count; idx++)
+	for (uint32_t idx = 0; idx < p.vertex_count; idx++)
 	{
 		size_t index = cgltf_accessor_read_index(primitive->indices, idx);
 		geometry.indices.push_back((unsigned int)(index + geometry.vertices.size()));

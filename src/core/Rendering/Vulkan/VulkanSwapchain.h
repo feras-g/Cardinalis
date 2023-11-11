@@ -28,13 +28,12 @@ public:
 	uint32_t current_backbuffer_idx = 0;
 
 	VkResult acquire_next_image(VkSemaphore imageAcquiredSmp);
-	void present(VkCommandBuffer cmdBuffer, VkQueue queue, uint32_t imageIndices);
+	VkResult present(VkCommandBuffer cmdBuffer, VkQueue queue, uint32_t imageIndices);
 	
 	VkSurfaceKHR h_surface;
 	VkSwapchainKHR vk_swapchain;
 	VulkanSwapchainInfo info;
 
-	// Data
 	std::vector<Texture2D> color_attachments;
 	std::vector<Texture2D> depth_attachments;
 private:

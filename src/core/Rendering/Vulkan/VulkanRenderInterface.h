@@ -36,25 +36,26 @@ inline PFN_vkCmdEndRenderingKHR				fpCmdEndRenderingKHR;
 class Window;
 
 // Number of frames to work on 
-constexpr uint32_t NUM_FRAMES = 2;
+static constexpr uint32_t NUM_FRAMES = 2;
 
 struct VulkanContext
 {
-	VkInstance instance			= VK_NULL_HANDLE;
-	VkDevice   device			= VK_NULL_HANDLE;
-	VkPhysicalDevice physical_device	= VK_NULL_HANDLE;
-	VkQueue	   queue			= VK_NULL_HANDLE;
-	VkCommandPool frames_cmd_pool = VK_NULL_HANDLE;
-	VkCommandPool temp_cmd_pool	= VK_NULL_HANDLE;
+	VkInstance instance;
+	VkDevice device;
+	VkPhysicalDevice physical_device;
+	VkQueue queue;
+	VkCommandPool frames_cmd_pool;
+	VkCommandPool temp_cmd_pool;
+	VulkanFrame frames[NUM_FRAMES];
 
 	VulkanFrame& get_current_frame() { return frames[curr_frame_idx]; }
+	void update_frame_index() { curr_frame_idx = (curr_frame_idx + 1) % NUM_FRAMES; }
 
 	std::unique_ptr<VulkanSwapchain> swapchain;
 
 	uint32_t frame_count= 0;
 	uint32_t curr_frame_idx = 0;
 	uint32_t curr_backbuffer_idx = 0; 
-	VulkanFrame frames[NUM_FRAMES];
 	uint32_t gfxQueueFamily		= 0;
 };
 extern VulkanContext context;

@@ -41,7 +41,7 @@ struct WindowInfo
 struct WindowState
 {
 	bool b_is_closed = false;
-	bool bIsMinimized = false;
+	bool b_is_minimized = false;
 };
 
 class Application;

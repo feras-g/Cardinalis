@@ -14,11 +14,16 @@ project("corelib")
 
 	location(project_path)
 
-	files { 
+	files 
+	{ 
 		project_path .. "**.h", 
 		project_path .. "**.cpp",
 		project_path .. "**.hpp",
 		engine_root .. "data/**",
+	}
+	removefiles 
+	{ 
+		engine_root .. "**/exclude/**",
 	}
 
 	vpaths { 

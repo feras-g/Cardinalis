@@ -137,10 +137,10 @@ void VulkanSwapchain::destroy()
 
 VkResult VulkanSwapchain::acquire_next_image(VkSemaphore imageAcquiredSmp)
 {
-    return fpAcquireNextImageKHR(context.device, vk_swapchain, 1000000000ull, imageAcquiredSmp, VK_NULL_HANDLE, &current_backbuffer_idx);
+    return vkAcquireNextImageKHR(context.device, vk_swapchain, UINT64_MAX, imageAcquiredSmp, VK_NULL_HANDLE, &current_backbuffer_idx);
 }
 
-void VulkanSwapchain::present(VkCommandBuffer cmdBuffer, VkQueue queue, uint32_t imageIndices)
+VkResult VulkanSwapchain::present(VkCommandBuffer cmdBuffer, VkQueue queue, uint32_t imageIndices)
 {
     VkPresentInfoKHR presentInfo =
     {
@@ -153,7 +153,6 @@ void VulkanSwapchain::present(VkCommandBuffer cmdBuffer, VkQueue queue, uint32_t
         //.pResults=,
     };
     
-    VkResult result = vkQueuePresentKHR(queue, &presentInfo);
-    assert(result == VK_SUCCESS);
+    return vkQueuePresentKHR(queue, &presentInfo);
 }
 

@@ -18,8 +18,10 @@ public:
 	virtual void compose_gui() override;
 	virtual void render() override;
 	virtual void update(float t, float dt) override;
+
+	/* t : time in seconds */
 	virtual void update_scene(float t, float dt);
-	virtual void update_frame_data();
+	virtual void update_frame_ubo();
 	virtual void exit() override;
 
 	virtual void on_window_resize() override;

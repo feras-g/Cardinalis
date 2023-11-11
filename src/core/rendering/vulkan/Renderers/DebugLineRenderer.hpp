@@ -2,7 +2,7 @@
 
 #include "IRenderer.h"
 
-struct DebugLineRenderer : IRenderer
+struct DebugLineRenderer : public IRenderer
 {
 	void init() override
 	{
@@ -96,6 +96,11 @@ struct DebugLineRenderer : IRenderer
 	void on_window_resize()
 	{
 		create_renderpass();
+	}
+
+	virtual void show_ui() const
+	{
+
 	}
 
 	struct DebugPoint
