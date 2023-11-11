@@ -36,7 +36,8 @@ public:
 	const WindowData*  GetData()	const;
 	void HandleEvents();
 
-	double GetTime() const;
+	/* Returns time in seconds since window creation */
+	double get_time() const;
 
 	void OnClose();
 	void OnResize(unsigned int width, unsigned int height);
@@ -50,6 +51,8 @@ public:
 
 	bool is_in_focus() const;
 
+	void init_perf_counter();
+
 	WindowInfo m_WinInfo;
 	WindowState m_WinState;
 	WindowData m_Data;
@@ -59,7 +62,8 @@ public:
 	HWND hWnd;
 	HINSTANCE hInstance;
 
-	double m_PerfCounterFreq;
+	double m_perf_counter_freq;
+	double m_perf_counter_start;
 
 	bool b_is_in_focus;
 };
@@ -127,9 +131,9 @@ void Window::Impl::Create()
 	SetWindowPos(hWnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
 
 	// Init performance counter
-	LARGE_INTEGER perfCountFreq;
-	QueryPerformanceFrequency(&perfCountFreq);
-	m_PerfCounterFreq = (double)perfCountFreq.QuadPart;
+	init_perf_counter();
+
+
 
 	// Initialize ImGui
 	ImGui::CreateContext();
@@ -372,6 +376,15 @@ bool Window::Impl::is_in_focus() const
 	return b_is_in_focus;
 }
 
+void Window::Impl::init_perf_counter()
+{
+	LARGE_INTEGER perf_counter_freq;
+	QueryPerformanceFrequency(&perf_counter_freq);
+	m_perf_counter_freq = double(perf_counter_freq.QuadPart);
+	QueryPerformanceCounter(&perf_counter_freq);
+	m_perf_counter_start = double(perf_counter_freq.QuadPart);
+}
+
 /////////////////////////////////////////////////////////////////////////
 bool Window::Impl::IsClosed()  const { return m_WinState.b_is_closed; }
 int  Window::Impl::GetHeight() const { return m_WinInfo.height; }
@@ -390,12 +403,11 @@ void Window::Impl::HandleEvents()
 	}
 }
 
-/* Time in seconds */
-double Window::Impl::GetTime() const
+double Window::Impl::get_time() const
 {
 	LARGE_INTEGER now;
 	QueryPerformanceCounter(&now);
-	return (double)now.QuadPart / m_PerfCounterFreq;
+	return double(now.QuadPart - m_perf_counter_start) / m_perf_counter_freq;
 }
 
 #else
@@ -431,7 +443,7 @@ void Window::ShutdownGUI() const { pImpl->ShutdownGUI(); }
 const WindowData* Window::GetData() const { return pImpl->GetData(); }
 void Window::handle_events() { return pImpl->HandleEvents(); }
 bool Window::is_in_focus() const { return pImpl->is_in_focus(); }
-double Window::GetTime() const { return pImpl->GetTime(); }
+double Window::GetTime() const { return pImpl->get_time(); }
 void Window::OnClose()  { return pImpl->OnClose(); }
 void Window::OnResize(unsigned int width, unsigned int height) { return pImpl->OnResize(width, height); }
 
