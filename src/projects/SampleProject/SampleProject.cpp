@@ -34,6 +34,7 @@ void SampleProject::compose_gui()
 {
 	m_gui.begin();
 	m_gui.show_gizmo(m_camera, m_event_manager->key_event, ObjectManager::get_instance().m_mesh_instance_data[0][0].model);
+	m_gui.show_demo();
 	m_gui.show_inspector(ObjectManager::get_instance());
 	m_gui.show_camera_settings(m_camera);
 	m_gui.show_draw_statistics(IRenderer::draw_stats);
@@ -62,7 +63,19 @@ void SampleProject::update(float t, float dt)
 	}
 	m_camera.translate(m_delta_time, m_event_manager->key_event);
 
-	update_scene(t, dt);
+	static ObjectManager& object_manager = ObjectManager::get_instance();
+
+	/* Update CPU scene data */
+	std::string mesh_name = "mesh_1";
+	size_t mesh_idx = object_manager.m_mesh_id_from_name.at(mesh_name);
+
+	for (size_t instance_idx = 0; instance_idx < object_manager.m_mesh_instance_data[mesh_idx].size(); instance_idx++)
+	{
+		float normalized_index = (instance_idx / float(object_manager.m_mesh_instance_data[mesh_idx].size())) * 2 - 1;
+		
+		object_manager.m_mesh_instance_data[mesh_idx][instance_idx].model = glm::rotate(object_manager.m_mesh_instance_data[mesh_idx][instance_idx].model, dt, glm::vec3(0,1, 0));
+	}
+
 	compose_gui();
 }
 
@@ -75,10 +88,16 @@ void SampleProject::render()
 	set_viewport_scissor(cmd_buffer, context.swapchain->info.width, context.swapchain->info.height, true);
 
 	forward_renderer.render(cmd_buffer, ObjectManager::get_instance());
-	//debug_line_renderer.render(cmd_buffer);
+	debug_line_renderer.render(cmd_buffer);
 
 	m_gui.render(cmd_buffer);
 
+	update_gpu_buffers();
+}
+
+void SampleProject::update_gpu_buffers()
+{
+	update_instances_ssbo();
 	update_frame_ubo();
 }
 
@@ -96,19 +115,18 @@ void SampleProject::create_scene()
 	//ObjectManager::get_instance().add_mesh(mesh, "mesh", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 0.1f, 0.1f, 0.1f } });
 
 	VulkanMesh mesh_1; 
-	mesh_1.create_from_file("basic/armored_crab/scene.gltf");
+	mesh_1.create_from_file("basic/unit_cube.glb");
 	ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 1.0f, 1.0f, 1.0f } });
 
 	//VulkanMesh mesh_2;
-	//mesh_2.create_from_file("basic/unit_sphere.glb");
+	//mesh_2.create_from_file("scenes/porsche/scene.gltf");
 	//ObjectManager::get_instance().add_mesh(mesh_2, "mesh_2", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 1.0f, 1.0f, 1.0f } });
-	int count = 0;
+	
 	for (int x = -15; x < 15; x++)
-	for (int y = -15; y < 15; y++)
 	for (int z = -15; z < 15; z++)
 	{
-		float spacing = 5.0f;
-		Transform t = { .position = spacing * glm::vec3(x, y, z), .rotation = {0,0,0}, .scale = glm::vec3{ 1.0f, 1.0f, 1.0f } };
+		float spacing = 3.0f;
+		Transform t = { .position = spacing * glm::vec3(x, 0, z), .rotation = {0,0,0}, .scale = glm::vec3{ 1.0f, 1.0f, 1.0f } };
 
 		//if ((x + z + 0) % 2 == 0)
 		{
@@ -121,20 +139,12 @@ void SampleProject::create_scene()
 	}
 }
 
-void SampleProject::update_scene(float t, float dt)
+void SampleProject::update_instances_ssbo()
 {
-	//static ObjectManager& object_manager = ObjectManager::get_instance();
-	//
-	//std::string mesh_name = "mesh_1";
-	//size_t mesh_idx = object_manager.m_mesh_id_from_name.at(mesh_name);
+	static ObjectManager& object_manager = ObjectManager::get_instance();
 
-
-	//for (size_t instance_idx = 0; instance_idx < object_manager.m_mesh_instance_data[mesh_idx].size(); instance_idx++)
-	//{
-	//	object_manager.m_mesh_instance_data[mesh_idx][instance_idx].model = glm::translate(object_manager.m_mesh_instance_data[mesh_idx][instance_idx].model, glm::vec3(0, cos(t), 0));
-	//}
-	//
-	//object_manager.update_instances_ssbo(mesh_name);
+	object_manager.update_instances_ssbo("mesh_1");
+	//object_manager.update_instances_ssbo("mesh_2");
 }
 
 void SampleProject::exit()
@@ -165,5 +175,10 @@ void SampleProject::on_mouse_move(MouseEvent event)
 void SampleProject::on_key_event(KeyEvent event)
 {
 	Application::on_key_event(event);
+
+	if (event.key == Key::R)
+	{
+
+	}
 }
 

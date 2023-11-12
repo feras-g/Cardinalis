@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include <vulkan/vulkan_core.h>
 #include "core/rendering/vulkan/DescriptorSet.h"
 #include "core/rendering/vulkan/VulkanShader.h"
@@ -84,10 +86,13 @@ struct IRenderer
 	/* Add UI elements to be displayed */
 	virtual void show_ui() const = 0;
 
+	virtual void reload_pipeline() = 0;
+
 	Pipeline pipeline;
 	VertexFragmentShader shader;
 	VkFormat color_format;
 	VkFormat depth_format;
 	VulkanRenderPassDynamic renderpass[NUM_FRAMES];
 	DrawStatsEntry renderer_stats;
+	std::string name;
 };

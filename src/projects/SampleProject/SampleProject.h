@@ -17,10 +17,10 @@ public:
 	virtual void create_scene();
 	virtual void compose_gui() override;
 	virtual void render() override;
-	virtual void update(float t, float dt) override;
-
 	/* t : time in seconds */
-	virtual void update_scene(float t, float dt);
+	virtual void update(float t, float dt) override;
+	virtual void update_gpu_buffers() override;
+	virtual void update_instances_ssbo();
 	virtual void update_frame_ubo();
 	virtual void exit() override;
 

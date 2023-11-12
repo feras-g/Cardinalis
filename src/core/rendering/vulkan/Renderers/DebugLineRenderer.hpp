@@ -6,6 +6,7 @@ struct DebugLineRenderer : public IRenderer
 {
 	void init() override
 	{
+		name = "Debug Line Renderer";
 		create_renderpass();
 		create_pipeline();
 	}
@@ -99,6 +100,11 @@ struct DebugLineRenderer : public IRenderer
 	}
 
 	virtual void show_ui() const
+	{
+
+	}
+
+	virtual void reload_pipeline()
 	{
 
 	}

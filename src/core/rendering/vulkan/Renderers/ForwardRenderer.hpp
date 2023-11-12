@@ -7,9 +7,10 @@ struct ForwardRenderer : public IRenderer
 {
 	void init()
 	{
+		name = "Forward Renderer";
 		create_renderpass();
 		create_pipeline();
-		forward_renderer_stats = IRenderer::draw_stats.add_entry("ForwardRenderer");
+		forward_renderer_stats = IRenderer::draw_stats.add_entry(name.c_str());
 	}
 
 	void create_pipeline()
@@ -112,6 +113,13 @@ struct ForwardRenderer : public IRenderer
 	void show_ui() const override
 	{
 
+	}
+
+	void reload_pipeline() override
+	{
+		vkDeviceWaitIdle(context.device);
+		shader.create("instanced_mesh_vert.vert.spv", "forward_frag.frag.spv");
+		pipeline.create_graphics_pipeline_dynamic(shader, std::span<VkFormat>(&color_format, 1), depth_format, Pipeline::Flags::ENABLE_DEPTH_STATE, pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
 	}
 
 	VkFormat color_format;

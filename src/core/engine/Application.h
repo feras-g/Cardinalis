@@ -34,6 +34,7 @@ public:
 	virtual void update(float t, float dt) = 0;
 	virtual void render() = 0;
 	virtual void exit() = 0;
+	virtual void update_gpu_buffers() = 0;
 
 	/* Prepare for render */
 	void prerender();

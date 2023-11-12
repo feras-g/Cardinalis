@@ -22,6 +22,9 @@ void VulkanGUI::begin()
 {
 	ImGui::NewFrame();
 	ImGui::StyleColorsDark();
+	ImGui::GetStyle().WindowRounding = 5.0f;
+	ImGui::GetStyle().FrameRounding = 5.0f;
+
 	ImGui::DockSpaceOverViewport(0, ImGuiDockNodeFlags_PassthruCentralNode);
 }
 
@@ -60,21 +63,30 @@ void VulkanGUI::show_gizmo(const Camera& camera, const KeyEvent& event, glm::mat
 
 	const char* items[] = { "Translate", "Rotate", "Scale" };
 	static int current_item = 0;
-	if (ImGui::ListBox("Controls", &current_item, items, 3, 3))
+
+	if (ImGui::Begin("Toolbar"))
 	{
-		if (current_item == 0)
+		ImGui::SeparatorText("Transform Mode");
+		
+		if (ImGui::Button("Translation", ImVec2(70, 40)))
 		{
 			gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
+			
 		}
-		else if (current_item == 1)
+		ImGui::SameLine();
+		if (ImGui::Button("Rotation", ImVec2(70, 40)))
 		{
+			ImGui::SameLine();
 			gizmo_operation = ImGuizmo::OPERATION::ROTATE;
 		}
-		else if (current_item == 2)
+		ImGui::SameLine();
+		if (ImGui::Button("Scale", ImVec2(70, 40)))
 		{
+			ImGui::SameLine();
 			gizmo_operation = ImGuizmo::OPERATION::SCALE;
 		}
 	}
+	ImGui::End();
 
 	//if (event.is_key_pressed_async(Key::R))
 	//{
@@ -84,7 +96,6 @@ void VulkanGUI::show_gizmo(const Camera& camera, const KeyEvent& event, glm::mat
 	//{
 	//	gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
 	//}
-
 
 	ImGuizmo::Manipulate(view, proj, gizmo_operation, ImGuizmo::MODE::WORLD, glm::value_ptr(selected_object_transform));
 }
