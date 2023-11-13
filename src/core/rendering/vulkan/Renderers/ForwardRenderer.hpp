@@ -37,15 +37,15 @@ struct ForwardRenderer : public IRenderer
 		{ 
 			VulkanRendererCommon::get_instance().m_framedata_desc_set_layout,
 			ObjectManager::get_instance().m_descriptor_set_bindless_textures.layout.vk_set_layout,
-			descriptor_set.layout.vk_set_layout,
 			ObjectManager::get_instance().mesh_descriptor_set_layout, 
+			descriptor_set.layout.vk_set_layout,
 		};
 
 		pipeline.layout.add_push_constant_range("Primitive Model Matrix", { .stageFlags = VK_SHADER_STAGE_VERTEX_BIT, .offset = 0, .size = sizeof(glm::mat4) });
 		pipeline.layout.add_push_constant_range("Material", { .stageFlags =  VK_SHADER_STAGE_FRAGMENT_BIT, .offset = sizeof(glm::mat4), .size = sizeof(Material) });
 
 		pipeline.layout.create(layouts);
-		pipeline.create_graphics_pipeline_dynamic(shader, std::span<VkFormat>(&color_format, 1), depth_format, Pipeline::Flags::ENABLE_DEPTH_STATE, pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+		pipeline.create_graphics(shader, std::span<VkFormat>(&color_format, 1), depth_format, Pipeline::Flags::ENABLE_DEPTH_STATE, pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
 	}
 
 	void create_renderpass()
@@ -77,13 +77,13 @@ struct ForwardRenderer : public IRenderer
 		/* Frame level descriptor sets 1,2,3 */
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 0, 1, &VulkanRendererCommon::get_instance().m_framedata_desc_set[context.curr_frame_idx].vk_set, 0, nullptr);
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 1, 1, &ObjectManager::get_instance().m_descriptor_set_bindless_textures.vk_set, 0, nullptr);
-		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 2, 1, &descriptor_set.vk_set, 0, nullptr);
+		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 3, 1, &descriptor_set.vk_set, 0, nullptr);
 
 		renderpass[context.curr_frame_idx].begin(cmd_buffer, { context.swapchain->info.width, context.swapchain->info.height });
 		for (size_t mesh_idx = 0; mesh_idx < object_manager.m_meshes.size(); mesh_idx++)
 		{
 			/* Mesh descriptor set */
-			vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 3, 1, &object_manager.m_descriptor_sets[mesh_idx].vk_set, 0, nullptr);
+			vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 2, 1, &object_manager.m_descriptor_sets[mesh_idx].vk_set, 0, nullptr);
 
 			const VulkanMesh& mesh = object_manager.m_meshes[mesh_idx];
 
@@ -119,7 +119,7 @@ struct ForwardRenderer : public IRenderer
 	{
 		vkDeviceWaitIdle(context.device);
 		shader.create("instanced_mesh_vert.vert.spv", "forward_frag.frag.spv");
-		pipeline.create_graphics_pipeline_dynamic(shader, std::span<VkFormat>(&color_format, 1), depth_format, Pipeline::Flags::ENABLE_DEPTH_STATE, pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+		pipeline.create_graphics(shader, std::span<VkFormat>(&color_format, 1), depth_format, Pipeline::Flags::ENABLE_DEPTH_STATE, pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
 	}
 
 	VkFormat color_format;

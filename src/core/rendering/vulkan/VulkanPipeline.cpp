@@ -1,0 +1,9 @@
+#include "VulkanPipeline.h"
+#include "vulkan/vulkan.h"
+
+VkPipelineVertexInputStateCreateInfo vertex_input_state;
+VkPipelineInputAssemblyStateCreateInfo input_assembly_state;
+VkPipelineMultisampleStateCreateInfo multisample_state;
+VkPipelineDepthStencilStateCreateInfo depth_stencil_state;
+VkPipelineColorBlendStateCreateInfo color_blend_state;
+VkPipelineDynamicStateCreateInfo dynamic_state;

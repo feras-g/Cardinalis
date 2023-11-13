@@ -36,6 +36,11 @@ static constexpr ImageViewInitInfo ImageViewTexture2D
 	VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1
 };
 
+static constexpr ImageViewInitInfo ImageViewDepthTexture2D
+{
+	VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1
+};
+
 struct Texture
 {
 	VkImage               image			{ VK_NULL_HANDLE };

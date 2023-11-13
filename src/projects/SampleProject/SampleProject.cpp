@@ -8,10 +8,12 @@
 #include "glm/gtx/quaternion.hpp"
 
 #include "rendering/vulkan/Renderers/DebugLineRenderer.hpp"
+#include "rendering/vulkan/Renderers/DeferredRenderer.hpp"
 #include "rendering/vulkan/Renderers/ForwardRenderer.hpp"
 
 static ForwardRenderer forward_renderer;
 static DebugLineRenderer debug_line_renderer;
+static DeferredRenderer deferred_renderer;
 
 SampleProject::SampleProject(const char* title, uint32_t width, uint32_t height)
 	: Application(title, width, height)
@@ -26,6 +28,7 @@ void SampleProject::init()
 	debug_line_renderer.init();
 	forward_renderer.p_debug_line_renderer = &debug_line_renderer;
 	forward_renderer.init();
+	deferred_renderer.init();
 
 	create_scene();
 }

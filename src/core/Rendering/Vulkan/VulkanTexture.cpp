@@ -70,6 +70,7 @@ void Texture2D::create_from_data(
 void Texture2D::create(VkDevice device, VkImageUsageFlags imageUsage)
 {
     create_vk_image(device, false, imageUsage);
+    create_view(device, !!(imageUsage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) ? ImageViewDepthTexture2D : ImageViewTexture2D);
 }
 void Texture::create_vk_image_cube(VkDevice device, VkImageUsageFlags imageUsage)
 {

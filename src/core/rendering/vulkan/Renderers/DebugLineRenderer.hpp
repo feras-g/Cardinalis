@@ -51,7 +51,7 @@ struct DebugLineRenderer : public IRenderer
 		};
 
 		graphics_pipeline.layout.create(graphics_pipeline_layouts);
-		graphics_pipeline.create_graphics_pipeline_dynamic(render_shader, std::span<VkFormat>(&color_format, 1), depth_format, Pipeline::Flags::ENABLE_DEPTH_STATE, graphics_pipeline.layout, VK_PRIMITIVE_TOPOLOGY_LINE_LIST, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
+		graphics_pipeline.create_graphics(render_shader, std::span<VkFormat>(&color_format, 1), depth_format, Pipeline::Flags::ENABLE_DEPTH_STATE, graphics_pipeline.layout, VK_PRIMITIVE_TOPOLOGY_LINE_LIST, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
 
 		VkDescriptorSetLayout compute_pipeline_layouts[] =
 		{
@@ -59,7 +59,7 @@ struct DebugLineRenderer : public IRenderer
 		};
 		populate_shader.create("debug_line_populate_comp.comp.spv");
 		compute_pipeline.layout.create(compute_pipeline_layouts);
-		compute_pipeline.create_compute_pipeline(populate_shader);
+		compute_pipeline.create_compute(populate_shader);
 	}
 
 	void create_renderpass() override

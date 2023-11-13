@@ -29,7 +29,7 @@ layout(set = 0, binding = 0) uniform FrameDataBlock
 
 layout(set = 1, binding = 0) uniform sampler2D textures[];
 
-layout(set = 2, binding = 0) buffer ShaderParams 
+layout(set = 3, binding = 0) buffer ShaderParams 
 { 
     bool enable_normal_mapping; 
 } shader_params;

@@ -7,6 +7,7 @@ layout(location = 0) out vec4 position_ws;
 layout(location = 1) out vec4 normal_ws;
 layout(location = 2) out vec2 uv;
 layout(location = 3) out vec4 instance_color;
+layout(location = 4) out vec3 vertex_to_eye_ws;
 
 struct Instance
 {
@@ -14,9 +15,9 @@ struct Instance
     vec4  color;
 };
 
-layout(set = 3, binding = 0) readonly buffer VertexBuffer { Vertex data[]; } vtx_buffer;
-layout(set = 3, binding = 1) readonly buffer IndexBuffer  { uint   data[]; } idx_buffer;
-layout(set = 3, binding = 2) readonly buffer InstanceData 
+layout(set = 2, binding = 0) readonly buffer VertexBuffer { Vertex data[]; } vtx_buffer;
+layout(set = 2, binding = 1) readonly buffer IndexBuffer  { uint   data[]; } idx_buffer;
+layout(set = 2, binding = 2) readonly buffer InstanceData 
 { 
     Instance  data[];
 } instances;
@@ -45,6 +46,8 @@ void main()
     vec2 depth_cs    = position_cs.zw;
 
     uv = vec2(v.u, v.v);
+
+    vertex_to_eye_ws = normalize(frame.data.eye_pos_ws - position_ws).xyz;
 
     gl_Position = position_cs;
 }

@@ -621,7 +621,7 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colo
 	return out;
 }
 
-void Pipeline::create_graphics_pipeline_dynamic(const VertexFragmentShader& shader, std::span<VkFormat> color_formats, VkFormat depth_format, Flags flags, VkPipelineLayout pipeline_layout, VkPrimitiveTopology topology,
+void Pipeline::create_graphics(const VertexFragmentShader& shader, std::span<VkFormat> color_formats, VkFormat depth_format, Flags flags, VkPipelineLayout pipeline_layout, VkPrimitiveTopology topology,
 	VkCullModeFlags cull_mode, VkFrontFace front_face, uint32_t view_mask)
 {
 	VkPipelineRenderingCreateInfoKHR pipeline_create{ VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR };
@@ -637,10 +637,10 @@ void Pipeline::create_graphics_pipeline_dynamic(const VertexFragmentShader& shad
 		flags = Flags(( (int)flags | (int)Flags::ENABLE_DEPTH_STATE));
 	}
 
-	create_graphics_pipeline(shader, (uint32_t)color_formats.size(), flags, nullptr, pipeline_layout, topology, cull_mode, front_face, &pipeline_create);
+	create_graphics(shader, (uint32_t)color_formats.size(), flags, nullptr, pipeline_layout, topology, cull_mode, front_face, &pipeline_create);
 }
 
-void Pipeline::create_graphics_pipeline(const VertexFragmentShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPrimitiveTopology topology,
+void Pipeline::create_graphics(const VertexFragmentShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPrimitiveTopology topology,
 	VkCullModeFlags cullMode, VkFrontFace frontFace, VkPipelineRenderingCreateInfoKHR* dynamic_pipeline_create)
 {
 	// Pipeline stages
@@ -776,7 +776,7 @@ void Pipeline::create_graphics_pipeline(const VertexFragmentShader& shader, uint
 	VkResourceManager::get_instance(context.device)->add_pipeline(pipeline);
 }
 
-void Pipeline::create_compute_pipeline(const Shader& shader)
+void Pipeline::create_compute(const Shader& shader)
 {
 	assert(layout);
 
