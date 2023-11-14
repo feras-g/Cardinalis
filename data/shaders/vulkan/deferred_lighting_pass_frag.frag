@@ -1,41 +1,9 @@
 #version 460
-#define ENABLE_SHADOWS
-// #define ENABLE_CUBEMAP_REFLECTIONS
-
-#include "Headers/LightDefinitions.glsl"
-#include "Headers/Maths.glsl"
-#include "Headers/BRDF.glsl"
-#include "Headers/ShadowMapping.glsl"
-#include "Headers/Tonemapping.glsl"
-#include "Headers/Fog.glsl"
 
 layout(location = 0) in vec2 uv;
 layout(location = 0) out vec4 out_color;
 
-layout(set = 0, binding = 0) uniform sampler2D gbuffer_color;
-layout(set = 0, binding = 1) uniform sampler2D gbuffer_VS_normal;
-layout(set = 0, binding = 2) uniform sampler2D gbuffer_depth;
-layout(set = 0, binding = 3) uniform sampler2D gbuffer_normal_map;
-layout(set = 0, binding = 4) uniform sampler2D gbuffer_metallic_roughness;
-layout(set = 0, binding = 5) uniform sampler2DArray  gbuffer_shadow_map;
-layout(set = 0, binding = 6) uniform samplerCube cubemap;
-layout(set = 0, binding = 7) uniform samplerCube irradiance_map;
-
-layout(std140, set = 0, binding = 8) readonly buffer LightData
-{
-    DirectionalLight dir_light;
-    uint num_point_lights;
-    PointLight point_lights[];
-} lights;
-
-layout(set = 0, binding = 9) readonly buffer ShadowCascadesSSBO
-{
-    CascadeData data;
-} shadow_cascades;
-
-layout(set = 0, binding = 11) uniform texture2D textures[];
-
-layout(set = 1, binding = 0) uniform FrameData
+layout(set = 0, binding = 0) uniform FrameData
 {
     mat4 view;
     mat4 proj;
@@ -43,14 +11,11 @@ layout(set = 1, binding = 0) uniform FrameData
     vec4 view_pos;
 } frame_data;
 
-struct ToggleParams
-{
-    bool bViewDebugShadow;
-    bool bFilterShadowPCF;
-    bool bFilterShadowPoisson;
-};
+layout(set = 1, binding = 0) uniform sampler2D gbuffer_base_color;
+layout(set = 1, binding = 1) uniform sampler2D gbuffer_normal_ws;
+layout(set = 1, binding = 2) uniform sampler2D gbuffer_metalness_roughness;
+layout(set = 1, binding = 3) uniform sampler2D gbuffer_depth;
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void main()
 {
     // ToggleParams params;
@@ -105,4 +70,6 @@ void main()
     // color = uncharted2_filmic(color);
 
     // out_color = vec4(color, 1.0);
+
+    out_color = texture(gbuffer_base_color, uv);
 }

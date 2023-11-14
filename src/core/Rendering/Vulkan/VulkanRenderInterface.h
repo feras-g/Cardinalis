@@ -180,9 +180,13 @@ struct Pipeline
 		std::vector<VkPushConstantRange> push_constant_ranges;
 
 		VkPipelineLayout vk_pipeline_layout = VK_NULL_HANDLE;
+
+		
 	} layout;
 
 	VkPipeline pipeline;
+
+	operator VkPipeline() { return pipeline; }
 
 	void create_graphics(const VertexFragmentShader& shader, std::span<VkFormat> color_formats, VkFormat depth_format, Flags flags, VkPipelineLayout pipeline_layout,
 		VkPrimitiveTopology topology, VkCullModeFlags cull_mode, VkFrontFace front_face, uint32_t view_mask = 0);

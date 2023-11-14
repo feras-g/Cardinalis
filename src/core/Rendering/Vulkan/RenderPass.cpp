@@ -5,6 +5,8 @@
 void VulkanRenderPassDynamic::begin(VkCommandBuffer cmd_buffer, glm::vec2 extent, uint32_t viewMask)
 {
 	VkRect2D area = {};
+	area.offset.x = 0;
+	area.offset.y = 0;
 	area.extent.width  = (uint32_t)extent.x;
 	area.extent.height = (uint32_t)extent.y;
 

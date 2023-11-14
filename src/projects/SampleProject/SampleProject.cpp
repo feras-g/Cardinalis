@@ -90,8 +90,9 @@ void SampleProject::render()
 
 	set_viewport_scissor(cmd_buffer, context.swapchain->info.width, context.swapchain->info.height, true);
 
-	forward_renderer.render(cmd_buffer, ObjectManager::get_instance());
-	debug_line_renderer.render(cmd_buffer);
+	deferred_renderer.render(cmd_buffer, ObjectManager::get_instance());
+	//forward_renderer.render(cmd_buffer, ObjectManager::get_instance());
+	//debug_line_renderer.render(cmd_buffer);
 
 	m_gui.render(cmd_buffer);
 
@@ -118,7 +119,7 @@ void SampleProject::create_scene()
 	//ObjectManager::get_instance().add_mesh(mesh, "mesh", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 0.1f, 0.1f, 0.1f } });
 
 	VulkanMesh mesh_1; 
-	mesh_1.create_from_file("basic/unit_cube.glb");
+	mesh_1.create_from_file("basic/duck/duck.gltf");
 	ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 1.0f, 1.0f, 1.0f } });
 
 	//VulkanMesh mesh_2;
@@ -161,6 +162,7 @@ void SampleProject::on_window_resize()
 	m_gui.on_window_resize();
 	forward_renderer.on_window_resize();
 	debug_line_renderer.on_window_resize();
+	deferred_renderer.on_window_resize();
 	m_camera.update_aspect_ratio(m_window->GetWidth() / (float)m_window->GetHeight());
 }
 

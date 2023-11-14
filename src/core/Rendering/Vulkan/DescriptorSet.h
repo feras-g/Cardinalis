@@ -76,7 +76,7 @@ struct DescriptorSetLayout
 struct DescriptorSet
 {
 	/* Overload conversion operators */
-	operator const VkDescriptorSet&() const { return vk_set; }
+	operator const VkDescriptorSet () const { return vk_set; }
 	operator const VkDescriptorSet*() const { return &vk_set; }
 
 	void assign_layout(DescriptorSetLayout in_layout)

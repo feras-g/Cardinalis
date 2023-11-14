@@ -10,8 +10,7 @@ layout(location = 4) in vec3 vertex_to_eye_ws;
 
 layout(location = 0) out vec4  gbuffer_base_color;
 layout(location = 1) out vec4  gbuffer_normal_ws;
-layout(location = 2) out vec4  gbuffer_metalness_roughness;
-// layout(location = 3) out float gbuffer_depth_ndc;
+layout(location = 2) out vec2  gbuffer_metalness_roughness;
 
 layout(push_constant) uniform constants
 {
@@ -45,17 +44,15 @@ void main()
     {
         gbuffer_normal_ws   = vec4(N, 1.0f);
     }
-    
-    // gbuffer_depth_ndc   = depthCS.z/depthCS.w;
 
     /* https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#metallic-roughness-material */
     /* Metallic : G, Roughness: B */
     if(material.texture_metalness_roughness_idx != 0)
     {
-        gbuffer_metalness_roughness = vec4(texture(bindless_tex[material.texture_metalness_roughness_idx], uv.xy).bg, 1.0, 1.0);
+        gbuffer_metalness_roughness = texture(bindless_tex[material.texture_metalness_roughness_idx], uv.xy).bg;
     }
     else
     {
-        gbuffer_metalness_roughness = vec4(0, 0.01, 1.0, 1.0);
+        gbuffer_metalness_roughness = vec2(0, 1.0);
     }
 }
