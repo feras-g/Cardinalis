@@ -4,6 +4,7 @@
 
 #include "VulkanRenderInterface.h"
 #include "VulkanDebugUtils.h"
+#include "RenderPass.h"
 
 VulkanSwapchain::VulkanSwapchain(VkSurfaceKHR surface)
     : h_surface(surface)
@@ -123,6 +124,14 @@ void VulkanSwapchain::reinitialize()
     vkDeviceWaitIdle(context.device);
     destroy();
     init(info.color_format, info.color_space, info.depth_format);
+}
+
+void VulkanSwapchain::clear_color(VkCommandBuffer cmd_buffer)
+{
+    VulkanRenderPassDynamic rp;
+    rp.add_color_attachment(color_attachments[context.curr_frame_idx].view);
+    rp.begin(cmd_buffer, { info.width, info.height });
+    rp.end(cmd_buffer);
 }
 
 void VulkanSwapchain::destroy()

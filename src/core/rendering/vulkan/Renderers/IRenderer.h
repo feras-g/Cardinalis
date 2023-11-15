@@ -84,9 +84,9 @@ struct IRenderer
 	}
 
 	/* Add UI elements to be displayed */
-	virtual void show_ui() const = 0;
+	virtual void show_ui() = 0;
 
-	virtual void reload_pipeline() = 0;
+	virtual bool reload_pipeline() = 0;
 
 	Pipeline pipeline;
 	VertexFragmentShader shader;

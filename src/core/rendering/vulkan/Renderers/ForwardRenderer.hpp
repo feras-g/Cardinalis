@@ -110,16 +110,15 @@ struct ForwardRenderer : public IRenderer
 		ssbo_shader_toggles.upload(context.device, &shader_params, 0, sizeof(ShaderToggles));
 	}
 
-	void show_ui() const override
+	void show_ui() override
 	{
 
 	}
 
-	void reload_pipeline() override
+	bool reload_pipeline() override
 	{
 		vkDeviceWaitIdle(context.device);
-		shader.create("instanced_mesh_vert.vert.spv", "forward_frag.frag.spv");
-		pipeline.create_graphics(shader, std::span<VkFormat>(&color_format, 1), depth_format, Pipeline::Flags::ENABLE_DEPTH_STATE, pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+		return pipeline.reload_pipeline();
 	}
 
 	VkFormat color_format;

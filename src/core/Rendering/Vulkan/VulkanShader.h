@@ -12,9 +12,13 @@ struct Shader
 struct VertexFragmentShader : Shader
 {
 	void create(const char* vertex_shader_path, const char* fragment_shader_path);
+	bool recompile();
 	size_t hash_vertex_module;
 	size_t hash_fragment_module;
 	void destroy();
+
+	const char* vertex_shader_path; 
+	const char* fragment_shader_path;
 };
 
 struct ComputeShader : Shader
@@ -22,4 +26,5 @@ struct ComputeShader : Shader
 	void create(const char* compute_shader_path);
 	size_t hash_compute_module;
 	void destroy();
+	bool recompile();
 };

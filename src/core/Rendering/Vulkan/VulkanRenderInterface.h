@@ -181,7 +181,6 @@ struct Pipeline
 
 		VkPipelineLayout vk_pipeline_layout = VK_NULL_HANDLE;
 
-		
 	} layout;
 
 	VkPipeline pipeline;
@@ -193,6 +192,29 @@ struct Pipeline
 	void create_graphics(const VertexFragmentShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPrimitiveTopology topology,
 		VkCullModeFlags cullMode, VkFrontFace frontFace, VkPipelineRenderingCreateInfoKHR* dynamic_pipeline_create);
 	void create_compute(const Shader& shader);
+	bool reload_pipeline();
+
+
+	/* Saved pipeline info */
+	VkGraphicsPipelineCreateInfo pipeline_create_info = {};
+	VkPipelineRenderingCreateInfoKHR dynamic_pipeline_create_info = {};
+	VertexFragmentShader pipeline_shader;
+	std::vector<VkFormat> color_attachment_formats;
+	VkFormat depth_attachment_format;
+	Flags pipeline_flags;
+
+	std::vector<VkDynamicState> pipeline_dynamic_states { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+	std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments = {};
+
+
+	VkPipelineVertexInputStateCreateInfo vertexInputState;
+	VkPipelineInputAssemblyStateCreateInfo inputAssemblyState;
+	VkPipelineMultisampleStateCreateInfo multisampleState;
+	VkPipelineDepthStencilStateCreateInfo depthStencilState;
+	VkPipelineColorBlendStateCreateInfo colorBlendState;
+	VkPipelineDynamicStateCreateInfo dynamicState;
+	VkPipelineViewportStateCreateInfo viewportState = {};
+	VkPipelineRasterizationStateCreateInfo raster_state_info = {};
 };
 
 static Pipeline::Flags operator|(Pipeline::Flags a, Pipeline::Flags b)

@@ -77,8 +77,36 @@ bool Shader::create_shader_module(const VkShaderStageFlagBits stage, const char*
 
 void VertexFragmentShader::create(const char* vertex_shader_path, const char* fragment_shader_path)
 {
+	this->vertex_shader_path = vertex_shader_path;
+	this->fragment_shader_path = fragment_shader_path;
 	create_shader_module(VK_SHADER_STAGE_VERTEX_BIT, vertex_shader_path, hash_vertex_module);
 	create_shader_module(VK_SHADER_STAGE_FRAGMENT_BIT, fragment_shader_path, hash_fragment_module);
+}
+
+bool VertexFragmentShader::recompile()
+{
+	size_t prev_hash_vertex = hash_vertex_module;
+	size_t prev_hash_fragment = hash_fragment_module;
+
+	size_t hash_vertex;
+	size_t hash_fragment;
+
+	std::vector<VkPipelineShaderStageCreateInfo> prev_stages = stages;
+
+	stages.clear();
+	if (create_shader_module(VK_SHADER_STAGE_VERTEX_BIT, vertex_shader_path, hash_vertex) && create_shader_module(VK_SHADER_STAGE_FRAGMENT_BIT, fragment_shader_path, hash_fragment))
+	{
+		hash_vertex_module = hash_vertex;
+		hash_fragment_module = hash_fragment;
+
+		return true;
+	}
+	else
+	{
+		stages = prev_stages;
+	}
+
+	return false;
 }
 
 void VertexFragmentShader::destroy()
@@ -96,4 +124,9 @@ void ComputeShader::create(const char* compute_shader_path)
 void ComputeShader::destroy()
 {
 	VkResourceManager::get_instance(context.device)->destroy_shader_module(hash_compute_module);
+}
+
+bool ComputeShader::recompile()
+{
+	return false;
 }

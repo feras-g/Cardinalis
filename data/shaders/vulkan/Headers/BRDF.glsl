@@ -4,6 +4,15 @@
 *   Specular term : Cook-Torrance model
 *   Diffuse term : Lambertian model 
 */
+struct BRDFData
+{
+    vec3 albedo;
+    vec3 normal_ws;
+    vec3 viewdir_ws;     /* Fragment to camera */
+    vec3 lightdir_ws;    /* Fragment to light */
+    vec3 halfvec_ws;
+    vec2 metalness_roughness; 
+};
 
 const float PI = 3.1415926538;
 const float INV_PI = 1.0 / PI;
@@ -70,12 +79,6 @@ vec3 get_specular_reflectance(vec3 base_color, float metalness)
     return mix(f0_dielectric, base_color, metalness);
 }
 
-struct BRDFData
-{
-    vec3 diffuse_reflectance;
-    vec3 specular_reflectance;  // Specular F0 at normal incidence
-};
-
 vec3 brdf_cook_torrance(vec3 n, vec3 v, vec3 l, vec3 h, vec3 light_color, vec3 irradiance, vec3 base_color, float metalness, float roughness)
 {
     float NoV = abs(dot(n, v)) + 1e-5;
@@ -110,4 +113,43 @@ vec3 brdf_blinn_phong(vec3 diffuse_reflectance, vec3 specular_reflectance, vec3 
 
     vec3 specular = blinn * specular_reflectance;
     return (diffuse_reflectance * NoL);
+}
+
+vec3 brdf_blinn_phong(BRDFData data, float shininess)
+{
+    float NoL = clamp(dot(data.normal_ws, data.lightdir_ws), 1e-5, 1.0);
+    float NoH = clamp(dot(data.normal_ws, data.halfvec_ws), 1e-5, 1.0);
+
+    float blinn = pow(NoH, shininess);
+    vec3 diffuse_reflectance = get_diffuse_reflectance(data.albedo, data.metalness_roughness.x);
+    vec3 specular_reflectance = get_specular_reflectance(data.albedo, data.metalness_roughness.x);
+
+    vec3 diffuse = diffuse_reflectance * brdf_lambert() ;
+    vec3 specular = blinn * specular_reflectance;
+    return (diffuse + specular) * NoL ;
+}
+
+
+vec3 brdf_cook_torrance(BRDFData data, vec3 light_color)
+{
+    float NoV = abs(dot(data.normal_ws, data.viewdir_ws)) + 1e-5;
+    float NoL = clamp(dot(data.normal_ws, data.lightdir_ws), 1e-5, 1.0);
+    float NoH = clamp(dot(data.normal_ws, data.halfvec_ws), 1e-5, 1.0);
+    float LoH = clamp(dot(data.lightdir_ws, data.halfvec_ws), 1e-5, 1.0);
+    float VoH = clamp(dot(data.viewdir_ws, data.halfvec_ws), 1e-5, 1.0);
+
+    /* Diffuse reflection */
+    vec3 diffuse_reflectance = get_diffuse_reflectance(data.albedo, data.metalness_roughness.x);
+    vec3 diffuse = diffuse_reflectance * brdf_lambert();
+
+    /* Specular reflection */
+    // https://google.github.io/filament/Filament.md.html#table_commonmatreflectance
+    vec3 specular_reflectance = get_specular_reflectance(data.albedo, data.metalness_roughness.x);
+    
+    float D = specular_D(NoH, data.metalness_roughness.y);
+    vec3  F = specular_F(specular_reflectance, VoH);
+    float G = specular_G(NoV, NoL, data.metalness_roughness.y);
+    vec3 specular = (D * G * F) / (4 * NoL * NoV);
+
+    return (diffuse + specular) * light_color * NoL;
 }

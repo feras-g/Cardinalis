@@ -41,6 +41,9 @@ void SampleProject::compose_gui()
 	m_gui.show_inspector(ObjectManager::get_instance());
 	m_gui.show_camera_settings(m_camera);
 	m_gui.show_draw_statistics(IRenderer::draw_stats);
+
+	deferred_renderer.show_ui();
+
 	m_gui.end();
 }
 
@@ -72,12 +75,12 @@ void SampleProject::update(float t, float dt)
 	std::string mesh_name = "mesh_1";
 	size_t mesh_idx = object_manager.m_mesh_id_from_name.at(mesh_name);
 
-	for (size_t instance_idx = 0; instance_idx < object_manager.m_mesh_instance_data[mesh_idx].size(); instance_idx++)
-	{
-		float normalized_index = (instance_idx / float(object_manager.m_mesh_instance_data[mesh_idx].size())) * 2 - 1;
-		
-		object_manager.m_mesh_instance_data[mesh_idx][instance_idx].model = glm::rotate(object_manager.m_mesh_instance_data[mesh_idx][instance_idx].model, dt, glm::vec3(0,1, 0));
-	}
+	//for (size_t instance_idx = 0; instance_idx < object_manager.m_mesh_instance_data[mesh_idx].size(); instance_idx++)
+	//{
+	//	float normalized_index = (instance_idx / float(object_manager.m_mesh_instance_data[mesh_idx].size())) * 2 - 1;
+	//	
+	//	object_manager.m_mesh_instance_data[mesh_idx][instance_idx].model = glm::rotate(object_manager.m_mesh_instance_data[mesh_idx][instance_idx].model, dt, glm::vec3(0,1, 0));
+	//}
 
 	compose_gui();
 }
@@ -85,15 +88,14 @@ void SampleProject::update(float t, float dt)
 void SampleProject::render()
 {
 	VkCommandBuffer& cmd_buffer = context.get_current_frame().cmd_buffer;
-
 	IRenderer::draw_stats.reset();
-
 	set_viewport_scissor(cmd_buffer, context.swapchain->info.width, context.swapchain->info.height, true);
+
+	context.swapchain->clear_color(cmd_buffer);
 
 	deferred_renderer.render(cmd_buffer, ObjectManager::get_instance());
 	//forward_renderer.render(cmd_buffer, ObjectManager::get_instance());
 	//debug_line_renderer.render(cmd_buffer);
-
 	m_gui.render(cmd_buffer);
 
 	update_gpu_buffers();
@@ -119,22 +121,22 @@ void SampleProject::create_scene()
 	//ObjectManager::get_instance().add_mesh(mesh, "mesh", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 0.1f, 0.1f, 0.1f } });
 
 	VulkanMesh mesh_1; 
-	mesh_1.create_from_file("basic/duck/duck.gltf");
-	ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 1.0f, 1.0f, 1.0f } });
+	mesh_1.create_from_file("test/metallic_roughness_test/scene.gltf");
+	ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } });
 
 	//VulkanMesh mesh_2;
 	//mesh_2.create_from_file("scenes/porsche/scene.gltf");
 	//ObjectManager::get_instance().add_mesh(mesh_2, "mesh_2", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 1.0f, 1.0f, 1.0f } });
 	
-	for (int x = -15; x < 15; x++)
-	for (int z = -15; z < 15; z++)
+	//for (int x = -15; x < 15; x++)
+	//for (int z = -15; z < 15; z++)
 	{
 		float spacing = 3.0f;
-		Transform t = { .position = spacing * glm::vec3(x, 0, z), .rotation = {0,0,0}, .scale = glm::vec3{ 1.0f, 1.0f, 1.0f } };
+		Transform t = { .position = spacing * glm::vec3(0, 0, 0), .rotation = {0,0,0}, .scale = glm::vec3{ 0.1f, 0.1f, 0.1f } };
 
 		//if ((x + z + 0) % 2 == 0)
 		{
-			ObjectManager::get_instance().add_mesh_instance("mesh_1", ObjectManager::GPUInstanceData{ .model = glm::mat4(t), .color = glm::vec4(glm::sphericalRand(1.0f), 1.0f) });
+			//ObjectManager::get_instance().add_mesh_instance("mesh_1", ObjectManager::GPUInstanceData{ .model = glm::mat4(t), .color = glm::vec4(glm::sphericalRand(1.0f), 1.0f) });
 		}
 		//else
 		//{
@@ -162,7 +164,6 @@ void SampleProject::on_window_resize()
 	m_gui.on_window_resize();
 	forward_renderer.on_window_resize();
 	debug_line_renderer.on_window_resize();
-	deferred_renderer.on_window_resize();
 	m_camera.update_aspect_ratio(m_window->GetWidth() / (float)m_window->GetHeight());
 }
 

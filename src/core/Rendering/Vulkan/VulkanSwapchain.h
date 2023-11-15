@@ -24,6 +24,7 @@ public:
 	void init(VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkFormat depthStencilFormat);
 	void reinitialize();
 	void destroy();
+	void clear_color(VkCommandBuffer cmd_buffer);
 
 	uint32_t current_backbuffer_idx = 0;
 

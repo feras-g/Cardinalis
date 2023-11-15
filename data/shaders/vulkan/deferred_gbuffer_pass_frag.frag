@@ -28,26 +28,31 @@ void main()
     vec3 N = normalize( normal_ws.xyz );
 
     /* Sample base color */
+    if(material.texture_base_color_idx != -1)
     {
-        gbuffer_base_color = vec4(texture(bindless_tex[material.texture_base_color_idx], uv.xy).rgba);
+        gbuffer_base_color = vec4(texture(bindless_tex[material.texture_base_color_idx], uv.xy).rgb, 1.0);
         if(gbuffer_base_color.a < 1) discard;
+    }
+    else
+    {
+        gbuffer_base_color = vec4(0.27, 0.27, 0.27, 1.0);
     }
 
     /* Sample normal map
     https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#additional-textures */
-    if(material.texture_normal_map_idx != -1)
-    {
-		vec3 N_map = texture(bindless_tex[material.texture_normal_map_idx], uv.xy).xyz * 2.0 - 1.0;
-		N = perturb_normal(N, N_map, vertex_to_eye_ws, uv.xy);
-    }
-    else
+    // if(material.texture_normal_map_idx != -1)
+    // {
+	// 	vec3 N_map = texture(bindless_tex[material.texture_normal_map_idx], uv.xy).xyz * 2.0 - 1.0;
+	// 	N = perturb_normal(N, N_map, vertex_to_eye_ws, uv.xy);
+    // }
+    // else
     {
         gbuffer_normal_ws   = vec4(N, 1.0f);
     }
 
     /* https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#metallic-roughness-material */
     /* Metallic : G, Roughness: B */
-    if(material.texture_metalness_roughness_idx != 0)
+    if(material.texture_metalness_roughness_idx != -1)
     {
         gbuffer_metalness_roughness = texture(bindless_tex[material.texture_metalness_roughness_idx], uv.xy).bg;
     }

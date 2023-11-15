@@ -624,33 +624,34 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colo
 void Pipeline::create_graphics(const VertexFragmentShader& shader, std::span<VkFormat> color_formats, VkFormat depth_format, Flags flags, VkPipelineLayout pipeline_layout, VkPrimitiveTopology topology,
 	VkCullModeFlags cull_mode, VkFrontFace front_face, uint32_t view_mask)
 {
-	VkPipelineRenderingCreateInfoKHR pipeline_create{ VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR };
-	pipeline_create.pNext = VK_NULL_HANDLE;
-	pipeline_create.colorAttachmentCount = (uint32_t)color_formats.size();
-	pipeline_create.pColorAttachmentFormats = color_formats.data();
-	pipeline_create.depthAttachmentFormat = depth_format;
-	pipeline_create.viewMask = view_mask;
+	for (VkFormat format : color_formats)
+	{
+		color_attachment_formats.push_back(format);
+	}
+	depth_attachment_format = depth_format;
+
+	dynamic_pipeline_create_info = {};
+	dynamic_pipeline_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+	dynamic_pipeline_create_info.pNext = VK_NULL_HANDLE;
+	dynamic_pipeline_create_info.colorAttachmentCount = (uint32_t)color_attachment_formats.size();
+	dynamic_pipeline_create_info.pColorAttachmentFormats = color_attachment_formats.data();
+	dynamic_pipeline_create_info.depthAttachmentFormat = depth_attachment_format;
+	dynamic_pipeline_create_info.viewMask = view_mask;
 	//pipeline_create.stencilAttachmentFormat = VK_NULL_HANDLE;
 	
+	pipeline_flags = flags;
 	if (depth_format != VK_FORMAT_UNDEFINED)
 	{
-		flags = Flags(( (int)flags | (int)Flags::ENABLE_DEPTH_STATE));
+		pipeline_flags = Flags(( (int)pipeline_flags | (int)Flags::ENABLE_DEPTH_STATE));
 	}
 
-	create_graphics(shader, (uint32_t)color_formats.size(), flags, nullptr, pipeline_layout, topology, cull_mode, front_face, &pipeline_create);
+	create_graphics(shader, (uint32_t)color_formats.size(), pipeline_flags, nullptr, pipeline_layout, topology, cull_mode, front_face, &dynamic_pipeline_create_info);
 }
 
 void Pipeline::create_graphics(const VertexFragmentShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPrimitiveTopology topology,
 	VkCullModeFlags cullMode, VkFrontFace frontFace, VkPipelineRenderingCreateInfoKHR* dynamic_pipeline_create)
 {
 	// Pipeline stages
-	// Vertex Input -> Input Assembly -> Viewport -> Rasterization -> Depth-Stencil -> Color Blending
-	VkPipelineVertexInputStateCreateInfo vertexInputState;
-	VkPipelineInputAssemblyStateCreateInfo inputAssemblyState;
-	VkPipelineMultisampleStateCreateInfo multisampleState;
-	VkPipelineDepthStencilStateCreateInfo depthStencilState;
-	VkPipelineColorBlendStateCreateInfo colorBlendState;
-	VkPipelineDynamicStateCreateInfo dynamicState;
 
 	VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL;
 
@@ -679,14 +680,12 @@ void Pipeline::create_graphics(const VertexFragmentShader& shader, uint32_t numC
 
 	VkRect2D scissor = { .offset = {0,0}, .extent = {.width = (uint32_t)viewport.width, .height = (uint32_t)viewport.height } };
 
-	VkPipelineViewportStateCreateInfo viewportState = {};
 	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 	viewportState.viewportCount = 1;
 	viewportState.pViewports = &viewport;
 	viewportState.scissorCount = 1;
 	viewportState.pScissors = &scissor;
 
-	VkPipelineRasterizationStateCreateInfo raster_state_info = {};
 	raster_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 	raster_state_info.polygonMode = polygonMode;
 	raster_state_info.cullMode = cullMode;
@@ -710,7 +709,6 @@ void Pipeline::create_graphics(const VertexFragmentShader& shader, uint32_t numC
 	};
 
 
-	std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments = {};
 	for (uint32_t i = 0; i < numColorAttachments; i++)
 	{
 		colorBlendAttachments.push_back(
@@ -737,23 +735,25 @@ void Pipeline::create_graphics(const VertexFragmentShader& shader, uint32_t numC
 		.blendConstants = { 1.0f, 1.0f, 1.0f, 1.0f }
 	};
 
-	VkDynamicState dynamicStateElt[2] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 	dynamicState =
 	{
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-		.dynamicStateCount = 2,
-		.pDynamicStates = dynamicStateElt
+		.dynamicStateCount = (uint32_t)pipeline_dynamic_states.size(),
+		.pDynamicStates = pipeline_dynamic_states.data()
 	};
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	VkGraphicsPipelineCreateInfo gfxPipeline =
+	/* Save shader */
+	pipeline_shader = shader;
+
+	pipeline_create_info =
 	{
 		.sType=VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
 		.pNext= dynamic_pipeline_create,
 		.flags=0,
-		.stageCount=(uint32_t)shader.stages.size(),
-		.pStages=shader.stages.data(),
+		.stageCount=(uint32_t)pipeline_shader.stages.size(),
+		.pStages= pipeline_shader.stages.data(),
 		.pVertexInputState= !!(flags & DISABLE_VTX_INPUT_STATE) ? VK_NULL_HANDLE  : &vertexInputState,
 		.pInputAssemblyState=&inputAssemblyState,
 		.pTessellationState=nullptr,
@@ -770,7 +770,7 @@ void Pipeline::create_graphics(const VertexFragmentShader& shader, uint32_t numC
 		.basePipelineIndex=0
 	};
 
-	VK_CHECK(vkCreateGraphicsPipelines(context.device, VK_NULL_HANDLE, 1, &gfxPipeline, nullptr, &pipeline));
+	VK_CHECK(vkCreateGraphicsPipelines(context.device, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &pipeline));
 
 	/* Add to resource manager */
 	VkResourceManager::get_instance(context.device)->add_pipeline(pipeline);
@@ -789,6 +789,29 @@ void Pipeline::create_compute(const Shader& shader)
 
 	/* Add to resource manager */
 	VkResourceManager::get_instance(context.device)->add_pipeline(pipeline);
+}
+
+bool Pipeline::reload_pipeline()
+{
+	VkPipeline ppl;
+	VkResult result;
+
+	if (!pipeline_shader.recompile())
+	{
+		return false;
+	}
+
+	result = vkCreateGraphicsPipelines(context.device, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &ppl);
+	if (result == VK_SUCCESS)
+	{
+		pipeline = ppl;
+		return true;
+	}
+	else
+	{
+		LOG_ERROR("Pipeline reload failed with error : {}", string_VkResult(result));
+		return false;
+	}
 }
 
 size_t create_vertex_index_buffer(Buffer& result, const void* vtxData, size_t& vtxBufferSizeInBytes, const void* idxData, size_t& idxBufferSizeInBytes)

@@ -18,6 +18,7 @@ public:
 	void destroy();
 	const glm::vec2& get_render_area() const;
 
+	VkDescriptorSet add_texture2D(VkSampler sampler, const Texture2D& image);
 private:
 	glm::vec2 render_area;
 	VkDescriptorPool m_descriptor_pool;

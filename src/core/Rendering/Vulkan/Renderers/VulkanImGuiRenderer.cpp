@@ -2,6 +2,8 @@
 #include "core/rendering/vulkan/VulkanDebugUtils.h"
 #include "core/rendering/vulkan/VulkanRenderInterface.h"
 #include "core/rendering/vulkan/VulkanShader.h"
+#include "core/rendering/vulkan/VulkanTexture.h"
+
 #include "glm/mat4x4.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
@@ -59,7 +61,7 @@ void VulkanImGuiRenderer::render(VkCommandBuffer cmdBuffer)
 	VULKAN_RENDER_DEBUG_MARKER(cmdBuffer, "ImGui Pass");
 
 	m_renderpass[context.curr_frame_idx].begin(cmdBuffer, render_area);
-
+	
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuffer);
 
 	m_renderpass[context.curr_frame_idx].end(cmdBuffer);
@@ -75,3 +77,4 @@ const glm::vec2& VulkanImGuiRenderer::get_render_area() const
 {
 	return render_area;
 }
+

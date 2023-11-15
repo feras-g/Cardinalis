@@ -99,14 +99,14 @@ struct DebugLineRenderer : public IRenderer
 		create_renderpass();
 	}
 
-	virtual void show_ui() const
+	virtual void show_ui()
 	{
 
 	}
 
-	virtual void reload_pipeline()
+	virtual bool reload_pipeline()
 	{
-
+		return false;
 	}
 
 	struct DebugPoint
