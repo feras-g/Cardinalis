@@ -27,15 +27,19 @@ public:
 	void show_inspector(const ObjectManager& object_manager);
 	void show_camera_settings(Camera& camera);
 	void show_draw_statistics(IRenderer::DrawStats draw_stats);
+	void show_viewport_window(Camera& camera);
 
 	/* UI rendering */
 	void render(VkCommandBuffer cmd_buffer);
 	void on_window_resize();
 	const glm::vec2& get_render_area() const;
 
-	/* State */
-	bool is_active();
+	
+	bool is_scene_viewport_active();
+	bool m_is_scene_viewport_hovered = false;
+	float scene_view_aspect_ratio = 1.0f;
 
+	/* State */
 	VulkanGUI& ShowSceneViewportPanel(Camera& scene_camera,
 		VkDescriptorSet_T* texDeferred, VkDescriptorSet_T* texColorId,
 		VkDescriptorSet_T* texNormalId, VkDescriptorSet_T* texDepthId,
@@ -49,7 +53,6 @@ public:
 	VulkanGUI& ShowLightSettings(LightManager* light_manager);
 
 	bool is_scene_viewport_hovered = false;
-	float default_scene_view_aspect_ratio = 1.0f;
 	float x, y;
 	Camera *h_camera;
 

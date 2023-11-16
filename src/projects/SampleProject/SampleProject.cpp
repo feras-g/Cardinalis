@@ -18,7 +18,7 @@ static DeferredRenderer deferred_renderer;
 SampleProject::SampleProject(const char* title, uint32_t width, uint32_t height)
 	: Application(title, width, height)
 {
-	m_camera.update_aspect_ratio(m_window->GetAspectRatio());
+	
 }
 
 void SampleProject::init()
@@ -30,12 +30,15 @@ void SampleProject::init()
 	forward_renderer.init();
 	deferred_renderer.init();
 
+	m_camera.update_aspect_ratio(m_gui.scene_view_aspect_ratio);
+
 	create_scene();
 }
 
 void SampleProject::compose_gui()
 {
 	m_gui.begin();
+	m_gui.show_viewport_window(m_camera);
 	m_gui.show_gizmo(m_camera, m_event_manager->key_event, ObjectManager::get_instance().m_mesh_instance_data[0][0].model);
 	m_gui.show_demo();
 	m_gui.show_inspector(ObjectManager::get_instance());
@@ -60,7 +63,7 @@ void SampleProject::update_frame_ubo()
 void SampleProject::update(float t, float dt)
 {
 	/* Update camera */
-	if (!m_gui.is_active())
+	if (m_gui.is_scene_viewport_active())
 	{
 		if (m_event_manager->mouse_event.b_lmb_click)
 		{
@@ -161,10 +164,10 @@ void SampleProject::exit()
 void SampleProject::on_window_resize()
 {
 	Application::on_window_resize();
+	m_camera.update_aspect_ratio(m_window->GetWidth() / (float)m_window->GetHeight());
 	m_gui.on_window_resize();
 	forward_renderer.on_window_resize();
 	debug_line_renderer.on_window_resize();
-	m_camera.update_aspect_ratio(m_window->GetWidth() / (float)m_window->GetHeight());
 }
 
 void SampleProject::on_lmb_down(MouseEvent event)

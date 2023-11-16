@@ -8,7 +8,7 @@
 
 struct DeferredRenderer : public IRenderer
 {
-	static constexpr int render_size = 1024;
+	static constexpr int render_size = 2048;
 
 	VkFormat base_color_format = VK_FORMAT_R8G8B8A8_SRGB;
 	VkFormat normal_format = VK_FORMAT_R16G16_SNORM;
@@ -82,7 +82,7 @@ struct DeferredRenderer : public IRenderer
 		for (int i = 0; i < NUM_FRAMES; i++)
 		{
 			renderpass_lighting[i].reset();
-			renderpass_lighting[i].add_color_attachment(compositing_attachments[i].view);
+			renderpass_lighting[i].add_color_attachment(VulkanImGuiRenderer::scene_viewport_attachments[i].view);
 		}
 	}
 
@@ -156,6 +156,9 @@ struct DeferredRenderer : public IRenderer
 	void render_geometry_pass(VkCommandBuffer cmd_buffer, const ObjectManager& object_manager)
 	{
 		VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Deferred Geometry Pass");
+
+		set_viewport_scissor(cmd_buffer, render_size, render_size, true);
+
 		vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, geometry_pass_pipeline);
 
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, geometry_pass_pipeline.layout, 0, 1, &VulkanRendererCommon::get_instance().m_framedata_desc_set[context.curr_frame_idx].vk_set, 0, nullptr);
@@ -206,13 +209,13 @@ struct DeferredRenderer : public IRenderer
 		VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Deferred Lighting Pass");
 		vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lighting_pass_pipeline);
 
-		set_viewport_scissor(cmd_buffer, render_size, render_size, false);
+		set_viewport_scissor(cmd_buffer, VulkanImGuiRenderer::scene_viewport_size.x, VulkanImGuiRenderer::scene_viewport_size.y, false);
 
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lighting_pass_pipeline.layout, 0, 1, &VulkanRendererCommon::get_instance().m_framedata_desc_set[context.curr_frame_idx].vk_set, 0, nullptr);
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lighting_pass_pipeline.layout, 1, 1, &gbuffer_descriptor_set[context.curr_frame_idx].vk_set, 0, nullptr);
 
 		compositing_attachments[context.curr_frame_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
-		renderpass_lighting[context.curr_frame_idx].begin(cmd_buffer, { render_size, render_size });
+		renderpass_lighting[context.curr_frame_idx].begin(cmd_buffer, { VulkanImGuiRenderer::scene_viewport_size.x, VulkanImGuiRenderer::scene_viewport_size.y });
 		vkCmdDraw(cmd_buffer, 3, 1, 0, 0);
 		renderpass_lighting[context.curr_frame_idx].end(cmd_buffer);
 		compositing_attachments[context.curr_frame_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
@@ -259,7 +262,7 @@ struct DeferredRenderer : public IRenderer
 			ui_texture_ids[i].normal = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_nearest, gbuffer[i].normal_attachment.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
 			ui_texture_ids[i].metalness_roughness = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_nearest, gbuffer[i].metalness_roughness_attachment.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
 			ui_texture_ids[i].depth = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_nearest, gbuffer[i].depth_attachment.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
-			ui_texture_ids[i].composite = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_nearest, compositing_attachments[i].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
+			ui_texture_ids[i].composite = VulkanImGuiRenderer::scene_viewport_attachments_ids[i];
 		}
 	}
 
@@ -272,33 +275,27 @@ struct DeferredRenderer : public IRenderer
 
 			static ImTextureID curr_main_image = ui_texture_ids[context.curr_frame_idx].composite;
 
-			if (ImGui::Begin("Deferred Renderer Scene Viewport"))
+			if (ImGui::Begin("GBuffer View"))
 			{
-				ImGui::Image(curr_main_image, main_img_size);
-
-				if (ImGui::Begin("GBuffer View"))
+				if (ImGui::ImageButton(ui_texture_ids[context.curr_frame_idx].base_color, thumb_img_size))
 				{
-					if (ImGui::ImageButton(ui_texture_ids[context.curr_frame_idx].base_color, thumb_img_size))
-					{
-						curr_main_image = ui_texture_ids[context.curr_frame_idx].base_color;
-					}
-					ImGui::SameLine();
-					if (ImGui::ImageButton(ui_texture_ids[context.curr_frame_idx].normal, thumb_img_size))
-					{
-						curr_main_image = ui_texture_ids[context.curr_frame_idx].normal;
-					}
-					ImGui::SameLine();
-					if (ImGui::ImageButton(ui_texture_ids[context.curr_frame_idx].metalness_roughness, thumb_img_size))
-					{
-						curr_main_image = ui_texture_ids[context.curr_frame_idx].metalness_roughness;
-					}
-					ImGui::SameLine();
-					if (ImGui::ImageButton(ui_texture_ids[context.curr_frame_idx].depth, thumb_img_size))
-					{
-						curr_main_image = ui_texture_ids[context.curr_frame_idx].depth;
-					}
+					curr_main_image = ui_texture_ids[context.curr_frame_idx].base_color;
 				}
-				ImGui::End();
+				ImGui::SameLine();
+				if (ImGui::ImageButton(ui_texture_ids[context.curr_frame_idx].normal, thumb_img_size))
+				{
+					curr_main_image = ui_texture_ids[context.curr_frame_idx].normal;
+				}
+				ImGui::SameLine();
+				if (ImGui::ImageButton(ui_texture_ids[context.curr_frame_idx].metalness_roughness, thumb_img_size))
+				{
+					curr_main_image = ui_texture_ids[context.curr_frame_idx].metalness_roughness;
+				}
+				ImGui::SameLine();
+				if (ImGui::ImageButton(ui_texture_ids[context.curr_frame_idx].depth, thumb_img_size))
+				{
+					curr_main_image = ui_texture_ids[context.curr_frame_idx].depth;
+				}
 			}
 			ImGui::End();
 

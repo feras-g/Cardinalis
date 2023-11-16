@@ -36,7 +36,7 @@ public:
 		float time; /* Time in seconds */
 		glm::vec3 pad;
 	};
-
+	Buffer m_ubo_framedata[NUM_FRAMES];
 	DescriptorSetLayout m_framedata_desc_set_layout;
 	DescriptorSet m_framedata_desc_set[NUM_FRAMES];
 
@@ -52,25 +52,9 @@ public:
 	VkSampler s_SamplerClampLinear;
 	VkSampler s_SamplerClampNearest;
 	VkSampler s_SamplerRepeatNearest;
-	Buffer m_ubo_framedata[NUM_FRAMES];
-
-	/* WIP */
-	VulkanRenderPassDynamic m_dyn_renderpass[NUM_FRAMES];
-	VkPipeline m_gfx_pipeline = VK_NULL_HANDLE;
-	VkDescriptorPool m_descriptor_pool;
-	VkPipelineLayout m_pipeline_layout;
-	VkDescriptorSetLayout m_descriptor_set_layout;
-	VkDescriptorSet m_descriptor_set;
 
 	uint32_t render_width;
 	uint32_t render_height;
-
-	/* G-Buffers for Deferred rendering */
-	std::array<Texture2D, NUM_FRAMES> m_gbuffer_albedo;
-	std::array<Texture2D, NUM_FRAMES> m_gbuffer_normal;
-	std::array<Texture2D, NUM_FRAMES> m_gbuffer_depth;
-	std::array<Texture2D, NUM_FRAMES> m_gbuffer_metallic_roughness;
-	//static inline std::array<Texture2D, NUM_FRAMES> m_gbuffer_emissive;
 
 	/* Color attachment resulting the deferred lighting pass */
 	static inline std::array <Texture2D, NUM_FRAMES> m_deferred_lighting_attachment;

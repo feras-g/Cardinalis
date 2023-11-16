@@ -120,11 +120,6 @@ const glm::vec2& VulkanGUI::get_render_area() const
 	return m_renderer.get_render_area();
 }
 
-bool VulkanGUI::is_active()
-{
-	return ImGui::IsAnyItemActive() || ImGuizmo::IsUsing();
-}
-
 VulkanGUI& VulkanGUI::ShowSceneViewportPanel(Camera& scene_camera,
 	VkDescriptorSet_T* texDeferred, VkDescriptorSet_T* texColorId,
 	VkDescriptorSet_T* texNormalId, VkDescriptorSet_T* texDepthId,
@@ -162,11 +157,11 @@ VulkanGUI& VulkanGUI::ShowSceneViewportPanel(Camera& scene_camera,
 		ImVec2 sceneViewPanelSize = ImGui::GetContentRegionAvail();
 		const float curr_aspect_ratio = sceneViewPanelSize.x / sceneViewPanelSize.y;
 
-		if (curr_aspect_ratio != default_scene_view_aspect_ratio)
-		{
-			default_scene_view_aspect_ratio = curr_aspect_ratio;
-			scene_camera.update_aspect_ratio(default_scene_view_aspect_ratio);
-		}
+		//if (curr_aspect_ratio != default_scene_view_aspect_ratio)
+		//{
+		//	default_scene_view_aspect_ratio = curr_aspect_ratio;
+		//	scene_camera.update_aspect_ratio(default_scene_view_aspect_ratio);
+		//}
 		
 		ImGui::Image(reinterpret_cast<ImTextureID>(texDeferred), sceneViewPanelSize);
 	}
@@ -266,7 +261,6 @@ VulkanGUI& VulkanGUI::ShowFrameTimeGraph(float* values, size_t nbValues)
 
 	if (ImGui::Begin("Statistics", 0, 0))
 	{
-		//ImGui::PlotLines("CPU Time", values, nbValues, 0, 0, 0, 33);
 	}
 	ImGui::End();
 
@@ -279,11 +273,14 @@ void VulkanGUI::show_camera_settings(Camera& camera)
 	{
 		ImGui::SeparatorText("Transform");
 		{
-
+			
+			ImGui::InputFloat3("Position", glm::value_ptr(camera.controller.m_position));
 		}
 
 		ImGui::SeparatorText("Camera");
 		{
+			ImGui::Text("Aspect Ratio: %f", camera.aspect_ratio);
+
 			if (ImGui::SliderFloat("Fov", &camera.fov, 1.0f, 120.0f))
 			{
 				camera.update_proj();
@@ -354,6 +351,31 @@ void VulkanGUI::show_draw_statistics(IRenderer::DrawStats draw_stats)
 	ImGui::BulletText("Num Vertices : %u", draw_stats.total_vertices);
 	ImGui::BulletText("Num Instances : %u", draw_stats.total_instances);
 
+
+	ImGui::End();
+}
+
+bool VulkanGUI::is_scene_viewport_active()
+{
+	return m_is_scene_viewport_hovered;
+}
+
+void VulkanGUI::show_viewport_window(Camera& camera)
+{
+	if (ImGui::Begin("Scene Viewport"))
+	{
+		ImVec2 region_size = ImGui::GetContentRegionAvail();
+		const float curr_aspect_ratio = region_size.x / region_size.y;
+
+		if (curr_aspect_ratio != scene_view_aspect_ratio)
+		{
+			scene_view_aspect_ratio = curr_aspect_ratio;
+			camera.update_aspect_ratio(scene_view_aspect_ratio);
+		}
+
+		m_is_scene_viewport_hovered = ImGui::IsItemActive();
+		ImGui::Image(m_renderer.scene_viewport_attachments_ids[context.curr_frame_idx], region_size);
+	}
 
 	ImGui::End();
 }

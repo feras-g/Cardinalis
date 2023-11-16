@@ -15,7 +15,7 @@ void VulkanImGuiRenderer::init()
 {
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-
+	io.ConfigWindowsMoveFromTitleBarOnly = true;
 	std::vector<VkDescriptorPoolSize> pool_sizes
 	{
 		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1}, 
@@ -42,6 +42,8 @@ void VulkanImGuiRenderer::init()
 	VkCommandBuffer cbuf = begin_temp_cmd_buffer();
 	ImGui_ImplVulkan_CreateFontsTexture(cbuf);
 	end_temp_cmd_buffer(cbuf);
+
+	create_scene_viewport_attachment();
 
 	/* Dynamic renderpass setup */
 	create_renderpass();
@@ -76,5 +78,16 @@ void VulkanImGuiRenderer::destroy()
 const glm::vec2& VulkanImGuiRenderer::get_render_area() const
 {
 	return render_area;
+}
+
+void VulkanImGuiRenderer::create_scene_viewport_attachment()
+{
+	for (int i = 0; i < NUM_FRAMES; i++)
+	{
+		scene_viewport_attachments[i].init(context.swapchain->info.color_format, scene_viewport_size.x, scene_viewport_size.y, 1, false, "Scene Viewport Attachment");
+		scene_viewport_attachments[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+		scene_viewport_attachments[i].transition_immediate(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
+		scene_viewport_attachments_ids[i] = ImGui_ImplVulkan_AddTexture(VulkanRendererCommon::get_instance().s_SamplerClampNearest, scene_viewport_attachments[i].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	}
 }
 
