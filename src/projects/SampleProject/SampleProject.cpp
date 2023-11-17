@@ -135,20 +135,21 @@ void SampleProject::create_scene()
 	//ObjectManager::get_instance().add_mesh(mesh_2, "mesh_2", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 1.0f, 1.0f, 1.0f } });
 	
 	//for (int x = -15; x < 15; x++)
+	//for (int y = -15; y < 15; y++)
 	//for (int z = -15; z < 15; z++)
-	{
-		float spacing = 3.0f;
-		Transform t = { .position = spacing * glm::vec3(0, 0, 0), .rotation = {0,0,0}, .scale = glm::vec3{ 0.1f, 0.1f, 0.1f } };
+	//{
+	//	float spacing = 10.0f;
+	//	Transform t = { .position = spacing * glm::vec3(x, y, z), .rotation = {0,0,0}, .scale = glm::vec3{ 1.0f, 1.0f, 1.0f } };
 
-		//if ((x + z + 0) % 2 == 0)
-		{
-			//ObjectManager::get_instance().add_mesh_instance("mesh_1", ObjectManager::GPUInstanceData{ .model = glm::mat4(t), .color = glm::vec4(glm::sphericalRand(1.0f), 1.0f) });
-		}
-		//else
-		//{
-		//	ObjectManager::get_instance().add_mesh_instance("mesh_2", ObjectManager::GPUInstanceData{ .model = glm::mat4(t), .color = glm::vec4(glm::sphericalRand(1.0f), 1.0f)});
-		//}
-	}
+	//	//if ((x + z + 0) % 2 == 0)
+	//	{
+	//		ObjectManager::get_instance().add_mesh_instance("mesh_1", ObjectManager::GPUInstanceData{ .model = glm::mat4(t), .color = glm::vec4(glm::sphericalRand(1.0f), 1.0f) });
+	//	}
+	//	//else
+	//	//{
+	//	//	ObjectManager::get_instance().add_mesh_instance("mesh_2", ObjectManager::GPUInstanceData{ .model = glm::mat4(t), .color = glm::vec4(glm::sphericalRand(1.0f), 1.0f)});
+	//	//}
+	//}
 }
 
 void SampleProject::update_instances_ssbo()

@@ -41,8 +41,8 @@ void main()
     https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#additional-textures */
     if(material.texture_normal_map_idx != -1)
     {
-		vec3 N_map = texture(bindless_tex[material.texture_normal_map_idx], uv.xy).xyz * 2.0 - 1.0;
-		N = perturb_normal(N, N_map, vertex_to_eye_ws, uv.xy);
+		vec3 N_map = texture(bindless_tex[material.texture_normal_map_idx], uv.xy).xyz * 2.0 - 1.0; // Gltf normal maps values are packed in [0, 1]
+		N = perturb_normal(N, N_map, vertex_to_eye_ws, uv.xy) * 0.5 + 0.5;  // Normal attachment is UNORM
     }
     gbuffer_normal_ws   = vec4(N, 1.0f);
 

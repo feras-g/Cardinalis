@@ -28,25 +28,14 @@ void main()
     brdf_data.metalness_roughness = texture(gbuffer_metalness_roughness, uv).rg;
     brdf_data.normal_ws = normalize(texture(gbuffer_normal_ws, uv).xyz * 2 - 1);
     brdf_data.viewdir_ws = normalize(frame.data.eye_pos_ws.xyz - position_ws);
-    brdf_data.lightdir_ws = normalize(vec3(1, -1, 1) - position_ws);
+    brdf_data.lightdir_ws = normalize(-vec3(1, -1, 0));
     brdf_data.halfvec_ws = normalize(brdf_data.lightdir_ws + brdf_data.viewdir_ws);
 
     float roughness = brdf_data.metalness_roughness.g;
     float specular_power = (2 / (roughness*roughness*roughness*roughness)) - 2;
-    //out_color = vec4(brdf_blinn_phong(brdf_data, specular_power), 1.0) ;
 
-    out_color = vec4(0,0,0,1);
-    for(int i = -5 ; i < 5; i++)
-    {
-        for(int j = -5 ; j < 5; j++)
-        {
-            float atten = 1 / length(vec3(i, -1, j) - position_ws);
-            brdf_data.lightdir_ws = normalize(vec3(i, -1, j) - position_ws);
-            brdf_data.halfvec_ws = normalize(brdf_data.lightdir_ws + brdf_data.viewdir_ws);
-            out_color += vec4(brdf_cook_torrance(brdf_data, vec3(1.0)), 1.0) * atten;
-            //out_color += vec4(brdf_blinn_phong(brdf_data, specular_power), 1.0) * atten;
-        }
-    }
+    out_color = vec4(brdf_cook_torrance(brdf_data, vec3(1.0)), 1.0);
+    // out_color = vec4(brdf_blinn_phong(brdf_data, specular_power), 1.0) ;
 
     // out_color = vec4(brdf_data.normal_ws, 1);
 }
