@@ -1,24 +1,33 @@
 #pragma once
 
 #include <vulkan/vulkan.hpp>
-#include <array>
+#include <set>
+
+struct ShaderLib
+{
+	std::set<std::string> names;
+};
+
 
 struct Shader
 {
-	bool create_shader_module(const VkShaderStageFlagBits stage, const char* filename, size_t& module_hash);
+	static ShaderLib shader_library;
+	bool create_shader_module(const VkShaderStageFlagBits stage, std::string_view filename, size_t& module_hash);
 	std::vector<VkPipelineShaderStageCreateInfo> stages;
+	static bool compile(std::string_view shader_file);
 };
 
 struct VertexFragmentShader : Shader
 {
-	void create(const char* vertex_shader_path, const char* fragment_shader_path);
-	bool recompile();
+	void create(const std::string& vertex_shader_path, const std::string& fragment_shader_path);
+	bool recreate_modules();
+	bool compile();
 	size_t hash_vertex_module;
 	size_t hash_fragment_module;
 	void destroy();
 
-	const char* vertex_shader_path; 
-	const char* fragment_shader_path;
+	std::string vertex_shader_spirv_filename; 
+	std::string fragment_shader_spirv_filename;
 };
 
 struct ComputeShader : Shader

@@ -309,7 +309,7 @@ struct DeferredRenderer : public IRenderer
 					}
 					else
 					{
-						ImGui::TextColored(ImVec4(0, 1, 0, 1), "Pipeline reload fail.");
+						ImGui::TextColored(ImVec4(1, 0, 0, 1), "Pipeline reload fail.");
 					}
 				}
 			}
@@ -320,7 +320,26 @@ struct DeferredRenderer : public IRenderer
 	bool reload_pipeline() override
 	{
 		vkDeviceWaitIdle(context.device);
-		return geometry_pass_pipeline.reload_pipeline() && lighting_pass_pipeline.reload_pipeline();
+
+		if (shader_geometry_pass.compile())
+		{
+			geometry_pass_pipeline.reload_pipeline();
+		}
+		else
+		{
+			return false;
+		}
+
+		if (shader_lighting_pass.compile())
+		{
+			lighting_pass_pipeline.reload_pipeline();
+		}
+		else
+		{
+			return false;
+		}
+
+		return true;
 	}
 
 	VertexFragmentShader shader_geometry_pass;

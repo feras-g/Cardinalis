@@ -796,7 +796,7 @@ bool Pipeline::reload_pipeline()
 	VkPipeline ppl;
 	VkResult result;
 
-	if (!pipeline_shader.recompile())
+	if (!pipeline_shader.recreate_modules())
 	{
 		return false;
 	}

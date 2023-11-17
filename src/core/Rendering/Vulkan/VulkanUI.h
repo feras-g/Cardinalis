@@ -28,6 +28,7 @@ public:
 	void show_camera_settings(Camera& camera);
 	void show_draw_statistics(IRenderer::DrawStats draw_stats);
 	void show_viewport_window(Camera& camera);
+	void show_shader_library();
 
 	/* UI rendering */
 	void render(VkCommandBuffer cmd_buffer);

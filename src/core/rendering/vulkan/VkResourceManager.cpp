@@ -166,6 +166,8 @@ void VkResourceManager::destroy_shader_module(size_t module_hash)
 			module = VK_NULL_HANDLE;
 		}
 	}
+	m_shader_modules.erase(ite->first);
+
 	LOG_INFO("Destroyed shader module. Total shader modules: {}", m_shader_modules.size());
 }
 

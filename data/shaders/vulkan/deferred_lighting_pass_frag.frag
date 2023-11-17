@@ -35,7 +35,7 @@ void main()
     float specular_power = (2 / (roughness*roughness*roughness*roughness)) - 2;
 
     out_color = vec4(brdf_cook_torrance(brdf_data, vec3(1.0)), 1.0);
-    // out_color = vec4(brdf_blinn_phong(brdf_data, specular_power), 1.0) ;
+    //out_color = vec4(brdf_blinn_phong(brdf_data, specular_power), 1.0);
 
     // out_color = vec4(brdf_data.normal_ws, 1);
 }

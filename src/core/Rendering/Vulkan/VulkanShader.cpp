@@ -4,11 +4,15 @@
 #include "core/rendering/vulkan/VkResourceManager.h"
 #include "VulkanRenderInterface.h"
 
+ShaderLib Shader::shader_library;
+
 static constexpr uint32_t SPIRV_FOURCC = 0x07230203;
 
-static std::string base_spirv_folder("../../../data/shaders/vulkan/spirv/");
+static std::string shader_src_folder("../../../data/shaders/vulkan/");
+static std::string shader_spirv_folder("../../../data/shaders/vulkan/spirv/");
+static std::string shader_header_folder("../../../data/shaders/vulkan/headers/");
 
-bool Shader::create_shader_module(const VkShaderStageFlagBits stage, const char* filename, size_t& module_hash)
+bool Shader::create_shader_module(const VkShaderStageFlagBits stage, std::string_view filename, size_t& module_hash)
 {
 	int supported = 
 		int(VK_SHADER_STAGE_FRAGMENT_BIT) | int(VK_SHADER_STAGE_VERTEX_BIT) | int(VK_SHADER_STAGE_COMPUTE_BIT);
@@ -20,7 +24,7 @@ bool Shader::create_shader_module(const VkShaderStageFlagBits stage, const char*
 	}
 
 	FILE* fp = nullptr;
-	errno_t fopenresult = fopen_s(&fp, (base_spirv_folder + filename).c_str(), "rb");
+	errno_t fopenresult = fopen_s(&fp, (shader_spirv_folder + filename.data()).c_str(), "rb");
 	
 	if (fp == nullptr)
 	{
@@ -32,7 +36,7 @@ bool Shader::create_shader_module(const VkShaderStageFlagBits stage, const char*
 	fread(&fourcc, 4, 1, fp);
 	if (fourcc != SPIRV_FOURCC)
 	{
-		LOG_ERROR("SPIR-V FourCC for {0} file is {1} -- should be {2}.", filename, fourcc, SPIRV_FOURCC);
+		LOG_ERROR("SPIR-V FourCC for {0} file is {1} -- should be {2}.", filename.data(), fourcc, SPIRV_FOURCC);
 		assert(false);
 	}
 
@@ -48,7 +52,7 @@ bool Shader::create_shader_module(const VkShaderStageFlagBits stage, const char*
 	/* Create module */
 	if (bytecode == nullptr)
 	{
-		LOG_ERROR("Cannot read SPIR-V bytecode.", filename);
+		LOG_ERROR("Cannot read SPIR-V bytecode.", filename.data());
 		return false;
 	}
 
@@ -75,15 +79,43 @@ bool Shader::create_shader_module(const VkShaderStageFlagBits stage, const char*
 	return true;
 }
 
-void VertexFragmentShader::create(const char* vertex_shader_path, const char* fragment_shader_path)
+void VertexFragmentShader::create(const std::string& vertex_shader_path, const std::string& fragment_shader_path)
 {
-	this->vertex_shader_path = vertex_shader_path;
-	this->fragment_shader_path = fragment_shader_path;
-	create_shader_module(VK_SHADER_STAGE_VERTEX_BIT, vertex_shader_path, hash_vertex_module);
-	create_shader_module(VK_SHADER_STAGE_FRAGMENT_BIT, fragment_shader_path, hash_fragment_module);
+	this->vertex_shader_spirv_filename = vertex_shader_path.data();
+	this->fragment_shader_spirv_filename = fragment_shader_path.data();
+
+	if (create_shader_module(VK_SHADER_STAGE_VERTEX_BIT, vertex_shader_path.data(), hash_vertex_module))
+	{
+		shader_library.names.insert(vertex_shader_path.substr(0, vertex_shader_path.find_last_of('.')));
+	}
+
+	if (create_shader_module(VK_SHADER_STAGE_FRAGMENT_BIT, fragment_shader_path.data(), hash_fragment_module))
+	{
+		shader_library.names.insert(fragment_shader_path.substr(0, fragment_shader_path.find_last_of('.')).data());
+	}
 }
 
-bool VertexFragmentShader::recompile()
+bool VertexFragmentShader::compile()
+{
+	return Shader::compile(vertex_shader_spirv_filename.substr(0, vertex_shader_spirv_filename.find_last_of('.'))) && Shader::compile(fragment_shader_spirv_filename.substr(0, fragment_shader_spirv_filename.find_last_of('.')));
+}
+
+bool Shader::compile(std::string_view shader_file)
+{
+	char command[1500];
+
+	std::string src_path = shader_src_folder + shader_file.data();
+	std::string dst_path = shader_spirv_folder + shader_file.data() + ".spv";
+	std::string header_path = shader_header_folder;
+
+	sprintf(command, "%s\\Bin\\glslc.exe %s -g -I %s -o %s", std::getenv("VULKAN_SDK"), src_path.c_str(), header_path.c_str(), dst_path.c_str());
+
+	bool result = system(command);
+
+	return result == 0;
+}
+
+bool VertexFragmentShader::recreate_modules()
 {
 	size_t prev_hash_vertex = hash_vertex_module;
 	size_t prev_hash_fragment = hash_fragment_module;
@@ -94,10 +126,13 @@ bool VertexFragmentShader::recompile()
 	std::vector<VkPipelineShaderStageCreateInfo> prev_stages = stages;
 
 	stages.clear();
-	if (create_shader_module(VK_SHADER_STAGE_VERTEX_BIT, vertex_shader_path, hash_vertex) && create_shader_module(VK_SHADER_STAGE_FRAGMENT_BIT, fragment_shader_path, hash_fragment))
+	if (create_shader_module(VK_SHADER_STAGE_VERTEX_BIT, vertex_shader_spirv_filename, hash_vertex) && create_shader_module(VK_SHADER_STAGE_FRAGMENT_BIT, fragment_shader_spirv_filename, hash_fragment))
 	{
 		hash_vertex_module = hash_vertex;
 		hash_fragment_module = hash_fragment;
+
+		VkResourceManager::get_instance(context.device)->destroy_shader_module(prev_hash_vertex);
+		VkResourceManager::get_instance(context.device)->destroy_shader_module(prev_hash_fragment);
 
 		return true;
 	}

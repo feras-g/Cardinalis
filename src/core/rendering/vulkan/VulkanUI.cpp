@@ -380,6 +380,21 @@ void VulkanGUI::show_viewport_window(Camera& camera)
 
 	ImGui::End();
 }
+void VulkanGUI::show_shader_library()
+{
+	if (ImGui::Begin("Shaders"))
+	{
+		for (const std::string& shader : Shader::shader_library.names)
+		{
+			ImGui::Text("%s", shader.c_str()); ImGui::SameLine();
+			if (ImGui::Button("Recompile"))
+			{
+
+			}
+		}
+	}
+	ImGui::End();
+}
 
 VulkanGUI& VulkanGUI::ShowInspector()
 {

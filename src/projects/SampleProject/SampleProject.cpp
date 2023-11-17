@@ -43,7 +43,7 @@ void SampleProject::compose_gui()
 	m_gui.show_inspector(ObjectManager::get_instance());
 	m_gui.show_camera_settings(m_camera);
 	m_gui.show_draw_statistics(IRenderer::draw_stats);
-
+	m_gui.show_shader_library();
 	deferred_renderer.show_ui();
 
 	m_gui.end();
