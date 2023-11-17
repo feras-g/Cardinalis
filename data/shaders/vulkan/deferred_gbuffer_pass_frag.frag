@@ -1,7 +1,6 @@
 #version 460
 #extension GL_EXT_nonuniform_qualifier : enable
 
-#include "headers/LightDefinitions.glsl" 
 #include "headers/normal_mapping.glsl" 
 
 layout(location = 1) in vec4 normal_ws;
@@ -19,6 +18,8 @@ layout(push_constant) uniform constants
     int texture_normal_map_idx;
     int texture_metalness_roughness_idx;
     int texture_emissive_map_idx;
+    vec4 base_color;
+    vec2 metalness_roughness;
 } material;
 
 layout(set = 1, binding = 0) uniform sampler2D bindless_tex[];
@@ -26,15 +27,16 @@ layout(set = 1, binding = 0) uniform sampler2D bindless_tex[];
 void main()
 {
     vec3 N = normalize( normal_ws.xyz );
-    vec2 metalness_roughness = vec2(0, 1.0);
-    vec4 base_color  = vec4(1, 0, 1, 1);
+    vec2 metalness_roughness = material.metalness_roughness;
+    vec4 base_color  = material.base_color;
 
     /* Sample base color */
     if(material.texture_base_color_idx != -1)
     {
-        base_color = vec4(texture(bindless_tex[material.texture_base_color_idx], uv.xy).rgb, 1.0);
+        base_color = vec4(texture(bindless_tex[material.texture_base_color_idx], uv.xy).rgb, 1.0) * material.base_color;
         if(base_color.a < 1) discard;
     }
+
     gbuffer_base_color = base_color;
 
     /* Sample normal map
@@ -50,7 +52,7 @@ void main()
     /* Metallic : G, Roughness: B */
     if(material.texture_metalness_roughness_idx != -1)
     {
-        metalness_roughness = texture(bindless_tex[material.texture_metalness_roughness_idx], uv.xy).bg;
+        metalness_roughness = texture(bindless_tex[material.texture_metalness_roughness_idx], uv.xy).bg * material.metalness_roughness;
     }
     gbuffer_metalness_roughness = metalness_roughness;
 }

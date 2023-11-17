@@ -8,6 +8,8 @@ struct Material
 	int texture_normal_map_idx = -1;
 	int texture_metalness_roughness_idx = -1;
 	int texture_emissive_map_idx = -1;
+    glm::vec4 base_color;
+    glm::vec2 metalness_roughness;
 };
 
 /* https://live.boost.org/doc/libs/1_42_0/boost/functional/hash/hash.hpp */
@@ -27,6 +29,7 @@ struct MaterialHash
         hash_combine(h, m.texture_normal_map_idx);
         hash_combine(h, m.texture_metalness_roughness_idx);
         hash_combine(h, m.texture_emissive_map_idx);
+        hash_combine(h, m.base_color);
         return h;
     }
 };

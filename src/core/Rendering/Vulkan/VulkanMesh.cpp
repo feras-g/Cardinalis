@@ -196,7 +196,6 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 			}
 		};
 
-
 		cgltf_texture* tex_normal = gltf_mat->normal_texture.texture;
 		if (tex_normal)
 		{
@@ -225,10 +224,9 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 
 			/* Factors */
 			{
-				//float* v = gltf_mat->pbr_metallic_roughness.base_color_factor;
-				//material.base_color_factor = glm::vec4(v[0], v[1], v[2], v[3]);
-				//material.metallic_factor = gltf_mat->pbr_metallic_roughness.metallic_factor;
-				//material.roughness_factor = gltf_mat->pbr_metallic_roughness.roughness_factor;
+				float* v = gltf_mat->pbr_metallic_roughness.base_color_factor;
+				material.base_color = glm::vec4(v[0], v[1], v[2], v[3]);
+				material.metalness_roughness = { gltf_mat->pbr_metallic_roughness.metallic_factor, gltf_mat->pbr_metallic_roughness.roughness_factor };
 			}
 		}
 

@@ -20,6 +20,8 @@ layout(push_constant) uniform constants
     int texture_normal_map_idx;
     int texture_metalness_roughness_idx;
     int texture_emissive_map_idx;
+    vec4 base_color;
+    vec2 metalness_roughness;
 } push_constants;
 
 layout(set = 0, binding = 0) uniform FrameDataBlock 
