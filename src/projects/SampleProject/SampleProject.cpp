@@ -40,7 +40,6 @@ void SampleProject::compose_gui()
 	m_gui.begin();
 	m_gui.show_viewport_window(m_camera);
 	m_gui.show_gizmo(m_camera, m_event_manager->key_event, ObjectManager::get_instance().m_mesh_instance_data[0][0].model);
-	m_gui.show_demo();
 	m_gui.show_inspector(ObjectManager::get_instance());
 	m_gui.show_camera_settings(m_camera);
 	m_gui.show_draw_statistics(IRenderer::draw_stats);
@@ -63,14 +62,18 @@ void SampleProject::update_frame_ubo()
 void SampleProject::update(float t, float dt)
 {
 	/* Update camera */
-	if (m_gui.is_scene_viewport_active())
+	if (m_window->is_in_focus())
 	{
-		if (m_event_manager->mouse_event.b_lmb_click)
+		if (m_gui.is_scene_viewport_active())
 		{
-			m_camera.rotate(m_delta_time, m_event_manager->mouse_event);
+			if (m_event_manager->mouse_event.b_lmb_click)
+			{
+				m_camera.rotate(m_delta_time, m_event_manager->mouse_event);
+			}
 		}
+		m_camera.translate(m_delta_time, m_event_manager->key_event);
 	}
-	m_camera.translate(m_delta_time, m_event_manager->key_event);
+
 
 	static ObjectManager& object_manager = ObjectManager::get_instance();
 
@@ -124,7 +127,7 @@ void SampleProject::create_scene()
 	//ObjectManager::get_instance().add_mesh(mesh, "mesh", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 0.1f, 0.1f, 0.1f } });
 
 	VulkanMesh mesh_1; 
-	mesh_1.create_from_file("test/metallic_roughness_test/scene.gltf");
+	mesh_1.create_from_file("basic/crab/scene.gltf");
 	ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } });
 
 	//VulkanMesh mesh_2;

@@ -364,8 +364,9 @@ void VulkanGUI::show_viewport_window(Camera& camera)
 {
 	if (ImGui::Begin("Scene Viewport"))
 	{
-		ImVec2 region_size = ImGui::GetContentRegionAvail();
-		const float curr_aspect_ratio = region_size.x / region_size.y;
+		scene_viewport_window_size = ImGui::GetContentRegionAvail();
+		
+		const float curr_aspect_ratio = scene_viewport_window_size.x / scene_viewport_window_size.y;
 
 		if (curr_aspect_ratio != scene_view_aspect_ratio)
 		{
@@ -374,7 +375,7 @@ void VulkanGUI::show_viewport_window(Camera& camera)
 		}
 
 		m_is_scene_viewport_hovered = ImGui::IsItemActive();
-		ImGui::Image(m_renderer.scene_viewport_attachments_ids[context.curr_frame_idx], region_size);
+		ImGui::Image(m_renderer.scene_viewport_attachments_ids[context.curr_frame_idx], scene_viewport_window_size);
 	}
 
 	ImGui::End();

@@ -11,7 +11,7 @@ struct DeferredRenderer : public IRenderer
 	static constexpr int render_size = 2048;
 
 	VkFormat base_color_format = VK_FORMAT_R8G8B8A8_SRGB;
-	VkFormat normal_format = VK_FORMAT_R16G16_SNORM;
+	VkFormat normal_format = VK_FORMAT_R8G8B8A8_UNORM;
 	VkFormat metalness_roughness_format = VK_FORMAT_R8G8_UNORM;
 	VkFormat depth_format = VK_FORMAT_D32_SFLOAT;
 
@@ -271,7 +271,7 @@ struct DeferredRenderer : public IRenderer
 		if (render_ok)
 		{
 			const ImVec2 main_img_size  = { render_size, render_size };
-			const ImVec2 thumb_img_size = { 256, 256 };
+			const ImVec2 thumb_img_size = { ((float)VulkanGUI::scene_viewport_window_size.x / 4 ), 256};
 
 			static ImTextureID curr_main_image = ui_texture_ids[context.curr_frame_idx].composite;
 
@@ -292,7 +292,7 @@ struct DeferredRenderer : public IRenderer
 					curr_main_image = ui_texture_ids[context.curr_frame_idx].metalness_roughness;
 				}
 				ImGui::SameLine();
-				if (ImGui::ImageButton(ui_texture_ids[context.curr_frame_idx].depth, thumb_img_size))
+				if (ImGui::ImageButton(ui_texture_ids[context.curr_frame_idx].depth, { thumb_img_size.x - 55, thumb_img_size.y }))
 				{
 					curr_main_image = ui_texture_ids[context.curr_frame_idx].depth;
 				}

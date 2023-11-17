@@ -38,7 +38,7 @@ public:
 	bool is_scene_viewport_active();
 	bool m_is_scene_viewport_hovered = false;
 	float scene_view_aspect_ratio = 1.0f;
-
+	static inline ImVec2 scene_viewport_window_size;
 	/* State */
 	VulkanGUI& ShowSceneViewportPanel(Camera& scene_camera,
 		VkDescriptorSet_T* texDeferred, VkDescriptorSet_T* texColorId,

@@ -18,9 +18,6 @@ void VulkanRendererCommon::init()
 	tex_metallic_roughness_format = VK_FORMAT_R8G8B8A8_UNORM;
 	tex_normal_map_format = VK_FORMAT_R8G8B8A8_UNORM;
 	tex_emissive_format = VK_FORMAT_R8G8B8A8_SRGB;
-	tex_gbuffer_normal_format = VK_FORMAT_R16G16B16A16_SFLOAT;
-	tex_gbuffer_depth_format = VK_FORMAT_D16_UNORM;
-	tex_deferred_lighting_format = VK_FORMAT_R8G8B8A8_SRGB;
 }
 
 void VulkanRendererCommon::create_descriptor_sets()

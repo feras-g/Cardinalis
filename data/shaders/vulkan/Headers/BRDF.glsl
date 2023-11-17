@@ -126,7 +126,7 @@ vec3 brdf_blinn_phong(BRDFData data, float shininess)
 
     vec3 diffuse = diffuse_reflectance * brdf_lambert() ;
     vec3 specular = blinn * specular_reflectance;
-    return (diffuse + specular) * NoL ;
+    return (diffuse + specular) * NoL;
 }
 
 
