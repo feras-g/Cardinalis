@@ -49,8 +49,8 @@ struct GeometryData
 	glm::vec3 rotation;
 	glm::vec3 scale;
 
-	glm::vec4 bbox_min_WS {};
-	glm::vec4 bbox_max_WS {};
+	glm::vec4 bbox_min_os {};
+	glm::vec4 bbox_max_os {};
 };
 
 enum class TextureType
@@ -87,7 +87,6 @@ struct VulkanMesh
 	GeometryData geometry_data;
 	std::vector<Node*> nodes;
 };
-
 
 // A node represents an object in the glTF scene graph
 struct Node 

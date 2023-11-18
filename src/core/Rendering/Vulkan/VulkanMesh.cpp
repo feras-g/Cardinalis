@@ -77,14 +77,14 @@ static void load_vertices(Primitive p, cgltf_primitive* primitive, GeometryData&
 			// Also get bounding box for this primitive
 			if (attribute->data->has_min)
 			{
-				glm::vec4 bbox_min_OS (attribute->data->min[0], attribute->data->min[1], attribute->data->min[2], 1.0f);
-				geometry.bbox_min_WS = bbox_min_OS * geometry.world_mat;
+				
+				geometry.bbox_min_os = glm::vec4(attribute->data->min[0], attribute->data->min[1], attribute->data->min[2], 1.0f);
 			}
 
 			if (attribute->data->has_max)
 			{
-				glm::vec4 bbox_max_OS(attribute->data->max[0], attribute->data->max[1], attribute->data->max[2], 1.0f);
-				geometry.bbox_max_WS = bbox_max_OS * geometry.world_mat;
+				
+				geometry.bbox_max_os = glm::vec4(attribute->data->max[0], attribute->data->max[1], attribute->data->max[2], 1.0f);
 			}
 		}
 		break;

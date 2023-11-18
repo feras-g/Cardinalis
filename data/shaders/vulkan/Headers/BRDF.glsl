@@ -70,49 +70,15 @@ float specular_G(float NoV, float NoL, float roughness)
 */
 vec3 get_diffuse_reflectance(vec3 base_color, float metalness)
 {
+    /* For metals there is no diffuse reflection */
     return base_color * (1.0f - metalness);
 }
 
 vec3 get_specular_reflectance(vec3 base_color, float metalness)
 {
+    /* Specular reflection is tinted with material color */
     vec3 f0_dielectric = vec3(0.04);
     return mix(f0_dielectric, base_color, metalness);
-}
-
-vec3 brdf_cook_torrance(vec3 n, vec3 v, vec3 l, vec3 h, vec3 light_color, vec3 irradiance, vec3 base_color, float metalness, float roughness)
-{
-    float NoV = abs(dot(n, v)) + 1e-5;
-    float NoL = clamp(dot(n, l), 1e-5, 1.0);
-    float NoH = clamp(dot(n, h), 1e-5, 1.0);
-    float LoH = clamp(dot(l, h), 1e-5, 1.0);
-    float VoH = clamp(dot(v, h), 1e-5, 1.0);
-
-    /* Diffuse reflection */
-    vec3 diffuse_reflectance = get_diffuse_reflectance(base_color, metalness);
-    vec3 diffuse = diffuse_reflectance * brdf_lambert();
-
-    /* Specular reflection */
-    // https://google.github.io/filament/Filament.md.html#table_commonmatreflectance
-    vec3 specular_reflectance = get_specular_reflectance(base_color, metalness);
-    
-    float D = specular_D(NoH, roughness);
-    vec3  F = specular_F(specular_reflectance, VoH);
-    float G = specular_G(NoV, NoL, roughness);
-    vec3 specular = (D * G * F) / (4 * NoL * NoV);
-
-    return (diffuse + specular) * light_color * NoL;
-}
-
-/* To multiply with specular color */
-vec3 brdf_blinn_phong(vec3 diffuse_reflectance, vec3 specular_reflectance, vec3 n, vec3 l, vec3 h, float shininess)
-{
-    float NoL = clamp(dot(n, l), 1e-5, 1.0);
-    float NoH = clamp(dot(n, h), 1e-5, 1.0);
-
-    float blinn = pow(max(dot(n, h), 0), shininess);
-
-    vec3 specular = blinn * specular_reflectance;
-    return (diffuse_reflectance * NoL);
 }
 
 vec3 brdf_blinn_phong(BRDFData data, float shininess)
@@ -124,9 +90,9 @@ vec3 brdf_blinn_phong(BRDFData data, float shininess)
     vec3 diffuse_reflectance = get_diffuse_reflectance(data.albedo, data.metalness_roughness.x);
     vec3 specular_reflectance = get_specular_reflectance(data.albedo, data.metalness_roughness.x);
 
-    vec3 diffuse = diffuse_reflectance * brdf_lambert() ;
-    vec3 specular = blinn * specular_reflectance;
-    return vec3(blinn);//(diffuse + specular) * NoL;
+    vec3 diffuse  = diffuse_reflectance * NoL;
+    vec3 specular = specular_reflectance * blinn;
+    return diffuse + specular;
 }
 
 

@@ -45,7 +45,6 @@ void SampleProject::compose_gui()
 	m_gui.show_draw_statistics(IRenderer::draw_stats);
 	m_gui.show_shader_library();
 	deferred_renderer.show_ui();
-
 	m_gui.end();
 }
 
@@ -127,13 +126,9 @@ void SampleProject::create_scene()
 	//ObjectManager::get_instance().add_mesh(mesh, "mesh", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 0.1f, 0.1f, 0.1f } });
 
 	VulkanMesh mesh_1; 
-	mesh_1.create_from_file("scenes/porsche/scene.gltf");
+	mesh_1.create_from_file("basic/duck/duck.gltf");
 	ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } });
 
-	//VulkanMesh mesh_2;
-	//mesh_2.create_from_file("scenes/porsche/scene.gltf");
-	//ObjectManager::get_instance().add_mesh(mesh_2, "mesh_2", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 1.0f, 1.0f, 1.0f } });
-	
 	//for (int x = -15; x < 15; x++)
 	//for (int y = -15; y < 15; y++)
 	//for (int z = -15; z < 15; z++)

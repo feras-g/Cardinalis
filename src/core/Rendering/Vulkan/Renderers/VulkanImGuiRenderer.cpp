@@ -87,7 +87,7 @@ void VulkanImGuiRenderer::create_scene_viewport_attachment()
 		scene_viewport_attachments[i].init(context.swapchain->info.color_format, scene_viewport_size.x, scene_viewport_size.y, 1, false, "Scene Viewport Attachment");
 		scene_viewport_attachments[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 		scene_viewport_attachments[i].transition_immediate(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
-		scene_viewport_attachments_ids[i] = ImGui_ImplVulkan_AddTexture(VulkanRendererCommon::get_instance().s_SamplerClampNearest, scene_viewport_attachments[i].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		scene_viewport_attachments_ids[i] = ImGui_ImplVulkan_AddTexture(VulkanRendererCommon::get_instance().s_SamplerClampLinear, scene_viewport_attachments[i].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
 }
 

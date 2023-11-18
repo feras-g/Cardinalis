@@ -32,21 +32,21 @@ void main()
     brdf_data.lightdir_ws = normalize(-vec3(0, -1, 0));
     brdf_data.halfvec_ws = normalize(brdf_data.lightdir_ws + brdf_data.viewdir_ws);
 
-    // out_color = vec4(0,0,0,1);
-    // for(int i = -10; i < 10; i++)
-    // {
-    //     for(int j = -10; j < 10; j++)
-    //     {
-    //         vec3 l = vec3(i, 1, j)  - position_ws;
-    //         float atten = attenuation_gltf(length(l), 1.0);
-    //         brdf_data.lightdir_ws = normalize(l);
-    //         brdf_data.halfvec_ws = normalize(brdf_data.lightdir_ws + brdf_data.viewdir_ws);
-    //         out_color += vec4(brdf_cook_torrance(brdf_data, vec3(1.0)), 1.0) * atten;
-    //     }
-    // }
+    out_color = vec4(0,0,0,1);
+    for(int i = -2; i < 2; i++)
+    {
+        for(int j = -2; j < 2; j++)
+        {
+            vec3 l = vec3(i, 5, j)  - position_ws;
+            float atten = attenuation_frostbite(length(l), 1.0);
+            brdf_data.lightdir_ws = normalize(l);
+            brdf_data.halfvec_ws = normalize(brdf_data.lightdir_ws + brdf_data.viewdir_ws);
+            out_color += vec4(brdf_cook_torrance(brdf_data, vec3(1.0)), 1.0) * atten;
+        }
+    }
 
 
-    out_color = vec4(brdf_cook_torrance(brdf_data, vec3(1.0)), 1.0);
+    //out_color = vec4(brdf_cook_torrance(brdf_data, vec3(1.0)), 1.0);
 
     float roughness = brdf_data.metalness_roughness.g;
     float specular_power = (2 / (roughness*roughness*roughness*roughness)) - 2;

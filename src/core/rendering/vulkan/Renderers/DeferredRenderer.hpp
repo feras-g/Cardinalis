@@ -271,7 +271,7 @@ struct DeferredRenderer : public IRenderer
 		if (render_ok)
 		{
 			const ImVec2 main_img_size  = { render_size, render_size };
-			const ImVec2 thumb_img_size = { ((float)VulkanGUI::scene_viewport_window_size.x / 4 ), 256};
+			const ImVec2 thumb_img_size = { ((float)VulkanGUI::scene_viewport_window_size.x / 4 ), (float)VulkanGUI::scene_viewport_window_size.y / 4};
 
 			static ImTextureID curr_main_image = ui_texture_ids[context.curr_frame_idx].composite;
 
@@ -282,6 +282,7 @@ struct DeferredRenderer : public IRenderer
 					curr_main_image = ui_texture_ids[context.curr_frame_idx].base_color;
 				}
 				ImGui::SameLine();
+				
 				if (ImGui::ImageButton(ui_texture_ids[context.curr_frame_idx].normal, thumb_img_size))
 				{
 					curr_main_image = ui_texture_ids[context.curr_frame_idx].normal;
