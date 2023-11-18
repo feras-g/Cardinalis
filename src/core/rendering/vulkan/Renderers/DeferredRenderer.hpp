@@ -5,7 +5,6 @@
 #include "core/rendering/vulkan/VulkanTexture.h"
 #include "core/rendering/vulkan/VulkanUI.h"
 
-
 struct DeferredRenderer : public IRenderer
 {
 	static constexpr int render_size = 2048;

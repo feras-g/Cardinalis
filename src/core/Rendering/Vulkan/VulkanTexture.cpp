@@ -31,11 +31,17 @@ void Texture2D::create_from_file(
     std::string_view	filename,
     VkFormat			format,
     VkImageUsageFlags	imageUsage,
-    VkImageLayout		layout)
+    VkImageLayout		layout,
+    bool                use_mipmaps
+)
 {
-    assert(initialized);
-    Image rawImage = load_image_from_file(filename);
-    create_from_data(&rawImage, imageUsage, layout);
+    Image image_data = load_image_from_file(filename);
+    if (!initialized)
+    {
+        init(format, image_data.w, image_data.h, 1, use_mipmaps, filename);
+    }
+    create_from_data(&image_data, imageUsage, layout);
+    create_view(context.device, ImageViewTexture2D);
 }
 
 void Texture2D::create_from_data(

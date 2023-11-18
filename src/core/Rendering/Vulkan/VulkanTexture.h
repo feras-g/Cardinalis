@@ -80,8 +80,10 @@ struct Texture2D : public Texture
 	void create_from_file(
 		std::string_view	filename,
 		VkFormat			format,
-		VkImageUsageFlags	imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT,
-		VkImageLayout		layout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		VkImageUsageFlags	imageUsage  = VK_IMAGE_USAGE_SAMPLED_BIT,
+		VkImageLayout		layout      = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		bool                use_mipmaps = false
+	);
 
 	void create_from_data(
 		void*				data,

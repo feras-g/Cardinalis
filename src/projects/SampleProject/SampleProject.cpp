@@ -10,10 +10,12 @@
 #include "rendering/vulkan/Renderers/DebugLineRenderer.hpp"
 #include "rendering/vulkan/Renderers/DeferredRenderer.hpp"
 #include "rendering/vulkan/Renderers/ForwardRenderer.hpp"
+#include "rendering/vulkan/Renderers/ImageBasedLighting.hpp"
 
 static ForwardRenderer forward_renderer;
 static DebugLineRenderer debug_line_renderer;
 static DeferredRenderer deferred_renderer;
+static ImageBasedLighting ibl_renderer;
 
 SampleProject::SampleProject(const char* title, uint32_t width, uint32_t height)
 	: Application(title, width, height)
@@ -29,6 +31,7 @@ void SampleProject::init()
 	forward_renderer.p_debug_line_renderer = &debug_line_renderer;
 	forward_renderer.init();
 	deferred_renderer.init();
+	ibl_renderer.init();
 
 	m_camera.update_aspect_ratio(m_gui.scene_view_aspect_ratio);
 
@@ -45,6 +48,7 @@ void SampleProject::compose_gui()
 	m_gui.show_draw_statistics(IRenderer::draw_stats);
 	m_gui.show_shader_library();
 	deferred_renderer.show_ui();
+	ibl_renderer.show_ui();
 	m_gui.end();
 }
 

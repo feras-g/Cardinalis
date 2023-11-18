@@ -75,18 +75,14 @@ struct IRenderer
 	virtual void init() = 0;
 	virtual void create_pipeline() = 0;
 	virtual void create_renderpass() = 0;
-
 	virtual void render(VkCommandBuffer cmd_buffer) = 0;
+	virtual void show_ui() = 0;
+	virtual bool reload_pipeline() = 0;
 
 	virtual void on_window_resize()
 	{
 		create_renderpass();
 	}
-
-	/* Add UI elements to be displayed */
-	virtual void show_ui() = 0;
-
-	virtual bool reload_pipeline() = 0;
 
 	Pipeline pipeline;
 	VertexFragmentShader shader;
