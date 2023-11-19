@@ -27,11 +27,11 @@ void SampleProject::init()
 {
 	ObjectManager::get_instance().init();
 
+	ibl_renderer.init();
 	debug_line_renderer.init();
 	forward_renderer.p_debug_line_renderer = &debug_line_renderer;
 	forward_renderer.init();
 	deferred_renderer.init();
-	ibl_renderer.init();
 
 	m_camera.update_aspect_ratio(m_gui.scene_view_aspect_ratio);
 
@@ -130,7 +130,7 @@ void SampleProject::create_scene()
 	//ObjectManager::get_instance().add_mesh(mesh, "mesh", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 0.1f, 0.1f, 0.1f } });
 
 	VulkanMesh mesh_1; 
-	mesh_1.create_from_file("basic/duck/duck.gltf");
+	mesh_1.create_from_file("scenes/helmet/scene.gltf");
 	ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } });
 
 	//for (int x = -15; x < 15; x++)

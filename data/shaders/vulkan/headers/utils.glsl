@@ -5,7 +5,7 @@ vec3 ws_pos_from_depth(vec2 uv, float z, mat4 inv_view_proj)
 
     // Compute NDC position
     float x = uv.x * 2 - 1;
-	  float y = (1-uv.y) * 2 - 1;
+	float y = (1-uv.y) * 2 - 1;
     vec4 ndc_pos = vec4(x,y,z, 1.0);
 
     // NDC -> View-Space

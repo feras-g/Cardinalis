@@ -4,6 +4,7 @@
 #include "core/rendering/Material.hpp"
 #include "core/rendering/vulkan/VulkanTexture.h"
 #include "core/rendering/vulkan/VulkanUI.h"
+#include "ImageBasedLighting.hpp"
 
 struct DeferredRenderer : public IRenderer
 {
@@ -122,28 +123,40 @@ struct DeferredRenderer : public IRenderer
 		};
 		descriptor_pool = create_descriptor_pool(pool_sizes, NUM_FRAMES);
 
-		VkSampler& sample_clamp_nearest = VulkanRendererCommon::get_instance().s_SamplerClampNearest;
-		
-		gbuffer_descriptor_layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sample_clamp_nearest, "GBuffer Base Color");
-		gbuffer_descriptor_layout.add_combined_image_sampler_binding(1, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sample_clamp_nearest, "GBuffer Normal");
-		gbuffer_descriptor_layout.add_combined_image_sampler_binding(2, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sample_clamp_nearest, "GBuffer Metalness Roughness");
-		gbuffer_descriptor_layout.add_combined_image_sampler_binding(3, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sample_clamp_nearest, "GBuffer Depth");
-		gbuffer_descriptor_layout.create("GBuffer Descriptor Layout");
+		VkSampler& sampler_clamp_nearest = VulkanRendererCommon::get_instance().s_SamplerClampNearest;
+
+		sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_clamp_nearest, "GBuffer Base Color");
+		sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(1, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_clamp_nearest, "GBuffer Normal");
+		sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(2, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_clamp_nearest, "GBuffer Metalness Roughness");
+		sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(3, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_clamp_nearest, "GBuffer Depth");
+
+		/* Add images for image-based lighting */
+		VkSampler& sampler_clamp_linear = VulkanRendererCommon::get_instance().s_SamplerClampLinear;
+		if (PrefilteredDiffuseEnvMap::is_initialized)
+		{
+			sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(4, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_clamp_linear, "Pre-filtered Env Map Diffuse");
+		}
+
+		sampled_images_descriptor_set_layout.create("GBuffer Descriptor Layout");
 
 		for (int i = 0; i < NUM_FRAMES; i++)
 		{
-			gbuffer_descriptor_set[i].assign_layout(gbuffer_descriptor_layout);
-			gbuffer_descriptor_set[i].create(descriptor_pool, "GBuffer Descriptor Set");
-			gbuffer_descriptor_set[i].write_descriptor_combined_image_sampler(0, gbuffer[i].base_color_attachment.view, sample_clamp_nearest);
-			gbuffer_descriptor_set[i].write_descriptor_combined_image_sampler(1, gbuffer[i].normal_attachment.view, sample_clamp_nearest);
-			gbuffer_descriptor_set[i].write_descriptor_combined_image_sampler(2, gbuffer[i].metalness_roughness_attachment.view, sample_clamp_nearest);
-			gbuffer_descriptor_set[i].write_descriptor_combined_image_sampler(3, gbuffer[i].depth_attachment.view, sample_clamp_nearest);
+			sampled_images_descriptor_set[i].assign_layout(sampled_images_descriptor_set_layout);
+			sampled_images_descriptor_set[i].create(descriptor_pool, "GBuffer Descriptor Set");
+			sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(0, gbuffer[i].base_color_attachment.view, sampler_clamp_nearest);
+			sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(1, gbuffer[i].normal_attachment.view, sampler_clamp_nearest);
+			sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(2, gbuffer[i].metalness_roughness_attachment.view, sampler_clamp_nearest);
+			sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(3, gbuffer[i].depth_attachment.view, sampler_clamp_nearest);
+			if (PrefilteredDiffuseEnvMap::is_initialized)
+			{
+				sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(4, PrefilteredDiffuseEnvMap::result_attachment.view, sampler_clamp_linear);
+			}
 		}
 
 		VkDescriptorSetLayout descriptor_set_layouts[] =
 		{
 			VulkanRendererCommon::get_instance().m_framedata_desc_set_layout,
-			gbuffer_descriptor_layout,
+			sampled_images_descriptor_set_layout,
 		};
 
 		lighting_pass_pipeline.layout.create(descriptor_set_layouts);
@@ -211,7 +224,7 @@ struct DeferredRenderer : public IRenderer
 		set_viewport_scissor(cmd_buffer, VulkanImGuiRenderer::scene_viewport_size.x, VulkanImGuiRenderer::scene_viewport_size.y, false);
 
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lighting_pass_pipeline.layout, 0, 1, &VulkanRendererCommon::get_instance().m_framedata_desc_set[context.curr_frame_idx].vk_set, 0, nullptr);
-		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lighting_pass_pipeline.layout, 1, 1, &gbuffer_descriptor_set[context.curr_frame_idx].vk_set, 0, nullptr);
+		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lighting_pass_pipeline.layout, 1, 1, &sampled_images_descriptor_set[context.curr_frame_idx].vk_set, 0, nullptr);
 
 		compositing_attachments[context.curr_frame_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 		renderpass_lighting[context.curr_frame_idx].begin(cmd_buffer, { VulkanImGuiRenderer::scene_viewport_size.x, VulkanImGuiRenderer::scene_viewport_size.y });
@@ -351,8 +364,8 @@ struct DeferredRenderer : public IRenderer
 	
 	Pipeline geometry_pass_pipeline;
 	Pipeline lighting_pass_pipeline;
-	DescriptorSet gbuffer_descriptor_set[NUM_FRAMES];
-	DescriptorSetLayout gbuffer_descriptor_layout;
+	DescriptorSet sampled_images_descriptor_set[NUM_FRAMES];
+	DescriptorSetLayout sampled_images_descriptor_set_layout;
 
 	VulkanRenderPassDynamic renderpass[NUM_FRAMES];
 

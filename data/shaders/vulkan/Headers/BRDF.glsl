@@ -1,4 +1,6 @@
 
+#include "math_constants.glsl"
+
 /*  
 *   Microfacet model : diffuse + specular term
 *   Specular term : Cook-Torrance model
@@ -13,9 +15,6 @@ struct BRDFData
     vec3 halfvec_ws;
     vec2 metalness_roughness; 
 };
-
-const float PI = 3.1415926538;
-const float INV_PI = 1.0 / PI;
 
 /* 
 * https://cdn2.unrealengine.com/Resources/files/2013SiggraphPresentationsNotes-26915738.pdf  

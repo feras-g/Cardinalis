@@ -12,12 +12,15 @@ struct PrefilteredDiffuseEnvMap
 	void init(Texture2D& spherical_env_map)
 	{
 		init_assets(attachment_render_size, false);
+		init_ubo();
 		init_pipeline(spherical_env_map);
+		render();
+		is_initialized = true;
 	}
 
 	void init_pipeline(Texture2D& spherical_env_map)
 	{
-		shader.create("fullscreen_quad_vert.vert.spv", "ibl_importance_sample_diffuse_frag.frag.spv");
+		shader.create("fullscreen_quad_vert.vert.spv", "importance_sample_diffuse_frag.frag.spv");
 
 		std::array<VkDescriptorPoolSize, 1> pool_sizes
 		{
@@ -31,13 +34,12 @@ struct PrefilteredDiffuseEnvMap
 		descriptor_set.create(descriptor_pool, "Diffuse Env Map Prefiltering");
 
 		descriptor_set.write_descriptor_combined_image_sampler(0, spherical_env_map.view, VulkanRendererCommon::get_instance().s_SamplerClampNearest);
-		descriptor_set.write_descriptor_storage_buffer(1, ubo_shader_params, 0, VK_WHOLE_SIZE);
+		descriptor_set.write_descriptor_uniform_buffer(1, ubo_shader_params, 0, VK_WHOLE_SIZE);
 
 		VkDescriptorSetLayout layouts[]
 		{
 			descriptor_set.layout
 		};
-
 
 		pipeline.layout.create(layouts);
 
@@ -68,7 +70,10 @@ struct PrefilteredDiffuseEnvMap
 		VkSampler& sampler_clamp_nearest = VulkanRendererCommon::get_instance().s_SamplerClampNearest;
 		prefiltered_diffuse_env_map_ui_id = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_nearest, result_attachment.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
 
-		/* Uniform buffer */
+	}
+
+	void init_ubo()
+	{
 		ubo_shader_params.init(Buffer::Type::UNIFORM, sizeof(ShaderParams), "Diffuse Env Map Shader Params");
 		ubo_shader_params.create();
 		update_shader_params_ubo();
@@ -104,38 +109,86 @@ struct PrefilteredDiffuseEnvMap
 		ImGui::SeparatorText("Pre-filtered Environment Map");
 
 		static glm::ivec2 input_render_size = attachment_render_size;
-		static int input_num_samples = shader_params.num_samples;
+		static unsigned int input_num_samples = shader_params.num_samples;
+		static unsigned int input_mipmap_level = shader_params.mipmap_level;
 
-		ImGui::SliderInt2("Render size", glm::value_ptr(input_render_size), 0, 4096);
-		ImGui::SliderInt("# Samples", &input_num_samples, 0, 4096);
+		ImGui::Image(prefiltered_diffuse_env_map_ui_id, { (float)result_attachment.info.width, (float)result_attachment.info.height });
+
+		// Move to the next line
+		ImGui::SameLine();
+
+		// Begin a vertical panel for buttons and inputs
+		ImGui::BeginGroup();
+
+		// Display input fields
+		ImGui::SeparatorText("Render size");
+		ImGui::InputInt2("##Render size", glm::value_ptr(input_render_size));
+		ImGui::SeparatorText("Sample count");
+		ImGui::InputScalar("##Sample count", ImGuiDataType_U32, &input_num_samples);
+		ImGui::SeparatorText("Mipmap level");
+		ImGui::InputScalar("##Mipmap level", ImGuiDataType_U32, &input_mipmap_level);
+
+		// Display buttons
 		if (ImGui::Button("Render"))
 		{
 			if (input_render_size != attachment_render_size)
 			{
 				init_assets(input_render_size, true);
+				update_shader_params_ubo();
 			}
 
 			if (input_num_samples != shader_params.num_samples)
 			{
-				shader_params.num_samples = std::max(input_num_samples, 0);
+				shader_params.num_samples = input_num_samples;
 				update_shader_params_ubo();
 			}
 
+			if (input_mipmap_level != shader_params.mipmap_level)
+			{
+				shader_params.mipmap_level = input_mipmap_level;
+				update_shader_params_ubo();
+			}
+			
 			render();
 		}
-		ImGui::Image(prefiltered_diffuse_env_map_ui_id, { (float)result_attachment.info.width, (float)result_attachment.info.height });
+		ImGui::SameLine();
+
+		if (ImGui::Button("Reload pipeline"))
+		{
+			if (reload_pipeline())
+			{
+				render();
+				ImGui::Text("Reload success");
+			}
+		}
+
+		// End the vertical panel
+		ImGui::EndGroup();
 	}
 
+	bool reload_pipeline()
+	{
+		vkDeviceWaitIdle(context.device);
+
+		if (shader.compile())
+		{
+			pipeline.reload_pipeline();
+			return true;
+		}
+
+		return false;
+	}
 
 	struct ShaderParams
 	{
-		int env_map_width = 1024;
-		int env_map_height = 1024;
-		unsigned int num_samples = 256; /* Number of samples used for importance sampling. Default: 256. */
+		unsigned int k_env_map_width  = 1024;		/* Env map original size, do not modify. */
+		unsigned int k_env_map_height = 512;
+		unsigned int num_samples    = 512;		/* Number of samples used for importance sampling. Default: 256.*/
+		unsigned int mipmap_level = 8;			/* Mipmap level of env map to sample values from.  Default: 0*/
 	} shader_params;
 	
-	glm::ivec2 attachment_render_size{ 256, 256 };
-	Texture2D result_attachment;	/* Stores for a given surface normal, the outgoing radiance. */
+	glm::ivec2 attachment_render_size{ shader_params.k_env_map_width, shader_params.k_env_map_height };
+	static inline Texture2D result_attachment;	/* Stores for a given surface normal, the outgoing radiance. */
 	ImTextureID prefiltered_diffuse_env_map_ui_id;
 	Pipeline pipeline;
 	VertexFragmentShader shader;
@@ -143,6 +196,8 @@ struct PrefilteredDiffuseEnvMap
 	DescriptorSet descriptor_set;
 	VkDescriptorPool descriptor_pool;
 	Buffer ubo_shader_params;
+
+	static inline bool is_initialized = false;
 };
 
 
@@ -157,7 +212,8 @@ struct ImageBasedLighting : public IRenderer
 
 	void init_assets(const char* filename)
 	{
-		spherical_env_map.create_from_file(env_map_folder + filename, env_map_format, VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		
+		spherical_env_map.create_from_file(env_map_folder + filename, env_map_format, VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, true);
 		VkSampler& sampler_clamp_nearest = VulkanRendererCommon::get_instance().s_SamplerClampNearest;
 		spherical_env_map_ui_id = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_nearest, spherical_env_map.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
 	}
@@ -167,7 +223,7 @@ struct ImageBasedLighting : public IRenderer
 		if (ImGui::Begin("IBL Viewer"))
 		{
 			ImGui::SeparatorText("Spherical Environment Map");
-			ImGui::Image(spherical_env_map_ui_id, ImGui::GetContentRegionAvail());
+			ImGui::Image(spherical_env_map_ui_id, { (float)spherical_env_map.info.width, (float)spherical_env_map.info.height });
 			prefiltered_diffuse.show_ui();
 		}
 		ImGui::End();

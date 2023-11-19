@@ -5,6 +5,7 @@
 #include "headers/framedata.glsl"
 #include "headers/brdf.glsl"
 #include "headers/lights.glsl"
+#include "headers/ibl_utils.glsl"
 
 layout(location = 0) in vec2 uv;
 layout(location = 0) out vec4 out_color;
@@ -18,6 +19,7 @@ layout(set = 1, binding = 0) uniform sampler2D gbuffer_base_color;
 layout(set = 1, binding = 1) uniform sampler2D gbuffer_normal_ws;
 layout(set = 1, binding = 2) uniform sampler2D gbuffer_metalness_roughness;
 layout(set = 1, binding = 3) uniform sampler2D gbuffer_depth;
+layout(set = 1, binding = 4) uniform sampler2D pre_filtered_env_map_diffuse;
 
 void main()
 {
@@ -32,6 +34,7 @@ void main()
     brdf_data.lightdir_ws = normalize(-vec3(0, -1, 0));
     brdf_data.halfvec_ws = normalize(brdf_data.lightdir_ws + brdf_data.viewdir_ws);
 
+    // Direct lighting
     out_color = vec4(0,0,0,1);
     for(int i = -2; i < 2; i++)
     {
@@ -45,12 +48,11 @@ void main()
         }
     }
 
+    // Image based
+    vec2 diffuse_sample_uv = direction_to_spherical_env_map(brdf_data.normal_ws);
+    out_color += vec4(brdf_data.albedo * texture(pre_filtered_env_map_diffuse, diffuse_sample_uv).rgb, 1);
 
-    //out_color = vec4(brdf_cook_torrance(brdf_data, vec3(1.0)), 1.0);
 
-    float roughness = brdf_data.metalness_roughness.g;
-    float specular_power = (2 / (roughness*roughness*roughness*roughness)) - 2;
-    //out_color = vec4(brdf_blinn_phong(brdf_data, specular_power), 1.0);
-
-    // out_color = vec4(brdf_data.normal_ws, 1);
+    // Tonemap
+    out_color.rgb = uncharted2_filmic(out_color.rgb);
 }
