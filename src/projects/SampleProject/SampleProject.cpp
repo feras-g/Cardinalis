@@ -10,12 +10,16 @@
 #include "rendering/vulkan/Renderers/DebugLineRenderer.hpp"
 #include "rendering/vulkan/Renderers/DeferredRenderer.hpp"
 #include "rendering/vulkan/Renderers/ForwardRenderer.hpp"
-#include "rendering/vulkan/Renderers/ImageBasedLighting.hpp"
+#include "rendering/vulkan/Renderers/SkyboxRenderer.hpp"
 
 static ForwardRenderer forward_renderer;
 static DebugLineRenderer debug_line_renderer;
 static DeferredRenderer deferred_renderer;
-static ImageBasedLighting ibl_renderer;
+static SkyboxRenderer skybox_renderer;
+static IBLRenderer ibl_renderer;
+static bool using_skybox = true;
+
+static std::vector<size_t> drawable_list;
 
 SampleProject::SampleProject(const char* title, uint32_t width, uint32_t height)
 	: Application(title, width, height)
@@ -27,12 +31,14 @@ void SampleProject::init()
 {
 	ObjectManager::get_instance().init();
 
-	ibl_renderer.init();
 	debug_line_renderer.init();
 	forward_renderer.p_debug_line_renderer = &debug_line_renderer;
 	forward_renderer.init();
-	deferred_renderer.init();
 
+	ibl_renderer.init("newport_loft.hdr");
+	skybox_renderer.init();
+	deferred_renderer.init();
+	skybox_renderer.init(cubemap_renderer.cubemap_attachment);
 	m_camera.update_aspect_ratio(m_gui.scene_view_aspect_ratio);
 
 	create_scene();
@@ -42,6 +48,7 @@ void SampleProject::compose_gui()
 {
 	m_gui.begin();
 	m_gui.show_viewport_window(m_camera);
+	m_gui.show_toolbar();
 	m_gui.show_gizmo(m_camera, m_event_manager->key_event, ObjectManager::get_instance().m_mesh_instance_data[0][0].model);
 	m_gui.show_inspector(ObjectManager::get_instance());
 	m_gui.show_camera_settings(m_camera);
@@ -55,7 +62,9 @@ void SampleProject::compose_gui()
 void SampleProject::update_frame_ubo()
 {
 	VulkanRendererCommon::FrameData frame_data;
-	frame_data.view_proj     = m_camera.get_proj() * m_camera.get_view();
+	frame_data.view =  m_camera.get_view();
+	frame_data.proj = m_camera.get_proj();
+	frame_data.view_proj = m_camera.get_proj() * m_camera.get_view();
 	frame_data.view_proj_inv = glm::inverse(frame_data.view_proj);
 	frame_data.camera_pos_ws = glm::vec4(m_camera.controller.m_position, 1);
 	frame_data.time = m_time;
@@ -98,12 +107,15 @@ void SampleProject::render()
 {
 	VkCommandBuffer& cmd_buffer = context.get_current_frame().cmd_buffer;
 	IRenderer::draw_stats.reset();
+	
+	set_polygon_mode(cmd_buffer, IRenderer::global_polygon_mode);
 	set_viewport_scissor(cmd_buffer, context.swapchain->info.width, context.swapchain->info.height, true);
 
 	context.swapchain->clear_color(cmd_buffer);
 
-	deferred_renderer.render(cmd_buffer, ObjectManager::get_instance());
-	//forward_renderer.render(cmd_buffer, ObjectManager::get_instance());
+	deferred_renderer.render(cmd_buffer, drawable_list);
+	skybox_renderer.render(cmd_buffer);
+	//forward_renderer.render(cmd_buffer, drawable_list);
 	//debug_line_renderer.render(cmd_buffer);
 	m_gui.render(cmd_buffer);
 
@@ -131,7 +143,7 @@ void SampleProject::create_scene()
 
 	VulkanMesh mesh_1; 
 	mesh_1.create_from_file("scenes/helmet/scene.gltf");
-	ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } });
+	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
 
 	//for (int x = -15; x < 15; x++)
 	//for (int y = -15; y < 15; y++)

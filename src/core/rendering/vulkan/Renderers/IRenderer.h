@@ -6,6 +6,7 @@
 #include "core/rendering/vulkan/DescriptorSet.h"
 #include "core/rendering/vulkan/VulkanShader.h"
 #include "core/rendering/vulkan/RenderPass.h"
+#include "core/rendering/vulkan/RenderObjectManager.h"
 
 struct DrawStats;
 
@@ -84,6 +85,7 @@ struct IRenderer
 		create_renderpass();
 	}
 
+	static inline VkPolygonMode global_polygon_mode = VK_POLYGON_MODE_FILL;
 	Pipeline pipeline;
 	VertexFragmentShader shader;
 	VkFormat color_format;

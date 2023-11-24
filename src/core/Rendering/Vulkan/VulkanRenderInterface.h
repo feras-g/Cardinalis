@@ -32,6 +32,7 @@ inline PFN_vkSetDebugUtilsObjectNameEXT		fpSetDebugUtilsObjectNameEXT;
 #endif // ENGINE_DEBUG
 inline PFN_vkCmdBeginRenderingKHR			fpCmdBeginRenderingKHR;
 inline PFN_vkCmdEndRenderingKHR				fpCmdEndRenderingKHR;
+//inline PFN_vkCmdSetPolygonModeEXT			fpCmdSetPolygonModeEXT;
 
 class Window;
 
@@ -194,6 +195,9 @@ struct Pipeline
 	void create_compute(const Shader& shader);
 	bool reload_pipeline();
 
+	void bind(VkCommandBuffer cmd_buffer) const;
+
+	bool is_graphics = false;
 
 	/* Saved pipeline info */
 	VkGraphicsPipelineCreateInfo pipeline_create_info = {};
@@ -203,9 +207,13 @@ struct Pipeline
 	VkFormat depth_attachment_format;
 	Flags pipeline_flags;
 
-	std::vector<VkDynamicState> pipeline_dynamic_states { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+	std::vector<VkDynamicState> pipeline_dynamic_states 
+	{ 
+		VK_DYNAMIC_STATE_VIEWPORT, 
+		VK_DYNAMIC_STATE_SCISSOR,
+		//VK_DYNAMIC_STATE_POLYGON_MODE_EXT,
+	};
 	std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments = {};
-
 
 	VkPipelineVertexInputStateCreateInfo vertexInputState;
 	VkPipelineInputAssemblyStateCreateInfo inputAssemblyState;
@@ -236,6 +244,7 @@ void BeginRenderpass(VkCommandBuffer cmdBuffer, VkRenderPass renderPass, VkFrame
 
 void EndRenderPass(VkCommandBuffer cmdBuffer);
 void set_viewport_scissor(VkCommandBuffer cmdBuffer, uint32_t width, uint32_t height, bool invertViewportY = false);
+void set_polygon_mode(VkCommandBuffer cmdBuffer, VkPolygonMode mode);
 
 VkPipelineLayout create_pipeline_layout(VkDevice device, std::span<VkDescriptorSetLayout> descSetLayout, std::span<VkPushConstantRange> push_constant_ranges = {});
 VkPipelineLayout create_pipeline_layout(VkDevice device, VkDescriptorSetLayout descSetLayout, std::span<VkPushConstantRange> push_constant_ranges );

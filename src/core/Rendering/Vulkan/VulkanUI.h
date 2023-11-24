@@ -24,6 +24,7 @@ public:
 	void end();
 	void exit();
 	void show_gizmo(const Camera& camera, const KeyEvent& event, glm::mat4& selected_object_transform);
+	void show_toolbar();
 	void show_inspector(const ObjectManager& object_manager);
 	void show_camera_settings(Camera& camera);
 	void show_draw_statistics(IRenderer::DrawStats draw_stats);

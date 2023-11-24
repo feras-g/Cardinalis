@@ -53,7 +53,7 @@ public:
 		glm::vec4 color;
 	};
 
-	void add_mesh(const VulkanMesh& mesh, std::string_view mesh_name, const Transform& transform);
+	size_t add_mesh(const VulkanMesh& mesh, std::string_view mesh_name, const Transform& transform);
 	void add_mesh_instance(std::string_view mesh_name,GPUInstanceData data, std::string_view instance_name = "");
 
 

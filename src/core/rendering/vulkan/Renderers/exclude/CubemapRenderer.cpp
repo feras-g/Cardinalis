@@ -292,7 +292,7 @@ void CubemapRenderer::render_cubemap(VkCommandBuffer cmd_buffer, VkRect2D area)
 {	
 	VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Cubemap Generation Render Pass");
 	
-	set_viewport_scissor(cmd_buffer, layer_width, layer_height, true);
+	//set_viewport_scissor(cmd_buffer, layer_width, layer_height, true);
 	VkDescriptorSet desc_sets[2] =
 	{
 		//d_placeholder_cube->get_mesh().descriptor_set,

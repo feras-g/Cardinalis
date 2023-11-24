@@ -13,6 +13,8 @@
 #include "../imgui/backends/imgui_impl_win32.h"
 #include "../imgui/backends/imgui_impl_vulkan.h"
 
+static ImGuizmo::OPERATION gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
+
 VulkanGUI::VulkanGUI()
 {
 	m_renderer.init();
@@ -59,19 +61,32 @@ void VulkanGUI::show_gizmo(const Camera& camera, const KeyEvent& event, glm::mat
 
 	glm::mat4 transform = glm::identity<glm::mat4>();
 
-	static ImGuizmo::OPERATION gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
-
 	const char* items[] = { "Translate", "Rotate", "Scale" };
 	static int current_item = 0;
 
+	//if (event.is_key_pressed_async(Key::R))
+	//{
+	//	gizmo_operation = ImGuizmo::OPERATION::ROTATE;
+	//}
+	//else if (event.is_key_pressed_async(Key::T))
+	//{
+	//	gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
+	//}
+
+	ImGuizmo::Manipulate(view, proj, gizmo_operation, ImGuizmo::MODE::WORLD, glm::value_ptr(selected_object_transform));
+}
+
+void VulkanGUI::show_toolbar()
+{
 	if (ImGui::Begin("Toolbar"))
 	{
+		/* Gizmo mode */
 		ImGui::SeparatorText("Transform Mode");
-		
+
 		if (ImGui::Button("Translation", ImVec2(70, 40)))
 		{
 			gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
-			
+
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Rotation", ImVec2(70, 40)))
@@ -85,19 +100,20 @@ void VulkanGUI::show_gizmo(const Camera& camera, const KeyEvent& event, glm::mat
 			ImGui::SameLine();
 			gizmo_operation = ImGuizmo::OPERATION::SCALE;
 		}
+
+		/* Render modes */
+		ImGui::SeparatorText("Rendering mode");
+		if (ImGui::Button("Default"))
+		{
+			IRenderer::global_polygon_mode = VK_POLYGON_MODE_FILL;
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Wireframe"))
+		{
+			IRenderer::global_polygon_mode = VK_POLYGON_MODE_LINE;
+		}
 	}
 	ImGui::End();
-
-	//if (event.is_key_pressed_async(Key::R))
-	//{
-	//	gizmo_operation = ImGuizmo::OPERATION::ROTATE;
-	//}
-	//else if (event.is_key_pressed_async(Key::T))
-	//{
-	//	gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
-	//}
-
-	ImGuizmo::Manipulate(view, proj, gizmo_operation, ImGuizmo::MODE::WORLD, glm::value_ptr(selected_object_transform));
 }
 
 void VulkanGUI::show_inspector(const ObjectManager& object_manager)

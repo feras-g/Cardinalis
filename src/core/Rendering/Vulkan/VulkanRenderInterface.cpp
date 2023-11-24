@@ -153,7 +153,8 @@ void RenderInterface::create_device()
 	extensions = 
 	{ 
 		"VK_KHR_swapchain", 
-		"VK_KHR_dynamic_rendering", 
+		"VK_KHR_dynamic_rendering",
+		//"VK_EXT_extended_dynamic_state3",
 	};
 
 	/* Enabled device features */
@@ -168,7 +169,7 @@ void RenderInterface::create_device()
 	VkPhysicalDeviceMultiviewFeaturesKHR multiview_feature = {};
 	VkPhysicalDeviceDepthClampZeroOneFeaturesEXT depth_clamp_feature = {};
 	VkPhysicalDeviceSynchronization2Features synchronization2_feature = {};
-
+	VkPhysicalDeviceExtendedDynamicState3FeaturesEXT dynamic_state3_features = {};
 
 	/* Descriptor indexing */
 	descriptor_indexing_feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
@@ -193,9 +194,15 @@ void RenderInterface::create_device()
 	depth_clamp_feature.depthClampZeroOne = VK_TRUE;
 	depth_clamp_feature.pNext = &synchronization2_feature;
 
+	/* Synchronization 2 */
 	synchronization2_feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
 	synchronization2_feature.synchronization2 = VK_TRUE;
-	synchronization2_feature.pNext = VK_NULL_HANDLE;
+	synchronization2_feature.pNext = VK_NULL_HANDLE;// &dynamic_state3_features;
+
+	///* Dynamic state 3 */
+	//dynamic_state3_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_FEATURES_EXT;
+	//dynamic_state3_features.extendedDynamicState3PolygonMode = VK_TRUE;
+	//dynamic_state3_features.pNext = VK_NULL_HANDLE;
 
 	VkDeviceCreateInfo device_create_info = {};
 	device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -219,6 +226,7 @@ void RenderInterface::create_device()
 	
 	assert(fpCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)vkGetInstanceProcAddr(context.instance, "vkCmdBeginRenderingKHR"));
 	assert(fpCmdEndRenderingKHR = (PFN_vkCmdEndRenderingKHR)(vkGetInstanceProcAddr(context.instance, "vkCmdEndRenderingKHR")));
+	//assert(fpCmdSetPolygonModeEXT = (PFN_vkCmdSetPolygonModeEXT)(vkGetInstanceProcAddr(context.instance, "vkCmdSetPolygonModeEXT")));
 
 	LOG_INFO("vkCreateDevice() : success.");
 }
@@ -651,8 +659,9 @@ void Pipeline::create_graphics(const VertexFragmentShader& shader, std::span<VkF
 void Pipeline::create_graphics(const VertexFragmentShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPrimitiveTopology topology,
 	VkCullModeFlags cullMode, VkFrontFace frontFace, VkPipelineRenderingCreateInfoKHR* dynamic_pipeline_create)
 {
-	// Pipeline stages
+	is_graphics = true;
 
+	// Pipeline stages
 	VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL;
 
 	if (topology == VK_PRIMITIVE_TOPOLOGY_POINT_LIST)
@@ -814,6 +823,12 @@ bool Pipeline::reload_pipeline()
 	}
 }
 
+void Pipeline::bind(VkCommandBuffer cmd_buffer) const
+{
+	VkPipelineBindPoint bind_point = is_graphics ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE;
+	vkCmdBindPipeline(cmd_buffer, bind_point, pipeline);
+}
+
 size_t create_vertex_index_buffer(Buffer& result, const void* vtxData, size_t& vtxBufferSizeInBytes, const void* idxData, size_t& idxBufferSizeInBytes)
 {
 	/* Compute a good alignment */
@@ -956,6 +971,11 @@ void set_viewport_scissor(VkCommandBuffer cmdBuffer, uint32_t width, uint32_t he
 
 	vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
 	vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
+}
+
+void set_polygon_mode(VkCommandBuffer cmdBuffer, VkPolygonMode mode)
+{
+	//fpCmdSetPolygonModeEXT(cmdBuffer, mode);
 }
 
 [[nodiscard]] VkPipelineLayout create_pipeline_layout(VkDevice device, VkDescriptorSetLayout descSetLayout, std::span<VkPushConstantRange> push_constant_ranges)

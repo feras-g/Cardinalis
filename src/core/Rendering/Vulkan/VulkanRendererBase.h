@@ -30,6 +30,8 @@ public:
 
 	struct FrameData
 	{
+		glm::mat4 view;
+		glm::mat4 proj;
 		glm::mat4 view_proj;
 		glm::mat4 view_proj_inv;
 		glm::vec4 camera_pos_ws;

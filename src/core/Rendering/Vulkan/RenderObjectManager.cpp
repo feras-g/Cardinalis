@@ -54,7 +54,7 @@ int ObjectManager::get_texture_id(std::string_view name)
 	return -1;
 }
 
-void ObjectManager::add_mesh(const VulkanMesh& mesh, std::string_view mesh_name, const Transform& transform)
+size_t ObjectManager::add_mesh(const VulkanMesh& mesh, std::string_view mesh_name, const Transform& transform)
 {
 	size_t mesh_idx = m_meshes.size();
 	m_mesh_id_from_name.insert({ mesh_name.data(), mesh_idx });
@@ -89,6 +89,8 @@ void ObjectManager::add_mesh(const VulkanMesh& mesh, std::string_view mesh_name,
 			m_mesh_instance_data_ssbo[mesh_idx].upload(context.device, &m_mesh_instance_data[mesh_idx].back(), offset, sizeof(GPUInstanceData));
 		}
 	}
+
+	return mesh_idx;
 }
 
 void ObjectManager::add_mesh_instance(std::string_view mesh_name, GPUInstanceData data, std::string_view instance_name)

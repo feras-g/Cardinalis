@@ -66,7 +66,7 @@ struct ForwardRenderer : public IRenderer
 		
 	}
 
-	void render(VkCommandBuffer cmd_buffer, const ObjectManager& object_manager)
+	void render(VkCommandBuffer cmd_buffer, std::span<size_t> mesh_list)
 	{
 		VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Forward Pass");
 
@@ -80,7 +80,9 @@ struct ForwardRenderer : public IRenderer
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 3, 1, &descriptor_set.vk_set, 0, nullptr);
 
 		renderpass[context.curr_frame_idx].begin(cmd_buffer, { context.swapchain->info.width, context.swapchain->info.height });
-		for (size_t mesh_idx = 0; mesh_idx < object_manager.m_meshes.size(); mesh_idx++)
+
+		const ObjectManager& object_manager = ObjectManager::get_instance();
+		for (size_t mesh_idx : mesh_list)
 		{
 			/* Mesh descriptor set */
 			vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 2, 1, &object_manager.m_descriptor_sets[mesh_idx].vk_set, 0, nullptr);
