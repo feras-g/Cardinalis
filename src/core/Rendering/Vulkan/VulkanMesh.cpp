@@ -155,7 +155,6 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 	{
 		std::function load_tex = [](TextureType tex_type, cgltf_texture* tex, VkFormat format, bool calc_mip) -> int
 		{
-				calc_mip = false;
 			const char* uri = tex->image->uri;
 			std::string name = uri ? base_path + uri : base_path + tex->image->name;
 
@@ -177,11 +176,11 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 				texture.create_from_data(&im);
 				texture.create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, texture.info.mipLevels });
 
-	/*			if (tex_type == TextureType::NORMAL_MAP || tex_type == TextureType::METALLIC_ROUGHNESS_MAP)
+				if (tex_type == TextureType::NORMAL_MAP || tex_type == TextureType::METALLIC_ROUGHNESS_MAP)
 				{
 					texture.sampler = VulkanRendererCommon::get_instance().s_SamplerRepeatNearest;
 				}
-				else*/
+				else
 				{
 					texture.sampler = VulkanRendererCommon::get_instance().s_SamplerRepeatLinear;
 				}

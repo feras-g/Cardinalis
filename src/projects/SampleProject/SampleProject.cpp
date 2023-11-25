@@ -137,12 +137,13 @@ void SampleProject::create_scene()
 	//mesh.create_from_file("scenes/sponza-gltf-pbr/scene.glb");
 	//mesh.create_from_file("basic/armor/scene.gltf");
 	//mesh.create_from_file("basic/lantern/scene.gltf");
+	//mesh.create_from_file("basic/lantern/scene.gltf");
 
-	//mesh.create_from_file("test/metallic_roughness_test/scene.gltf");
+	//mesh.create_from_file("scenes/bistro/scene.gltf");
 	//ObjectManager::get_instance().add_mesh(mesh, "mesh", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 0.1f, 0.1f, 0.1f } });
 
 	VulkanMesh mesh_1; 
-	mesh_1.create_from_file("scenes/helmet/scene.gltf");
+	mesh_1.create_from_file("scenes/sponza-gltf-pbr/scene.glb");
 	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
 
 	//for (int x = -15; x < 15; x++)
