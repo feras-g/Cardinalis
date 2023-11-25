@@ -63,19 +63,30 @@ struct IBLRenderer
 		if (size_changed)
 		{
 			vkDeviceWaitIdle(context.device);
-			result_attachment.destroy();
+			prefiltered_diffuse_env_map.destroy();
 			ImGui_ImplVulkan_RemoveTexture(static_cast<VkDescriptorSet>(prefiltered_diffuse_env_map_ui_id));
-			render_pass.reset();
+			render_pass_prefilter_diffuse.reset();
 		}
 
+		/* Diffuse prefiltering render */
 		attachment_render_size = render_size;
-		result_attachment.init(env_map_format, attachment_render_size.x, attachment_render_size.y, 1, 0, "Pre-filtered diffuse environment map attachment");
-		result_attachment.create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-		result_attachment.transition_immediate(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
-		render_pass.add_attachment(result_attachment.view, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+		prefiltered_diffuse_env_map.init(env_map_format, attachment_render_size.x, attachment_render_size.y, 1, 0, "Pre-filtered diffuse environment map attachment");
+		prefiltered_diffuse_env_map.create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+		prefiltered_diffuse_env_map.transition_immediate(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
+		render_pass_prefilter_diffuse.add_attachment(prefiltered_diffuse_env_map.view, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+		/* Specular prefiltering render */
+		attachment_render_size = render_size;
+		prefiltered_specular_env_map.init(env_map_format, attachment_render_size.x, attachment_render_size.y, 1, 0, "Pre-filtered specular environment map attachment");
+		prefiltered_specular_env_map.info.mipLevels = 6; /* 6 mip levels for each roughness increment : 0.0, 0.2, 0.4, 0.8, 1.0 */
+		prefiltered_specular_env_map.create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+		prefiltered_specular_env_map.transition_immediate(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
+		render_pass_prefilter_specular.add_attachment(prefiltered_specular_env_map.view, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 		VkSampler& sampler_clamp_nearest = VulkanRendererCommon::get_instance().s_SamplerClampNearest;
-		prefiltered_diffuse_env_map_ui_id = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_nearest, result_attachment.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
+		prefiltered_diffuse_env_map_ui_id = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_nearest, prefiltered_diffuse_env_map.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
+		prefiltered_specular_env_map_ui_id = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_nearest, prefiltered_specular_env_map.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
+
 	}
 
 	void create_env_map(const char* filename)
@@ -116,7 +127,7 @@ struct IBLRenderer
 	void render()
 	{
 		/*
-			We want to solve the rendering equation, i.e find the outgoing radiance in the viewing direction, for a surface patch with normal N.
+			We want to solve the rendering equation, i.e find the outgoing radiance in the viewing direction give an incoming light direction.
 			We solve this by integrating over the contributions of all incoming radiances multiplied by the surface brdf, in the hemisphere over the surface patch.
 			We approximate this integral with importance sampling.
 		*/
@@ -125,11 +136,31 @@ struct IBLRenderer
 
 		vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 0, 1, &descriptor_set.vk_set, 0, nullptr);
-		result_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
-		render_pass.begin(cmd_buffer, attachment_render_size);
+
+		if (shader_params.prefilter_diffuse)
+		{
+			prefiltered_diffuse_env_map.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+			render_pass_prefilter_diffuse.begin(cmd_buffer, attachment_render_size);
+		}
+		else
+		{
+			prefiltered_specular_env_map.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+			render_pass_prefilter_specular.begin(cmd_buffer, attachment_render_size);
+		}
+
 		vkCmdDraw(cmd_buffer, 3, 1, 0, 0);
-		render_pass.end(cmd_buffer);
-		result_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
+
+		if (shader_params.prefilter_diffuse)
+		{
+			render_pass_prefilter_diffuse.end(cmd_buffer);
+			prefiltered_diffuse_env_map.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
+		}
+		else
+		{
+			render_pass_prefilter_specular.end(cmd_buffer);
+			prefiltered_specular_env_map.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
+		}
+
 		end_temp_cmd_buffer(cmd_buffer);
 	}
 
@@ -140,13 +171,11 @@ struct IBLRenderer
 			ImGui::SeparatorText("Spherical Environment Map");
 			ImGui::Image(spherical_env_map_ui_id, { (float)spherical_env_map.info.width, (float)spherical_env_map.info.height });
 
-			ImGui::SeparatorText("Pre-filtered Environment Map");
+			ImGui::SeparatorText("Pre-filtered Diffuse Environment Map");
+			ImGui::Image(prefiltered_diffuse_env_map_ui_id, { (float)prefiltered_diffuse_env_map.info.width, (float)prefiltered_diffuse_env_map.info.height });
 
-			static glm::ivec2 input_render_size = attachment_render_size;
-			static unsigned int input_num_samples = shader_params.num_samples;
-			static unsigned int input_mipmap_level = shader_params.mipmap_level;
-
-			ImGui::Image(prefiltered_diffuse_env_map_ui_id, { (float)result_attachment.info.width, (float)result_attachment.info.height });
+			ImGui::SeparatorText("Pre-filtered Specular Environment Map");
+			ImGui::Image(prefiltered_specular_env_map_ui_id, { (float)prefiltered_specular_env_map.info.width, (float)prefiltered_specular_env_map.info.height });
 
 			// Move to the next line
 			ImGui::SameLine();
@@ -155,31 +184,73 @@ struct IBLRenderer
 			ImGui::BeginGroup();
 
 			// Display input fields
+			static glm::ivec2 input_render_size = attachment_render_size;
+			static unsigned int input_num_samples = shader_params.num_samples;
+			static unsigned int input_mipmap_level = shader_params.mipmap_level;
+			static bool input_prefilter_diffuse = shader_params.prefilter_diffuse;
+			static float input_roughness = shader_params.roughness;
+
 			ImGui::SeparatorText("Render size");
 			ImGui::InputInt2("##Render size", glm::value_ptr(input_render_size));
 			ImGui::SeparatorText("Sample count");
 			ImGui::InputScalar("##Sample count", ImGuiDataType_U32, &input_num_samples);
 			ImGui::SeparatorText("Mipmap level");
 			ImGui::InputScalar("##Mipmap level", ImGuiDataType_U32, &input_mipmap_level);
+			ImGui::SeparatorText("Prefilter mode");
+			const char* active_modes[2] = { "Specular", "Diffuse" };
+			ImGui::Text("Active mode: %s", active_modes[input_prefilter_diffuse]);
+
+			if (input_prefilter_diffuse == false)
+			{
+				ImGui::SliderFloat("Roughness", &input_roughness, 0.0, 1.0, "%.1f");
+			}
+
+			if (ImGui::Button("Diffuse"))
+			{
+				input_prefilter_diffuse = true;
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Specular"))
+			{
+				input_prefilter_diffuse = false;
+			}
 
 			// Display buttons
 			if (ImGui::Button("Render"))
 			{
+				bool dirty_params = false;
+
 				if (input_render_size != attachment_render_size)
 				{
 					init_assets(input_render_size, true);
-					update_shader_params_ubo();
 				}
 
 				if (input_num_samples != shader_params.num_samples)
 				{
 					shader_params.num_samples = input_num_samples;
-					update_shader_params_ubo();
+					dirty_params = true;
 				}
 
 				if (input_mipmap_level != shader_params.mipmap_level)
 				{
 					shader_params.mipmap_level = input_mipmap_level;
+					dirty_params = true;
+				}
+
+				if (input_prefilter_diffuse != shader_params.prefilter_diffuse)
+				{
+					shader_params.prefilter_diffuse = input_prefilter_diffuse;
+					dirty_params = true;
+				}
+
+				if (input_roughness != shader_params.roughness)
+				{
+					shader_params.roughness = input_roughness;
+					dirty_params = true;
+				}
+
+				if (dirty_params)
+				{
 					update_shader_params_ubo();
 				}
 
@@ -222,18 +293,26 @@ struct IBLRenderer
 
 	struct ShaderParams
 	{
-		unsigned int k_env_map_width = 1024;		/* Env map original size, do not modify. */
+		unsigned int k_env_map_width = 1024;	/* Env map original size, do not modify. */
 		unsigned int k_env_map_height = 512;
-		unsigned int num_samples = 512;		/* Number of samples used for importance sampling. Default: 256.*/
+		unsigned int num_samples = 512;			/* Number of samples used for importance sampling. Default: 256.*/
 		unsigned int mipmap_level = 8;			/* Mipmap level of env map to sample values from.  Default: 0*/
+		bool prefilter_diffuse = true;			/* Wether to prefilter diffuse or specular. Default: true. */
+		float roughness = 0.2f;					/* Roughness for specular prefiltering. Default: 0.2 */
 	} shader_params;
 
 	glm::ivec2 attachment_render_size{ shader_params.k_env_map_width, shader_params.k_env_map_height };
-	static inline Texture2D result_attachment;	/* Stores for a given surface normal, the outgoing radiance. */
+
+	VulkanRenderPassDynamic render_pass_prefilter_diffuse;
+	static inline Texture2D prefiltered_diffuse_env_map;	/* Stores for a given surface normal, the outgoing radiance. */
 	ImTextureID prefiltered_diffuse_env_map_ui_id;
+
+	VulkanRenderPassDynamic render_pass_prefilter_specular;
+	static inline Texture2D prefiltered_specular_env_map;	
+	ImTextureID prefiltered_specular_env_map_ui_id;
+
 	Pipeline pipeline;
 	VertexFragmentShader shader;
-	VulkanRenderPassDynamic render_pass;
 	DescriptorSet descriptor_set;
 	VkDescriptorPool descriptor_pool;
 	Buffer ubo_shader_params;

@@ -149,7 +149,7 @@ struct DeferredRenderer : public IRenderer
 			sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(3, gbuffer[i].depth_attachment.view, sampler_clamp_nearest);
 			if (IBLRenderer::is_initialized)
 			{
-				sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(4, IBLRenderer::result_attachment.view, sampler_clamp_linear);
+				sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(4, IBLRenderer::prefiltered_diffuse_env_map.view, sampler_clamp_linear);
 			}
 		}
 

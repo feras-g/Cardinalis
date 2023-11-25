@@ -35,7 +35,7 @@ void SampleProject::init()
 	forward_renderer.p_debug_line_renderer = &debug_line_renderer;
 	forward_renderer.init();
 
-	ibl_renderer.init("newport_loft.hdr");
+	ibl_renderer.init("blaubeuren_night_1k.hdr");
 	skybox_renderer.init();
 	deferred_renderer.init();
 	skybox_renderer.init(cubemap_renderer.cubemap_attachment);
@@ -143,7 +143,7 @@ void SampleProject::create_scene()
 	//ObjectManager::get_instance().add_mesh(mesh, "mesh", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 0.1f, 0.1f, 0.1f } });
 
 	VulkanMesh mesh_1; 
-	mesh_1.create_from_file("scenes/sponza-gltf-pbr/scene.glb");
+	mesh_1.create_from_file("basic/cobblestone/scene.gltf");
 	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
 
 	//for (int x = -15; x < 15; x++)

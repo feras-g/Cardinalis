@@ -33,22 +33,23 @@ void main()
     brdf_data.viewdir_ws = normalize(frame.data.eye_pos_ws.xyz - position_ws);
     brdf_data.lightdir_ws = normalize(-vec3(0, -1, 0));
     brdf_data.halfvec_ws = normalize(brdf_data.lightdir_ws + brdf_data.viewdir_ws);
+    
+    out_color = vec4(0,0,0,1);
 
     // Direct lighting
-    out_color = vec4(0,0,0,1);
-    for(int i = -2; i < 2; i++)
-    {
-        for(int j = -2; j < 2; j++)
-        {
-            vec3 l = vec3(i, 5, j)  - position_ws;
-            float atten = attenuation_frostbite(length(l), 1.0);
-            brdf_data.lightdir_ws = normalize(l);
-            brdf_data.halfvec_ws = normalize(brdf_data.lightdir_ws + brdf_data.viewdir_ws);
-            out_color += vec4(brdf_cook_torrance(brdf_data, vec3(1.0)), 1.0) * atten;
-        }
-    }
+    // for(int i = -2; i < 2; i++)
+    // {
+    //     for(int j = -2; j < 2; j++)
+    //     {
+    //         vec3 l = vec3(i, 5, j)  - position_ws;
+    //         float atten = attenuation_frostbite(length(l), 1.0);
+    //         brdf_data.lightdir_ws = normalize(l);
+    //         brdf_data.halfvec_ws = normalize(brdf_data.lightdir_ws + brdf_data.viewdir_ws);
+    //         out_color += vec4(brdf_cook_torrance(brdf_data, vec3(1.0)), 1.0) * atten;
+    //     }
+    // }
 
-    // Image based
+    // Image based diffuse
     vec2 diffuse_sample_uv = direction_to_spherical_env_map(brdf_data.normal_ws);
     out_color += vec4(brdf_data.albedo * texture(pre_filtered_env_map_diffuse, diffuse_sample_uv).rgb, 1);
 
