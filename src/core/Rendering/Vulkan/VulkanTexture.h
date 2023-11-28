@@ -49,7 +49,7 @@ static constexpr ImageViewInitInfo ImageViewTextureCubemap
 struct Texture
 {
 	VkImage               image			{ VK_NULL_HANDLE };
-	VkImageView		      view			{ VK_NULL_HANDLE };
+	VkImageView			  view			{ VK_NULL_HANDLE };
 	VkDeviceMemory        deviceMemory	{ VK_NULL_HANDLE };
 	VkSampler             sampler		{ VK_NULL_HANDLE };
 	VkDescriptorImageInfo descriptor	{ VK_NULL_HANDLE };
@@ -75,7 +75,7 @@ struct Texture
 };
 
 VkImageView create_texture_view(
-	Texture& texture, VkFormat format, VkImageViewType view_type, 
+	const Texture& texture, VkFormat format, VkImageViewType view_type, 
 	VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT, VkImageSubresourceRange* subresourceRange = nullptr);
 
 struct Texture2D : public Texture
@@ -103,12 +103,12 @@ struct Texture2D : public Texture
 	void create(VkDevice device, VkImageUsageFlags imageUsage);
 
 
-
-	static VkImageView create_texture_2d_view(Texture2D texture, VkFormat format, 
+	static VkImageView create_texture_2d_view(const Texture2D& texture, VkFormat format, 
 	                                          VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
-	static VkImageView create_texture_cube_view(Texture2D texture, VkFormat format, 
+	static VkImageView create_texture_cube_view(const Texture2D& texture, VkFormat format,
 	                                            VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
-	static VkImageView create_texture_2d_array_view(Texture2D texture, VkFormat format, 
+	static VkImageView create_texture_2d_array_view(const Texture2D& texture, VkFormat format,
 	                                                VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
+	static void create_texture_2d_mip_view(VkImageView& out_view, const Texture2D& texture, VkDevice device, uint32_t mip_level);
 };
 

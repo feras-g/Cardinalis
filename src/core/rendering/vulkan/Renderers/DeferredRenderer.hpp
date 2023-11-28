@@ -4,7 +4,7 @@
 #include "core/rendering/Material.hpp"
 #include "core/rendering/vulkan/VulkanTexture.h"
 #include "core/rendering/vulkan/VulkanUI.h"
-#include "core/rendering/vulkan/Renderers/PrefilteredEnvMapRenderer.hpp"
+#include "core/rendering/vulkan/Renderers/IBLPrefiltering.hpp"
 
 struct DeferredRenderer : public IRenderer
 {

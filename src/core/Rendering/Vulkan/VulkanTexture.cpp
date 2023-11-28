@@ -114,7 +114,7 @@ void Texture::create_vk_image(VkDevice device, bool isCubemap, VkImageUsageFlags
     VK_CHECK(vkCreateImage(device, &createInfo, nullptr, &image));
 
     // Image memory
-    VkMemoryRequirements imageMemReq;
+    VkMemoryRequirements imageMemReq = {};
     vkGetImageMemoryRequirements(device, image, &imageMemReq);
     
     VkMemoryAllocateInfo allocInfo =
@@ -176,7 +176,7 @@ void Texture::upload_data(VkDevice device, void* data)
 
 void Texture::create_view(VkDevice device, const ImageViewInitInfo& viewInfo)
 {
-	view = create_texture_view(*this, info.imageFormat, viewInfo.viewType, viewInfo.aspectMask);
+    view = create_texture_view(*this, info.imageFormat, viewInfo.viewType, viewInfo.aspectMask);
 }
 
 void Texture::destroy()
@@ -523,7 +523,7 @@ void GetSrcDstPipelineStage(VkImageLayout oldLayout, VkImageLayout newLayout, Vk
 }
 
 VkImageView create_texture_view(
-	Texture& texture, VkFormat format, VkImageViewType view_type,
+	const Texture& texture, VkFormat format, VkImageViewType view_type,
 	VkImageAspectFlags aspect, VkImageSubresourceRange* subresourceRange)
 {
 	VkImageViewCreateInfo createInfo =
@@ -562,28 +562,61 @@ VkImageView create_texture_view(
 	vkCreateImageView(context.device, &createInfo, nullptr, &out_view);
 
     /* Add to resource manager */
-    texture.view_hash = VkResourceManager::get_instance(context.device)->add_image_view(out_view);
+    VkResourceManager::get_instance(context.device)->add_image_view(out_view);
 
 	return out_view;
 }
 
-VkImageView Texture2D::create_texture_2d_view(Texture2D texture, VkFormat format, 
+VkImageView Texture2D::create_texture_2d_view(const Texture2D& texture, VkFormat format, 
                                               VkImageAspectFlags aspect)
 {
 	return create_texture_view(texture, format, 
 	                    VK_IMAGE_VIEW_TYPE_2D, aspect);
 }
 
-VkImageView Texture2D::create_texture_cube_view(Texture2D texture, VkFormat format, 
+VkImageView Texture2D::create_texture_cube_view(const Texture2D& texture, VkFormat format,
                                                 VkImageAspectFlags aspect)
 {
 	return create_texture_view(texture, format, 
 	                    VK_IMAGE_VIEW_TYPE_CUBE, aspect);
 }
 
-VkImageView Texture2D::create_texture_2d_array_view(Texture2D texture, VkFormat format, 
+VkImageView Texture2D::create_texture_2d_array_view(const Texture2D& texture, VkFormat format,
                                                     VkImageAspectFlags aspect)
 {
 	return create_texture_view(texture, format, 
 	                    VK_IMAGE_VIEW_TYPE_2D_ARRAY, aspect);
+}
+
+void Texture2D::create_texture_2d_mip_view(VkImageView& out_view, const Texture2D& texture, VkDevice device, uint32_t mip_level)
+{
+    VkImageViewCreateInfo createInfo =
+    {
+        .sType      { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO },
+        .flags      {  },
+        .image      { texture.image },
+        .viewType   { VK_IMAGE_VIEW_TYPE_2D },
+        .format     { texture.info.imageFormat },
+        .components
+        {
+            .r = VK_COMPONENT_SWIZZLE_R,
+            .g = VK_COMPONENT_SWIZZLE_G,
+            .b = VK_COMPONENT_SWIZZLE_B,
+            .a = VK_COMPONENT_SWIZZLE_A
+        },
+    };
+    
+    createInfo.subresourceRange =
+    {
+        .aspectMask     { VK_IMAGE_ASPECT_COLOR_BIT },
+        .baseMipLevel   { mip_level },
+        .levelCount     { 1 },
+        .baseArrayLayer { 0 },
+        .layerCount     { 1 },
+    };
+
+    assert(vkCreateImageView(context.device, &createInfo, nullptr, &out_view) == VK_SUCCESS);
+
+    /* Add to resource manager */
+    VkResourceManager::get_instance(context.device)->add_image_view(out_view);
 }

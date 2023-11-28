@@ -10,11 +10,18 @@ layout(set = 0, binding = 1) uniform ParametersBlock
     uint samples;           // Number of samples for importance sampling. Default : 256
     uint mipmap_level;      // Mipmap level of the environment map to sample from. Default: 0 
     bool prefilter_diffuse;    // Wether to prefilter diffuse or specular. Default: true.
-    float roughness;        // Roughness for specular prefiltering. Default: 0.2
 } params;
 
 layout (location = 0) in vec2 uv;
 layout (location = 0) out vec4 out_color;
+
+layout(push_constant) uniform PSBlock
+{
+    uint current_mip_level;
+}push_constants;
+
+const uint  specular_filtering_per_mip_samples[6] = { 512, 512, 4096, 4096, 8096, 8096 };
+const float specular_filtering_per_mip_roughness[6] = { 0.0, 0.2, 0.4, 0.6, 0.8, 1.0 };
 
 vec3 prefilter_env_map_diffuse(in sampler2D env_map)
 {
@@ -53,7 +60,9 @@ vec3 prefilter_env_map_diffuse(in sampler2D env_map)
     return result;
 }
 
-vec3 prefilter_env_map_specular(in sampler2D env_map)
+
+
+vec3 prefilter_env_map_specular(in sampler2D env_map, float roughness)
 {
     vec2 pixel_coord = uv_coord_to_pixel_coord(uv, uvec2(params.k_env_map_width, params.k_env_map_height));
 
@@ -64,7 +73,7 @@ vec3 prefilter_env_map_specular(in sampler2D env_map)
     /* Assume normal vector and view vector have the same direction */
     vec3 view_dir = normal;
     /* Sampling */
-    uint N = params.samples; 
+    uint N = specular_filtering_per_mip_samples[push_constants.current_specular_mip_level]; 
     vec3 result = vec3(0.0);
     float total_weight = 0.0;
     for(uint n = 0; n < N; n++)
@@ -76,7 +85,7 @@ vec3 prefilter_env_map_specular(in sampler2D env_map)
         /* Convert to directions on the unit hemisphere */ 
         float phi = 2.0 * PI * random_pixel_pos.x;
         float u = random_pixel_pos.y;
-        float alpha = params.roughness * params.roughness;
+        float alpha = roughness * roughness;
 
         /* Sample a random halfway vector */
         float theta = acos(sqrt((1.0 - u) / (1.0+(alpha*alpha - 1.0) * u)));   
@@ -97,7 +106,7 @@ vec3 prefilter_env_map_specular(in sampler2D env_map)
             vec2 uv_sampled_pos = direction_to_spherical_env_map(lightdir_world);
 
             /* Get radiance value at sampled pos */
-            vec3 radiance = textureLod(env_map, uv_sampled_pos, params.mipmap_level).rgb;
+            vec3 radiance = textureLod(env_map, uv_sampled_pos, push_constants.current_specular_mip_level).rgb;
             result += radiance * NoL;
             total_weight += NoL;
         }
@@ -107,19 +116,27 @@ vec3 prefilter_env_map_specular(in sampler2D env_map)
     return result;
 }
 
+vec3 colors[6] =
+{
+    vec3(1,0,0),
+    vec3(0,1,0),
+    vec3(0,0,1),
+    vec3(1,1,0),
+    vec3(1,0,1),
+    vec3(1,1,1)
+};
+
 void main()
 {
     vec3 color = vec3(0);
     if(params.prefilter_diffuse)
     {
         color = prefilter_env_map_diffuse(spherical_env_map);
+        vec3 gamma = pow(color, vec3(2.2)); 
+        out_color = vec4(gamma, 1.0);
     }
     else
     {
-        color = prefilter_env_map_specular(spherical_env_map);
+        out_color = vec4(prefilter_env_map_specular(spherical_env_map, specular_filtering_per_mip_roughness[push_constants.current_specular_mip_level]), 1);
     }
-    
-    vec3 gamma = pow(color, vec3(2.2)); 
-
-    out_color = vec4(gamma, 1.0);
 }
