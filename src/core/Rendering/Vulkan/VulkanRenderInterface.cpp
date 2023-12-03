@@ -950,7 +950,6 @@ void EndRenderPass(VkCommandBuffer cmdBuffer)
 
 void set_viewport_scissor(VkCommandBuffer cmdBuffer, uint32_t width, uint32_t height, bool invertViewportY)
 {
-	
 	VkViewport viewport =
 	{
 		.x = 0.0f,

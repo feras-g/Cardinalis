@@ -109,6 +109,9 @@ struct Texture2D : public Texture
 	                                            VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
 	static VkImageView create_texture_2d_array_view(const Texture2D& texture, VkFormat format,
 	                                                VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
+	// TODO: refactore and combine functions
 	static void create_texture_2d_mip_view(VkImageView& out_view, const Texture2D& texture, VkDevice device, uint32_t mip_level);
+	static void create_texture_2d_layer_view(VkImageView& out_view, const Texture2D& texture, VkDevice device, uint32_t layer);
+
 };
 

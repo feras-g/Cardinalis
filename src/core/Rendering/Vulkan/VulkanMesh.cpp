@@ -155,7 +155,6 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 	{
 		std::function load_tex = [](TextureType tex_type, cgltf_texture* tex, VkFormat format, bool calc_mip) -> int
 		{
-			calc_mip = false;
 			const char* uri = tex->image->uri;
 			std::string name = uri ? base_path + uri : base_path + tex->image->name;
 

@@ -44,15 +44,16 @@ void main()
     if(material.texture_normal_map_idx != -1)
     {
 		vec3 N_map = texture(bindless_tex[material.texture_normal_map_idx], uv.xy).xyz * 2.0 - 1.0; // Gltf normal maps values are packed in [0, 1]
-		N = perturb_normal(N, N_map, vertex_to_eye_ws, uv.xy) * 0.5 + 0.5;  // Normal attachment is UNORM
+		N = perturb_normal(N, N_map, vertex_to_eye_ws, uv.xy);
     }
     gbuffer_normal_ws   = vec4(N, 1.0f);
 
     /* https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#metallic-roughness-material */
-    /* Metallic : G, Roughness: B */
+    /* The textures for metalness and roughness properties are packed together in a single texture called metallicRoughnessTexture. 
+        Its green channel contains roughness values and its blue channel contains metalness values. */
     if(material.texture_metalness_roughness_idx != -1)
     {
-        metalness_roughness = texture(bindless_tex[material.texture_metalness_roughness_idx], uv.xy).bg * material.metalness_roughness;
+        metalness_roughness = texture(bindless_tex[material.texture_metalness_roughness_idx], uv).bg * material.metalness_roughness;
     }
     gbuffer_metalness_roughness = metalness_roughness;
 }

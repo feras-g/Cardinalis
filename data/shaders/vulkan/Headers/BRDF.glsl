@@ -22,7 +22,6 @@ struct BRDFData
 */
 
 /* Diffuse term */
-
 float brdf_lambert()
 {
     return INV_PI;
@@ -62,6 +61,10 @@ float specular_G(float NoV, float NoL, float roughness)
 	float G_l = NoL / (NoL * (1.f - k) + k);
 	return G_v * G_l;
 }
+
+
+
+
 
 /*
 *   Diffuse reflectance represents light that is refracted into the surface, scattered, partially absorbed, and re-emitted.

@@ -11,7 +11,7 @@ struct DeferredRenderer : public IRenderer
 	static constexpr int render_size = 2048;
 
 	VkFormat base_color_format = VK_FORMAT_R8G8B8A8_SRGB;
-	VkFormat normal_format = VK_FORMAT_R8G8B8A8_UNORM;
+	VkFormat normal_format = VK_FORMAT_R16G16B16A16_SFLOAT;
 	VkFormat metalness_roughness_format = VK_FORMAT_R8G8_UNORM;
 	VkFormat depth_format = VK_FORMAT_D32_SFLOAT;
 
@@ -124,6 +124,8 @@ struct DeferredRenderer : public IRenderer
 		descriptor_pool = create_descriptor_pool(pool_sizes, NUM_FRAMES);
 
 		VkSampler& sampler_clamp_nearest = VulkanRendererCommon::get_instance().s_SamplerClampNearest;
+		VkSampler& sampler_repeat_linear = VulkanRendererCommon::get_instance().s_SamplerRepeatLinear;
+		VkSampler& sampler_clamp_linear = VulkanRendererCommon::get_instance().s_SamplerClampLinear;
 
 		sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_clamp_nearest, "GBuffer Base Color");
 		sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(1, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_clamp_nearest, "GBuffer Normal");
@@ -131,10 +133,11 @@ struct DeferredRenderer : public IRenderer
 		sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(3, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_clamp_nearest, "GBuffer Depth");
 
 		/* Add images for image-based lighting */
-		VkSampler& sampler_clamp_linear = VulkanRendererCommon::get_instance().s_SamplerClampLinear;
 		if (IBLRenderer::is_initialized)
 		{
-			sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(4, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_clamp_linear, "Pre-filtered Env Map Diffuse");
+			sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(4, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_repeat_linear, "Pre-filtered Env Map Diffuse");
+			sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(5, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_repeat_linear, "Pre-filtered Env Map Specular");
+			sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(6, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_clamp_nearest, "BRDF Integration Map");
 		}
 
 		sampled_images_descriptor_set_layout.create("GBuffer Descriptor Layout");
@@ -149,7 +152,9 @@ struct DeferredRenderer : public IRenderer
 			sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(3, gbuffer[i].depth_attachment.view, sampler_clamp_nearest);
 			if (IBLRenderer::is_initialized)
 			{
-				sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(4, IBLRenderer::prefiltered_diffuse_env_map.view, sampler_clamp_linear);
+				sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(4, IBLRenderer::prefiltered_diffuse_env_map.view, sampler_repeat_linear);
+				sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(5, IBLRenderer::prefiltered_specular_env_map.view, sampler_repeat_linear);
+				sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(6, IBLRenderer::brdf_integration_map.view, sampler_clamp_nearest);
 			}
 		}
 
@@ -161,7 +166,7 @@ struct DeferredRenderer : public IRenderer
 
 		lighting_pass_pipeline.layout.create(descriptor_set_layouts);
 		shader_lighting_pass.create("fullscreen_quad_vert.vert.spv", "deferred_lighting_pass_frag.frag.spv");
-		lighting_pass_pipeline.create_graphics(shader_lighting_pass, attachment_formats, depth_format, Pipeline::Flags::ENABLE_DEPTH_STATE, lighting_pass_pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_FRONT_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+		lighting_pass_pipeline.create_graphics(shader_lighting_pass, attachment_formats, depth_format, Pipeline::Flags::ENABLE_DEPTH_STATE, lighting_pass_pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_CLOCKWISE);
 	}
 
 	/* Render pass writing geometry information to G-Buffers */
@@ -316,18 +321,24 @@ struct DeferredRenderer : public IRenderer
 
 			if (ImGui::Begin("Deferred Renderer Toolbar"))
 			{
+				static bool reload_success = true;
 				if (ImGui::Button("Reload Shaders"))
 				{
-					if (reload_pipeline())
-					{
-						ImGui::TextColored(ImVec4(0, 1, 0, 1), "Pipeline reload success");
-					}
-					else
-					{
-						ImGui::TextColored(ImVec4(1, 0, 0, 1), "Pipeline reload fail.");
-					}
+					reload_success = reload_pipeline();
+				}
+
+				if(reload_success)
+				{
+					ImGui::TextColored(ImVec4(0, 1, 0, 1), "Pipeline reload success");
+				}
+				else
+				{
+					ImGui::TextColored(ImVec4(1, 0, 0, 1), "Pipeline reload fail.");
 				}
 			}
+
+			cubemap_renderer.show_ui();
+
 			ImGui::End();
 		}
 	}
@@ -348,6 +359,17 @@ struct DeferredRenderer : public IRenderer
 		if (shader_lighting_pass.compile())
 		{
 			lighting_pass_pipeline.reload_pipeline();
+		}
+		else
+		{
+			return false;
+		}
+
+
+		if (cubemap_renderer.write_cubemap_shader.compile())
+		{
+			cubemap_renderer.pipeline.reload_pipeline();
+			cubemap_renderer.render();
 		}
 		else
 		{

@@ -6,6 +6,9 @@ static const std::string env_map_folder("../../../data/textures/env/");
 static constexpr VkFormat env_map_format = VK_FORMAT_R32G32B32A32_SFLOAT;
 //static constexpr VkFormat env_map_format = VK_FORMAT_R8G8B8A8_UNORM;
 
+// Real Shading in Unreal Engine 4, Presentations Notes, page 6 (https://cdn2.unrealengine.com/Resources/files/2013SiggraphPresentationsNotes-26915738.pdf)
+static VkFormat brdf_integration_map_format = VK_FORMAT_R16G16_UNORM;
+
 static CubemapRenderer cubemap_renderer;
 
 struct IBLRenderer
@@ -56,7 +59,13 @@ struct IBLRenderer
 			env_map_format
 		};
 
-		pipeline.create_graphics(shader, color_format, VK_FORMAT_UNDEFINED, Pipeline::Flags::NONE, pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_FRONT_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+		pipeline.create_graphics(shader, color_format, VK_FORMAT_UNDEFINED, Pipeline::Flags::NONE, pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+
+		VkPipelineLayout empty_layout = {};
+		VkPipelineLayoutCreateInfo empty_info = {};
+		vkCreatePipelineLayout(context.device, &empty_info, nullptr, &empty_layout);
+		shader_brdf_integration.create("fullscreen_quad_vert.vert.spv", "integrate_brdf_frag.frag.spv");
+		pipeline_brdf_integration.create_graphics(shader_brdf_integration, std::span<VkFormat>(&brdf_integration_map_format, 1), VK_FORMAT_UNDEFINED, Pipeline::Flags::NONE, empty_layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
 	}
 
 	void init_assets(glm::ivec2 render_size, bool size_changed)
@@ -66,35 +75,45 @@ struct IBLRenderer
 			vkDeviceWaitIdle(context.device);
 			prefiltered_diffuse_env_map.destroy();
 			ImGui_ImplVulkan_RemoveTexture(static_cast<VkDescriptorSet>(prefiltered_diffuse_env_map_ui_id));
-			render_pass_prefilter_diffuse.reset();
+			render_pass.reset();
 		}
 
 		VkSampler& sampler_clamp_nearest = VulkanRendererCommon::get_instance().s_SamplerClampNearest;
-
-		/* Diffuse prefiltering render */
 		attachment_render_size = render_size;
-		prefiltered_diffuse_env_map.init(env_map_format, attachment_render_size.x, attachment_render_size.y, 1, false, "Pre-filtered diffuse environment map attachment");
-		prefiltered_diffuse_env_map.create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-		prefiltered_diffuse_env_map.transition_immediate(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
-		render_pass_prefilter_diffuse.add_attachment(prefiltered_diffuse_env_map.view, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-		prefiltered_diffuse_env_map_ui_id = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_nearest, prefiltered_diffuse_env_map.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
+
+		/* Diffuse env map prefiltering */
+		{
+			prefiltered_diffuse_env_map.init(env_map_format, attachment_render_size.x, attachment_render_size.y, 1, false, "Pre-filtered diffuse environment map attachment");
+			prefiltered_diffuse_env_map.create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+			prefiltered_diffuse_env_map.transition_immediate(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
+			prefiltered_diffuse_env_map_ui_id = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_nearest, prefiltered_diffuse_env_map.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
+		}
 
 		/* Specular prefiltering render */
-		attachment_render_size = render_size;
-		prefiltered_specular_env_map.init(env_map_format, attachment_render_size.x, attachment_render_size.y, 1, false, "Pre-filtered specular environment map attachment");
-		/* 6 mip levels for each roughness increment : 0.0, 0.2, 0.4, 0.8, 1.0 */
-		prefiltered_specular_env_map.info.mipLevels = k_specular_mip_levels; 
-		prefiltered_specular_env_map.create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-		prefiltered_specular_env_map.transition_immediate(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
-
-		glm::vec2 mip_size = attachment_render_size;
-		for (int mip = 0; mip < k_specular_mip_levels; mip++)
 		{
-			Texture2D::create_texture_2d_mip_view(specular_mip_views[mip], prefiltered_specular_env_map, context.device, mip);
-			render_pass_prefilter_specular.add_color_attachment(specular_mip_views[mip]);
-			prefiltered_specular_env_map_ui_id[mip] = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_nearest, specular_mip_views[mip], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
-			specular_mip_sizes[mip] = mip_size;
-			mip_size = { mip_size.x / 2, mip_size.y / 2 };
+			prefiltered_specular_env_map.init(env_map_format, attachment_render_size.x, attachment_render_size.y, 1, false, "Pre-filtered specular environment map attachment");
+			/* 6 mip levels for each roughness increment : 0.0, 0.2, 0.4, 0.8, 1.0 */
+			prefiltered_specular_env_map.info.mipLevels = k_specular_mip_levels;
+			prefiltered_specular_env_map.create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+			prefiltered_specular_env_map.transition_immediate(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
+
+
+			glm::vec2 mip_size = attachment_render_size;
+			for (int mip = 0; mip < k_specular_mip_levels; mip++)
+			{
+				Texture2D::create_texture_2d_mip_view(specular_mip_views[mip], prefiltered_specular_env_map, context.device, mip);
+				prefiltered_specular_env_map_ui_id[mip] = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_nearest, specular_mip_views[mip], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
+				specular_mip_sizes[mip] = mip_size;
+				mip_size = { mip_size.x / 2, mip_size.y / 2 };
+			}
+		}
+
+		/* Environment BRDF LUT */
+		{
+			brdf_integration_map.init(brdf_integration_map_format, brdf_integration_map_size, brdf_integration_map_size, 1, false, "IBL Brdf integration map");
+			brdf_integration_map.create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+			brdf_integration_map.transition_immediate(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
+			brdf_integration_map_ui_id = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_nearest, brdf_integration_map.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
 		}
 	}
 
@@ -141,39 +160,52 @@ struct IBLRenderer
 			We approximate this integral with importance sampling.
 		*/
 		VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
-
-		vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+		pipeline.bind(cmd_buffer);
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 0, 1, &descriptor_set.vk_set, 0, nullptr);
 
+		bool invert_y = true;
 		
 		/* Diffuse */
-		if (shader_params.prefilter_diffuse)
+		if (shader_params.mode == MODE_PREFILTER_DIFFUSE)
 		{
 			int placeholder_val = 0;
 			pipeline.layout.cmd_push_constants(cmd_buffer, "Specular Mip Level", &placeholder_val);
-			set_viewport_scissor(cmd_buffer, attachment_render_size.x, attachment_render_size.y, false);
+			set_viewport_scissor(cmd_buffer, attachment_render_size.x, attachment_render_size.y, invert_y);
 			prefiltered_diffuse_env_map.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
-			render_pass_prefilter_diffuse.begin(cmd_buffer, attachment_render_size);
+			render_pass.reset();
+			render_pass.add_color_attachment(prefiltered_diffuse_env_map.view);
+			render_pass.begin(cmd_buffer, attachment_render_size);
 			vkCmdDraw(cmd_buffer, 3, 1, 0, 0);
-			render_pass_prefilter_diffuse.end(cmd_buffer);
+			render_pass.end(cmd_buffer);
 			prefiltered_diffuse_env_map.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
 		}
-		else
+		else if (shader_params.mode == MODE_PREFILTER_SPECULAR)
 		{
 			/* Specular */
 			prefiltered_specular_env_map.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 			for (int mip = 0; mip < k_specular_mip_levels; mip++)
 			{
 				pipeline.layout.cmd_push_constants(cmd_buffer, "Specular Mip Level", &mip);
-				set_viewport_scissor(cmd_buffer, specular_mip_sizes[mip].x, specular_mip_sizes[mip].y, false);
-				render_pass_prefilter_specular.reset();
-				render_pass_prefilter_specular.add_color_attachment(specular_mip_views[mip]);
-				render_pass_prefilter_specular.begin(cmd_buffer, specular_mip_sizes[mip]);
+				set_viewport_scissor(cmd_buffer, specular_mip_sizes[mip].x, specular_mip_sizes[mip].y, invert_y);
+				render_pass.reset();
+				render_pass.add_color_attachment(specular_mip_views[mip]);
+				render_pass.begin(cmd_buffer, specular_mip_sizes[mip]);
 				vkCmdDraw(cmd_buffer, 3, 1, 0, 0);
-				render_pass_prefilter_specular.end(cmd_buffer);
-
+				render_pass.end(cmd_buffer);
 			}
 			prefiltered_specular_env_map.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
+		}
+		else if (shader_params.mode == MODE_BRDF_INTEGRATION)
+		{
+			pipeline_brdf_integration.bind(cmd_buffer);
+			set_viewport_scissor(cmd_buffer, brdf_integration_map_size, brdf_integration_map_size, invert_y);
+			brdf_integration_map.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+			render_pass.reset();
+			render_pass.add_color_attachment(brdf_integration_map.view);
+			render_pass.begin(cmd_buffer, { brdf_integration_map_size, brdf_integration_map_size });
+			vkCmdDraw(cmd_buffer, 3, 1, 0, 0);
+			render_pass.end(cmd_buffer);
+			brdf_integration_map.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
 		}
 
 		end_temp_cmd_buffer(cmd_buffer);
@@ -181,93 +213,63 @@ struct IBLRenderer
 
 	void show_ui()
 	{
+		const ImVec2 thumbnail_size = { 512, 256 };
+
 		if (ImGui::Begin("IBL Viewer"))
 		{
+			/*************************************************************************************************/
 			ImGui::SeparatorText("Spherical Environment Map");
-			ImGui::Image(spherical_env_map_ui_id, { (float)spherical_env_map.info.width, (float)spherical_env_map.info.height });
+			ImGui::Image(spherical_env_map_ui_id, thumbnail_size);
 
+			/*************************************************************************************************/
 			ImGui::SeparatorText("Pre-filtered Diffuse Environment Map");
-			ImGui::Image(prefiltered_diffuse_env_map_ui_id, { (float)prefiltered_diffuse_env_map.info.width, (float)prefiltered_diffuse_env_map.info.height });
+			ImGui::Image(prefiltered_diffuse_env_map_ui_id, thumbnail_size);
 
+			if (ImGui::Button("Render Diffuse"))
+			{
+				shader_params.mode = Mode::MODE_PREFILTER_DIFFUSE;
+				update_shader_params_ubo();
+				render();
+			}
+			
+			ImGui::SeparatorText("Sample count");
+			ImGui::InputScalar("##Sample count", ImGuiDataType_U32, &shader_params.num_samples);
+			ImGui::SeparatorText("Mipmap level");
+			ImGui::InputScalar("##Mipmap level", ImGuiDataType_U32, &shader_params.mipmap_level);
+
+			/*************************************************************************************************/
 			ImGui::SeparatorText("Pre-filtered Specular Environment Map");
+
 			for (int mip = 0; mip < k_specular_mip_levels; mip++)
 			{
-				ImGui::Image(prefiltered_specular_env_map_ui_id[mip], { (float)specular_mip_sizes[mip].x,  specular_mip_sizes[mip].y });
+				ImGui::Image(prefiltered_specular_env_map_ui_id[mip], { float(int(thumbnail_size.x) >> mip) ,  float(int(thumbnail_size.y) >> mip) });
 				if (mip < k_specular_mip_levels - 1)
 				{
 					ImGui::SameLine();
 				}
+			}
+			if (ImGui::Button("Render Specular"))
+			{
+				shader_params.mode = Mode::MODE_PREFILTER_SPECULAR;
+				update_shader_params_ubo();
+				render();
+			}
+
+			/*************************************************************************************************/
+			ImGui::SeparatorText("BRDF Integration");
+
+			ImGui::Image(brdf_integration_map_ui_id, { 256, 256 });
+			if (ImGui::Button("Render"))
+			{
+				shader_params.mode = Mode::MODE_BRDF_INTEGRATION;
+				update_shader_params_ubo();
+				render();
 			}
 
 			// Begin a vertical panel for buttons and inputs
 			ImGui::BeginGroup();
 
 			// Display input fields
-			static glm::ivec2 input_render_size = attachment_render_size;
-			static unsigned int input_num_samples = shader_params.num_samples;
-			static unsigned int input_mipmap_level = shader_params.mipmap_level;
-			static bool input_prefilter_diffuse = shader_params.prefilter_diffuse;
-
-			ImGui::SeparatorText("Render size");
-			ImGui::InputInt2("##Render size", glm::value_ptr(input_render_size));
-			if (input_prefilter_diffuse)
-			{
-				ImGui::SeparatorText("Sample count");
-				ImGui::InputScalar("##Sample count", ImGuiDataType_U32, &input_num_samples);
-				ImGui::SeparatorText("Mipmap level");
-				ImGui::InputScalar("##Mipmap level", ImGuiDataType_U32, &input_mipmap_level);
-			}
-
-			ImGui::SeparatorText("Prefilter mode");
-			const char* active_modes[2] = { "Specular", "Diffuse" };
-			ImGui::Text("Active mode: %s", active_modes[input_prefilter_diffuse]);
-
-			if (ImGui::Button("Diffuse"))
-			{
-				input_prefilter_diffuse = true;
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Specular"))
-			{
-				input_prefilter_diffuse = false;
-			}
-
-			// Display buttons
-			if (ImGui::Button("Render"))
-			{
-				bool dirty_params = false;
-
-				if (input_render_size != attachment_render_size)
-				{
-					init_assets(input_render_size, true);
-				}
-
-				if (input_num_samples != shader_params.num_samples)
-				{
-					shader_params.num_samples = input_num_samples;
-					dirty_params = true;
-				}
-
-				if (input_mipmap_level != shader_params.mipmap_level)
-				{
-					shader_params.mipmap_level = input_mipmap_level;
-					dirty_params = true;
-				}
-
-				if (input_prefilter_diffuse != shader_params.prefilter_diffuse)
-				{
-					shader_params.prefilter_diffuse = input_prefilter_diffuse;
-					dirty_params = true;
-				}
-
-				if (dirty_params)
-				{
-					update_shader_params_ubo();
-				}
-
-				render();
-			}
-			ImGui::SameLine();
 
 			if (ImGui::Button("Reload pipeline"))
 			{
@@ -308,28 +310,40 @@ struct IBLRenderer
 		unsigned int k_env_map_height = 512;
 		unsigned int num_samples = 512;			/* Number of samples used for importance sampling. Default: 256.*/
 		unsigned int mipmap_level = 5;			/* Mipmap level of env map to sample values from.  Default: 0*/
-		bool prefilter_diffuse = true;			/* Wether to prefilter diffuse or specular. Default: true. */
+		unsigned int mode = 0;
 	} shader_params;
+
+	enum Mode
+	{
+		MODE_PREFILTER_DIFFUSE = 0,
+		MODE_PREFILTER_SPECULAR = 1,
+		MODE_BRDF_INTEGRATION = 2,
+	};
 
 	glm::ivec2 attachment_render_size{ shader_params.k_env_map_width, shader_params.k_env_map_height };
 
-	VulkanRenderPassDynamic render_pass_prefilter_diffuse;
+	/* Diffuse environment map prefiltering */
 	static inline Texture2D prefiltered_diffuse_env_map;	/* Stores for a given surface normal, the outgoing radiance. */
-	ImTextureID prefiltered_diffuse_env_map_ui_id;
 
-	VulkanRenderPassDynamic render_pass_prefilter_specular;
+	/* Specular environment map prefiltering */
 	static inline Texture2D prefiltered_specular_env_map;	
 	static constexpr int k_specular_mip_levels = 6;
-	ImTextureID prefiltered_specular_env_map_ui_id[k_specular_mip_levels];
 	VkImageView specular_mip_views[k_specular_mip_levels];
 	glm::vec2 specular_mip_sizes[k_specular_mip_levels];
 
-	struct SpecularMipFilteringValues
-	{
-		unsigned int samples;
-		float roughness;
-	};
+	/* User Interface */
+	ImTextureID prefiltered_diffuse_env_map_ui_id;
+	ImTextureID prefiltered_specular_env_map_ui_id[k_specular_mip_levels];
+	ImTextureID brdf_integration_map_ui_id;
 
+	/* BRDF Integration map */
+	VertexFragmentShader shader_brdf_integration;
+	static inline Texture2D brdf_integration_map;
+	Pipeline pipeline_brdf_integration;
+	int brdf_integration_map_size = 512;
+
+	/* Common */
+	VulkanRenderPassDynamic render_pass;
 	Pipeline pipeline;
 	VertexFragmentShader shader;
 	DescriptorSet descriptor_set;

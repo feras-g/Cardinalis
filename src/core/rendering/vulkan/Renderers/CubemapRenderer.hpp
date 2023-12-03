@@ -3,6 +3,7 @@
 #include "IRenderer.h"
 
 /* Renders a cubemap from a spherical environement map */
+
 struct CubemapRenderer
 {
 	void init(Texture2D& spherical_env_map)
@@ -14,8 +15,17 @@ struct CubemapRenderer
 		cubemap_attachment.create_vk_image(context.device, true, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 		cubemap_attachment.create_view(context.device, ImageViewTextureCubemap);
 
-		mesh_skybox.create_from_file("basic/unit_cube.glb");
+		VkSampler& sampler = VulkanRendererCommon::get_instance().s_SamplerRepeatLinear; // Repeat important to avoid seams
 
+		for (int layer = 0; layer < 6; layer++)
+		{
+			Texture2D::create_texture_2d_layer_view(cubemap_layer_view[layer], cubemap_attachment, context.device, layer);
+			cubemap_layer_view_ui_id[layer] = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler, cubemap_layer_view[layer], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
+		}
+
+		mesh_skybox.create_from_file("basic/cube_pos_y_up.glb");
+
+		cube_matrix_data.model = glm::rotate(mesh_skybox.geometry_data.primitives[0].model, glm::radians(0.0f), glm::vec3(1,0,0));
 		mesh_skybox_id = ObjectManager::get_instance().add_mesh(mesh_skybox, "Mesh_Skybox", {});
 
 		ubo_cube_matrix_data.init(Buffer::Type::UNIFORM, sizeof(CubeMatrixData), "UBO Cube Matrix Data");
@@ -29,7 +39,6 @@ struct CubemapRenderer
 		};
 		descriptor_pool = create_descriptor_pool(pool_sizes, 1);
 
-		VkSampler& sampler = VulkanRendererCommon::get_instance().s_SamplerClampLinear;
 		cubemap_descriptor_set.layout.add_uniform_buffer_binding(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, "Cube Matrix Data binding");
 		cubemap_descriptor_set.layout.add_combined_image_sampler_binding(1, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler, "Spherical Env Map binding");
 		cubemap_descriptor_set.layout.create("");
@@ -49,7 +58,7 @@ struct CubemapRenderer
 		};
 		pipeline.layout.create(set_layouts);
 		VkFormat color_formats[] = { cubemap_attachment.info.imageFormat };
-		pipeline.create_graphics(write_cubemap_shader, color_formats, VK_FORMAT_UNDEFINED, Pipeline::Flags::NONE, pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_CLOCKWISE, multiview_mask);
+		pipeline.create_graphics(write_cubemap_shader, color_formats, VK_FORMAT_UNDEFINED, Pipeline::Flags::NONE, pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_NONE, VK_FRONT_FACE_COUNTER_CLOCKWISE, multiview_mask);
 	}
 
 	void render()
@@ -81,18 +90,47 @@ struct CubemapRenderer
 	struct CubeMatrixData
 	{
 		/* View matrices for each cube face */
+		glm::vec4 colors[6]
+		{
+			glm::vec4(1.0f, 0.0f, 0.0f, 1.0f),
+			glm::vec4(-1.0f, 0.0f, 0.0f, 1.0f),
+			glm::vec4(0.0f, 1.0f, 0.0f, 1.0f),
+			glm::vec4(0.0f, -1.0f, 0.0f, 1.0f),
+			glm::vec4(0.0f, 0.0f, 1.0f, 1.0f),
+			glm::vec4(0.0f, 0.0f, -1.0f, 1.0f),
+		};
+
 		glm::mat4 view_matrices[6]
 		{
-			glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, 1.0f,  0.0f)),
-			glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, 1.0f,  0.0f)),
-			glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  +1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  -1.0f)),
-			glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  -1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
-			glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  +1.0f), glm::vec3(0.0f, 1.0f,  0.0f)),
-			glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  -1.0f), glm::vec3(0.0f, 1.0f,  0.0f))
+			glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(+1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+			glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+			glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)),
+			glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, +1.0f, 0.0f), glm::vec3(0.0f, 0.0f, +1.0f)),
+			glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, +1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+			glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f))
 		};
-		glm::mat4 model = glm::identity<glm::mat4>();
+		glm::mat4 model;
 		glm::mat4 projection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
 	} cube_matrix_data;
+
+	void show_ui()
+	{
+		const ImVec2 thumbnail_size { 128, 128 };
+		if (ImGui::Begin("Cubemap Faces"))
+		{
+			for (int i = 0; i < 6; i++)
+			{
+				ImGui::Text(ui_image_names[i]);
+				ImGui::Image(cubemap_layer_view_ui_id[i], thumbnail_size);
+			}
+		}
+		ImGui::End();
+	}
+
+	const char* ui_image_names[6] = { "+X", "-X", "+Y", "-Y", "+Z", "-Z" };
+
+	ImTextureID cubemap_layer_view_ui_id[6];
+	VkImageView cubemap_layer_view[6];
 
 	Buffer ubo_cube_matrix_data;
 	DescriptorSet cubemap_descriptor_set;

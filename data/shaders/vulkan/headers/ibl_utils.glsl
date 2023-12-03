@@ -9,32 +9,7 @@
 
 vec2 uv_coord_to_pixel_coord(in vec2 uv, in uvec2 image_size)
 {
-    return (uv * image_size) - vec2(0.5, 0.5); // shift by 0.5 to be at pixel center
-}
-
-/* 
-    Convert texture coordinates to spherical coordinates. 
-
-    @params uv The uv coordinate.
-*/
-vec2 uv_coord_to_spherical_coord(in vec2 uv)
-{
-    // s is mapped from [0.0; 1.0] to [+PI; -PI] to get azimuth angle phi
-    // t is mapped from [0.0; 1.0] to [+PI; 0] to get polar angle theta
-
-    float theta = PI * (1.0 - uv.t);
-    float phi = 2.0 * PI * (0.5 - uv.s);
-
-    return vec2(theta, phi);
-}
-
-vec3 spherical_coord_to_cartesian_coord(in float theta, in float phi)
-{
-    vec3 cartesian;
-    cartesian.x = sin(theta) * cos(phi);
-    cartesian.y = sin(theta) * sin(phi);
-    cartesian.z = cos(theta);
-    return cartesian;
+    return (vec2(uv.x, uv.y) * image_size) - vec2(0.5, 0.5); // shift by 0.5 to be at pixel center
 }
 
 /* 
@@ -55,6 +30,30 @@ vec3 pcg3d(in uvec3 v)
 }
 
 /* 
+    Convert texture coordinates to spherical coordinates. 
+
+    @params uv The uv coordinate.
+*/
+vec2 uv_to_spherical(in vec2 uv)
+{
+    // s is mapped from [0.0; 1.0] to [+PI; -PI] to get azimuth angle phi
+    // t is mapped from [0.0; 1.0] to [+PI; 0] to get polar angle theta
+    float phi = 2.0 * PI * (0.5 - uv.s);
+    float theta = PI * (1.0 - uv.t);
+
+    return vec2(theta, phi);
+}
+
+vec3 spherical_coord_to_cartesian_coord(in float theta, in float phi)
+{
+    vec3 cartesian;
+    cartesian.x = sin(theta) * cos(phi);
+    cartesian.y = sin(theta) * sin(phi);
+    cartesian.z = cos(theta);
+    return cartesian;
+}
+
+/* 
     From a texture coordinate, retrieve the direction
     of the normal to a point on the spherical env map.
 
@@ -63,7 +62,7 @@ vec3 pcg3d(in uvec3 v)
 vec3 spherical_env_map_to_direction(vec2 uv)
 {
     /* Convert texture coordinate to spherical */
-    vec2 spherical = uv_coord_to_spherical_coord(uv);
+    vec2 spherical = uv_to_spherical(uv);
 
     /* 
         Convert spherical coordinate to cartesian.
@@ -79,18 +78,26 @@ vec3 spherical_env_map_to_direction(vec2 uv)
     From a direction on the unit sphere, retrieve
     the corresponding position on the env map
 
-    @params direction The direction on the unit sphere.
+    @params d The direction on the unit sphere.
 */
 vec2 direction_to_spherical_env_map(vec3 dir)
 {
     /* Cartesian to spherical */
-    float phi = atan(dir.y, dir.x);
-    float theta = acos(dir.z);
+    // float phi = atan(dir.z, dir.x);
+    // float theta = acos(dir.y);
 
-    /* Spherical to texture coordinate */
-    float u = 0.5 - phi / (2.0 * PI);
-    float v = 1.0 - theta / PI;
-    return vec2(u, v);
+    // /* Spherical to texture coordinate */
+    // float s = 0.5 - phi / (2.0 * PI);
+    // float t = 1.0 - theta / PI;
+    // return vec2(s, t);
+
+    // const vec2 invAtan = vec2(0.1591, 0.3183);
+    // vec2 uv = vec2(atan(dir.z, dir.x), asin(dir.y));
+    // uv *= invAtan;
+    // uv += 0.5;
+    // return uv;
+
+	return vec2(0.5f + 0.5f * atan(dir.z, dir.x) / PI,1.f - acos(dir.y) / PI);
 }
 
 mat3 get_normal_frame(in vec3 normal)
@@ -105,4 +112,16 @@ mat3 get_normal_frame(in vec3 normal)
     tangent = normalize(cross(arbitrary_vec, normal));
     vec3 bitangent = cross(normal, tangent);
     return mat3(tangent, bitangent, normal);
+}
+
+float GGX_Schlick(float NoV, float roughness)
+{
+    float alpha = roughness * roughness;
+    float k = alpha * 0.5;
+    return max(NoV, 0.001) / (NoV * (1.0 - k) + k);
+}
+
+float G_Smith(float NoV, float NoL, float roughness)
+{
+    return GGX_Schlick(NoL, roughness) * GGX_Schlick(NoV, roughness);
 }

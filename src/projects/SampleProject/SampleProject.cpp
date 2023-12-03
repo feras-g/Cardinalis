@@ -17,7 +17,6 @@ static DebugLineRenderer debug_line_renderer;
 static DeferredRenderer deferred_renderer;
 static SkyboxRenderer skybox_renderer;
 static IBLRenderer ibl_renderer;
-static bool using_skybox = true;
 
 static std::vector<size_t> drawable_list;
 
@@ -35,7 +34,7 @@ void SampleProject::init()
 	forward_renderer.p_debug_line_renderer = &debug_line_renderer;
 	forward_renderer.init();
 
-	ibl_renderer.init("blaubeuren_night_1k.hdr");
+	ibl_renderer.init("footprint_court.hdr");
 	skybox_renderer.init();
 	deferred_renderer.init();
 	skybox_renderer.init(cubemap_renderer.cubemap_attachment);
@@ -90,8 +89,8 @@ void SampleProject::update(float t, float dt)
 	static ObjectManager& object_manager = ObjectManager::get_instance();
 
 	/* Update CPU scene data */
-	std::string mesh_name = "mesh_1";
-	size_t mesh_idx = object_manager.m_mesh_id_from_name.at(mesh_name);
+	//std::string mesh_name = "mesh_1";
+	//size_t mesh_idx = object_manager.m_mesh_id_from_name.at(mesh_name);
 
 	//for (size_t instance_idx = 0; instance_idx < object_manager.m_mesh_instance_data[mesh_idx].size(); instance_idx++)
 	//{
@@ -109,7 +108,6 @@ void SampleProject::render()
 	IRenderer::draw_stats.reset();
 	
 	set_polygon_mode(cmd_buffer, IRenderer::global_polygon_mode);
-	set_viewport_scissor(cmd_buffer, context.swapchain->info.width, context.swapchain->info.height, true);
 
 	context.swapchain->clear_color(cmd_buffer);
 
@@ -142,9 +140,15 @@ void SampleProject::create_scene()
 	//mesh.create_from_file("scenes/bistro/scene.gltf");
 	//ObjectManager::get_instance().add_mesh(mesh, "mesh", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 0.1f, 0.1f, 0.1f } });
 
-	VulkanMesh mesh_1; 
-	mesh_1.create_from_file("basic/cobblestone/scene.gltf");
-	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
+	VulkanMesh mesh_1, mesh_2, mesh_test_roughness; 
+	mesh_1.create_from_file("basic/axes/scene.gltf");
+	mesh_2.create_from_file("scenes/camera/scene.gltf");
+	mesh_test_roughness.create_from_file("test/metallic_roughness_test/scene.gltf");
+
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  100.0f, 100.0f, 100.0f  } }));
+	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_2, "mesh_2", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_test_roughness, "mesh_test_roughness", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.5f,0.5f,0.5f } }));
+
 
 	//for (int x = -15; x < 15; x++)
 	//for (int y = -15; y < 15; y++)
