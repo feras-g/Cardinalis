@@ -9,7 +9,7 @@
 struct DeferredRenderer : public IRenderer
 {
 	static constexpr int render_size = 2048;
-
+	
 	VkFormat base_color_format = VK_FORMAT_R8G8B8A8_SRGB;
 	VkFormat normal_format = VK_FORMAT_R16G16B16A16_SFLOAT;
 	VkFormat metalness_roughness_format = VK_FORMAT_R8G8_UNORM;
@@ -107,7 +107,10 @@ struct DeferredRenderer : public IRenderer
 
 		geometry_pass_pipeline.layout.create(descriptor_set_layouts);
 		shader_geometry_pass.create("instanced_mesh_vert.vert.spv", "deferred_gbuffer_pass_frag.frag.spv");
-		geometry_pass_pipeline.create_graphics(shader_geometry_pass, attachment_formats, depth_format, Pipeline::Flags::ENABLE_DEPTH_STATE, geometry_pass_pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+
+		Pipeline::Flags flags = Pipeline::Flags::ENABLE_DEPTH_STATE;
+
+		geometry_pass_pipeline.create_graphics(shader_geometry_pass, attachment_formats, depth_format, flags, geometry_pass_pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
 	}
 
 	void create_pipeline_lighting_pass()

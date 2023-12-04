@@ -34,7 +34,7 @@ void main()
     if(material.texture_base_color_idx != -1)
     {
         base_color = vec4(texture(bindless_tex[material.texture_base_color_idx], uv.xy).rgb, 1.0) * material.base_color;
-        if(base_color.a < 1) discard;
+        if(base_color.a < 0.5) discard;
     }
 
     gbuffer_base_color = base_color;

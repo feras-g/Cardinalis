@@ -34,7 +34,7 @@ void SampleProject::init()
 	forward_renderer.p_debug_line_renderer = &debug_line_renderer;
 	forward_renderer.init();
 
-	ibl_renderer.init("footprint_court.hdr");
+	ibl_renderer.init("pisa.hdr");
 	skybox_renderer.init();
 	deferred_renderer.init();
 	skybox_renderer.init(cubemap_renderer.cubemap_attachment);
@@ -129,7 +129,9 @@ void SampleProject::update_gpu_buffers()
 void SampleProject::create_scene()
 {
 	VulkanMesh mesh;
-	//mesh.create_from_file("basic/unit_sphere.glb");
+	mesh.create_from_file("scenes/Sponza/scene.gltf");
+	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh, "sponza", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
+	 
 	//mesh.create_from_file("basic/unit_cube.glb");
 	//mesh.create_from_file("scenes/goggles/scene.gltf");
 	//mesh.create_from_file("scenes/sponza-gltf-pbr/scene.glb");
@@ -140,14 +142,26 @@ void SampleProject::create_scene()
 	//mesh.create_from_file("scenes/bistro/scene.gltf");
 	//ObjectManager::get_instance().add_mesh(mesh, "mesh", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 0.1f, 0.1f, 0.1f } });
 
-	VulkanMesh mesh_1, mesh_2, mesh_test_roughness; 
-	mesh_1.create_from_file("basic/axes/scene.gltf");
-	mesh_2.create_from_file("scenes/camera/scene.gltf");
-	mesh_test_roughness.create_from_file("test/metallic_roughness_test/scene.gltf");
+	//VulkanMesh mesh_1, mesh_2, mesh_test_roughness; 
+	//mesh_1.create_from_file("basic/axes/scene.gltf");
+	//mesh_2.create_from_file("scenes/sponza-gltf-pbr/scene.glb");
+	//mesh_test_roughness.create_from_file("test/metallic_roughness_test/scene.gltf");
 
 	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  100.0f, 100.0f, 100.0f  } }));
-	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_2, "mesh_2", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_2, "mesh_2", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
 	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_test_roughness, "mesh_test_roughness", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.5f,0.5f,0.5f } }));
+
+
+
+	//VulkanMesh mesh_sponza, mesh_ivy, mesh_curtains;
+	//mesh_sponza.create_from_file("scenes/intel_sponza/main/scene.gltf");
+	//mesh_ivy.create_from_file("scenes/intel_sponza/ivy/scene.gltf");
+	//mesh_curtains.create_from_file("scenes/intel_sponza/curtains/scene.gltf");
+
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_sponza, "mesh_sponza", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_ivy, "mesh_ivy", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_curtains, "mesh_curtains", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
+
 
 
 	//for (int x = -15; x < 15; x++)

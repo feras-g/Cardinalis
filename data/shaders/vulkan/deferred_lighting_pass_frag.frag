@@ -30,35 +30,42 @@ void main()
     float depth = texture(gbuffer_depth, uv).r;
     vec3 position_ws = ws_pos_from_depth(uv, depth, frame.data.inv_view_proj);
 
+    // Direct lighting
+    DirectionalLight dir_light;
+    dir_light.L = normalize(-vec3(0, -1, 0.5));
+    dir_light.color = vec3(0.8, 0.4, 0.2);
+
     BRDFData brdf_data;
     brdf_data.albedo = texture(gbuffer_base_color, uv).rgb;
     brdf_data.metalness_roughness = texture(gbuffer_metalness_roughness, uv).rg;
     brdf_data.normal_ws = normalize(texture(gbuffer_normal_ws, uv).xyz);
     brdf_data.viewdir_ws = normalize(frame.data.eye_pos_ws.xyz - position_ws);
-    brdf_data.lightdir_ws = normalize(-vec3(0, -1, 0));
+    brdf_data.lightdir_ws = dir_light.L;
     brdf_data.halfvec_ws = normalize(brdf_data.lightdir_ws + brdf_data.viewdir_ws);
     
     out_color.rgb = vec3(0.0);
 
-    // Direct lighting
-    // for(int i = -2; i < 2; i++)
+    out_color += vec4(brdf_cook_torrance(brdf_data, vec3(0.8, 0.4, 0.3) * 2), 1.0);
+
+
+    // for(int i = -5; i < 5; i++)
     // {
-    //     for(int j = -2; j < 2; j++)
+    //     for(int j = -5; j < 5; j++)
     //     {
-    //         vec3 l = vec3(i, 5, j)  - position_ws;
-    //         float atten = attenuation_frostbite(length(l), 1.0);
+    //         vec3 l = vec3(i * 2 + cos(frame.data.time), 0.5, j * 2 + sin(frame.data.time))  - position_ws;
+    //         float atten = attenuation_gltf(length(l), 1.0);
     //         brdf_data.lightdir_ws = normalize(l);
     //         brdf_data.halfvec_ws = normalize(brdf_data.lightdir_ws + brdf_data.viewdir_ws);
-    //         out_color += vec4(brdf_cook_torrance(brdf_data, vec3(1.0)), 1.0) * atten;
+    //         out_color += vec4(brdf_cook_torrance(brdf_data, vec3(1,1,0)), 1.0) * atten;
     //     }
     // }
 
     // IBL Diffuse
     float metallic  = brdf_data.metalness_roughness.x;
-    float roughness = brdf_data.metalness_roughness.y;
+    float roughness = clamp(0.0, 1.0, brdf_data.metalness_roughness.y - 0.00001);
     vec3 diffuse_reflectance = brdf_data.albedo * (1.0 - metallic);
 
-    // F0
+    // // F0
     vec3 F0 = vec3(0.04);
     F0 = mix(F0, brdf_data.albedo, metallic);
     vec2 diffuse_sample_uv = direction_to_spherical_env_map(brdf_data.normal_ws);

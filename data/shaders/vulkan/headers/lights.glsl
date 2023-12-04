@@ -7,8 +7,8 @@ struct PointLight
 
 struct DirectionalLight
 {
-    vec4 direction;
-    vec4 color;
+    vec3 L;
+    vec3 color;
 };
 
 /* 

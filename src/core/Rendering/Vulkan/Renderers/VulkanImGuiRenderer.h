@@ -18,7 +18,7 @@ public:
 	void destroy();
 	const glm::vec2& get_render_area() const;
 
-	static inline glm::uvec2 scene_viewport_size {2048, 2048};
+	static inline glm::uvec2 scene_viewport_size { 2048, 2048 };
 	void create_scene_viewport_attachment();
 	static inline Texture2D scene_viewport_attachments[NUM_FRAMES];
 	static inline VkDescriptorSet scene_viewport_attachments_ids[NUM_FRAMES];

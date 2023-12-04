@@ -132,7 +132,6 @@ vec3 gamma(vec3 c)
     return c;
     //return pow(c, vec3(2.2));
     //return pow(c, vec3(1.0 / 2.2));
-
 }
 
 void main()
