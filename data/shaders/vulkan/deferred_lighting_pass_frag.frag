@@ -25,6 +25,12 @@ layout(set = 1, binding = 4) uniform sampler2D prefiltered_env_map_diffuse;
 layout(set = 1, binding = 5) uniform sampler2D prefiltered_env_map_specular;
 layout(set = 1, binding = 6) uniform sampler2D ibl_brdf_integration_map;
 
+vec3 unpack_normal(vec2 n)
+{
+    float z = sqrt(1 - (n.x*n.x) - (n.y*n.y));
+    return vec3(n.x, n.y, z);    
+}
+
 void main()
 {
     float depth = texture(gbuffer_depth, uv).r;
@@ -38,7 +44,7 @@ void main()
     BRDFData brdf_data;
     brdf_data.albedo = texture(gbuffer_base_color, uv).rgb;
     brdf_data.metalness_roughness = texture(gbuffer_metalness_roughness, uv).rg;
-    brdf_data.normal_ws = normalize(texture(gbuffer_normal_ws, uv).xyz);
+    brdf_data.normal_ws = normalize(unpack_normal(texture(gbuffer_normal_ws, uv).xy));
     brdf_data.viewdir_ws = normalize(frame.data.eye_pos_ws.xyz - position_ws);
     brdf_data.lightdir_ws = dir_light.L;
     brdf_data.halfvec_ws = normalize(brdf_data.lightdir_ws + brdf_data.viewdir_ws);
@@ -48,17 +54,17 @@ void main()
     out_color += vec4(brdf_cook_torrance(brdf_data, vec3(0.8, 0.4, 0.3) * 2), 1.0);
 
 
-    // for(int i = -5; i < 5; i++)
-    // {
-    //     for(int j = -5; j < 5; j++)
-    //     {
-    //         vec3 l = vec3(i * 2 + cos(frame.data.time), 0.5, j * 2 + sin(frame.data.time))  - position_ws;
-    //         float atten = attenuation_gltf(length(l), 1.0);
-    //         brdf_data.lightdir_ws = normalize(l);
-    //         brdf_data.halfvec_ws = normalize(brdf_data.lightdir_ws + brdf_data.viewdir_ws);
-    //         out_color += vec4(brdf_cook_torrance(brdf_data, vec3(1,1,0)), 1.0) * atten;
-    //     }
-    // }
+    for(int i = -5; i < 5; i++)
+    {
+        for(int j = -5; j < 5; j++)
+        {
+            vec3 l = vec3(i * 2 + cos(frame.data.time), 0.5, j * 2 + sin(frame.data.time))  - position_ws;
+            float atten = attenuation_gltf(length(l), 1.0);
+            brdf_data.lightdir_ws = normalize(l);
+            brdf_data.halfvec_ws = normalize(brdf_data.lightdir_ws + brdf_data.viewdir_ws);
+            out_color += vec4(brdf_cook_torrance(brdf_data, vec3(1,1,0)), 1.0) * atten;
+        }
+    }
 
     // IBL Diffuse
     float metallic  = brdf_data.metalness_roughness.x;

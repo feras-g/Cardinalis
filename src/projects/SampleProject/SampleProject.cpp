@@ -128,9 +128,9 @@ void SampleProject::update_gpu_buffers()
 
 void SampleProject::create_scene()
 {
-	VulkanMesh mesh;
-	mesh.create_from_file("scenes/Sponza/scene.gltf");
-	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh, "sponza", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
+	//VulkanMesh mesh;
+	//mesh.create_from_file("scenes/Sponza/scene.gltf");
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh, "sponza", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
 	 
 	//mesh.create_from_file("basic/unit_cube.glb");
 	//mesh.create_from_file("scenes/goggles/scene.gltf");
@@ -153,14 +153,14 @@ void SampleProject::create_scene()
 
 
 
-	//VulkanMesh mesh_sponza, mesh_ivy, mesh_curtains;
-	//mesh_sponza.create_from_file("scenes/intel_sponza/main/scene.gltf");
-	//mesh_ivy.create_from_file("scenes/intel_sponza/ivy/scene.gltf");
-	//mesh_curtains.create_from_file("scenes/intel_sponza/curtains/scene.gltf");
+	VulkanMesh mesh_sponza, mesh_ivy, mesh_curtains;
+	mesh_sponza.create_from_file("scenes/intel_sponza/main/scene.gltf");
+	mesh_ivy.create_from_file("scenes/intel_sponza/ivy/scene.gltf");
+	mesh_curtains.create_from_file("scenes/intel_sponza/curtains/scene.gltf");
 
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_sponza, "mesh_sponza", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_ivy, "mesh_ivy", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_curtains, "mesh_curtains", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
+	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_sponza, "mesh_sponza", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
+	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_ivy, "mesh_ivy", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
+	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_curtains, "mesh_curtains", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
 
 
 

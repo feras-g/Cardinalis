@@ -11,7 +11,7 @@ struct DeferredRenderer : public IRenderer
 	static constexpr int render_size = 2048;
 	
 	VkFormat base_color_format = VK_FORMAT_R8G8B8A8_SRGB;
-	VkFormat normal_format = VK_FORMAT_R16G16B16A16_SFLOAT;
+	VkFormat normal_format = VK_FORMAT_R16G16_SFLOAT;	// Only store X and Y components
 	VkFormat metalness_roughness_format = VK_FORMAT_R8G8_UNORM;
 	VkFormat depth_format = VK_FORMAT_D32_SFLOAT;
 
