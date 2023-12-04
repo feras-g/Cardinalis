@@ -159,6 +159,11 @@ void ObjectManager::create_materials_ssbo()
 {
 	size_t buf_size_bytes = max_material_count * sizeof(Material);
 	std::string buf_name = "Materials";
+	m_materials.resize(max_material_count);
+
+	// Default material
+	m_materials[0] = { -1, -1, -1, -1, {1.0f, 0.0f, 1.0f, 1.0f}, { 0.0f, 1.0f } };
+
 	m_materials_ssbo.init(Buffer::Type::STORAGE, buf_size_bytes, buf_name.c_str());
 	m_materials_ssbo.create();
 }

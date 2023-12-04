@@ -62,6 +62,15 @@ enum class TextureType
 	EMISSIVE_MAP = 4
 };
 
+struct TexturesMetadata
+{
+	std::vector<const char*> uri;
+	std::vector<TextureType> type;
+	std::vector<VkFormat> format;
+	std::vector<bool> load_mip;
+	size_t total_size_bytes;
+};
+
 struct Node;
 
 /* Class describing geometry */

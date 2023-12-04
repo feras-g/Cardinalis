@@ -20,6 +20,8 @@
 
 static std::string base_path;
 
+std::unordered_map<const char*, size_t> uri_to_texture_id;
+
 void VulkanMesh::create_from_file(const std::string& filename)
 {
 	std::string_view ext = get_extension(filename);
@@ -147,6 +149,9 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 	
 	Material material;
 
+#if 0
+	primitive.material_id = ObjectManager::get_instance().default_material_id;
+#else
 	if (nullptr == gltf_mat)
 	{
 		primitive.material_id = ObjectManager::get_instance().default_material_id;
@@ -237,6 +242,7 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 
 		primitive.material_id = ObjectManager::get_instance().add_material(material);
 	}
+#endif
 }
 
 static void load_primitive(cgltf_node* node, cgltf_primitive* primitive, Node* engine_node, GeometryData& geometry)
@@ -319,7 +325,6 @@ static void process_node(cgltf_node* p_node, Node* parent, VulkanMesh& model)
 	//}
 }
 
-
 static void load_textures(cgltf_texture* textures, size_t texture_count)
 {
 	std::function load_tex = [](cgltf_texture* tex, VkFormat format, bool calc_mip) -> int
@@ -357,10 +362,10 @@ static void load_textures(cgltf_texture* textures, size_t texture_count)
 			}
 		};
 
-
-	for (size_t i = 0; i < texture_count; i++)
-	{
-	}
+	//for (size_t i = 0; i < texture_count; i++)
+	//{
+	//	printf("Texture %sz URI: %s\n", i, textures[i].image->uri);
+	//}
 }
 
 
