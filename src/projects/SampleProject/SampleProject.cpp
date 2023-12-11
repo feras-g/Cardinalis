@@ -37,8 +37,8 @@ void SampleProject::init()
 	ibl_renderer.init("pisa.hdr");
 	skybox_renderer.init();
 	deferred_renderer.init();
+	m_camera.update_aspect_ratio(1.0f);
 	skybox_renderer.init(cubemap_renderer.cubemap_attachment);
-	m_camera.update_aspect_ratio(m_gui.scene_view_aspect_ratio);
 
 	create_scene();
 }
@@ -46,13 +46,13 @@ void SampleProject::init()
 void SampleProject::compose_gui()
 {
 	m_gui.begin();
-	m_gui.show_viewport_window(m_camera);
 	m_gui.show_toolbar();
 	m_gui.show_gizmo(m_camera, m_event_manager->key_event, ObjectManager::get_instance().m_mesh_instance_data[0][0].model);
 	m_gui.show_inspector(ObjectManager::get_instance());
-	m_gui.show_camera_settings(m_camera);
 	m_gui.show_draw_statistics(IRenderer::draw_stats);
 	m_gui.show_shader_library();
+	m_gui.show_viewport_window(m_camera);
+	m_camera.show_ui();
 	deferred_renderer.show_ui();
 	ibl_renderer.show_ui();
 	m_gui.end();
@@ -61,11 +61,11 @@ void SampleProject::compose_gui()
 void SampleProject::update_frame_ubo()
 {
 	VulkanRendererCommon::FrameData frame_data;
-	frame_data.view =  m_camera.get_view();
-	frame_data.proj = m_camera.get_proj();
-	frame_data.view_proj = m_camera.get_proj() * m_camera.get_view();
+	frame_data.view = m_camera.view;
+	frame_data.proj = m_camera.projection;
+	frame_data.view_proj = frame_data.proj * frame_data.view;
 	frame_data.view_proj_inv = glm::inverse(frame_data.view_proj);
-	frame_data.camera_pos_ws = glm::vec4(m_camera.controller.m_position, 1);
+	frame_data.camera_pos_ws = glm::vec4(m_camera.position, 1);
 	frame_data.time = m_time;
 	VulkanRendererCommon::get_instance().update_frame_data(frame_data, context.curr_frame_idx);
 }
@@ -75,14 +75,40 @@ void SampleProject::update(float t, float dt)
 	/* Update camera */
 	if (m_window->is_in_focus())
 	{
-		if (m_gui.is_scene_viewport_active())
+		//if (m_gui.is_inactive())
 		{
-			if (m_event_manager->mouse_event.b_lmb_click)
+			if (m_event_manager->key_event.is_key_pressed_async(Key::Z))
 			{
-				m_camera.rotate(m_delta_time, m_event_manager->mouse_event);
+				m_camera.translate(m_camera.forward * m_delta_time);
+			}
+
+			if (m_event_manager->key_event.is_key_pressed_async(Key::S))
+			{
+				m_camera.translate(-m_camera.forward * m_delta_time);
+			}
+
+			if (m_event_manager->key_event.is_key_pressed_async(Key::Q))
+			{
+				m_camera.right = glm::normalize(glm::cross(m_camera.forward, m_camera.up));
+				m_camera.translate(-m_camera.right * m_delta_time);
+			}
+
+			if (m_event_manager->key_event.is_key_pressed_async(Key::D))
+			{
+				m_camera.right = glm::normalize(glm::cross(m_camera.forward, m_camera.up));
+				m_camera.translate(m_camera.right * m_delta_time);
+			}
+
+			if (m_event_manager->key_event.is_key_pressed_async(Key::SPACE))
+			{
+				m_camera.translate(m_camera.up * m_delta_time);
+			}
+
+			if (m_event_manager->key_event.is_key_pressed_async(Key::LSHIFT))
+			{
+				m_camera.translate(-m_camera.up * m_delta_time);
 			}
 		}
-		m_camera.translate(m_delta_time, m_event_manager->key_event);
 	}
 
 
@@ -128,40 +154,23 @@ void SampleProject::update_gpu_buffers()
 
 void SampleProject::create_scene()
 {
-	//VulkanMesh mesh;
-	//mesh.create_from_file("scenes/Sponza/scene.gltf");
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh, "sponza", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
-	 
-	//mesh.create_from_file("basic/unit_cube.glb");
-	//mesh.create_from_file("scenes/goggles/scene.gltf");
-	//mesh.create_from_file("scenes/sponza-gltf-pbr/scene.glb");
-	//mesh.create_from_file("basic/armor/scene.gltf");
-	//mesh.create_from_file("basic/lantern/scene.gltf");
-	//mesh.create_from_file("basic/lantern/scene.gltf");
+	VulkanMesh mesh_1, mesh_2, mesh_test_roughness; 
+	//mesh_1.create_from_file("basic/mat/scene.gltf");
+	mesh_2.create_from_file("scenes/sponza/scene.gltf");
+	mesh_test_roughness.create_from_file("test/metallic_roughness_test/scene.gltf");
 
-	//mesh.create_from_file("scenes/bistro/scene.gltf");
-	//ObjectManager::get_instance().add_mesh(mesh, "mesh", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = { 0.1f, 0.1f, 0.1f } });
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,180,0}, .scale = {  0.1f, 0.1f, 0.1f  } }));
+	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_2, "mesh_2", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  2.0f, 2.0f, 2.0f  } }));
+	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_test_roughness, "mesh_test_roughness", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.25f,0.25f,0.25f } }));
 
-	//VulkanMesh mesh_1, mesh_2, mesh_test_roughness; 
-	//mesh_1.create_from_file("basic/axes/scene.gltf");
-	//mesh_2.create_from_file("scenes/sponza-gltf-pbr/scene.glb");
-	//mesh_test_roughness.create_from_file("test/metallic_roughness_test/scene.gltf");
-
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  100.0f, 100.0f, 100.0f  } }));
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_2, "mesh_2", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_test_roughness, "mesh_test_roughness", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.5f,0.5f,0.5f } }));
-
-
-
-	VulkanMesh mesh_sponza, mesh_ivy, mesh_curtains;
+	/*VulkanMesh mesh_sponza, mesh_ivy, mesh_curtains;
 	mesh_sponza.create_from_file("scenes/intel_sponza/main/scene.gltf");
 	mesh_ivy.create_from_file("scenes/intel_sponza/ivy/scene.gltf");
 	mesh_curtains.create_from_file("scenes/intel_sponza/curtains/scene.gltf");
 
 	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_sponza, "mesh_sponza", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
 	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_ivy, "mesh_ivy", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
-	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_curtains, "mesh_curtains", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
-
+	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_curtains, "mesh_curtains", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));*/
 
 
 	//for (int x = -15; x < 15; x++)
@@ -202,26 +211,60 @@ void SampleProject::on_window_resize()
 	m_gui.on_window_resize();
 	forward_renderer.on_window_resize();
 	debug_line_renderer.on_window_resize();
-}
-
-void SampleProject::on_lmb_down(MouseEvent event)
-{
-	m_camera.controller.b_first_click = true;
-    m_camera.controller.m_last_mouse_pos = { (float)event.px, (float)event.py };
+	skybox_renderer.on_window_resize();
+	deferred_renderer.on_window_resize();
 }
 
 void SampleProject::on_mouse_move(MouseEvent event)
 {
 	Application::on_mouse_move(event);
+
+	//if (m_gui.is_inactive())
+	{
+		glm::vec2 a(event.curr_click_px, event.curr_click_py);
+		if (m_event_manager->mouse_event.b_mmb_click)
+		{
+			glm::vec2 b = { event.curr_pos_x,event.curr_pos_y };
+
+			glm::vec3 dir = glm::vec3(glm::normalize(b - a), 0);
+
+			glm::vec3 t = { dir.x, -dir.y, 0 };
+			m_camera.translate(t * m_delta_time);
+
+			a = b;
+		}
+
+
+		if (m_event_manager->mouse_event.b_lmb_click)
+		{
+			glm::vec2 mouse_pos = { m_event_manager->mouse_event.curr_pos_x, m_event_manager->mouse_event.curr_pos_y };
+			m_camera.rotate(mouse_pos);
+			m_camera.update_view();
+		}
+	}
+
 }
 
 void SampleProject::on_key_event(KeyEvent event)
 {
 	Application::on_key_event(event);
-
-	if (event.key == Key::R)
-	{
-
-	}
 }
 
+void SampleProject::on_mouse_up(MouseEvent event)
+{
+	Application::on_mouse_up(event);
+}
+
+void SampleProject::on_mouse_down(MouseEvent event)
+{
+	Application::on_mouse_down(event);
+
+	//if (m_gui.is_inactive())
+	{
+		if (event.b_lmb_click)
+		{
+			m_camera.first_mouse_click = true;
+		}
+	}
+
+}

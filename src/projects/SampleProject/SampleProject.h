@@ -27,9 +27,10 @@ public:
 	virtual void on_window_resize() override;
 	virtual void on_mouse_move(MouseEvent event) override;
 	virtual void on_key_event(KeyEvent event) override;
-	virtual void on_lmb_down(MouseEvent event) override;
+	virtual void on_mouse_up(MouseEvent event) override;
+	virtual void on_mouse_down(MouseEvent event) override;
 	
 private:
 	VulkanGUI m_gui;
-	Camera m_camera;
+	camera m_camera;
 };

@@ -5,11 +5,11 @@
 layout(set = 0, binding = 0) uniform sampler2D spherical_env_map;
 layout(set = 0, binding = 1) uniform ParametersBlock
 {
-    uint k_env_map_width;
-    uint k_env_map_height;
-    uint samples;           // Number of samples for importance sampling. Default : 256
-    uint mipmap_level;      // Mipmap level of the environment map to sample from. Default: 0 
-    uint mode;    
+    uint k_env_map_width;               // Width of source environment map
+    uint k_env_map_height;              // Height of source environment map
+    uint num_samples_diffuse;           // Number of num_samples_diffuse for importance sampling. Default : 256
+    uint base_mip_diffuse;              // Mipmap level of the environment map to sample from. Default: 0 
+    uint mode;                          // Whether to prefilter diffuse or specular.
 } params;
 
 layout (location = 0) in vec2 uv;
@@ -20,20 +20,8 @@ layout(push_constant) uniform PSBlock
     uint current_mip_level;
 } push_constants;
 
-const uint  specular_filtering_per_mip_samples[6]   = { 1024, 1024, 4096, 4096, 8096, 8096 };
+const uint  specular_filtering_per_mip_samples[6]   = { 512, 512, 4096, 4096, 8096, 8096 };
 const float specular_filtering_per_mip_roughness[6] = { 0.0, 0.2, 0.4, 0.6, 0.8, 1.0 };
-
-vec2 cartesian_to_spherical_uv(vec3 dir)
-{
-    /* Cartesian to spherical */
-    float phi = atan(dir.y, dir.x);
-    float theta = acos(dir.z);
-
-    /* Spherical to texture coordinate */
-    float u = 0.5 - phi / (2.0 * PI);
-    float v = 1.0 - theta / PI;
-    return vec2(u, v);
-}
 
 vec3 prefilter_env_map_diffuse(in sampler2D env_map)
 {
@@ -44,7 +32,7 @@ vec3 prefilter_env_map_diffuse(in sampler2D env_map)
     mat3 normal_space_to_world_space = get_normal_frame(normal);
 
     /* Sampling */
-    uint N = params.samples; 
+    uint N = params.num_samples_diffuse; 
     vec3 result = vec3(0.0);
     for(uint n = 0; n < N; n++)
     {
@@ -61,15 +49,15 @@ vec3 prefilter_env_map_diffuse(in sampler2D env_map)
         vec3 pos_world = normal_space_to_world_space * pos_local;
 
         /* Retrieve in the environment map the texel position corresponding the the world position of the sample */  
-        vec2 uv_sampled_pos = cartesian_to_spherical_uv(pos_world);
+        vec2 uv_sampled_pos = SampleSphericalMap_YXZ(pos_world);
 
         /* Get radiance value at sampled pos */
-        vec3 radiance = textureLod(env_map, uv_sampled_pos, params.mipmap_level).rgb;
+        vec3 radiance = textureLod(env_map, uv_sampled_pos, params.base_mip_diffuse).rgb;
 
         result += radiance;
     }
     result = result / float(N);
-    return result;
+    return result;//vec3(uv,0);
 }
 
 vec3 prefilter_env_map_specular(in sampler2D env_map, float roughness)
@@ -114,7 +102,7 @@ vec3 prefilter_env_map_specular(in sampler2D env_map, float roughness)
         if(NoL > 0.0)
         {
             /* Retrieve in the environment map the texel position corresponding the the world position of the sample */  
-            vec2 uv_sampled_pos = cartesian_to_spherical_uv(lightdir_world);
+            vec2 uv_sampled_pos = SampleSphericalMap_YXZ(lightdir_world);
 
             /* Get radiance value at sampled pos */
             vec3 radiance = textureLod(env_map, uv_sampled_pos, push_constants.current_mip_level).rgb;
@@ -127,25 +115,15 @@ vec3 prefilter_env_map_specular(in sampler2D env_map, float roughness)
     return result;
 }
 
-vec3 gamma(vec3 c)
-{
-    return c;
-    //return pow(c, vec3(2.2));
-    //return pow(c, vec3(1.0 / 2.2));
-}
-
 void main()
 {
-    vec3 color = vec3(0);
     if(params.mode == 0)
     {
-        color = prefilter_env_map_diffuse(spherical_env_map);
-        out_color = vec4(gamma(color), 1.0);
+        out_color.rgb = prefilter_env_map_diffuse(spherical_env_map);
     }
     else if(params.mode == 1)
     {
-        color = prefilter_env_map_specular(spherical_env_map, specular_filtering_per_mip_roughness[push_constants.current_mip_level]);
-        out_color = vec4(gamma(color), 1.0);
+        out_color.rgb = prefilter_env_map_specular(spherical_env_map, specular_filtering_per_mip_roughness[push_constants.current_mip_level]);
     }
 }
 

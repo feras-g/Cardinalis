@@ -8,7 +8,11 @@
 class Window;
 class RenderInterface;
 class FrameCounter;
-struct VulkanFrame;
+
+namespace vk
+{
+	struct frame;
+}
 
 /* Renderers forward decls */
 class VulkanRendererCommon;
@@ -45,8 +49,8 @@ public:
 	/* Input/Key/Events */
 	bool get_key_state(Key key);
 	virtual void on_window_resize();
-	virtual void on_lmb_up(MouseEvent event);
-	virtual void on_lmb_down(MouseEvent event);
+	virtual void on_mouse_up(MouseEvent event);
+	virtual void on_mouse_down(MouseEvent event);
 	virtual void on_mouse_move(MouseEvent event);
 	virtual void on_key_event(KeyEvent event);
 

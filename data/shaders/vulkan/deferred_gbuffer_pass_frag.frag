@@ -8,7 +8,7 @@ layout(location = 2) in vec2 uv;
 layout(location = 4) in vec3 vertex_to_eye_ws;
 
 layout(location = 0) out vec4  gbuffer_base_color;
-layout(location = 1) out vec2  gbuffer_normal_ws;
+layout(location = 1) out vec4  gbuffer_normal_ws;
 layout(location = 2) out vec2  gbuffer_metalness_roughness;
 
 layout(push_constant) uniform constants
@@ -52,7 +52,7 @@ void main()
 		vec3 N_map = unpack_gltf_normal_map(texture(bindless_tex[material.texture_normal_map_idx], uv.xy).xyz); 
 		N = perturb_normal(N, N_map, vertex_to_eye_ws, uv.xy);
     }
-    gbuffer_normal_ws = vec2(N.xy); // Only store XY components
+    gbuffer_normal_ws = vec4(N.xyz, 0); 
 
     /* https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#metallic-roughness-material */
     /* The textures for metalness and roughness properties are packed together in a single texture called metallicRoughnessTexture. 

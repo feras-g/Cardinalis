@@ -11,16 +11,16 @@ std::string KeyEvent::to_string()
 {
 	std::string out;
 
-	if (contains(Key::Z)) { out += "Z "; };
-	if (contains(Key::S)) { out += "S "; };
-	if (contains(Key::Q)) { out += "Q "; };
-	if (contains(Key::D)) { out += "D "; };
-	if (contains(Key::R)) { out += "R "; };
-	if (contains(Key::UP)) { out += "ARROW_UP "; };
-	if (contains(Key::DOWN)) { out += "ARROW_DOWN "; };
-	if (contains(Key::LEFT)) { out += "ARROW_LEFT "; };
-	if (contains(Key::RIGHT)) { out += "ARROW_RIGHT "; };
-	if (contains(Key::LSHIFT)) { out += "L_SHIFT "; };
+	if (key == (Key::Z)) { out += "Z "; };
+	if (key == (Key::S)) { out += "S "; };
+	if (key == (Key::Q)) { out += "Q "; };
+	if (key == (Key::D)) { out += "D "; };
+	if (key == (Key::R)) { out += "R "; };
+	if (key == (Key::UP)) { out += "ARROW_UP "; };
+	if (key == (Key::DOWN)) { out += "ARROW_DOWN "; };
+	if (key == (Key::LEFT)) { out += "ARROW_LEFT "; };
+	if (key == (Key::RIGHT)) { out += "ARROW_RIGHT "; };
+	if (key == (Key::LSHIFT)) { out += "L_SHIFT "; };
 
 	return out;
 };

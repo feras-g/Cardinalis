@@ -2,6 +2,7 @@
 
 #include <vulkan/vulkan.hpp>
 #include <string_view>
+#include "core/engine/common.h"
 
 class Image;
 
@@ -81,6 +82,7 @@ VkImageView create_texture_view(
 struct Texture2D : public Texture
 {
 	void init(VkFormat format, uint32_t width, uint32_t height, uint32_t layers, bool calc_mip, std::string_view debug_name);
+	void init(VkFormat format, glm::vec2 extent, uint32_t layers, bool calc_mip, std::string_view debug_name);
 
 	void create_from_file(
 		std::string_view	filename,

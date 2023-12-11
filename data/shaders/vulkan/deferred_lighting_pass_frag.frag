@@ -35,7 +35,6 @@ void main()
 {
     float depth = texture(gbuffer_depth, uv).r;
     vec3 position_ws = ws_pos_from_depth(uv, depth, frame.data.inv_view_proj);
-
     // Direct lighting
     DirectionalLight dir_light;
     dir_light.L = normalize(-vec3(0, -1, 0.5));
@@ -44,15 +43,14 @@ void main()
     BRDFData brdf_data;
     brdf_data.albedo = texture(gbuffer_base_color, uv).rgb;
     brdf_data.metalness_roughness = texture(gbuffer_metalness_roughness, uv).rg;
-    brdf_data.normal_ws = normalize(unpack_normal(texture(gbuffer_normal_ws, uv).xy));
+    brdf_data.normal_ws = normalize((texture(gbuffer_normal_ws, uv).xyz));
     brdf_data.viewdir_ws = normalize(frame.data.eye_pos_ws.xyz - position_ws);
     brdf_data.lightdir_ws = dir_light.L;
     brdf_data.halfvec_ws = normalize(brdf_data.lightdir_ws + brdf_data.viewdir_ws);
     
     out_color.rgb = vec3(0.0);
 
-    out_color += vec4(brdf_cook_torrance(brdf_data, vec3(0.8, 0.4, 0.3) * 2), 1.0);
-
+    // out_color += vec4(brdf_cook_torrance(brdf_data, vec3(0.8, 0.4, 0.3) * 2), 1.0);
 
     for(int i = -5; i < 5; i++)
     {
@@ -66,25 +64,24 @@ void main()
         }
     }
 
-    // IBL Diffuse
     float metallic  = brdf_data.metalness_roughness.x;
-    float roughness = clamp(0.0, 1.0, brdf_data.metalness_roughness.y - 0.00001);
-    vec3 diffuse_reflectance = brdf_data.albedo * (1.0 - metallic);
-
-    // // F0
+    float roughness = brdf_data.metalness_roughness.y;
     vec3 F0 = vec3(0.04);
     F0 = mix(F0, brdf_data.albedo, metallic);
-    vec2 diffuse_sample_uv = direction_to_spherical_env_map(brdf_data.normal_ws);
+
+    // IBL Diffuse
+    vec3 diffuse_reflectance = brdf_data.albedo * (1.0 - metallic);
+    vec2 diffuse_sample_uv = SampleSphericalMap_ZXY(brdf_data.normal_ws);
     out_color.rgb += diffuse_reflectance * texture(prefiltered_env_map_diffuse, diffuse_sample_uv).rgb;
 
     // IBL Specular
-    float NoV = clamp(dot(brdf_data.normal_ws, brdf_data.viewdir_ws), 0.0, 1.0);
     vec3 R = reflect(-brdf_data.viewdir_ws, brdf_data.normal_ws);
-    vec2 specular_uv = direction_to_spherical_env_map(R);
+    vec2 specular_uv = SampleSphericalMap_ZXY(R);
 
     // Split-sum
-    vec3 T1 = textureLod(prefiltered_env_map_specular, specular_uv, roughness * 6).rgb;
-    vec2 brdf = texture(ibl_brdf_integration_map, vec2(NoV, roughness)).xy;
+    float NoV = clamp(dot(brdf_data.normal_ws, brdf_data.viewdir_ws), 0.0, 1.0);
+    vec3 T1 = textureLod(prefiltered_env_map_specular, specular_uv , roughness * 6).rgb;
+    vec2 brdf = texture(ibl_brdf_integration_map, vec2(NoV, 1-roughness)).xy;
     vec3 T2 = (F0 * brdf.x + brdf.y);
     out_color.rgb += T1 * T2;   
 

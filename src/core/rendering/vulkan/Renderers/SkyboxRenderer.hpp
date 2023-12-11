@@ -2,7 +2,6 @@
 
 #include "IRenderer.h"
 #include "core/rendering/vulkan/VulkanUI.h"
-#include "core/rendering/vulkan/Renderers/DeferredRenderer.hpp"
 
 struct SkyboxRenderer : public IRenderer
 {
@@ -14,7 +13,7 @@ struct SkyboxRenderer : public IRenderer
 	void init(const Texture2D& cubemap)
 	{
 		/* Create descriptor set containing the cubemap */
-		VkSampler sampler_clamp_linear = VulkanRendererCommon::get_instance().s_SamplerRepeatLinear;
+		VkSampler sampler_clamp_linear = VulkanRendererCommon::get_instance().s_SamplerClampNearest;
 		VkDescriptorPoolSize pool_sizes[1]
 		{
 			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1},
@@ -63,7 +62,7 @@ struct SkyboxRenderer : public IRenderer
 	void render(VkCommandBuffer cmd_buffer) override
 	{
 		VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Skybox Pass");
-		static const glm::vec2 render_size = { VulkanImGuiRenderer::scene_viewport_size.x, VulkanImGuiRenderer::scene_viewport_size.y };
+		glm::vec2 render_size = { DeferredRenderer::gbuffer[0].final_lighting.info.width, DeferredRenderer::gbuffer[0].final_lighting.info.height };
 
 		vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 		set_viewport_scissor(cmd_buffer, render_size.x, render_size.y, true);
@@ -99,12 +98,12 @@ struct SkyboxRenderer : public IRenderer
 
 	void create_renderpass() override
 	{
-		color_format = VulkanImGuiRenderer::scene_viewport_attachments[0].info.imageFormat;
+		color_format = DeferredRenderer::gbuffer[0].final_lighting.info.imageFormat;
 		depth_format = DeferredRenderer::gbuffer[0].depth_attachment.info.imageFormat;
 		for (int i = 0; i < NUM_FRAMES; i++)
 		{
 			renderpass[i].reset();
-			renderpass[i].add_color_attachment(VulkanImGuiRenderer::scene_viewport_attachments[i].view, VK_ATTACHMENT_LOAD_OP_LOAD);
+			renderpass[i].add_color_attachment(DeferredRenderer::gbuffer[i].final_lighting.view, VK_ATTACHMENT_LOAD_OP_LOAD);
 			renderpass[i].add_depth_attachment(DeferredRenderer::gbuffer[i].depth_attachment.view, VK_ATTACHMENT_LOAD_OP_LOAD);
 		}
 	}

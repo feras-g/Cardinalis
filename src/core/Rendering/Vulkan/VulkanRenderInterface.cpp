@@ -16,10 +16,9 @@ RenderInterface::RenderInterface(const char* name, int maj, int min, int patch)
 {
 }
 
-void RenderInterface::initialize()
+void RenderInterface::init()
 {
 	// Init Vulkan context
-	create_instance();
 	create_device();
 
 	// Init frames
@@ -44,225 +43,23 @@ void RenderInterface::terminate()
 	vkDestroyCommandPool(context.device, context.temp_cmd_pool, nullptr);
 
 	context.swapchain->destroy();
-	vkDestroySurfaceKHR(context.instance, surface, nullptr);
-
+	vkDestroySurfaceKHR(context.device.instance, surface, nullptr);
 
 	vkDestroyDevice(context.device, nullptr);
-	vkDestroyInstance(context.instance, nullptr);
-}
-
-void RenderInterface::create_instance()
-{
-	uint32_t version = VK_MAKE_VERSION(maj_ver, min_ver, patch_ver);
-	VkApplicationInfo appInfo =
-	{
-		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-		.pNext = NULL,
-		.pApplicationName = m_name,
-		.applicationVersion = version,
-		.pEngineName = m_name,
-		.engineVersion = version,
-		.apiVersion = version,
-	};
-
-	{
-		uint32_t extensionCount = 0;
-		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-		std::vector<VkExtensionProperties> instanceExtensions{ extensionCount };
-		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, instanceExtensions.data());
-	}
-
-	{
-		uint32_t layerCount = 0;
-		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-		std::vector<VkLayerProperties> instanceLayers{ layerCount };
-		vkEnumerateInstanceLayerProperties(&layerCount, instanceLayers.data());
-	}
-
-	// Instance extensions
-	std::vector<const char*> instance_ext_names
-	{
-		"VK_KHR_surface",
-#ifdef _WIN32
-		"VK_KHR_win32_surface",
-#endif // _WIN32
-#ifdef ENGINE_DEBUG
-		"VK_EXT_debug_utils",
-		"VK_EXT_validation_features"
-#endif // ENGINE_DEBUG
-	};
-
-	// Instance layers
-	std::vector<const char*> instance_layers_names
-	{
-#ifdef ENGINE_DEBUG
-		"VK_LAYER_KHRONOS_validation",
-#endif // ENGINE_DEBUG
-		"VK_LAYER_LUNARG_monitor"
-	};
-
-	VkInstanceCreateInfo createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-	createInfo.pApplicationInfo = &appInfo;
-	createInfo.enabledLayerCount= (uint32_t)instance_layers_names.size();
-	createInfo.ppEnabledLayerNames = instance_layers_names.data();
-	createInfo.enabledExtensionCount= (uint32_t)instance_ext_names.size();
-	createInfo.ppEnabledExtensionNames = instance_ext_names.data();
-	
-	VK_CHECK(vkCreateInstance(&createInfo, nullptr, &context.instance));
-	
-	LOG_INFO("vkCreateInstance() : success.");
+	vkDestroyInstance(context.device.instance, nullptr);
 }
 
 void RenderInterface::create_device()
 {
-	uint32_t deviceCount = 0;
-	vkEnumeratePhysicalDevices(context.instance, &deviceCount, nullptr);
-	assert(deviceCount >= 1);
-
-	std::vector<VkPhysicalDevice> physical_devices;
-	physical_devices.resize(deviceCount);
-	VK_CHECK(vkEnumeratePhysicalDevices(context.instance, &deviceCount, physical_devices.data()));
-
-	// Use first physical device by default
-	context.physical_device = physical_devices[0];
-
-	// Enumerate devices
-	LOG_INFO("Found {0} device(s) :", deviceCount);
-	VkPhysicalDeviceProperties device_props = {};
-	for (uint32_t i=0; i < deviceCount; i++)
-	{
-		vkGetPhysicalDeviceProperties(physical_devices[i], &device_props);
-		RenderInterface::device_limits = device_props.limits;
-		LOG_DEBUG("{0} {1} {2}. Driver version = {3}. API Version = {4}.{5}.{6}", 
-			vk_object_to_string(device_props.deviceType), device_props.deviceName, device_props.deviceID, device_props.driverVersion,
-			VK_VERSION_MAJOR(device_props.apiVersion), VK_VERSION_MINOR(device_props.apiVersion), VK_VERSION_PATCH(device_props.apiVersion));
-	}
-
-	// Create a physical device and a queue : we chose the first
-	float queuePriorities[] = {1.0f};
-	VkDeviceQueueCreateInfo queueInfo =
-	{
-		.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-		.flags = NULL,
-		.queueFamilyIndex = 0,
-		.queueCount = 1,
-		.pQueuePriorities = queuePriorities
-	};
-
-	extensions = 
-	{ 
-		"VK_KHR_swapchain", 
-		"VK_KHR_dynamic_rendering",
-		//"VK_EXT_extended_dynamic_state3",
-	};
-
-	/* Enabled device features */
-	VkPhysicalDeviceDescriptorIndexingFeaturesEXT descriptor_indexing_feature = {};
-
-	VkPhysicalDeviceFeatures2 physical_features2 = {};
-	physical_features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-	physical_features2.pNext = &descriptor_indexing_feature;
-	vkGetPhysicalDeviceFeatures2(context.physical_device, &physical_features2);
-	
-	VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamic_rendering_feature = {};
-	VkPhysicalDeviceMultiviewFeaturesKHR multiview_feature = {};
-	VkPhysicalDeviceDepthClampZeroOneFeaturesEXT depth_clamp_feature = {};
-	VkPhysicalDeviceSynchronization2Features synchronization2_feature = {};
-	VkPhysicalDeviceExtendedDynamicState3FeaturesEXT dynamic_state3_features = {};
-
-	/* Descriptor indexing */
-	descriptor_indexing_feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
-	descriptor_indexing_feature.pNext = &dynamic_rendering_feature;
-	descriptor_indexing_feature.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
-	descriptor_indexing_feature.descriptorBindingPartiallyBound = VK_TRUE;
-	descriptor_indexing_feature.runtimeDescriptorArray = VK_TRUE;
-	descriptor_indexing_feature.descriptorBindingVariableDescriptorCount = VK_TRUE;
-	
-	/* Dynamic rendering */
-	dynamic_rendering_feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
-	dynamic_rendering_feature.pNext = &multiview_feature;
-	dynamic_rendering_feature.dynamicRendering = VK_TRUE;
-
-	/* Multiview */
-	multiview_feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHR;
-	multiview_feature.multiview = VK_TRUE;
-	multiview_feature.pNext = &depth_clamp_feature;
-
-	/* Depth clamp */
-	depth_clamp_feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_CLAMP_ZERO_ONE_FEATURES_EXT;
-	depth_clamp_feature.depthClampZeroOne = VK_TRUE;
-	depth_clamp_feature.pNext = &synchronization2_feature;
-
-	/* Synchronization 2 */
-	synchronization2_feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
-	synchronization2_feature.synchronization2 = VK_TRUE;
-	synchronization2_feature.pNext = VK_NULL_HANDLE;// &dynamic_state3_features;
-
-	///* Dynamic state 3 */
-	//dynamic_state3_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_FEATURES_EXT;
-	//dynamic_state3_features.extendedDynamicState3PolygonMode = VK_TRUE;
-	//dynamic_state3_features.pNext = VK_NULL_HANDLE;
-
-	VkDeviceCreateInfo device_create_info = {};
-	device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	device_create_info.pNext = &physical_features2;
-	device_create_info.flags = 0;
-	device_create_info.queueCreateInfoCount = 1;
-	device_create_info.pQueueCreateInfos = &queueInfo;
-	device_create_info.enabledExtensionCount = (uint32_t)extensions.size();
-	device_create_info.ppEnabledExtensionNames = extensions.data();
-	device_create_info.pEnabledFeatures = nullptr;
-	
-	VK_CHECK(vkCreateDevice(context.physical_device, &device_create_info, nullptr, &context.device));
-	
-	/* Initialize function pointers */
-#ifdef ENGINE_DEBUG
-	assert(fpCmdBeginDebugUtilsLabelEXT = (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetInstanceProcAddr(context.instance, "vkCmdBeginDebugUtilsLabelEXT"));
-	assert(fpCmdEndDebugUtilsLabelEXT = (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetInstanceProcAddr(context.instance, "vkCmdEndDebugUtilsLabelEXT"));
-	assert(fpCmdInsertDebugUtilsLabelEXT = (PFN_vkCmdInsertDebugUtilsLabelEXT)vkGetInstanceProcAddr(context.instance, "vkCmdInsertDebugUtilsLabelEXT"));
-	assert(fpSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(context.instance, "vkSetDebugUtilsObjectNameEXT"));
-#endif // ENGINE_DEBUG
-	
-	assert(fpCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)vkGetInstanceProcAddr(context.instance, "vkCmdBeginRenderingKHR"));
-	assert(fpCmdEndRenderingKHR = (PFN_vkCmdEndRenderingKHR)(vkGetInstanceProcAddr(context.instance, "vkCmdEndRenderingKHR")));
-	//assert(fpCmdSetPolygonModeEXT = (PFN_vkCmdSetPolygonModeEXT)(vkGetInstanceProcAddr(context.instance, "vkCmdSetPolygonModeEXT")));
-
-	LOG_INFO("vkCreateDevice() : success.");
+	context.device.create();
 }
 
 void RenderInterface::create_command_structures()
 {
-	// Command queue
-	vkGetDeviceQueue(context.device, context.gfxQueueFamily, 0, &context.queue);
-	assert(context.queue);
-
-	// Command buffers and command pools
-	VkCommandPoolCreateInfo poolCreateInfo =
-	{
-		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-		//.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-		.queueFamilyIndex = context.gfxQueueFamily
-	};
-
-
-	VkCommandBufferAllocateInfo alloc_info =
-	{
-		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-		.pNext = NULL,
-		.commandPool = context.temp_cmd_pool,
-		.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-		.commandBufferCount = 1
-	};
-
-	// Create a command pool and command buffer for each frame
 	for (uint32_t i = 0; i < NUM_FRAMES; i++)
 	{
-		vkCreateCommandPool(context.device, &poolCreateInfo, nullptr, &context.frames[i].cmd_pool);
-
-		alloc_info.commandPool = context.frames[i].cmd_pool;
-
-		vkAllocateCommandBuffers(context.device, &alloc_info, &context.frames[i].cmd_buffer);
+		context.frames[i].cmd_buffer.init(context.device, context.device.queue_family_indices[vk::queue_family::graphics]);
+		context.frames[i].cmd_buffer.create(context.device);
 	}
 }
 
@@ -298,7 +95,7 @@ void RenderInterface::create_surface(Window* window)
 		.hwnd = window->GetData()->hWnd
 	};
 
-	VK_CHECK(vkCreateWin32SurfaceKHR(context.instance, &surfaceInfo, nullptr, &surface));
+	VK_CHECK(vkCreateWin32SurfaceKHR(context.device.instance, &surfaceInfo, nullptr, &surface));
 
 	LOG_INFO("vkCreateWin32SurfaceKHR() success.");
 
@@ -315,7 +112,7 @@ void RenderInterface::create_swapchain()
 	                        VulkanRendererCommon::get_instance().swapchain_depth_format);
 }
 
-VulkanFrame& RenderInterface::get_current_frame()
+vk::frame& RenderInterface::get_current_frame()
 {
 	return context.frames[context.frame_count % NUM_FRAMES];
 }
@@ -375,7 +172,7 @@ void end_temp_cmd_buffer(VkCommandBuffer cmd_buffer)
 	VkFence submit_fence;
 
 	VK_CHECK(vkCreateFence(context.device, &submit_fence_info, nullptr, &submit_fence));
-	VK_CHECK(vkQueueSubmit(context.queue, 1, &submit_info, submit_fence));
+	VK_CHECK(vkQueueSubmit(context.device.graphics_queue, 1, &submit_info, submit_fence));
 
 	/* Destroy temporary command buffers */
 	vkWaitForFences(context.device, 1, &submit_fence, VK_TRUE, 1000000000ull);
@@ -948,25 +745,25 @@ void EndRenderPass(VkCommandBuffer cmdBuffer)
 	vkCmdEndRenderPass(cmdBuffer);
 }
 
-void set_viewport_scissor(VkCommandBuffer cmdBuffer, uint32_t width, uint32_t height, bool invertViewportY)
+void set_viewport_scissor(VkCommandBuffer cmdBuffer, uint32_t width, uint32_t height, bool flip_y)
 {
-	VkViewport viewport =
+	VkViewport viewport
 	{
 		.x = 0.0f,
 		.y = 0.0f,
 		.width = (float)width,
-		.height = (float)height,	// Flip viewport origin to bottom left corner 
+		.height = (float)height,
 		.minDepth = 0.0f,
 		.maxDepth = 1.0f
 	};
 
-	if (invertViewportY)
+	if (flip_y)
 	{
 		viewport.y = (float)height;
-		viewport.height *= -1;	// Flip viewport origin to bottom left corner 
+		viewport.height *= -1;
 	}
 
-	VkRect2D scissor = { .offset = {0, 0} , .extent = { width, height} };
+	VkRect2D scissor = { .offset = {0, 0}, .extent = { width, height} };
 
 	vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
 	vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);

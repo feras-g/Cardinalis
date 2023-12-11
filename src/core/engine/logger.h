@@ -6,24 +6,24 @@
 #include <spdlog/formatter.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
-class Logger
+class logger
 {
 public:
 	static void init(const char* loggerName, spdlog::level::level_enum e_LogLevel = spdlog::level::trace);
-	static std::shared_ptr<spdlog::logger>& GetLogger() { return s_Logger; }
+	static std::shared_ptr<spdlog::logger>& get() { return s_logger; }
 	static void exit_on_error(const char* msg);
 
-	Logger() = delete;
+	logger() = delete;
 protected:
-	static std::shared_ptr<spdlog::logger> s_Logger;
+	static std::shared_ptr<spdlog::logger> s_logger;
 private:
 };
 #ifdef ENGINE_DEBUG
-	#define LOG_ERROR(...) Logger::GetLogger()->error(__VA_ARGS__)
-	#define LOG_WARN(...)  Logger::GetLogger()->warn(__VA_ARGS__)
-	#define LOG_INFO(...)  Logger::GetLogger()->info(__VA_ARGS__)
-	#define LOG_DEBUG(...) Logger::GetLogger()->debug(__VA_ARGS__)
-	#define EXIT_ON_ERROR(...) Logger::exit_on_error(__VA_ARGS__)
+	#define LOG_ERROR(...) logger::get()->error(__VA_ARGS__)
+	#define LOG_WARN(...)  logger::get()->warn(__VA_ARGS__)
+	#define LOG_INFO(...)  logger::get()->info(__VA_ARGS__)
+	#define LOG_DEBUG(...) logger::get()->debug(__VA_ARGS__)
+	#define EXIT_ON_ERROR(...) logger::exit_on_error(__VA_ARGS__)
 #else
 	#define LOG_ERROR(...) 
 	#define LOG_WARN(...)  

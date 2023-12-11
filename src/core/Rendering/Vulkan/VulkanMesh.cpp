@@ -42,8 +42,8 @@ void VulkanMesh::create_from_data(std::span<VertexData> vertices, std::span<unsi
 {
 	m_num_vertices = vertices.size();
 	m_num_indices = indices.size();
-	m_index_buf_size_bytes  = EngineUtils::round_to(indices.size() * sizeof(unsigned int), RenderInterface::device_limits.minStorageBufferOffsetAlignment);
-	m_vertex_buf_size_bytes = EngineUtils::round_to(vertices.size() * sizeof(VertexData), RenderInterface::device_limits.minStorageBufferOffsetAlignment);
+	m_index_buf_size_bytes  = EngineUtils::round_to(indices.size() * sizeof(unsigned int), context.device.limits.minStorageBufferOffsetAlignment);
+	m_vertex_buf_size_bytes = EngineUtils::round_to(vertices.size() * sizeof(VertexData), context.device.limits.minStorageBufferOffsetAlignment);
 	
 	create_vertex_index_buffer(m_vertex_index_buffer, vertices.data(), m_vertex_buf_size_bytes, indices.data(), m_index_buf_size_bytes);
 }
@@ -224,7 +224,7 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 			cgltf_texture* tex_metallic_roughness = gltf_mat->pbr_metallic_roughness.metallic_roughness_texture.texture;
 			if (tex_metallic_roughness)
 			{
-				material.texture_metalness_roughness_idx = load_tex(TextureType::METALLIC_ROUGHNESS_MAP, tex_metallic_roughness, VulkanRendererCommon::get_instance().tex_metallic_roughness_format, true);
+				material.texture_metalness_roughness_idx = load_tex(TextureType::METALLIC_ROUGHNESS_MAP, tex_metallic_roughness, VulkanRendererCommon::get_instance().tex_metallic_roughness_format, false);
 			}
 
 			/* Factors */

@@ -1,5 +1,5 @@
 #include "Window.h"
-#include "core/engine/EngineLogger.h"
+#include "core/engine/logger.h"
 
 ///// Window Implementation
 #if defined(_WIN32)	
@@ -43,8 +43,8 @@ public:
 	void OnResize(unsigned int width, unsigned int height);
 
 
-	void OnLeftMouseButtonUp(MouseEvent event);
-	void OnLeftMouseButtonDown(MouseEvent event);
+	void OnMouseDown(MouseEvent event);
+	void OnMouseUp(MouseEvent event);
 	void OnMouseMove(MouseEvent event);
 	void OnKeyEvent(KeyEvent event);
 	bool AsyncKeyState(Key key) const;
@@ -233,10 +233,12 @@ LRESULT CALLBACK Window::Impl::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 			/* Mouse events */
 			case WM_MOUSEMOVE:
 			{
-				MouseEvent& event = self->hApplication->m_event_manager->mouse_event;
+				MouseEvent event = self->hApplication->m_event_manager->mouse_event;
 
-				event.px = GET_X_LPARAM(lParam);
-				event.py = GET_Y_LPARAM(lParam);
+
+				event.b_first_click = false;
+				event.curr_pos_x = GET_X_LPARAM(lParam);
+				event.curr_pos_y = GET_Y_LPARAM(lParam);
 
 				self->OnMouseMove(event);
 			}
@@ -244,32 +246,112 @@ LRESULT CALLBACK Window::Impl::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 
 			case WM_LBUTTONDOWN:
 			{
-				MouseEvent& event = self->hApplication->m_event_manager->mouse_event;
+				MouseEvent event = self->hApplication->m_event_manager->mouse_event;
+
 
 				event.b_lmb_click = true;
-				event.b_first_lmb_click = true;
+				event.b_first_click = true;
 
 				POINT pt;
 				pt.x = GET_X_LPARAM(lParam);
 				pt.y = GET_Y_LPARAM(lParam);
 				ScreenToClient(self->hWnd, &pt);
 
-				event.px = pt.x;
-				event.py = pt.y;
-				self->OnLeftMouseButtonDown(event);
+				event.curr_click_px = pt.x;
+				event.curr_click_py = pt.y;
+				self->OnMouseDown(event);
+			}
+			break;
+
+			case WM_MBUTTONDOWN:
+			{
+				MouseEvent event = self->hApplication->m_event_manager->mouse_event;
+
+
+				event.b_mmb_click = true;
+				event.b_first_click = true;
+				event.b_wheel_scroll = false;
+				event.wheel_zdelta = 0;
+				POINT pt;
+				pt.x = GET_X_LPARAM(lParam);
+				pt.y = GET_Y_LPARAM(lParam);
+				ScreenToClient(self->hWnd, &pt);
+
+				event.curr_click_px = pt.x;
+				event.curr_click_py = pt.y;
+				self->OnMouseDown(event);
+			}
+			break;
+
+			case WM_RBUTTONDOWN:
+			{
+				MouseEvent event = self->hApplication->m_event_manager->mouse_event;
+
+
+				event.b_rmb_click = true;
+				event.b_first_click = true;
+
+				POINT pt;
+				pt.x = GET_X_LPARAM(lParam);
+				pt.y = GET_Y_LPARAM(lParam);
+				ScreenToClient(self->hWnd, &pt);
+
+				event.curr_click_px = pt.x;
+				event.curr_click_py = pt.y;
+				self->OnMouseDown(event);
+			}
+			break;
+
+			case WM_MOUSEWHEEL:
+			{
+				MouseEvent event = self->hApplication->m_event_manager->mouse_event;
+
+				event.wheel_zdelta = (float)GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA;
+				event.b_wheel_scroll = true;
+				self->OnMouseDown(event);
 			}
 			break;
 
 			case WM_LBUTTONUP:
 			{
-				MouseEvent& event = self->hApplication->m_event_manager->mouse_event;
+				MouseEvent event = self->hApplication->m_event_manager->mouse_event;
+
 
 				event.b_lmb_click = false;
-				event.b_first_lmb_click = false;
-				event.px = GET_X_LPARAM(lParam);
-				event.py = GET_Y_LPARAM(lParam);
+				event.curr_click_px = GET_X_LPARAM(lParam);
+				event.curr_click_py = GET_Y_LPARAM(lParam);
 
-				self->OnLeftMouseButtonUp(event);
+				self->OnMouseUp(event);
+			}
+			break;
+
+			case WM_MBUTTONUP:
+			{
+				MouseEvent event = self->hApplication->m_event_manager->mouse_event;
+
+
+				event.b_mmb_click = false;
+
+				POINT pt;
+				pt.x = GET_X_LPARAM(lParam);
+				pt.y = GET_Y_LPARAM(lParam);
+				ScreenToClient(self->hWnd, &pt);
+
+				event.curr_click_px = pt.x;
+				event.curr_click_py = pt.y;
+				self->OnMouseUp(event);
+			}
+			break;
+
+			case WM_RBUTTONUP:
+			{
+				MouseEvent event = self->hApplication->m_event_manager->mouse_event;
+
+				event.b_rmb_click = false;
+				event.curr_click_px = GET_X_LPARAM(lParam);
+				event.curr_click_py = GET_Y_LPARAM(lParam);
+
+				self->OnMouseUp(event);
 			}
 			break;
 
@@ -280,14 +362,14 @@ LRESULT CALLBACK Window::Impl::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 
 				if(uMsg == WM_KEYDOWN) event.pressed = true;
 
-				if (wParam == 'Z')		event.append(Key::Z);
-				if (wParam == 'Q')		event.append(Key::Q);
-				if (wParam == 'S')		event.append(Key::S);
-				if (wParam == 'D')		event.append(Key::D);
-				if (wParam == VK_LEFT)	event.append(Key::LEFT);
-				if (wParam == VK_RIGHT)	event.append(Key::RIGHT);
-				if (wParam == VK_UP)	event.append(Key::UP);
-				if (wParam == VK_DOWN)	event.append(Key::DOWN);
+				if (wParam == 'Z')		event.key = Key::Z;
+				if (wParam == 'Q')		event.key = Key::Q;
+				if (wParam == 'S')		event.key = Key::S;
+				if (wParam == 'D')		event.key = Key::D;
+				if (wParam == VK_LEFT)	event.key = Key::LEFT;
+				if (wParam == VK_RIGHT)	event.key = Key::RIGHT;
+				if (wParam == VK_UP)	event.key = Key::UP;
+				if (wParam == VK_DOWN)	event.key = Key::DOWN;
 
 				self->OnKeyEvent(event);
 			}
@@ -297,15 +379,6 @@ LRESULT CALLBACK Window::Impl::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 				KeyEvent& event = self->hApplication->m_event_manager->key_event;
 
 				event.pressed = false;
-
-				if (wParam == 'Z')		event.append( Key::Z);
-				if (wParam == 'Q')		event.append( Key::Q);
-				if (wParam == 'S')		event.append( Key::S);
-				if (wParam == 'D')		event.append( Key::D);
-				if (wParam == VK_LEFT)	event.append( Key::LEFT);
-				if (wParam == VK_RIGHT)	event.append( Key::RIGHT);
-				if (wParam == VK_UP)	event.append( Key::UP);
-				if (wParam == VK_DOWN)	event.append( Key::DOWN);
 
 				self->OnKeyEvent(event);
 			}
@@ -349,13 +422,13 @@ inline void Window::Impl::ShutdownGUI() const
 
 /////////////////////////////////////////////////////////////////////////
 
-void Window::Impl::OnLeftMouseButtonUp(MouseEvent event)
+void Window::Impl::OnMouseDown(MouseEvent event)
 { 
-	hApplication->on_lmb_up(event);
+	hApplication->on_mouse_down(event);
 };
-void Window::Impl::OnLeftMouseButtonDown(MouseEvent event)
+void Window::Impl::OnMouseUp(MouseEvent event)
 { 
-	hApplication->on_lmb_down(event);
+	hApplication->on_mouse_up(event);
 };
 void Window::Impl::OnMouseMove(MouseEvent event) 
 { 
@@ -454,8 +527,8 @@ bool Window::AsyncKeyState(Key key) const
 
 void Window::OnKeyEvent(KeyEvent keypress) { pImpl->OnKeyEvent(keypress); }
 
-void Window::OnLeftMouseButtonUp(MouseEvent event)   { pImpl->OnLeftMouseButtonUp(event); };
-void Window::OnLeftMouseButtonDown(MouseEvent event) { pImpl->OnLeftMouseButtonDown(event); };
+void Window::OnMouseUp(MouseEvent event)   { pImpl->OnMouseUp(event); };
+void Window::OnMouseDown(MouseEvent event) { pImpl->OnMouseDown(event); };
 void Window::OnMouseMove(MouseEvent event) { pImpl->OnMouseMove(event); };
 
 IWindow::IWindow()

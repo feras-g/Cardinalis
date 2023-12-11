@@ -20,12 +20,12 @@ void VulkanRenderPassDynamic::begin(VkCommandBuffer cmd_buffer, glm::vec2 extent
 	render_info.pStencilAttachment = has_stencil_attachment ? &stencil_attachment : VK_NULL_HANDLE;
 	render_info.viewMask = viewMask;
 
-	fpCmdBeginRenderingKHR(cmd_buffer, &render_info);
+	vkCmdBeginRendering(cmd_buffer, &render_info);
 }
 
 void VulkanRenderPassDynamic::end(VkCommandBuffer cmd_buffer) const
 {
-	fpCmdEndRenderingKHR(cmd_buffer);
+	vkCmdEndRendering(cmd_buffer);
 }
 
 void  VulkanRenderPassDynamic::reset()
@@ -48,7 +48,7 @@ void VulkanRenderPassDynamic::add_attachment(VkImageView view, VkImageLayout lay
 	
 	if (layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 	{
-		attachment_info.clearValue.color = { 0.0f, 0.0f, 0.0f, 1.0f };
+		attachment_info.clearValue.color = { 1.0f, 1.0f, 1.0f, 1.0f };
 		color_attachments.push_back(attachment_info);
 	}
 	else if (layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL || VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)

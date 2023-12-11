@@ -15,7 +15,7 @@ struct CubemapRenderer
 		cubemap_attachment.create_vk_image(context.device, true, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 		cubemap_attachment.create_view(context.device, ImageViewTextureCubemap);
 
-		VkSampler& sampler = VulkanRendererCommon::get_instance().s_SamplerRepeatLinear; // Repeat important to avoid seams
+		VkSampler& sampler = VulkanRendererCommon::get_instance().s_SamplerClampNearest; 
 
 		for (int layer = 0; layer < 6; layer++)
 		{
@@ -23,9 +23,7 @@ struct CubemapRenderer
 			cubemap_layer_view_ui_id[layer] = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler, cubemap_layer_view[layer], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
 		}
 
-		mesh_skybox.create_from_file("basic/cube_pos_y_up.glb");
-
-		cube_matrix_data.model = glm::rotate(mesh_skybox.geometry_data.primitives[0].model, glm::radians(0.0f), glm::vec3(1,0,0));
+		mesh_skybox.create_from_file("basic/skybox.glb");
 		mesh_skybox_id = ObjectManager::get_instance().add_mesh(mesh_skybox, "Mesh_Skybox", {});
 
 		ubo_cube_matrix_data.init(Buffer::Type::UNIFORM, sizeof(CubeMatrixData), "UBO Cube Matrix Data");
@@ -64,7 +62,7 @@ struct CubemapRenderer
 	void render()
 	{
 		VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
-		set_viewport_scissor(cmd_buffer, cubemap_attachment.info.width, cubemap_attachment.info.height, true);
+		set_viewport_scissor(cmd_buffer, cubemap_attachment.info.width, cubemap_attachment.info.height);
 
 		pipeline.bind(cmd_buffer);
 		VkDescriptorSet descriptor_sets[]
@@ -100,16 +98,17 @@ struct CubemapRenderer
 			glm::vec4(0.0f, 0.0f, -1.0f, 1.0f),
 		};
 
+		
 		glm::mat4 view_matrices[6]
 		{
-			glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(+1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
-			glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
-			glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)),
-			glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, +1.0f, 0.0f), glm::vec3(0.0f, 0.0f, +1.0f)),
-			glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, +1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
-			glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f))
+			glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+			glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f,-1.0f,  0.0f)),
+			glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
+			glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
+			glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+			glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
 		};
-		glm::mat4 model;
+		glm::mat4 model = glm::identity<glm::mat4>();
 		glm::mat4 projection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
 	} cube_matrix_data;
 

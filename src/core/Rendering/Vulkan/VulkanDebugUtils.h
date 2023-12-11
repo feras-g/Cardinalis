@@ -12,16 +12,16 @@ public:
 	VulkanRenderDebugMarker(VkCommandBuffer cmd_buffer, const char* name, std::array<float, 4> color = { 1.0f, 1.0f, 1.0f, 1.0f })
 	{
 #if ENGINE_DEBUG
-		this->m_cmd_buffer = cmd_buffer;
-		VkDebugUtilsLabelEXT info = { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT, nullptr, name, *color.data() };
-		fpCmdBeginDebugUtilsLabelEXT(m_cmd_buffer, &info);
+		//this->m_cmd_buffer = cmd_buffer;
+		//VkDebugUtilsLabelEXT info = { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT, nullptr, name, *color.data() };
+		//fpCmdBeginDebugUtilsLabelEXT(m_cmd_buffer, &info);
 #endif // ENGINE_DEBUG
 	}
 
 	~VulkanRenderDebugMarker()
 	{
 #if ENGINE_DEBUG
-		fpCmdEndDebugUtilsLabelEXT(m_cmd_buffer);
+		//fpCmdEndDebugUtilsLabelEXT(m_cmd_buffer);
 #endif // ENGINE_DEBUG
 	}
 private:
@@ -37,15 +37,15 @@ private:
 static void set_object_name(VkObjectType obj_type, uint64_t obj_handle, const char* obj_name)
 {
 #if ENGINE_DEBUG
-	const VkDebugUtilsObjectNameInfoEXT debug_info = 
-	{
-		.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-		.objectType = obj_type,
-		.objectHandle = obj_handle,
-		.pObjectName = obj_name,
-	};
+	//const VkDebugUtilsObjectNameInfoEXT debug_info = 
+	//{
+	//	.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+	//	.objectType = obj_type,
+	//	.objectHandle = obj_handle,
+	//	.pObjectName = obj_name,
+	//};
 
-	fpSetDebugUtilsObjectNameEXT(context.device, &debug_info);
+	//fpSetDebugUtilsObjectNameEXT(context.device, &debug_info);
 #endif // ENGINE_DEBUG
 }
 

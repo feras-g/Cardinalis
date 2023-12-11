@@ -74,6 +74,24 @@ vec3 spherical_env_map_to_direction(vec2 uv)
     return cartesian;
 }
 
+vec2 SampleSphericalMap_ZXY(vec3 v)
+{
+    const vec2 invAtan = vec2(0.1591, 0.3183);
+    vec2 uv = vec2(atan(v.x, v.z), asin(v.y));
+    uv *= invAtan;
+    uv += 0.5;
+    return vec2(uv.x, uv.y);
+}
+
+vec2 SampleSphericalMap_YXZ(vec3 v)
+{
+    const vec2 invAtan = vec2(0.1591, 0.3183);
+    vec2 uv = vec2(atan(v.y, v.x), asin(v.z));
+    uv *= invAtan;
+    uv += 0.5;
+    return vec2(uv.x, uv.y);
+}
+
 /* 
     From a direction on the unit sphere, retrieve
     the corresponding position on the env map

@@ -25,11 +25,11 @@ void VulkanImGuiRenderer::init()
 
 	ImGui_ImplVulkan_InitInfo imgui_vk_info = {};
 
-	imgui_vk_info.Instance = context.instance;
-	imgui_vk_info.PhysicalDevice = context.physical_device;
+	imgui_vk_info.Instance = context.device.instance;
+	imgui_vk_info.PhysicalDevice = context.device.physical_device;
 	imgui_vk_info.Device = context.device;
-	imgui_vk_info.QueueFamily = context.gfxQueueFamily;
-	imgui_vk_info.Queue = context.queue;
+	imgui_vk_info.QueueFamily = context.device.queue_family_indices[vk::queue_family::graphics];
+	imgui_vk_info.Queue = context.device.graphics_queue;
 	imgui_vk_info.DescriptorPool = m_descriptor_pool;
 	imgui_vk_info.MinImageCount = 2;
 	imgui_vk_info.ImageCount = 2;

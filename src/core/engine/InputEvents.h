@@ -67,19 +67,28 @@ class Window;
 
 struct MouseEvent
 {
-	int px, py;
-	int last_click_px;
-	int last_click_py;
+	// Mouse click
+	int curr_click_px = 0;
+	int curr_click_py = 0;
 
-	bool b_first_lmb_click = false;
+	int last_click_px = 0;
+	int last_click_py = 0;
+
+	float wheel_zdelta = 0.0f;
+	// Mouse movement
+	int curr_pos_x = 0;
+	int curr_pos_y = 0;
+
+	// Mouse events
+	bool b_first_click = false;
 	bool b_lmb_click  = false;
+	bool b_rmb_click = false;
+	bool b_mmb_click  = false;
+	bool b_wheel_scroll = false;
 };
 
 struct KeyEvent
 {
-	void append(Key other) { key = key | other; };
-	void remove(Key other) { key = key & ~other; };
-	bool contains(Key other) const { return (key & other) == other; };
 	bool is_key_pressed_async(Key key) const;
 	std::string to_string();
 

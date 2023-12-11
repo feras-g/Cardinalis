@@ -1,6 +1,6 @@
 #include "VulkanShader.h"
 #include "VulkanDebugUtils.h"
-#include "core/engine/EngineLogger.h"
+#include "core/engine/logger.h"
 #include "core/rendering/vulkan/VkResourceManager.h"
 #include "VulkanRenderInterface.h"
 

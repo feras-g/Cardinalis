@@ -25,7 +25,8 @@ void main()
     uint index = idx_buffer.data[gl_VertexIndex];
     Vertex v = vtx_buffer.data[index];
     position_os = vec4(v.px, v.py, v.pz, 1.0);
-    vec4 position_cs = frame.data.proj * mat4(mat3(frame.data.view)) * ps.model * position_os;
+    vec4 position_ws = ps.model * position_os;
+    vec4 position_cs = frame.data.proj * mat4(mat3(frame.data.view)) *  position_ws;
 
     gl_Position = position_cs.xyww;
 }

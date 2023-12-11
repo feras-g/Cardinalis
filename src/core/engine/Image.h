@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 #include <sstream>
-#include "core/engine/EngineLogger.h"
+#include "core/engine/logger.h"
 #include <vulkan/vulkan.h>
 
 std::string_view get_extension(std::string_view filename);

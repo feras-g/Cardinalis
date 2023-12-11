@@ -1,12 +1,14 @@
-#include "EngineLogger.h"
+#include "logger.h"
 
 #if defined(_WIN32)
 #include <Windows.h>
 #endif
 
-std::shared_ptr<spdlog::logger> Logger::s_Logger;
+#include "imgui.h"
 
-void Logger::init(const char* loggerName, spdlog::level::level_enum e_LogLevel)
+std::shared_ptr<spdlog::logger> logger::s_logger;
+
+void logger::init(const char* name, spdlog::level::level_enum log_level)
 {
 	// https://github.com/gabime/spdlog#create-stdoutstderr-logger-object
 	// https://github.com/gabime/spdlog/wiki/3.-Custom-formatting
@@ -14,17 +16,17 @@ void Logger::init(const char* loggerName, spdlog::level::level_enum e_LogLevel)
 	spdlog::set_pattern("%^[%T] %n: %v%$");
 
 	// Create 
-	s_Logger = spdlog::stdout_color_mt(loggerName);
-	s_Logger->set_level(e_LogLevel);
-	s_Logger->flush();
+	s_logger = spdlog::stdout_color_mt(name);
+	s_logger->set_level(log_level);
+	s_logger->flush();
 }
 
-void Logger::exit_on_error(const char* msg)
+void logger::exit_on_error(const char* msg)
 {
 #if defined(_WIN32)
 		MessageBoxA(nullptr, msg, "Error", MB_ICONERROR);
 #else
-		s_Logger->error(msg);
+		s_logger->error(msg);
 #endif
 		exit(EXIT_FAILURE);
 }

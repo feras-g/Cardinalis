@@ -63,5 +63,5 @@ vec2 integrate_brdf(float NoV, float roughness)
 
 void main()
 {
-    out_color = integrate_brdf(uv.x, 1-uv.y);
+    out_color = integrate_brdf(uv.x, uv.y);
 }

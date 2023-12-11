@@ -1,126 +1,116 @@
 #include "Camera.h"
 
-#include "core/engine/EngineLogger.h"
-#include "core/engine/Application.h"
+#include "imgui.h"
 
-#include <glm/gtx/rotate_vector.hpp>
-#include <glm/vec3.hpp>
-
-void CameraController::translate(float dt, KeyEvent event)
+camera::camera()
+	: camera(glm::radians(50.0f), 1.0f, 0.25f, 250.0f)
 {
-	glm::vec3 curr_translation(0.0f);
-	if (event.is_key_pressed_async(Key::Z))      m_movement = m_movement | Movement::FORWARD;
-	if (event.is_key_pressed_async(Key::Q))      m_movement = m_movement | Movement::LEFT;
-	if (event.is_key_pressed_async(Key::S))      m_movement = m_movement | Movement::BACKWARD;
-	if (event.is_key_pressed_async(Key::D))      m_movement = m_movement | Movement::RIGHT;
-	if (event.is_key_pressed_async(Key::SPACE))  m_movement = m_movement | Movement::UP;
-	if (event.is_key_pressed_async(Key::LSHIFT)) m_movement = m_movement | Movement::DOWN;
-	
-	if ((m_movement & Movement::UP)   == Movement::UP)			  curr_translation += m_up * move_speed ;
-	if ((m_movement & Movement::DOWN) == Movement::DOWN)		  curr_translation -= m_up * move_speed ;
 
-	if ((m_movement & Movement::RIGHT) == Movement::RIGHT)		  curr_translation += m_right * move_speed ;
-	if ((m_movement & Movement::LEFT)  == Movement::LEFT)		  curr_translation -= m_right * move_speed ;
+}
+camera::camera(float fov, float aspect_ratio, float znear, float zfar)
+{
+	init_projection(fov, aspect_ratio, znear, zfar);
+	init_view(glm::vec3(0,0,0), axes.forward, axes.up);
+}
 
-	if ((m_movement & Movement::FORWARD)  == Movement::FORWARD)   curr_translation += m_forward * move_speed ;
-	if ((m_movement & Movement::BACKWARD) == Movement::BACKWARD)  curr_translation -= m_forward * move_speed ;
+void camera::init_view(glm::vec3 eye, glm::vec3 center, glm::vec3 up)
+{
+	position = eye;
+	view = glm::lookAt(position, position + center, up);
+}
 
-	m_position += curr_translation * dt;
+void camera::init_projection(float fov, float aspect_ratio, float znear, float zfar)
+{
+	this->fov = fov;
+	this->aspect_ratio = aspect_ratio;
+	this->znear = znear;
+	this->zfar = zfar;
+	projection = glm::perspective(fov, aspect_ratio, znear, zfar);
+}
 
-	m_movement = Movement::NONE;
+void camera::update_view()
+{
+	view = glm::lookAt(position, position + forward, up);
+}
 
+void camera::update_projection()
+{
+	projection = glm::perspective(fov, aspect_ratio, znear, zfar);
+}
+
+void camera::update_aspect_ratio(float aspect_ratio)
+{
+	this->aspect_ratio = aspect_ratio;
+	update_projection();
+}
+
+void camera::translate(glm::vec3 offset)
+{
+	position += offset * move_speed;
 	update_view();
 }
 
-void CameraController::rotate(float dt, MouseEvent event)
+void camera::rotate(glm::vec2 mouse_pos)
 {
-	if (b_first_click)
+	if (first_mouse_click)
 	{
-		m_last_mouse_pos.x = (float)event.px;
-		m_last_mouse_pos.y = (float)event.py;
-		b_first_click = false;
+		last_click_pos = mouse_pos;
+		first_mouse_click = false;
+		return;
 	}
 
-	float xoffset = (float)event.px - m_last_mouse_pos.x;
-	float yoffset = m_last_mouse_pos.y - (float)event.py;
-	m_last_mouse_pos.x = (float)event.px;
-	m_last_mouse_pos.y = (float)event.py;
+	float xoffset = mouse_pos.x - last_click_pos.x;
+	float yoffset = last_click_pos.y - mouse_pos.y;
+	last_click_pos.x = mouse_pos.x;
+	last_click_pos.y = mouse_pos.y;
 
 	float sensitivity = 0.1f;
 	xoffset *= sensitivity;
 	yoffset *= sensitivity;
 
-	yaw   += xoffset;
+	yaw += xoffset;
 	pitch += yoffset;
+
+	glm::vec2 rotation(pitch, yaw);
 
 	pitch = std::clamp(pitch, -89.0f, 89.0f);
 
-	glm::vec3 dir;
-	dir.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-	dir.y = sin(glm::radians(pitch));
-	dir.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-	m_forward = glm::normalize(dir);
-	update_view();
+	forward.x = -cos(glm::radians(rotation.x)) * sin(glm::radians(rotation.y));
+	forward.y = sin(glm::radians(rotation.x));
+	forward.z = cos(glm::radians(rotation.x)) * cos(glm::radians(rotation.y));
+
+	forward = glm::normalize(forward);
 }
 
-glm::mat4& CameraController::update_view()
+void camera::show_ui()
 {
-	m_right   = glm::normalize(glm::cross(m_forward, { 0,1,0 }));
-	m_up      = glm::normalize(glm::cross(m_right, m_forward));
-	m_forward = glm::cross(m_up, m_right);
-
-	m_view = glm::lookAt(m_position, m_position + m_forward, m_up);
-
-	return m_view;
-}
-
-Camera::Camera()
-: controller({ 0,1.0f,0 }, { 0,-180,0 }, { 0,0,1 }, { 0,1,0 }), fov(45.0f), aspect_ratio(ASPECT_16_9), znear(0.25f), zfar(250.0f), projection_mode(ProjectionMode::PERSPECTIVE)
-{
-	update_proj();
-}
-
-Camera::Camera(CameraController controller, float fov, float aspect_ratio, float zNear, float zFar)
-	: controller(controller), fov(fov), aspect_ratio(ASPECT_16_9), znear(zNear), zfar(zFar), projection_mode(ProjectionMode::PERSPECTIVE)
-{
-	update_proj();
-}
-
-
-void Camera::update_proj()
-{
-	if (projection_mode == ProjectionMode::PERSPECTIVE)
+	if (ImGui::Begin("Camera"))
 	{
-		projection = glm::perspective(glm::radians(fov), aspect_ratio, znear, zfar);
+		if (ImGui::InputFloat3("Position", glm::value_ptr(position)) ||
+			ImGui::InputFloat3("Forward", glm::value_ptr(forward)) ||
+			ImGui::InputFloat3("Up", glm::value_ptr(up)) ||
+			ImGui::InputFloat3("Right", glm::value_ptr(right)))
+		{
+			update_view();
+		}
+
+		ImGui::SeparatorText("Controls");
+		ImGui::InputFloat3("Move Speed", glm::value_ptr(move_speed));
+
+		ImGui::Text("View Matrix");
+		ImGui::InputFloat4("R0 - View", glm::value_ptr(view[0]));
+		ImGui::InputFloat4("R1 - View", glm::value_ptr(view[1]));
+		ImGui::InputFloat4("R2 - View", glm::value_ptr(view[2]));
+		ImGui::InputFloat4("R3 - View", glm::value_ptr(view[3]));
+
+
+		ImGui::Text("Projection Matrix");
+		ImGui::InputFloat4("R0 - Projection", glm::value_ptr(projection[0]));
+		ImGui::InputFloat4("R1 - Projection", glm::value_ptr(projection[1]));
+		ImGui::InputFloat4("R2 - Projection", glm::value_ptr(projection[2]));
+		ImGui::InputFloat4("R3 - Projection", glm::value_ptr(projection[3]));
 	}
-	else if (projection_mode == ProjectionMode::ORTHOGRAPHIC)
-	{
-		projection = glm::ortho(left, right, bottom, top, znear, zfar);
-	}
+	ImGui::End();
 }
 
-void Camera::translate(float dt, KeyEvent event)
-{
-	controller.translate(dt, event);
-}
 
-void Camera::rotate(float dt, MouseEvent event)
-{
-	controller.rotate(dt, event);
-}
-
-void Camera::update_aspect_ratio(float aspect)
-{
-	aspect_ratio = aspect;
-	update_proj();
-}
-
-const glm::mat4& Camera::get_proj() const
-{
-	return projection;
-}
-
-const glm::mat4& Camera::get_view() const
-{
-	return controller.m_view;
-}

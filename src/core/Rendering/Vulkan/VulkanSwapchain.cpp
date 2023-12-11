@@ -9,7 +9,7 @@
 VulkanSwapchain::VulkanSwapchain(VkSurfaceKHR surface)
     : h_surface(surface)
 {
-    const VkInstance& instance = context.instance;
+    const VkInstance& instance = context.device.instance;
     const VkDevice& device = context.device;
 
     // Initialize function pointers
@@ -26,11 +26,11 @@ VulkanSwapchain::VulkanSwapchain(VkSurfaceKHR surface)
 
     // Present mode
     uint32_t presentModeCount = 0;
-    VK_CHECK(fpGetPhysicalDeviceSurfacePresentModesKHR(context.physical_device, h_surface, &presentModeCount, nullptr));
+    VK_CHECK(fpGetPhysicalDeviceSurfacePresentModesKHR(context.device.physical_device, h_surface, &presentModeCount, nullptr));
     assert(presentModeCount >= 1);
 
     std::vector<VkPresentModeKHR> presentModes(presentModeCount);
-	VK_CHECK(fpGetPhysicalDeviceSurfacePresentModesKHR(context.physical_device, h_surface, &presentModeCount, presentModes.data()));
+	VK_CHECK(fpGetPhysicalDeviceSurfacePresentModesKHR(context.device.physical_device, h_surface, &presentModeCount, presentModes.data()));
 	info.present_mode = VK_PRESENT_MODE_FIFO_KHR;
     LOG_WARN("Current present mode : {0}", vk_object_to_string(info.present_mode));
 }
@@ -39,16 +39,16 @@ void VulkanSwapchain::init(VkFormat colorFormat, VkColorSpaceKHR colorSpace, VkF
 {
     // Query/Set surface capabilities
     VkSurfaceCapabilitiesKHR caps;
-    VK_CHECK(fpGetPhysicalDeviceSurfaceCapabilitiesKHR(context.physical_device, h_surface, &caps));
+    VK_CHECK(fpGetPhysicalDeviceSurfaceCapabilitiesKHR(context.device.physical_device, h_surface, &caps));
 
     LOG_INFO("Surface capabilities : minImageCount={0} maxImageCount={1}, currentImageExtent={2}x{3}, maxImageExtent={4}x{2}\n",
         caps.minImageCount, caps.maxImageCount, caps.currentExtent.width, caps.currentExtent.height,
         caps.maxImageExtent.width, caps.maxImageExtent.height);
 
     uint32_t surfaceFormatsCount = 0;
-    fpGetPhysicalDeviceSurfaceFormatsKHR(context.physical_device, h_surface, &surfaceFormatsCount, nullptr);
+    fpGetPhysicalDeviceSurfaceFormatsKHR(context.device.physical_device, h_surface, &surfaceFormatsCount, nullptr);
     std::vector<VkSurfaceFormatKHR> surfaceFormats (surfaceFormatsCount);
-    fpGetPhysicalDeviceSurfaceFormatsKHR(context.physical_device, h_surface, &surfaceFormatsCount, surfaceFormats.data());
+    fpGetPhysicalDeviceSurfaceFormatsKHR(context.device.physical_device, h_surface, &surfaceFormatsCount, surfaceFormats.data());
 
    
     assert(caps.maxImageCount >= 1);

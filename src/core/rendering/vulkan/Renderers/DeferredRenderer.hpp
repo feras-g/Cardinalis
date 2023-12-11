@@ -11,7 +11,7 @@ struct DeferredRenderer : public IRenderer
 	static constexpr int render_size = 2048;
 	
 	VkFormat base_color_format = VK_FORMAT_R8G8B8A8_SRGB;
-	VkFormat normal_format = VK_FORMAT_R16G16_SFLOAT;	// Only store X and Y components
+	VkFormat normal_format = VK_FORMAT_R16G16B16A16_SFLOAT;// VK_FORMAT_R16G16_SFLOAT;	// Only store X and Y components
 	VkFormat metalness_roughness_format = VK_FORMAT_R8G8_UNORM;
 	VkFormat depth_format = VK_FORMAT_D32_SFLOAT;
 
@@ -21,6 +21,7 @@ struct DeferredRenderer : public IRenderer
 		Texture2D normal_attachment;
 		Texture2D metalness_roughness_attachment;
 		Texture2D depth_attachment;
+		Texture2D final_lighting;
 	} gbuffer[NUM_FRAMES];
 
 	void init()
@@ -48,8 +49,8 @@ struct DeferredRenderer : public IRenderer
 			gbuffer[i].depth_attachment.create(context.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
 			/* Create final attachment compositing all geometry information */
-			compositing_attachments[i].init(VulkanRendererCommon::get_instance().swapchain_color_format, render_size, render_size, 1, 0, "[Deferred Renderer] Composite Color Attachment");
-			compositing_attachments[i].create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+			gbuffer[i].final_lighting.init(VulkanRendererCommon::get_instance().swapchain_color_format, render_size, render_size, 1, 0, "[Deferred Renderer] Composite Color Attachment");
+			gbuffer[i].final_lighting.create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 		}
 	}
 
@@ -59,7 +60,7 @@ struct DeferredRenderer : public IRenderer
 		create_pipeline_lighting_pass();
 	}
 
-	void create_renderpass()
+	void create_renderpass() override
 	{
 		create_geometry_renderpass();
 		create_lighting_renderpass();
@@ -82,7 +83,7 @@ struct DeferredRenderer : public IRenderer
 		for (int i = 0; i < NUM_FRAMES; i++)
 		{
 			renderpass_lighting[i].reset();
-			renderpass_lighting[i].add_color_attachment(VulkanImGuiRenderer::scene_viewport_attachments[i].view);
+			renderpass_lighting[i].add_color_attachment(gbuffer[i].final_lighting.view, VK_ATTACHMENT_LOAD_OP_CLEAR);
 		}
 	}
 
@@ -140,7 +141,7 @@ struct DeferredRenderer : public IRenderer
 		{
 			sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(4, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_repeat_linear, "Pre-filtered Env Map Diffuse");
 			sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(5, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_repeat_linear, "Pre-filtered Env Map Specular");
-			sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(6, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_clamp_nearest, "BRDF Integration Map");
+			sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(6, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_repeat_linear, "BRDF Integration Map");
 		}
 
 		sampled_images_descriptor_set_layout.create("GBuffer Descriptor Layout");
@@ -157,7 +158,7 @@ struct DeferredRenderer : public IRenderer
 			{
 				sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(4, IBLRenderer::prefiltered_diffuse_env_map.view, sampler_repeat_linear);
 				sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(5, IBLRenderer::prefiltered_specular_env_map.view, sampler_repeat_linear);
-				sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(6, IBLRenderer::brdf_integration_map.view, sampler_clamp_nearest);
+				sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(6, IBLRenderer::brdf_integration_map.view, sampler_repeat_linear);
 			}
 		}
 
@@ -231,16 +232,20 @@ struct DeferredRenderer : public IRenderer
 		VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Deferred Lighting Pass");
 		vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lighting_pass_pipeline);
 
-		set_viewport_scissor(cmd_buffer, VulkanImGuiRenderer::scene_viewport_size.x, VulkanImGuiRenderer::scene_viewport_size.y, false);
+		glm::vec2 render_size = { gbuffer[context.curr_frame_idx].final_lighting.info.width, gbuffer[context.curr_frame_idx].final_lighting.info.height };
+
+		// Invert when drawing to swapchain
+		set_viewport_scissor(cmd_buffer, render_size.x, render_size.y);
 
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lighting_pass_pipeline.layout, 0, 1, &VulkanRendererCommon::get_instance().m_framedata_desc_set[context.curr_frame_idx].vk_set, 0, nullptr);
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lighting_pass_pipeline.layout, 1, 1, &sampled_images_descriptor_set[context.curr_frame_idx].vk_set, 0, nullptr);
 
-		compositing_attachments[context.curr_frame_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
-		renderpass_lighting[context.curr_frame_idx].begin(cmd_buffer, { VulkanImGuiRenderer::scene_viewport_size.x, VulkanImGuiRenderer::scene_viewport_size.y });
+		gbuffer[context.curr_frame_idx].final_lighting.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+		renderpass_lighting[context.curr_frame_idx].begin(cmd_buffer, { render_size.x, render_size.y });
 		vkCmdDraw(cmd_buffer, 3, 1, 0, 0);
 		renderpass_lighting[context.curr_frame_idx].end(cmd_buffer);
-		compositing_attachments[context.curr_frame_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
+		gbuffer[context.curr_frame_idx].final_lighting.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
+
 	}
 
 	void render(VkCommandBuffer cmd_buffer)
@@ -271,12 +276,12 @@ struct DeferredRenderer : public IRenderer
 		ImTextureID normal;
 		ImTextureID metalness_roughness;
 		ImTextureID depth;
-		ImTextureID composite;
+		ImTextureID final_lighting;
 	} ui_texture_ids[NUM_FRAMES];
 
 	void init_ui()
 	{
-		VkSampler& sampler_clamp_nearest = VulkanRendererCommon::get_instance().s_SamplerClampNearest;
+		VkSampler& sampler_clamp_linear = VulkanRendererCommon::get_instance().s_SamplerClampLinear;
 
 		for (int i = 0; i < NUM_FRAMES; i++)
 		{
@@ -284,7 +289,7 @@ struct DeferredRenderer : public IRenderer
 			ui_texture_ids[i].normal = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_nearest, gbuffer[i].normal_attachment.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
 			ui_texture_ids[i].metalness_roughness = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_nearest, gbuffer[i].metalness_roughness_attachment.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
 			ui_texture_ids[i].depth = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_nearest, gbuffer[i].depth_attachment.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
-			ui_texture_ids[i].composite = VulkanImGuiRenderer::scene_viewport_attachments_ids[i];
+			ui_texture_ids[i].final_lighting = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_nearest, gbuffer[i].final_lighting.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
 		}
 	}
 
@@ -293,9 +298,15 @@ struct DeferredRenderer : public IRenderer
 		if (render_ok)
 		{
 			const ImVec2 main_img_size  = { render_size, render_size };
-			const ImVec2 thumb_img_size = { ((float)VulkanGUI::scene_viewport_window_size.x / 4 ), (float)VulkanGUI::scene_viewport_window_size.y / 4};
+			const ImVec2 thumb_img_size = { 256, 256 };
 
-			static ImTextureID curr_main_image = ui_texture_ids[context.curr_frame_idx].composite;
+			static ImTextureID curr_main_image = ui_texture_ids[context.curr_frame_idx].final_lighting;
+
+			if (ImGui::Begin("Scene"))
+			{
+				ImGui::Image(ui_texture_ids[context.curr_frame_idx].final_lighting, ImGui::GetContentRegionAvail());
+			}
+			ImGui::End();
 
 			if (ImGui::Begin("GBuffer View"))
 			{
@@ -303,19 +314,16 @@ struct DeferredRenderer : public IRenderer
 				{
 					curr_main_image = ui_texture_ids[context.curr_frame_idx].base_color;
 				}
-				ImGui::SameLine();
 				
 				if (ImGui::ImageButton(ui_texture_ids[context.curr_frame_idx].normal, thumb_img_size))
 				{
 					curr_main_image = ui_texture_ids[context.curr_frame_idx].normal;
 				}
-				ImGui::SameLine();
 				if (ImGui::ImageButton(ui_texture_ids[context.curr_frame_idx].metalness_roughness, thumb_img_size))
 				{
 					curr_main_image = ui_texture_ids[context.curr_frame_idx].metalness_roughness;
 				}
-				ImGui::SameLine();
-				if (ImGui::ImageButton(ui_texture_ids[context.curr_frame_idx].depth, { thumb_img_size.x - 55, thumb_img_size.y }))
+				if (ImGui::ImageButton(ui_texture_ids[context.curr_frame_idx].depth, { thumb_img_size.x, thumb_img_size.y }))
 				{
 					curr_main_image = ui_texture_ids[context.curr_frame_idx].depth;
 				}
@@ -387,7 +395,6 @@ struct DeferredRenderer : public IRenderer
 	bool render_ok = false;
 	VulkanRenderPassDynamic renderpass_geometry[NUM_FRAMES];
 	VulkanRenderPassDynamic renderpass_lighting[NUM_FRAMES];
-	Texture2D compositing_attachments[NUM_FRAMES];
 	
 	Pipeline geometry_pass_pipeline;
 	Pipeline lighting_pass_pipeline;

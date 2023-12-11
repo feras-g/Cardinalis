@@ -42,8 +42,11 @@ void main()
     instance_color = instances.data[gl_InstanceIndex].color;
     position_ws = model * position_os;
     vec4 position_cs = frame.data.view_proj * position_ws;
-    normal_ws        = model * vec4(v.nx, v.ny, v.nz, 0.0);
-    vec2 depth_cs    = position_cs.zw;
+    mat4 normal_mat = transpose(inverse(  model  ));
+
+    normal_ws = normal_mat * vec4(v.nx, v.ny, v.nz, 0.0);
+
+    vec2 depth_cs = position_cs.zw;
 
     uv = vec2(v.u, v.v);
 

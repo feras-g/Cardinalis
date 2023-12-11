@@ -99,7 +99,7 @@ void Buffer::create_vk_buffer_impl(size_t size, VkBufferUsageFlags usage, VkMemo
 	VkMemoryAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	allocInfo.allocationSize = memRequirements.size;
-	allocInfo.memoryTypeIndex = EngineUtils::FindMemoryType(context.physical_device, memRequirements.memoryTypeBits, memProperties);
+	allocInfo.memoryTypeIndex = EngineUtils::FindMemoryType(context.device.physical_device, memRequirements.memoryTypeBits, memProperties);
 	VK_CHECK(vkAllocateMemory(context.device, &allocInfo, nullptr, &m_vk_device_memory));
 
 	VK_CHECK(vkBindBufferMemory(context.device, m_vk_buffer, m_vk_device_memory, 0));

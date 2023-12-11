@@ -14,6 +14,11 @@ static uint32_t calc_mip_levels(uint32_t width, uint32_t height)
     return uint32_t(std::floor(std::log2(std::max(width, height))) + 1);
 }
 
+void Texture2D::init(VkFormat format, glm::vec2 extent, uint32_t layers, bool calc_mip, std::string_view debug_name)
+{
+    init(format, uint32_t(extent.x), uint32_t(extent.y), layers, calc_mip, debug_name);
+}
+
 void Texture2D::init(VkFormat format, uint32_t width, uint32_t height, uint32_t layers, bool calc_mip, std::string_view debug_name)
 {
     info.imageFormat = format;
@@ -121,7 +126,7 @@ void Texture::create_vk_image(VkDevice device, bool isCubemap, VkImageUsageFlags
     {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize = imageMemReq.size,
-        .memoryTypeIndex = EngineUtils::FindMemoryType(context.physical_device, imageMemReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+        .memoryTypeIndex = EngineUtils::FindMemoryType(context.device.physical_device, imageMemReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
     };
     
     VK_CHECK(vkAllocateMemory(device, &allocInfo, nullptr, &deviceMemory));

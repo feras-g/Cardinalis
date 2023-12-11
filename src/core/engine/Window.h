@@ -71,8 +71,8 @@ public:
 	void OnClose() override;
 	void OnResize(unsigned int width, unsigned int height) override;
 
-	void OnLeftMouseButtonUp(MouseEvent event);
-	void OnLeftMouseButtonDown(MouseEvent event);
+	void OnMouseUp(MouseEvent event);
+	void OnMouseDown(MouseEvent event);
 	void OnMouseMove(MouseEvent event);
 	void OnKeyEvent(KeyEvent event);
 	bool AsyncKeyState(Key key) const;

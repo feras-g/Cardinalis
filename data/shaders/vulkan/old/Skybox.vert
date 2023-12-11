@@ -19,7 +19,6 @@ void main()
     uint index = ibo.data[gl_VertexIndex];
     Vertex v = vbo.data[index];
     positionOS = vec4(v.px, v.py, v.pz, 1.0f);
-    positionOS.yz *= -1;
     vec4 positionCS = frame_data.proj * mat4(mat3(frame_data.view)) * positionOS;
 
     gl_Position = positionCS.xyww;

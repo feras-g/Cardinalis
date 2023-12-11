@@ -8,15 +8,19 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #endif // _WIN32
 
-#include <vulkan/vulkan.hpp>
+#include "core/engine/common.h"
+#include "core/engine/vulkan/vk_common.h"
+#include "core/engine/vulkan/objects/vk_device.h"
+
+#include "core/engine/logger.h"
+
 #include <vulkan/vk_enum_string_helper.h>
 
-#include "core/engine/EngineLogger.h"
 #include "core/rendering/vulkan/VulkanResources.h"
 #include "core/rendering/vulkan/VulkanSwapchain.h"
 #include "core/rendering/vulkan/VulkanTexture.h"
 #include "core/engine/Image.h"
-#include "core/rendering/vulkan/VulkanFrame.hpp"
+#include "core/rendering/vulkan/vk_frame.hpp"
 #include "core/rendering/vulkan/VulkanShader.h"
 
 #include <glm/vec2.hpp>
@@ -41,15 +45,13 @@ static constexpr uint32_t NUM_FRAMES = 2;
 
 struct VulkanContext
 {
-	VkInstance instance;
-	VkDevice device;
-	VkPhysicalDevice physical_device;
-	VkQueue queue;
 	VkCommandPool frames_cmd_pool;
 	VkCommandPool temp_cmd_pool;
-	VulkanFrame frames[NUM_FRAMES];
+	
+	vk::device device;
+	vk::frame frames[NUM_FRAMES];
 
-	VulkanFrame& get_current_frame() { return frames[curr_frame_idx]; }
+	vk::frame& get_current_frame() { return frames[curr_frame_idx]; }
 	void update_frame_index() { curr_frame_idx = (curr_frame_idx + 1) % NUM_FRAMES; }
 
 	std::unique_ptr<VulkanSwapchain> swapchain;
@@ -57,7 +59,6 @@ struct VulkanContext
 	uint32_t frame_count= 0;
 	uint32_t curr_frame_idx = 0;
 	uint32_t curr_backbuffer_idx = 0; 
-	uint32_t gfxQueueFamily		= 0;
 };
 extern VulkanContext context;
 
@@ -66,11 +67,10 @@ class RenderInterface
 public:
 	RenderInterface(const char* name, int maj, int min, int patch);
 
-	void initialize();
+	void init();
 	void terminate();
 	bool m_init_success;
 
-	void create_instance();
 	void create_device();
 	void create_surface(Window* window);
 	void create_swapchain();
@@ -78,7 +78,7 @@ public:
 	void create_command_structures();
 	void create_synchronization_structures();
 
-	VulkanFrame& get_current_frame();
+	vk::frame& get_current_frame();
 	inline VulkanSwapchain* get_swapchain() const { return context.swapchain.get(); }
 
 	inline size_t get_current_frame_index() const { return context.frame_count % NUM_FRAMES;  }
@@ -243,7 +243,7 @@ void create_sampler(VkDevice device, VkFilter minFilter, VkFilter magFilter, VkS
 void BeginRenderpass(VkCommandBuffer cmdBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer, VkRect2D renderArea, const VkClearValue* clearValues, uint32_t clearValueCount);
 
 void EndRenderPass(VkCommandBuffer cmdBuffer);
-void set_viewport_scissor(VkCommandBuffer cmdBuffer, uint32_t width, uint32_t height, bool invertViewportY = false);
+void set_viewport_scissor(VkCommandBuffer cmdBuffer, uint32_t width, uint32_t height, bool flip_y = false);
 void set_polygon_mode(VkCommandBuffer cmdBuffer, VkPolygonMode mode);
 
 VkPipelineLayout create_pipeline_layout(VkDevice device, std::span<VkDescriptorSetLayout> descSetLayout, std::span<VkPushConstantRange> push_constant_ranges = {});
