@@ -582,9 +582,9 @@ void Pipeline::create_graphics(const VertexFragmentShader& shader, uint32_t numC
 	VkResourceManager::get_instance(context.device)->add_pipeline(pipeline);
 }
 
-void Pipeline::create_compute(const Shader& shader)
+void Pipeline::create_compute(const Shader& shader, std::span<VkDescriptorSetLayout> descriptor_set_layout)
 {
-	assert(layout);
+	layout.create(descriptor_set_layout);
 
 	VkComputePipelineCreateInfo compute_ppl_info = {};
 	compute_ppl_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;

@@ -58,8 +58,7 @@ struct DebugLineRenderer : public IRenderer
 			debug_line_descriptor_set.layout
 		};
 		populate_shader.create("debug_line_populate_comp.comp.spv");
-		compute_pipeline.layout.create(compute_pipeline_layouts);
-		compute_pipeline.create_compute(populate_shader);
+		compute_pipeline.create_compute(populate_shader, compute_pipeline_layouts);
 	}
 
 	void create_renderpass() override

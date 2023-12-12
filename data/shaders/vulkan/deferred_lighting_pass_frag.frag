@@ -53,7 +53,6 @@ void main()
     out_color.rgb = vec3(0.0);
 
     out_color += vec4(brdf_cook_torrance(brdf_data, vec3(0.8, 0.4, 0.3) * 2), 1.0);
-    //[[unroll]]
     for(int i = -5; i < 5; i++)
     {
         for(int j = -5; j < 5; j++)

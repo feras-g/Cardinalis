@@ -47,35 +47,47 @@ struct IBLRenderer
 		descriptor_pool = create_descriptor_pool(pool_sizes, 1);
 
 		shader.create("fullscreen_quad_vert.vert.spv", "importance_sample_diffuse_frag.frag.spv");
-
+		
 		/* Init descriptor set for prefiltered maps rendering */
-		descriptor_set.layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_clamp_nearest, "Spherical env map");
-		descriptor_set.layout.add_uniform_buffer_binding(1, VK_SHADER_STAGE_FRAGMENT_BIT, "Diffuse Env Map Prefiltering parameters");
-		descriptor_set.layout.create("Diffuse Env Map Prefiltering Shader Params Layout");
-		descriptor_set.create(descriptor_pool, "Diffuse Env Map Prefiltering");
+		descriptor_set.layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_clamp_nearest, "Sampled Image: Source Spherical Env Map");
+		descriptor_set.layout.add_storage_image_binding(1, "Storage Image: Diffuse Prefiltering");
+		descriptor_set.layout.add_storage_image_binding(2, "Storage Image: Specular Prefiltering");
+		descriptor_set.layout.add_uniform_buffer_binding(3, VK_SHADER_STAGE_COMPUTE_BIT, "UBO: Prefilter parameters");
+		descriptor_set.layout.create("Descriptor Set Layout: Prefilter");
+		descriptor_set.create(descriptor_pool, "Descriptor Set: Env Map Prefiltering");
+
+
 		descriptor_set.write_descriptor_combined_image_sampler(0, spherical_env_map.view, sampler_clamp_nearest);
+
+		assert(false);// todo : write storage image
+
+
 		descriptor_set.write_descriptor_uniform_buffer(1, ubo_shader_params, 0, VK_WHOLE_SIZE);
 
-		VkDescriptorSetLayout layouts[]
+		VkDescriptorSetLayout descriptor_set_layout[]
 		{
 			descriptor_set.layout
 		};
 
+		cs_prefiltering.create("ibl_prefiltering_comp.comp");
+		compute_pipeline.create_compute(cs_prefiltering, descriptor_set_layout);
+
 		pipeline.layout.add_push_constant_range("Specular Mip Level", { VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(unsigned int) });
-		pipeline.layout.create(layouts);
+		pipeline.layout.create(descriptor_set_layout);
 
 		VkFormat color_format[]
 		{
 			env_map_format
 		};
 
-		pipeline.create_graphics(shader, color_format, VK_FORMAT_UNDEFINED, Pipeline::Flags::NONE, pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
-
+		pipeline.create_graphics(shader, color_format, VK_FORMAT_UNDEFINED, Pipeline::Flags::NONE, pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_NONE, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+		
+		/* BRDF integration */
 		VkPipelineLayout empty_layout = {};
 		VkPipelineLayoutCreateInfo empty_info = {};
 		vkCreatePipelineLayout(context.device, &empty_info, nullptr, &empty_layout);
 		shader_brdf_integration.create("fullscreen_quad_vert.vert.spv", "integrate_brdf_frag.frag.spv");
-		pipeline_brdf_integration.create_graphics(shader_brdf_integration, std::span<VkFormat>(&brdf_integration_map_format, 1), VK_FORMAT_UNDEFINED, Pipeline::Flags::NONE, empty_layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+		pipeline_brdf_integration.create_graphics(shader_brdf_integration, std::span<VkFormat>(&brdf_integration_map_format, 1), VK_FORMAT_UNDEFINED, Pipeline::Flags::NONE, empty_layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_NONE, VK_FRONT_FACE_COUNTER_CLOCKWISE);
 	}
 
 	void init_assets(bool size_changed)
@@ -93,7 +105,7 @@ struct IBLRenderer
 		/* Diffuse env map prefiltering */
 		{
 			prefiltered_diffuse_env_map.init(env_map_format, spherical_env_map_size, 1, false, "Pre-filtered diffuse environment map attachment");
-			prefiltered_diffuse_env_map.create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+			prefiltered_diffuse_env_map.create(context.device, VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 			prefiltered_diffuse_env_map.transition_immediate(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
 			prefiltered_diffuse_env_map_ui_id = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_nearest, prefiltered_diffuse_env_map.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
 		}
@@ -103,7 +115,7 @@ struct IBLRenderer
 			prefiltered_specular_env_map.init(env_map_format, spherical_env_map_size, 1, false, "Pre-filtered specular environment map attachment");
 			/* 6 mip levels for each roughness increment : 0.0, 0.2, 0.4, 0.8, 1.0 */
 			prefiltered_specular_env_map.info.mipLevels = k_specular_mip_levels;
-			prefiltered_specular_env_map.create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+			prefiltered_specular_env_map.create(context.device, VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 			prefiltered_specular_env_map.transition_immediate(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
 
 			glm::vec2 mip_size = spherical_env_map_size;
@@ -151,10 +163,11 @@ struct IBLRenderer
 		ubo_shader_params.create();
 
 		/* Defaults */
-		shader_params.k_env_map_width = spherical_env_map.info.width;
-		shader_params.k_env_map_height = spherical_env_map.info.height;
+		shader_params.image_size = { spherical_env_map.info.width, spherical_env_map.info.height };
+		shader_params.inv_image_size = glm::vec2(1.0) / shader_params.image_size;
 		shader_params.num_samples_diffuse = 4096;
 		shader_params.base_mip_diffuse = 2;
+		shader_params.hammersley = false;
 
 		update_shader_params_ubo();
 	}
@@ -176,6 +189,8 @@ struct IBLRenderer
 		pipeline.bind(cmd_buffer);
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 0, 1, &descriptor_set.vk_set, 0, nullptr);
 
+		const int group_count_x = 16;
+		const int group_count_y = 16;
 
 		/* Diffuse */
 		if (shader_params.mode == MODE_PREFILTER_DIFFUSE)
@@ -183,27 +198,19 @@ struct IBLRenderer
 			int placeholder_val = 0;
 			pipeline.layout.cmd_push_constants(cmd_buffer, "Specular Mip Level", &placeholder_val);
 			set_viewport_scissor(cmd_buffer, spherical_env_map.info.width, spherical_env_map.info.height, true);
-			prefiltered_diffuse_env_map.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
-			render_pass.reset();
-			render_pass.add_color_attachment(prefiltered_diffuse_env_map.view);
-			render_pass.begin(cmd_buffer, { spherical_env_map.info.width, spherical_env_map.info.height });
-			vkCmdDraw(cmd_buffer, 3, 1, 0, 0);
-			render_pass.end(cmd_buffer);
+			prefiltered_diffuse_env_map.transition(cmd_buffer, VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_SHADER_WRITE_BIT);
+			vkCmdDispatch(cmd_buffer, group_count_x, group_count_y, 1);
 			prefiltered_diffuse_env_map.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
 		}
 		else if (shader_params.mode == MODE_PREFILTER_SPECULAR)
 		{
 			/* Specular */
-			prefiltered_specular_env_map.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+			prefiltered_specular_env_map.transition(cmd_buffer, VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_SHADER_WRITE_BIT);
 			for (int mip = 0; mip < k_specular_mip_levels; mip++)
 			{
 				pipeline.layout.cmd_push_constants(cmd_buffer, "Specular Mip Level", &mip);
 				set_viewport_scissor(cmd_buffer, specular_mip_sizes[mip].x, specular_mip_sizes[mip].y, true);
-				render_pass.reset();
-				render_pass.add_color_attachment(specular_mip_views[mip]);
-				render_pass.begin(cmd_buffer, specular_mip_sizes[mip]);
-				vkCmdDraw(cmd_buffer, 3, 1, 0, 0);
-				render_pass.end(cmd_buffer);
+				vkCmdDispatch(cmd_buffer, group_count_x, group_count_y, 1);
 			}
 			prefiltered_specular_env_map.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
 		}
@@ -318,11 +325,12 @@ struct IBLRenderer
 
 	struct ShaderParams
 	{
-		unsigned int k_env_map_width;		// Width of source environment map.
-		unsigned int k_env_map_height;		// Height of source environment map.
+		glm::vec2 image_size;				// Size of source environment map
+		glm::vec2 inv_image_size;			// Inverse size of source environment map
 		unsigned int num_samples_diffuse;	// Number of num_samples_diffuse for importance sampling.
 		unsigned int base_mip_diffuse;		// Base mipmap level of the environment map to sample from.
 		unsigned int mode = 0;				// Whether to prefilter diffuse or specular.
+		bool hammersley;					// Whether to use a Hammersley sequence or uniform distribution for importance sampling.
 	} shader_params;
 
 	enum Mode
@@ -361,4 +369,9 @@ struct IBLRenderer
 	Buffer ubo_shader_params;
 
 	static inline bool is_initialized = false;
+
+	/* WIP */
+	ComputeShader cs_prefiltering;
+	Pipeline compute_pipeline;
+
 };
