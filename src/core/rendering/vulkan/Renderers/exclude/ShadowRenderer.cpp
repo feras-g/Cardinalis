@@ -149,7 +149,6 @@ void CascadedShadowRenderer::compute_cascade_splits()
 		per_cascade_projection[i] = glm::perspective(glm::radians(h_camera->fov), h_camera->aspect_ratio, (near_clip + prev_split_dist * clip_range), (near_clip + split_dist * clip_range));
 		prev_split_dist = split_dist;
 	}
-	
 }
 
 void CascadedShadowRenderer::compute_cascade_ortho_proj(size_t frame_idx)
