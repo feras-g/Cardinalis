@@ -156,11 +156,11 @@ void SampleProject::create_scene()
 {
 	VulkanMesh mesh_1, mesh_2, mesh_test_roughness; 
 	//mesh_1.create_from_file("basic/mat/scene.gltf");
-	mesh_2.create_from_file("scenes/sponza/scene.gltf");
+	mesh_2.create_from_file("scenes/temple/gltf/model.gltf");
 	mesh_test_roughness.create_from_file("test/metallic_roughness_test/scene.gltf");
 
 	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,180,0}, .scale = {  0.1f, 0.1f, 0.1f  } }));
-	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_2, "mesh_2", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  2.0f, 2.0f, 2.0f  } }));
+	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_2, "mesh_2", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.025f, 0.025f, 0.025f  } }));
 	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_test_roughness, "mesh_test_roughness", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.25f,0.25f,0.25f } }));
 
 	/*VulkanMesh mesh_sponza, mesh_ivy, mesh_curtains;
@@ -178,11 +178,11 @@ void SampleProject::create_scene()
 	//for (int z = -15; z < 15; z++)
 	//{
 	//	float spacing = 10.0f;
-	//	Transform t = { .position = spacing * glm::vec3(x, y, z), .rotation = {0,0,0}, .scale = glm::vec3{ 1.0f, 1.0f, 1.0f } };
+	//	Transform t = { .position = spacing * glm::vec3(x, y, z), .rotation = {0,0,0}, .scale = glm::vec3{  0.025f, 0.025f, 0.025f } };
 
 	//	//if ((x + z + 0) % 2 == 0)
 	//	{
-	//		ObjectManager::get_instance().add_mesh_instance("mesh_1", ObjectManager::GPUInstanceData{ .model = glm::mat4(t), .color = glm::vec4(glm::sphericalRand(1.0f), 1.0f) });
+	//		ObjectManager::get_instance().add_mesh_instance("mesh_2", ObjectManager::GPUInstanceData{ .model = glm::mat4(t) });
 	//	}
 	//	//else
 	//	//{

@@ -183,7 +183,7 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 
 				if (tex_type == TextureType::NORMAL_MAP || tex_type == TextureType::METALLIC_ROUGHNESS_MAP)
 				{
-					texture.sampler = VulkanRendererCommon::get_instance().s_SamplerRepeatNearest;
+					texture.sampler = VulkanRendererCommon::get_instance().s_SamplerRepeatLinear;
 				}
 				else
 				{

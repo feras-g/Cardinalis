@@ -1,5 +1,7 @@
 #version 460
 
+#extension GL_EXT_control_flow_attributes : enable
+
 #include "headers/utils.glsl"
 #include "headers/tonemapping.glsl"
 #include "headers/framedata.glsl"
@@ -50,17 +52,17 @@ void main()
     
     out_color.rgb = vec3(0.0);
 
-    // out_color += vec4(brdf_cook_torrance(brdf_data, vec3(0.8, 0.4, 0.3) * 2), 1.0);
-
+    out_color += vec4(brdf_cook_torrance(brdf_data, vec3(0.8, 0.4, 0.3) * 2), 1.0);
+    //[[unroll]]
     for(int i = -5; i < 5; i++)
     {
         for(int j = -5; j < 5; j++)
         {
-            vec3 l = vec3(i * 2 + cos(frame.data.time), 0.5, j * 2 + sin(frame.data.time))  - position_ws;
+            vec3 l = vec3(i * 2 + cos(frame.data.time), 2.5, j * 2 + sin(frame.data.time))  - position_ws;
             float atten = attenuation_gltf(length(l), 1.0);
             brdf_data.lightdir_ws = normalize(l);
             brdf_data.halfvec_ws = normalize(brdf_data.lightdir_ws + brdf_data.viewdir_ws);
-            out_color += vec4(brdf_cook_torrance(brdf_data, vec3(1,1,0)), 1.0) * atten;
+            out_color += vec4(brdf_cook_torrance(brdf_data, vec3(1)), 1.0) * atten;
         }
     }
 

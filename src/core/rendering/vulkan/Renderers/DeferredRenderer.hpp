@@ -285,11 +285,11 @@ struct DeferredRenderer : public IRenderer
 
 		for (int i = 0; i < NUM_FRAMES; i++)
 		{
-			ui_texture_ids[i].base_color = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_nearest, gbuffer[i].base_color_attachment.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
-			ui_texture_ids[i].normal = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_nearest, gbuffer[i].normal_attachment.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
-			ui_texture_ids[i].metalness_roughness = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_nearest, gbuffer[i].metalness_roughness_attachment.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
-			ui_texture_ids[i].depth = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_nearest, gbuffer[i].depth_attachment.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
-			ui_texture_ids[i].final_lighting = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_nearest, gbuffer[i].final_lighting.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
+			ui_texture_ids[i].base_color = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_linear, gbuffer[i].base_color_attachment.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
+			ui_texture_ids[i].normal = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_linear, gbuffer[i].normal_attachment.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
+			ui_texture_ids[i].metalness_roughness = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_linear, gbuffer[i].metalness_roughness_attachment.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
+			ui_texture_ids[i].depth = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_linear, gbuffer[i].depth_attachment.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
+			ui_texture_ids[i].final_lighting = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_linear, gbuffer[i].final_lighting.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
 		}
 	}
 
