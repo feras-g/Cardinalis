@@ -27,9 +27,10 @@ public:
 	void show_toolbar();
 	void show_inspector(const ObjectManager& object_manager);
 	void show_draw_statistics(IRenderer::DrawStats draw_stats);
-	void show_viewport_window(camera& camera);
+	void show_viewport_window(ImTextureID scene_image_id, camera& camera);
 	void show_shader_library();
 	void start_overlay(const char* title);
+	
 	/* UI rendering */
 	void render(VkCommandBuffer cmd_buffer);
 	void on_window_resize();
@@ -39,9 +40,9 @@ public:
 	
 	bool is_scene_viewport_hovered();
 	bool m_is_scene_viewport_hovered = false;
-	float scene_view_aspect_ratio = 1.0f;
-	static inline ImVec2 scene_viewport_window_size;
+	float viewport_aspect_ratio = 1.0;
 
+	bool is_not_selecting_gizmo() const;
 
 	float x, y;
 	camera *h_camera;

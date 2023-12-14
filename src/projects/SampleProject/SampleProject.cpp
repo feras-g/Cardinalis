@@ -45,15 +45,15 @@ void SampleProject::init()
 
 void SampleProject::compose_gui()
 {
+	
 	m_gui.begin();
 	m_gui.show_toolbar();
-	m_gui.show_gizmo(m_camera, m_event_manager->key_event, ObjectManager::get_instance().m_mesh_instance_data[0][0].model);
 	m_gui.show_inspector(ObjectManager::get_instance());
 	m_gui.show_draw_statistics(IRenderer::draw_stats);
 	m_gui.show_shader_library();
-	m_gui.show_viewport_window(m_camera);
+	m_gui.show_viewport_window(deferred_renderer.ui_texture_ids[context.curr_frame_idx].final_lighting, m_camera);
 	m_camera.show_ui();
-	deferred_renderer.show_ui();
+	deferred_renderer.show_ui(m_camera);
 	ibl_renderer.show_ui();
 	m_gui.end();
 }
@@ -112,10 +112,6 @@ void SampleProject::update(float t, float dt)
 	
 	}
 
-	if (deferred_renderer.viewport_aspect_ratio != m_camera.aspect_ratio)
-	{
-		m_camera.update_aspect_ratio(deferred_renderer.viewport_aspect_ratio);
-	}
 
 	static ObjectManager& object_manager = ObjectManager::get_instance();
 
@@ -247,7 +243,7 @@ void SampleProject::on_mouse_move(MouseEvent event)
 		}
 
 
-		if (m_event_manager->mouse_event.b_lmb_click)
+		if (m_event_manager->mouse_event.b_lmb_click && m_gui.is_not_selecting_gizmo())
 		{
 			glm::vec2 mouse_pos = { m_event_manager->mouse_event.curr_pos_x, m_event_manager->mouse_event.curr_pos_y };
 			m_camera.rotate(mouse_pos);

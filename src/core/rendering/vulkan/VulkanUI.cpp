@@ -8,10 +8,7 @@
 
 #include "glm/gtx/quaternion.hpp"
 
-#include "../imgui/imgui.h"
-#include "../imgui/widgets/imguizmo/ImGuizmo.h"
-#include "../imgui/backends/imgui_impl_win32.h"
-#include "../imgui/backends/imgui_impl_vulkan.h"
+
 
 static ImGuizmo::OPERATION gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
 
@@ -51,7 +48,7 @@ void VulkanGUI::show_gizmo(const camera& camera, const KeyEvent& event, glm::mat
 	ImGuizmo::MODE current_gizmo_mode = ImGuizmo::MODE::WORLD;
 
 	ImGuizmo::BeginFrame();
-	ImGuizmo::SetDrawlist(ImGui::GetBackgroundDrawList());
+	ImGuizmo::SetDrawlist(ImGui::GetWindowDrawList());
 	ImGuizmo::SetRect(0, 0, m_renderer.get_render_area().x, m_renderer.get_render_area().y);
 
 	ImGuizmo::SetOrthographic(false);
@@ -196,30 +193,45 @@ bool VulkanGUI::is_scene_viewport_hovered()
 	return m_is_scene_viewport_hovered;
 }
 
-void VulkanGUI::show_viewport_window(camera& camera)
+
+bool VulkanGUI::is_not_selecting_gizmo() const
 {
-	//if (ImGui::Begin("Scene Viewport"))
-	//{
-	//	scene_viewport_window_size = ImGui::GetContentRegionAvail();
-	//	
-	//	const float curr_aspect_ratio = scene_viewport_window_size.x / scene_viewport_window_size.y;
+	return !ImGuizmo::IsUsing();
+}
 
-	//	if (curr_aspect_ratio != scene_view_aspect_ratio)
-	//	{
-	//		scene_view_aspect_ratio = curr_aspect_ratio;
-	//		camera.aspect_ratio = curr_aspect_ratio;
-	//		camera.update_projection();
-	//	}
 
-	//	ImVec2 window_pos = ImGui::GetWindowPos();
-	//	ImVec2 window_size = ImGui::GetWindowSize();
-	//	ImVec2 cursor_pos = ImGui::GetCursorPos();
+void VulkanGUI::show_viewport_window(ImTextureID scene_image_id, camera& camera)
+{
+	if (ImGui::Begin("Scene"))
+	{
+		if (viewport_aspect_ratio != camera.aspect_ratio)
+		{
+			camera.update_aspect_ratio(viewport_aspect_ratio);
+		}
 
-	//	m_is_scene_viewport_hovered = ImGui::IsWindowHovered();
-	//	ImGui::Image(m_renderer.scene_viewport_attachments_ids[context.curr_frame_idx], scene_viewport_window_size);
-	//}
+		/* Scene view */
+		ImVec2 window_size = ImGui::GetContentRegionAvail();
+		ImGui::Image(scene_image_id, window_size);
+		viewport_aspect_ratio = window_size.x / window_size.y;
 
-	//ImGui::End();
+		/* Scene Gizmos */
+		ImGuizmo::BeginFrame();
+		ImGuizmo::SetDrawlist(ImGui::GetWindowDrawList());
+		ImGuizmo::SetRect(0, 0, window_size.x, window_size.y);
+		ImGuizmo::SetOrthographic(false);
+
+		glm::mat4 transform = glm::identity<glm::mat4>();
+		glm::mat4 selected_object_transform = glm::identity<glm::mat4>();
+
+		const char* items[] = { "Translate", "Rotate", "Scale" };
+		static int current_item = 0;
+
+		const glm::f32* view = glm::value_ptr(camera.view);
+		const glm::f32* proj = glm::value_ptr(camera.projection);
+
+		ImGuizmo::Manipulate(view, proj, ImGuizmo::OPERATION::TRANSLATE, ImGuizmo::MODE::WORLD, glm::value_ptr(selected_object_transform));
+	}
+	ImGui::End();
 }
 void VulkanGUI::show_shader_library()
 {

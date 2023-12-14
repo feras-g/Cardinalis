@@ -298,20 +298,17 @@ struct DeferredRenderer : public IRenderer
 
 	void show_ui() override
 	{
+
+	}
+
+	void show_ui(camera camera)
+	{
 		if (render_ok)
 		{
 			const ImVec2 main_img_size  = { render_size, render_size };
 			const ImVec2 thumb_img_size = { 256, 256 };
 
 			static ImTextureID curr_main_image = ui_texture_ids[context.curr_frame_idx].final_lighting;
-
-			if (ImGui::Begin("Scene"))
-			{
-				ImVec2 window_size = ImGui::GetContentRegionAvail();
-				ImGui::Image(ui_texture_ids[context.curr_frame_idx].final_lighting, window_size);
-				viewport_aspect_ratio = window_size.x / window_size.y;
-			}
-			ImGui::End();
 
 			if (ImGui::Begin("GBuffer View"))
 			{
@@ -354,6 +351,8 @@ struct DeferredRenderer : public IRenderer
 			}
 
 			cubemap_renderer.show_ui();
+
+			
 
 			ImGui::End();
 		}
@@ -418,5 +417,4 @@ struct DeferredRenderer : public IRenderer
 
 	DrawStatsEntry deferred_renderer_stats;
 
-	float viewport_aspect_ratio = 1.0;
 };
