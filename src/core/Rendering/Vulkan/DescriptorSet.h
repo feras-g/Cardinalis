@@ -43,9 +43,9 @@ struct DescriptorSetLayout
 		bindings.emplace_back(VkDescriptorSetLayoutBinding{ binding, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, shaderStage });
 	}
 
-	inline void add_combined_image_sampler_binding(uint32_t binding, VkShaderStageFlags shaderStage, uint32_t count, VkSampler* sampler, std::string_view name)
+	inline void add_combined_image_sampler_binding(uint32_t binding, VkShaderStageFlags shaderStage, uint32_t count, std::string_view name)
 	{
-		bindings.emplace_back(VkDescriptorSetLayoutBinding{ binding, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, count, shaderStage, sampler });
+		bindings.emplace_back(VkDescriptorSetLayoutBinding{ binding, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, count, shaderStage, VK_NULL_HANDLE });
 	}
 
 	inline void add_storage_image_binding(uint32_t binding, std::string_view name)

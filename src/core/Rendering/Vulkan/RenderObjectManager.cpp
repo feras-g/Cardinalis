@@ -171,7 +171,7 @@ void ObjectManager::create_materials_ssbo()
 void ObjectManager::create_textures_descriptor_set(VkDescriptorPool pool)
 {
 	texture_descriptor_array_binding = 0;
-	m_bindless_layout.add_combined_image_sampler_binding(texture_descriptor_array_binding, VK_SHADER_STAGE_FRAGMENT_BIT, max_bindless_textures, VK_NULL_HANDLE, "Bindless Textures");
+	m_bindless_layout.add_combined_image_sampler_binding(texture_descriptor_array_binding, VK_SHADER_STAGE_FRAGMENT_BIT, max_bindless_textures, "Bindless Textures");
 
 	VkDescriptorSetLayoutBindingFlagsCreateInfo bindings_flags_info = {};
 	m_bindless_layout.binding_flags.push_back(VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT);

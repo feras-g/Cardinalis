@@ -38,7 +38,7 @@ struct CubemapRenderer
 		descriptor_pool = create_descriptor_pool(pool_sizes, 1);
 
 		cubemap_descriptor_set.layout.add_uniform_buffer_binding(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, "Cube Matrix Data binding");
-		cubemap_descriptor_set.layout.add_combined_image_sampler_binding(1, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler, "Spherical Env Map binding");
+		cubemap_descriptor_set.layout.add_combined_image_sampler_binding(1, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "Spherical Env Map binding");
 		cubemap_descriptor_set.layout.create("");
 		cubemap_descriptor_set.create(descriptor_pool, "");
 

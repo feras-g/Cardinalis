@@ -27,11 +27,11 @@ struct DeferredRenderer : public IRenderer
 	void init()
 	{
 		name = "Deferred Renderer";
+		deferred_renderer_stats = IRenderer::draw_stats.add_entry(name.c_str());
 		init_gbuffer();
 		create_renderpass();
 		create_pipeline();
 		init_ui();
-		deferred_renderer_stats = IRenderer::draw_stats.add_entry(name.c_str());
 	}
 
 	void init_gbuffer()
@@ -130,18 +130,20 @@ struct DeferredRenderer : public IRenderer
 		VkSampler& sampler_clamp_nearest = VulkanRendererCommon::get_instance().s_SamplerClampNearest;
 		VkSampler& sampler_repeat_linear = VulkanRendererCommon::get_instance().s_SamplerRepeatLinear;
 		VkSampler& sampler_clamp_linear = VulkanRendererCommon::get_instance().s_SamplerClampLinear;
+		VkSampler& sampler_repeat_nearest = VulkanRendererCommon::get_instance().s_SamplerRepeatNearest;
 
-		sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_clamp_nearest, "GBuffer Base Color");
-		sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(1, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_clamp_nearest, "GBuffer Normal");
-		sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(2, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_clamp_nearest, "GBuffer Metalness Roughness");
-		sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(3, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_clamp_nearest, "GBuffer Depth");
+		sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "GBuffer Base Color");
+		sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(1, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "GBuffer Normal");
+		sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(2, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "GBuffer Metalness Roughness");
+		sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(3, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "GBuffer Depth");
 
 		/* Add images for image-based lighting */
 		if (IBLRenderer::is_initialized)
 		{
-			sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(4, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_repeat_linear, "Pre-filtered Env Map Diffuse");
-			sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(5, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_repeat_linear, "Pre-filtered Env Map Specular");
-			sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(6, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_repeat_linear, "BRDF Integration Map");
+			// Only use a nearest sampler to sample these image, linear introduces artifacts probably due to averaging texels
+			sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(4, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "Pre-filtered Env Map Diffuse");
+			sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(5, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "Pre-filtered Env Map Specular");
+			sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(6, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "BRDF Integration Map");
 		}
 
 		sampled_images_descriptor_set_layout.create("GBuffer Descriptor Layout");
@@ -156,9 +158,10 @@ struct DeferredRenderer : public IRenderer
 			sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(3, gbuffer[i].depth_attachment.view, sampler_clamp_nearest);
 			if (IBLRenderer::is_initialized)
 			{
-				sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(4, IBLRenderer::prefiltered_diffuse_env_map.view, sampler_repeat_linear);
-				sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(5, IBLRenderer::prefiltered_specular_env_map.view, sampler_repeat_linear);
-				sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(6, IBLRenderer::brdf_integration_map.view, sampler_repeat_linear);
+				// Only use a nearest sampler to sample these image, linear introduces artifacts probably due to averaging texels
+				sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(4, IBLRenderer::prefiltered_diffuse_env_map.view, sampler_repeat_nearest);
+				sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(5, IBLRenderer::prefiltered_specular_env_map.view, sampler_repeat_nearest);
+				sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(6, IBLRenderer::brdf_integration_map.view, sampler_repeat_nearest);
 			}
 		}
 
@@ -304,7 +307,9 @@ struct DeferredRenderer : public IRenderer
 
 			if (ImGui::Begin("Scene"))
 			{
-				ImGui::Image(ui_texture_ids[context.curr_frame_idx].final_lighting, ImGui::GetContentRegionAvail());
+				ImVec2 window_size = ImGui::GetContentRegionAvail();
+				ImGui::Image(ui_texture_ids[context.curr_frame_idx].final_lighting, window_size);
+				viewport_aspect_ratio = window_size.x / window_size.y;
 			}
 			ImGui::End();
 
@@ -412,4 +417,6 @@ struct DeferredRenderer : public IRenderer
 	} shader_params;
 
 	DrawStatsEntry deferred_renderer_stats;
+
+	float viewport_aspect_ratio = 1.0;
 };

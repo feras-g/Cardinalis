@@ -34,7 +34,7 @@ void SampleProject::init()
 	forward_renderer.p_debug_line_renderer = &debug_line_renderer;
 	forward_renderer.init();
 
-	ibl_renderer.init("pisa.hdr");
+	ibl_renderer.init("footprint_court.hdr");
 	skybox_renderer.init();
 	deferred_renderer.init();
 	m_camera.update_aspect_ratio(1.0f);
@@ -109,8 +109,13 @@ void SampleProject::update(float t, float dt)
 				m_camera.translate(-m_camera.up * m_delta_time);
 			}
 		}
+	
 	}
 
+	if (deferred_renderer.viewport_aspect_ratio != m_camera.aspect_ratio)
+	{
+		m_camera.update_aspect_ratio(deferred_renderer.viewport_aspect_ratio);
+	}
 
 	static ObjectManager& object_manager = ObjectManager::get_instance();
 
@@ -154,23 +159,29 @@ void SampleProject::update_gpu_buffers()
 
 void SampleProject::create_scene()
 {
-	VulkanMesh mesh_1, mesh_2, mesh_test_roughness; 
-	//mesh_1.create_from_file("basic/mat/scene.gltf");
-	mesh_2.create_from_file("scenes/temple/gltf/model.gltf");
+	VulkanMesh mesh_1, mesh_2, mesh_test_roughness, plane; 
 	mesh_test_roughness.create_from_file("test/metallic_roughness_test/scene.gltf");
 
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,180,0}, .scale = {  0.1f, 0.1f, 0.1f  } }));
-	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_2, "mesh_2", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.025f, 0.025f, 0.025f  } }));
-	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_test_roughness, "mesh_test_roughness", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.25f,0.25f,0.25f } }));
+	plane.create_from_file("basic/unit_plane.glb");
+	drawable_list.push_back(ObjectManager::get_instance().add_mesh(plane, "Floor", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  25, 25, 25 } }));
+	//mesh_1.create_from_file("test/shield/scene.gltf");
+	//mesh_2.create_from_file("scenes/temple/gltf/scene.gltf");
+	//mesh_2.create_from_file("scenes/sponza/scene.gltf");
 
-	/*VulkanMesh mesh_sponza, mesh_ivy, mesh_curtains;
-	mesh_sponza.create_from_file("scenes/intel_sponza/main/scene.gltf");
-	mesh_ivy.create_from_file("scenes/intel_sponza/ivy/scene.gltf");
-	mesh_curtains.create_from_file("scenes/intel_sponza/curtains/scene.gltf");
 
-	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_sponza, "mesh_sponza", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
-	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_ivy, "mesh_ivy", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
-	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_curtains, "mesh_curtains", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));*/
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.1, 0.1f, 0.1f } }));
+
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_2, "mesh_2", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.025f, 0.025f, 0.025f  } }));
+	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_test_roughness, "mesh_test_roughness", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.75f,0.75f,0.75f } }));
+
+	//VulkanMesh mesh_sponza, mesh_ivy, mesh_curtains;
+	//mesh_sponza.create_from_file("scenes/intel_sponza/main/scene.gltf");
+	//mesh_ivy.create_from_file("scenes/intel_sponza/ivy/scene.gltf");
+	//mesh_curtains.create_from_file("scenes/intel_sponza/curtains/scene.gltf");
+
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_sponza, "mesh_sponza", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_ivy, "mesh_ivy", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_curtains, "mesh_curtains", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
 
 
 	//for (int x = -15; x < 15; x++)
@@ -195,6 +206,7 @@ void SampleProject::update_instances_ssbo()
 {
 	static ObjectManager& object_manager = ObjectManager::get_instance();
 
+
 	object_manager.update_instances_ssbo("mesh_1");
 	//object_manager.update_instances_ssbo("mesh_2");
 }
@@ -206,8 +218,8 @@ void SampleProject::exit()
 
 void SampleProject::on_window_resize()
 {
+	
 	Application::on_window_resize();
-	m_camera.update_aspect_ratio(m_window->GetWidth() / (float)m_window->GetHeight());
 	m_gui.on_window_resize();
 	forward_renderer.on_window_resize();
 	debug_line_renderer.on_window_resize();

@@ -20,8 +20,6 @@ layout(push_constant) uniform PSBlock
     uint current_mip_level;
 } push_constants;
 
-const uint  specular_filtering_per_mip_samples[6]   = { 512, 512, 4096, 4096, 8096, 8096 };
-const float specular_filtering_per_mip_roughness[6] = { 0.0, 0.2, 0.4, 0.6, 0.8, 1.0 };
 
 vec3 prefilter_env_map_diffuse(in sampler2D env_map)
 {
@@ -37,7 +35,8 @@ vec3 prefilter_env_map_diffuse(in sampler2D env_map)
     for(uint n = 0; n < N; n++)
     {
         /* Generate a random position with a uniform distribution in [0; 1] */
-        vec3 random_pixel_pos = pcg3d(uvec3(pixel_coord, n));
+        // vec3 random_pixel_pos = pcg3d(uvec3(pixel_coord, n));
+        vec2 random_pixel_pos = hammersley(n, N);
 
         /* Importance sampling */
         /* Convert to directions on the unit hemisphere */ 
@@ -57,8 +56,12 @@ vec3 prefilter_env_map_diffuse(in sampler2D env_map)
         result += radiance;
     }
     result = result / float(N);
-    return result;//vec3(uv,0);
+    return result;
 }
+
+
+const uint  specular_filtering_per_mip_samples[6]   = { 512, 4096, 4096, 4096, 8096, 8096 };
+const float specular_filtering_per_mip_roughness[6] = { 0.0, 0.2, 0.4, 0.6, 0.8, 1.0 };
 
 vec3 prefilter_env_map_specular(in sampler2D env_map, float roughness)
 {
@@ -78,7 +81,8 @@ vec3 prefilter_env_map_specular(in sampler2D env_map, float roughness)
     for(uint n = 0; n < N; n++)
     {
         /* Generate a random position with a uniform distribution in [0; 1] */
-        vec3 random_pixel_pos = pcg3d(uvec3(pixel_coord, n));
+        // vec3 random_pixel_pos = pcg3d(uvec3(pixel_coord, n));
+        vec2 random_pixel_pos = hammersley(n, N);
 
         /* Importance sampling */
         /* Convert to directions on the unit hemisphere */ 

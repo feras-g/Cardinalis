@@ -49,7 +49,7 @@ struct IBLRenderer
 		shader.create("fullscreen_quad_vert.vert.spv", "importance_sample_diffuse_frag.frag.spv");
 
 		/* Init descriptor set for prefiltered maps rendering */
-		descriptor_set.layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_clamp_nearest, "Spherical env map");
+		descriptor_set.layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "Spherical env map");
 		descriptor_set.layout.add_uniform_buffer_binding(1, VK_SHADER_STAGE_FRAGMENT_BIT, "Diffuse Env Map Prefiltering parameters");
 		descriptor_set.layout.create("Diffuse Env Map Prefiltering Shader Params Layout");
 		descriptor_set.create(descriptor_pool, "Diffuse Env Map Prefiltering");
@@ -138,7 +138,7 @@ struct IBLRenderer
 		};
 		descriptor_pool = create_descriptor_pool(pool_sizes, 1);
 
-		spherical_env_map_descriptor_set.layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_clamp_nearest, "");
+		spherical_env_map_descriptor_set.layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "");
 		spherical_env_map_descriptor_set.layout.create("");
 		spherical_env_map_descriptor_set.create(descriptor_pool, "Spherical Env map descriptor set");
 
@@ -302,9 +302,10 @@ struct IBLRenderer
 	{
 		vkDeviceWaitIdle(context.device);
 
-		if (shader.compile())
+		if (shader.compile() && shader_brdf_integration.compile())
 		{
 			pipeline.reload_pipeline();
+			pipeline_brdf_integration.reload_pipeline();
 			return true;
 		}
 

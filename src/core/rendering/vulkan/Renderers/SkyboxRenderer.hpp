@@ -20,7 +20,7 @@ struct SkyboxRenderer : public IRenderer
 		};
 		descriptor_pool = create_descriptor_pool(pool_sizes, 1);
 
-		env_map_descriptor_set.layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, 1, &sampler_clamp_linear, "Skybox Cubemap");
+		env_map_descriptor_set.layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "Skybox Cubemap");
 		env_map_descriptor_set.layout.create("Skybox Cubemap Desc set layout");
 		env_map_descriptor_set.create(descriptor_pool, "Skybox");
 		env_map_descriptor_set.write_descriptor_combined_image_sampler(0, cubemap.view, sampler_clamp_linear);
