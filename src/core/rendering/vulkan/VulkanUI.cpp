@@ -113,9 +113,19 @@ void VulkanGUI::show_toolbar()
 	ImGui::End();
 }
 
-void VulkanGUI::show_inspector(const ObjectManager& object_manager)
+void VulkanGUI::show_hierarchy(ObjectManager& object_manager)
 {
-
+	if (ImGui::Begin("Inspector"))
+	{
+		for (size_t i = 0; i < object_manager.m_meshes.size(); i++)
+		{
+			if (ImGui::Button(object_manager.m_mesh_names[i]))
+			{
+				object_manager.current_selected_mesh_id = i;
+			}
+		}
+	}
+	ImGui::End();
 }
 
 void VulkanGUI::render(VkCommandBuffer cmd_buffer)
@@ -200,7 +210,7 @@ bool VulkanGUI::is_not_selecting_gizmo() const
 }
 
 
-void VulkanGUI::show_viewport_window(ImTextureID scene_image_id, camera& camera)
+void VulkanGUI::show_viewport_window(ImTextureID scene_image_id, camera& camera, ObjectManager& object_manager)
 {
 	if (ImGui::Begin("Scene"))
 	{
@@ -214,22 +224,18 @@ void VulkanGUI::show_viewport_window(ImTextureID scene_image_id, camera& camera)
 		ImGui::Image(scene_image_id, window_size);
 		viewport_aspect_ratio = window_size.x / window_size.y;
 
-		/* Scene Gizmos */
+		/* Gizmos */
 		ImGuizmo::BeginFrame();
 		ImGuizmo::SetDrawlist(ImGui::GetWindowDrawList());
 		ImGuizmo::SetRect(0, 0, window_size.x, window_size.y);
 		ImGuizmo::SetOrthographic(false);
 
-		glm::mat4 transform = glm::identity<glm::mat4>();
-		glm::mat4 selected_object_transform = glm::identity<glm::mat4>();
-
-		const char* items[] = { "Translate", "Rotate", "Scale" };
-		static int current_item = 0;
+		glm::mat4& selected_object_transform = object_manager.m_mesh_instance_data[object_manager.current_selected_mesh_id][0].model;
 
 		const glm::f32* view = glm::value_ptr(camera.view);
 		const glm::f32* proj = glm::value_ptr(camera.projection);
 
-		ImGuizmo::Manipulate(view, proj, ImGuizmo::OPERATION::TRANSLATE, ImGuizmo::MODE::WORLD, glm::value_ptr(selected_object_transform));
+		ImGuizmo::Manipulate(view, proj, gizmo_operation, ImGuizmo::MODE::WORLD, glm::value_ptr(selected_object_transform));
 	}
 	ImGui::End();
 }

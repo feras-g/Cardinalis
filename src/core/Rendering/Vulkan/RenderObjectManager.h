@@ -62,6 +62,7 @@ public:
 
 	std::unordered_map < std::string, size_t > m_mesh_id_from_name;
 	std::vector<VulkanMesh>   m_meshes;
+	std::vector<const char*>   m_mesh_names;
 
 	VkDescriptorPool m_descriptor_pool;
 
@@ -96,6 +97,10 @@ public:
 
 	static inline DescriptorSetLayout mesh_descriptor_set_layout;
 
+	// WIP
+	size_t current_selected_mesh_id = 0;
+
+
 public:
 	void init();
 
@@ -122,6 +127,6 @@ protected:
 	void create_textures_descriptor_set(VkDescriptorPool pool);
 private:
 	ObjectManager() = default;
-
 };
+
 

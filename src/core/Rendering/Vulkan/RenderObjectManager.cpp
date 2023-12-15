@@ -57,6 +57,7 @@ int ObjectManager::get_texture_id(std::string_view name)
 size_t ObjectManager::add_mesh(const VulkanMesh& mesh, std::string_view mesh_name, const Transform& transform)
 {
 	size_t mesh_idx = m_meshes.size();
+	m_mesh_names.push_back(mesh_name.data());
 	m_mesh_id_from_name.insert({ mesh_name.data(), mesh_idx });
 	m_meshes.push_back(mesh);
 
@@ -122,7 +123,7 @@ void ObjectManager::init()
 	create_materials_ssbo();
 	
 	/* Create a default material */
-	add_material({-1, -1, -1, -1});
+	add_material({ -1, -1, -1, -1});
 
 	/*
 		Mesh descriptor set layout

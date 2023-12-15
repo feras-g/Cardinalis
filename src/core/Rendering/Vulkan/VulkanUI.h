@@ -25,9 +25,9 @@ public:
 	void exit();
 	void show_gizmo(const camera& camera, const KeyEvent& event, glm::mat4& selected_object_transform);
 	void show_toolbar();
-	void show_inspector(const ObjectManager& object_manager);
+	void show_hierarchy(ObjectManager& object_manager);
 	void show_draw_statistics(IRenderer::DrawStats draw_stats);
-	void show_viewport_window(ImTextureID scene_image_id, camera& camera);
+	void show_viewport_window(ImTextureID scene_image_id, camera& camera, ObjectManager& object_manager);
 	void show_shader_library();
 	void start_overlay(const char* title);
 	

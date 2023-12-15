@@ -45,13 +45,13 @@ void SampleProject::init()
 
 void SampleProject::compose_gui()
 {
-	
+	ObjectManager& object_manager = ObjectManager::get_instance();
 	m_gui.begin();
 	m_gui.show_toolbar();
-	m_gui.show_inspector(ObjectManager::get_instance());
+	m_gui.show_hierarchy(object_manager);
 	m_gui.show_draw_statistics(IRenderer::draw_stats);
 	m_gui.show_shader_library();
-	m_gui.show_viewport_window(deferred_renderer.ui_texture_ids[context.curr_frame_idx].final_lighting, m_camera);
+	m_gui.show_viewport_window(deferred_renderer.ui_texture_ids[context.curr_frame_idx].final_lighting, m_camera, object_manager);
 	m_camera.show_ui();
 	deferred_renderer.show_ui(m_camera);
 	ibl_renderer.show_ui();
@@ -113,19 +113,6 @@ void SampleProject::update(float t, float dt)
 	}
 
 
-	static ObjectManager& object_manager = ObjectManager::get_instance();
-
-	/* Update CPU scene data */
-	//std::string mesh_name = "mesh_1";
-	//size_t mesh_idx = object_manager.m_mesh_id_from_name.at(mesh_name);
-
-	//for (size_t instance_idx = 0; instance_idx < object_manager.m_mesh_instance_data[mesh_idx].size(); instance_idx++)
-	//{
-	//	float normalized_index = (instance_idx / float(object_manager.m_mesh_instance_data[mesh_idx].size())) * 2 - 1;
-	//	
-	//	object_manager.m_mesh_instance_data[mesh_idx][instance_idx].model = glm::rotate(object_manager.m_mesh_instance_data[mesh_idx][instance_idx].model, dt, glm::vec3(0,1, 0));
-	//}
-
 	compose_gui();
 }
 
@@ -160,12 +147,12 @@ void SampleProject::create_scene()
 
 	plane.create_from_file("basic/unit_plane.glb");
 	drawable_list.push_back(ObjectManager::get_instance().add_mesh(plane, "Floor", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  25, 25, 25 } }));
-	//mesh_1.create_from_file("test/shield/scene.gltf");
+	mesh_1.create_from_file("scenes/shield/scene.gltf");
 	//mesh_2.create_from_file("scenes/temple/gltf/scene.gltf");
 	//mesh_2.create_from_file("scenes/sponza/scene.gltf");
 
 
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.1, 0.1f, 0.1f } }));
+	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.1, 0.1f, 0.1f } }));
 
 	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_2, "mesh_2", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.025f, 0.025f, 0.025f  } }));
 	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_test_roughness, "mesh_test_roughness", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.75f,0.75f,0.75f } }));
@@ -180,17 +167,17 @@ void SampleProject::create_scene()
 	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_curtains, "mesh_curtains", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
 
 
-	//for (int x = -15; x < 15; x++)
-	//for (int y = -15; y < 15; y++)
-	//for (int z = -15; z < 15; z++)
+	//for (int x = -5; x < 5; x++)
+	//for (int y = -5; y < 5; y++)
+	//for (int z = -5; z < 5; z++)
 	//{
 	//	float spacing = 10.0f;
 	//	Transform t = { .position = spacing * glm::vec3(x, y, z), .rotation = {0,0,0}, .scale = glm::vec3{  0.025f, 0.025f, 0.025f } };
 
 	//	//if ((x + z + 0) % 2 == 0)
-	//	{
-	//		ObjectManager::get_instance().add_mesh_instance("mesh_2", ObjectManager::GPUInstanceData{ .model = glm::mat4(t) });
-	//	}
+	//	//{
+	//	//	ObjectManager::get_instance().add_mesh_instance("mesh_1", ObjectManager::GPUInstanceData{ .model = glm::mat4(t) });
+	//	//}
 	//	//else
 	//	//{
 	//	//	ObjectManager::get_instance().add_mesh_instance("mesh_2", ObjectManager::GPUInstanceData{ .model = glm::mat4(t), .color = glm::vec4(glm::sphericalRand(1.0f), 1.0f)});
@@ -200,11 +187,13 @@ void SampleProject::create_scene()
 
 void SampleProject::update_instances_ssbo()
 {
+	/* Update CPU scene data */
 	static ObjectManager& object_manager = ObjectManager::get_instance();
 
-
-	object_manager.update_instances_ssbo("mesh_1");
-	//object_manager.update_instances_ssbo("mesh_2");
+	for (size_t i = 0; i < object_manager.m_meshes.size(); i++)
+	{
+		object_manager.update_instances_ssbo(object_manager.m_mesh_names[i]);
+	}
 }
 
 void SampleProject::exit()
