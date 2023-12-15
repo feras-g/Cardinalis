@@ -147,7 +147,7 @@ struct IBLRenderer
 
 	void init_ubo()
 	{
-		ubo_shader_params.init(Buffer::Type::UNIFORM, sizeof(ShaderParams), "Diffuse Env Map Shader Params");
+		ubo_shader_params.init(vk::buffer::type::UNIFORM, sizeof(ShaderParams), "Diffuse Env Map Shader Params");
 		ubo_shader_params.create();
 
 		/* Defaults */
@@ -359,7 +359,7 @@ struct IBLRenderer
 	VertexFragmentShader shader;
 	DescriptorSet descriptor_set;
 	VkDescriptorPool descriptor_pool;
-	Buffer ubo_shader_params;
+	vk::buffer ubo_shader_params;
 
 	static inline bool is_initialized = false;
 };

@@ -13,17 +13,17 @@ struct DebugLineRenderer : public IRenderer
 
 	void create_pipeline() override
 	{
-		vertex_buffer.init(Buffer::Type::STORAGE, vtx_buffer_max_size, "DebugLineRenderer Vertex Buffer");
+		vertex_buffer.init(vk::buffer::type::STORAGE, vtx_buffer_max_size, "DebugLineRenderer Vertex Buffer");
 		vertex_buffer.create();
 
-		Buffer staging;
-		staging.init(Buffer::Type::STAGING, sizeof(VkDrawIndirectCommand), "");
+		vk::buffer staging;
+		staging.init(vk::buffer::type::STAGING, sizeof(VkDrawIndirectCommand), "");
 		staging.create();
 
 		VkDrawIndirectCommand init_indirect_cmd{0, 1, 0, 0};
 		staging.upload(context.device, &init_indirect_cmd, 0, sizeof(VkDrawIndirectCommand));
 
-		indirect_cmd_buffer.init(Buffer::Type::INDIRECT, sizeof(VkDrawIndirectCommand), "DebugLineRenderer Indirect Command"); /* Device local */
+		indirect_cmd_buffer.init(vk::buffer::type::INDIRECT, sizeof(VkDrawIndirectCommand), "DebugLineRenderer Indirect Command"); /* Device local */
 		indirect_cmd_buffer.create();
 		copy_from_buffer(staging, indirect_cmd_buffer, sizeof(VkDrawIndirectCommand));
 
@@ -127,8 +127,8 @@ struct DebugLineRenderer : public IRenderer
 	VkDrawIndirectCommand command;
 	VkDescriptorPool descriptor_pool;
 	DescriptorSet debug_line_descriptor_set;
-	Buffer vertex_buffer;
-	Buffer indirect_cmd_buffer;
+	vk::buffer vertex_buffer;
+	vk::buffer indirect_cmd_buffer;
 	Pipeline graphics_pipeline;
 	VulkanRenderPassDynamic renderpass[NUM_FRAMES];
 

@@ -13,6 +13,7 @@ struct DebugLineRenderer : public IRenderer
 
 	void create_pipeline() override
 	{
+
 	}
 
 	void create_renderpass() override

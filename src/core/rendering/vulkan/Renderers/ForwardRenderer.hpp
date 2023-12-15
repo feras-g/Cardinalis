@@ -15,7 +15,7 @@ struct ForwardRenderer : public IRenderer
 
 	void create_pipeline()
 	{
-		ssbo_shader_toggles.init(Buffer::Type::STORAGE, sizeof(ShaderToggles), "ForwardRenderer Shader Toggles");
+		ssbo_shader_toggles.init(vk::buffer::type::STORAGE, sizeof(ShaderToggles), "ForwardRenderer Shader Toggles");
 		ssbo_shader_toggles.create();
 		update_shader_toggles();
 
@@ -137,7 +137,7 @@ struct ForwardRenderer : public IRenderer
 		bool enable_normal_mapping;
 	} shader_params;
 
-	Buffer ssbo_shader_toggles;
+	vk::buffer ssbo_shader_toggles;
 
 	DebugLineRenderer* p_debug_line_renderer = nullptr;
 

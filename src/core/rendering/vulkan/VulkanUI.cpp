@@ -1,7 +1,6 @@
 #include "core/engine/InputEvents.h"
 #include "core/rendering/Camera.h"
 #include "core/rendering/FrameCounter.h"
-#include "core/rendering/vulkan/LightManager.h"
 #include "core/rendering/vulkan/RenderObjectManager.h"
 #include "core/rendering/vulkan/VulkanRendererBase.h"
 #include "core/rendering/vulkan/VulkanUI.h"

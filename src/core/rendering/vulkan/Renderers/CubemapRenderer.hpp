@@ -26,7 +26,7 @@ struct CubemapRenderer
 		mesh_skybox.create_from_file("basic/skybox.glb");
 		mesh_skybox_id = ObjectManager::get_instance().add_mesh(mesh_skybox, "Mesh_Skybox", {});
 
-		ubo_cube_matrix_data.init(Buffer::Type::UNIFORM, sizeof(CubeMatrixData), "UBO Cube Matrix Data");
+		ubo_cube_matrix_data.init(vk::buffer::type::UNIFORM, sizeof(CubeMatrixData), "UBO Cube Matrix Data");
 		ubo_cube_matrix_data.create();
 		ubo_cube_matrix_data.upload(context.device, &cube_matrix_data, 0, sizeof(CubeMatrixData));
 
@@ -131,7 +131,7 @@ struct CubemapRenderer
 	ImTextureID cubemap_layer_view_ui_id[6];
 	VkImageView cubemap_layer_view[6];
 
-	Buffer ubo_cube_matrix_data;
+	vk::buffer ubo_cube_matrix_data;
 	DescriptorSet cubemap_descriptor_set;
 	VkDescriptorPool descriptor_pool;
 	VulkanRenderPassDynamic renderpass;
