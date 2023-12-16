@@ -1,7 +1,7 @@
 #version 460
 
 #include "headers/vertex.glsl"
-#include "headers/framedata.glsl"
+#include "headers/data.glsl"
 #include "headers/ibl_utils.glsl"
 
 layout(location = 0) out vec4 position_os;

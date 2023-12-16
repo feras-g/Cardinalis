@@ -69,13 +69,13 @@ struct SkyboxRenderer : public IRenderer
 
 		VkDescriptorSet descriptor_sets[]
 		{
-			VulkanRendererCommon::get_instance().m_framedata_desc_set[context.curr_frame_idx].vk_set,
+			VulkanRendererCommon::get_instance().m_framedata_desc_set[ctx.curr_frame_idx].vk_set,
 			ObjectManager::get_instance().m_descriptor_sets[id_mesh_skybox],
 			env_map_descriptor_set
 		};
 
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 0, 3, descriptor_sets, 0, nullptr);
-		renderpass[context.curr_frame_idx].begin(cmd_buffer, render_size);
+		renderpass[ctx.curr_frame_idx].begin(cmd_buffer, render_size);
 
 		const ObjectManager& object_manager = ObjectManager::get_instance();
 		for (int prim_idx = 0; prim_idx < object_manager.m_meshes[id_mesh_skybox].geometry_data.primitives.size(); prim_idx++)
@@ -86,7 +86,7 @@ struct SkyboxRenderer : public IRenderer
 			vkCmdDraw(cmd_buffer, p.vertex_count, 1, p.first_vertex, 0);
 		}
 
-		renderpass[context.curr_frame_idx].end(cmd_buffer);
+		renderpass[ctx.curr_frame_idx].end(cmd_buffer);
 	}
 
 	void show_ui() override
@@ -108,7 +108,7 @@ struct SkyboxRenderer : public IRenderer
 		}
 	}
 
-	DescriptorSet env_map_descriptor_set;
+	vk::descriptor_set env_map_descriptor_set;
 	size_t id_mesh_skybox;
 	VkDescriptorPool descriptor_pool;
 	Texture2D* env_map_texture_handle;

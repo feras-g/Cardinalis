@@ -21,7 +21,7 @@ uint32_t ObjectManager::add_material(const Material& material)
 
 	m_material_id_from_hash.insert({ hash, material_idx });
 
-	m_materials_ssbo.upload(context.device, &m_materials.back(), material_idx * sizeof(Material), sizeof(Material));
+	m_materials_ssbo.upload(ctx.device, &m_materials.back(), material_idx * sizeof(Material), sizeof(Material));
 
 	return material_idx;
 }
@@ -70,7 +70,7 @@ size_t ObjectManager::add_mesh(const VulkanMesh& mesh, std::string_view mesh_nam
 	
 	add_mesh_instance(mesh_name, data, "BaseInstance");
 
-	DescriptorSet descriptor_set;
+	vk::descriptor_set descriptor_set;
 	descriptor_set.assign_layout(mesh_descriptor_set_layout);
 	descriptor_set.create(m_descriptor_pool, "");
 	descriptor_set.write_descriptor_storage_buffer(0, mesh.m_vertex_index_buffer, 0, mesh.m_vertex_buf_size_bytes);
@@ -87,7 +87,7 @@ size_t ObjectManager::add_mesh(const VulkanMesh& mesh, std::string_view mesh_nam
 
 		if ((offset + sizeof(GPUInstanceData)) < (max_instance_count * sizeof(GPUInstanceData)))
 		{
-			m_mesh_instance_data_ssbo[mesh_idx].upload(context.device, &m_mesh_instance_data[mesh_idx].back(), offset, sizeof(GPUInstanceData));
+			m_mesh_instance_data_ssbo[mesh_idx].upload(ctx.device, &m_mesh_instance_data[mesh_idx].back(), offset, sizeof(GPUInstanceData));
 		}
 	}
 
@@ -104,7 +104,7 @@ void ObjectManager::add_mesh_instance(std::string_view mesh_name, GPUInstanceDat
 
 		if ((offset + sizeof(data)) < (max_instance_count * sizeof(data)))
 		{
-			m_mesh_instance_data_ssbo[mesh_idx].upload(context.device, &m_mesh_instance_data[mesh_idx].back(), offset, sizeof(data));
+			m_mesh_instance_data_ssbo[mesh_idx].upload(ctx.device, &m_mesh_instance_data[mesh_idx].back(), offset, sizeof(data));
 		}
 	}
 }
@@ -114,7 +114,7 @@ void ObjectManager::update_instances_ssbo(std::string_view mesh_name)
 	if (m_mesh_id_from_name.contains(mesh_name.data()))
 	{
 		size_t mesh_idx = m_mesh_id_from_name.at(mesh_name.data());
-		m_mesh_instance_data_ssbo[mesh_idx].upload(context.device, m_mesh_instance_data[mesh_idx].data(), 0, m_mesh_instance_data[mesh_idx].size() * sizeof(GPUInstanceData));
+		m_mesh_instance_data_ssbo[mesh_idx].upload(ctx.device, m_mesh_instance_data[mesh_idx].data(), 0, m_mesh_instance_data[mesh_idx].size() * sizeof(GPUInstanceData));
 	}
 }
 
@@ -150,8 +150,8 @@ void ObjectManager::create_instance_buffer()
 
 	size_t buf_size_bytes = max_instance_count * sizeof(GPUInstanceData);
 
-	Buffer instance_ssbo;
-	instance_ssbo.init(Buffer::Type::STORAGE, buf_size_bytes, buf_name.c_str());
+	vk::buffer instance_ssbo;
+	instance_ssbo.init(vk::buffer::type::STORAGE, buf_size_bytes, buf_name.c_str());
 	instance_ssbo.create();
 	m_mesh_instance_data_ssbo.push_back(instance_ssbo);
 }
@@ -165,7 +165,7 @@ void ObjectManager::create_materials_ssbo()
 	// Default material
 	m_materials[0] = { -1, -1, -1, -1, {1.0f, 0.0f, 1.0f, 1.0f}, { 0.0f, 1.0f } };
 
-	m_materials_ssbo.init(Buffer::Type::STORAGE, buf_size_bytes, buf_name.c_str());
+	m_materials_ssbo.init(vk::buffer::type::STORAGE, buf_size_bytes, buf_name.c_str());
 	m_materials_ssbo.create();
 }
 

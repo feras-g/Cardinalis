@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/rendering/vulkan/VulkanRendererBase.h"
-#include "core/rendering/vulkan/RenderPass.h"
+#include "core/engine/vulkan/objects/vk_renderpass.h"
 #include "core/rendering/vulkan/VulkanShader.h"
 
 #include "../imgui/imgui.h"
@@ -26,5 +26,5 @@ public:
 private:
 	glm::vec2 render_area;
 	VkDescriptorPool m_descriptor_pool;
-	VulkanRenderPassDynamic m_renderpass[NUM_FRAMES];
+	vk::renderpass_dynamic m_renderpass[NUM_FRAMES];
 };

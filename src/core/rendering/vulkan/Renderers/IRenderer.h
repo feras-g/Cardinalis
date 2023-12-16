@@ -3,9 +3,9 @@
 #include <string>
 
 #include <vulkan/vulkan_core.h>
-#include "core/rendering/vulkan/DescriptorSet.h"
+#include "core/engine/vulkan/objects/vk_descriptor_set.hpp"
 #include "core/rendering/vulkan/VulkanShader.h"
-#include "core/rendering/vulkan/RenderPass.h"
+#include "core/engine/vulkan/objects/vk_renderpass.h"
 #include "core/rendering/vulkan/RenderObjectManager.h"
 
 struct DrawStats;
@@ -90,7 +90,7 @@ struct IRenderer
 	VertexFragmentShader shader;
 	VkFormat color_format;
 	VkFormat depth_format;
-	VulkanRenderPassDynamic renderpass[NUM_FRAMES];
+	vk::renderpass_dynamic renderpass[NUM_FRAMES];
 	DrawStatsEntry renderer_stats;
 	std::string name;
 };

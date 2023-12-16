@@ -12,14 +12,14 @@ struct CubemapRenderer
 		write_cubemap_shader.create("write_cubemap_vert.vert.spv", "write_cubemap_frag.frag.spv");
 		layer_size = std::min(spherical_env_map.info.width, spherical_env_map.info.height);
 		cubemap_attachment.init(spherical_env_map.info.imageFormat, layer_size, layer_size, 6, false, "Cubemap Texture");
-		cubemap_attachment.create_vk_image(context.device, true, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-		cubemap_attachment.create_view(context.device, ImageViewTextureCubemap);
+		cubemap_attachment.create_vk_image(ctx.device, true, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+		cubemap_attachment.create_view(ctx.device, ImageViewTextureCubemap);
 
 		VkSampler& sampler = VulkanRendererCommon::get_instance().s_SamplerClampNearest; 
 
 		for (int layer = 0; layer < 6; layer++)
 		{
-			Texture2D::create_texture_2d_layer_view(cubemap_layer_view[layer], cubemap_attachment, context.device, layer);
+			Texture2D::create_texture_2d_layer_view(cubemap_layer_view[layer], cubemap_attachment, ctx.device, layer);
 			cubemap_layer_view_ui_id[layer] = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler, cubemap_layer_view[layer], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
 		}
 
@@ -28,7 +28,7 @@ struct CubemapRenderer
 
 		ubo_cube_matrix_data.init(vk::buffer::type::UNIFORM, sizeof(CubeMatrixData), "UBO Cube Matrix Data");
 		ubo_cube_matrix_data.create();
-		ubo_cube_matrix_data.upload(context.device, &cube_matrix_data, 0, sizeof(CubeMatrixData));
+		ubo_cube_matrix_data.upload(ctx.device, &cube_matrix_data, 0, sizeof(CubeMatrixData));
 
 		VkDescriptorPoolSize pool_sizes[2]
 		{
@@ -68,7 +68,7 @@ struct CubemapRenderer
 		VkDescriptorSet descriptor_sets[]
 		{
 			ObjectManager::get_instance().m_descriptor_sets[mesh_skybox_id],
-			VulkanRendererCommon::get_instance().m_framedata_desc_set[context.curr_frame_idx],
+			VulkanRendererCommon::get_instance().m_framedata_desc_set[ctx.curr_frame_idx],
 			cubemap_descriptor_set,
 		};
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 0, 3, descriptor_sets, 0, nullptr);
@@ -132,9 +132,9 @@ struct CubemapRenderer
 	VkImageView cubemap_layer_view[6];
 
 	vk::buffer ubo_cube_matrix_data;
-	DescriptorSet cubemap_descriptor_set;
+	vk::descriptor_set cubemap_descriptor_set;
 	VkDescriptorPool descriptor_pool;
-	VulkanRenderPassDynamic renderpass;
+	vk::renderpass_dynamic renderpass;
 	VertexFragmentShader write_cubemap_shader;
 	Texture2D cubemap_attachment;
 	uint32_t layer_size;

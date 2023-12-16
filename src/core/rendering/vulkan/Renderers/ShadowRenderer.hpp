@@ -21,6 +21,11 @@ struct DebugLineRenderer : public IRenderer
 
 	}
 
+	void render(VkCommandBuffer cmd_buffer, std::span<size_t> mesh_list)
+	{
+
+	}
+
 	void render(VkCommandBuffer cmd_buffer) override
 	{
 	}
@@ -76,5 +81,5 @@ struct DebugLineRenderer : public IRenderer
 	float z_split_cascade[k_num_cascades];			// Distance from near-plane for each cascade
 	glm::mat4 projection_cascade[k_num_cascades];
 	Texture2D shadow_cascades_depth[NUM_FRAMES];	// Each element is a Texture2DArray storing k_num_cascades cascades
-	VulkanRenderPassDynamic renderpass[NUM_FRAMES];
+	renderpass_dynamic renderpass[NUM_FRAMES];
 };

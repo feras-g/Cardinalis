@@ -42,8 +42,8 @@ void VulkanMesh::create_from_data(std::span<VertexData> vertices, std::span<unsi
 {
 	m_num_vertices = vertices.size();
 	m_num_indices = indices.size();
-	m_index_buf_size_bytes  = EngineUtils::round_to(indices.size() * sizeof(unsigned int), context.device.limits.minStorageBufferOffsetAlignment);
-	m_vertex_buf_size_bytes = EngineUtils::round_to(vertices.size() * sizeof(VertexData), context.device.limits.minStorageBufferOffsetAlignment);
+	m_index_buf_size_bytes  = EngineUtils::round_to(indices.size() * sizeof(unsigned int), ctx.device.limits.minStorageBufferOffsetAlignment);
+	m_vertex_buf_size_bytes = EngineUtils::round_to(vertices.size() * sizeof(VertexData), ctx.device.limits.minStorageBufferOffsetAlignment);
 	
 	create_vertex_index_buffer(m_vertex_index_buffer, vertices.data(), m_vertex_buf_size_bytes, indices.data(), m_index_buf_size_bytes);
 }
@@ -79,13 +79,11 @@ static void load_vertices(Primitive p, cgltf_primitive* primitive, GeometryData&
 			// Also get bounding box for this primitive
 			if (attribute->data->has_min)
 			{
-				
 				geometry.bbox_min_os = glm::vec4(attribute->data->min[0], attribute->data->min[1], attribute->data->min[2], 1.0f);
 			}
 
 			if (attribute->data->has_max)
 			{
-				
 				geometry.bbox_max_os = glm::vec4(attribute->data->max[0], attribute->data->max[1], attribute->data->max[2], 1.0f);
 			}
 		}
@@ -179,7 +177,7 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 				Texture2D texture;
 				texture.init(format, im.w, im.h, 1, calc_mip, name);
 				texture.create_from_data(&im);
-				texture.create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, texture.info.mipLevels });
+				texture.create_view(ctx.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, texture.info.mipLevels });
 
 				if (tex_type == TextureType::NORMAL_MAP || tex_type == TextureType::METALLIC_ROUGHNESS_MAP)
 				{
@@ -348,7 +346,7 @@ static void load_textures(cgltf_texture* textures, size_t texture_count)
 				Texture2D texture;
 				texture.init(format, im.w, im.h, 1, false, name);
 				texture.create_from_data(&im);
-				texture.create_view(context.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, texture.info.mipLevels });
+				texture.create_view(ctx.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, texture.info.mipLevels });
 				texture.sampler = VulkanRendererCommon::get_instance().s_SamplerRepeatLinear;
 				texture.info.debugName = name.c_str();
 

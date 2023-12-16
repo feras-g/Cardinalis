@@ -63,12 +63,12 @@ void Application::run()
 
 void Application::prerender()
 {
-    vk::frame& current_frame = context.get_current_frame();
+    vk::frame& current_frame = ctx.get_current_frame();
 
-    VulkanSwapchain& swapchain = *m_rhi->get_swapchain();
+    vk::swapchain& swapchain = *m_rhi->get_swapchain();
 
-    VK_CHECK(vkWaitForFences(context.device, 1, &current_frame.fence_queue_submitted, true, UINT64_MAX));
-    VK_CHECK(vkResetFences(context.device, 1, &current_frame.fence_queue_submitted));
+    VK_CHECK(vkWaitForFences(ctx.device, 1, &current_frame.fence_queue_submitted, true, UINT64_MAX));
+    VK_CHECK(vkResetFences(ctx.device, 1, &current_frame.fence_queue_submitted));
 
     swapchain.acquire_next_image(current_frame.semaphore_swapchain_acquire);
     
@@ -80,8 +80,8 @@ void Application::prerender()
 
 void Application::postrender()
 {
-    vk::frame& current_frame = context.get_current_frame();
-    VulkanSwapchain& swapchain = *m_rhi->get_swapchain();
+    vk::frame& current_frame = ctx.get_current_frame();
+    vk::swapchain& swapchain = *m_rhi->get_swapchain();
 
     /* Transition to present */
     swapchain.color_attachments[swapchain.current_backbuffer_idx].transition(current_frame.cmd_buffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_ACCESS_NONE);
@@ -101,7 +101,7 @@ void Application::postrender()
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores = &current_frame.smp_queue_submitted;
 
-    vkQueueSubmit(context.device.graphics_queue, 1, &submit_info, current_frame.fence_queue_submitted);
+    vkQueueSubmit(ctx.device.graphics_queue, 1, &submit_info, current_frame.fence_queue_submitted);
 
     // Present work
     // Waits for the GPU queue to finish execution before presenting, we wait on renderComplete semaphore
@@ -113,10 +113,10 @@ void Application::postrender()
     present_info.waitSemaphoreCount = 1;
     present_info.pWaitSemaphores = &current_frame.smp_queue_submitted;
 
-    vkQueuePresentKHR(context.device.graphics_queue, &present_info);
+    vkQueuePresentKHR(ctx.device.graphics_queue, &present_info);
 
-    context.frame_count++;
-    context.update_frame_index();
+    ctx.frame_count++;
+    ctx.update_frame_index();
 }
 
 double Application::get_time_secs() 
@@ -128,7 +128,7 @@ void Application::on_window_resize()
 {
     LOG_INFO("Windows Resize");
 
-    context.swapchain->reinitialize();
+    ctx.swapchain->reinitialize();
 }
 
 void Application::on_mouse_down(MouseEvent event)

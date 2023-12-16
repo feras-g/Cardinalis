@@ -23,7 +23,7 @@ namespace vk
 
 	void vk::buffer::destroy()
 	{
-		VkResourceManager::get_instance(context.device)->destroy_buffer(m_hash);
+		VkResourceManager::get_instance(ctx.device)->destroy_buffer(m_hash);
 	}
 
 	void* vk::buffer::map(VkDevice device, size_t offset, size_t size)
@@ -91,22 +91,22 @@ namespace vk
 			.pQueueFamilyIndices = nullptr
 		};
 
-		VK_CHECK(vkCreateBuffer(context.device, &info, nullptr, &m_vk_buffer));
+		VK_CHECK(vkCreateBuffer(ctx.device, &info, nullptr, &m_vk_buffer));
 
 		VkMemoryRequirements memRequirements;
-		vkGetBufferMemoryRequirements(context.device, m_vk_buffer, &memRequirements);
+		vkGetBufferMemoryRequirements(ctx.device, m_vk_buffer, &memRequirements);
 		m_size_bytes = memRequirements.size;
 
 		VkMemoryAllocateInfo allocInfo = {};
 		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 		allocInfo.allocationSize = memRequirements.size;
-		allocInfo.memoryTypeIndex = EngineUtils::FindMemoryType(context.device.physical_device, memRequirements.memoryTypeBits, memProperties);
-		VK_CHECK(vkAllocateMemory(context.device, &allocInfo, nullptr, &m_vk_device_memory));
+		allocInfo.memoryTypeIndex = EngineUtils::FindMemoryType(ctx.device.physical_device, memRequirements.memoryTypeBits, memProperties);
+		VK_CHECK(vkAllocateMemory(ctx.device, &allocInfo, nullptr, &m_vk_device_memory));
 
-		VK_CHECK(vkBindBufferMemory(context.device, m_vk_buffer, m_vk_device_memory, 0));
+		VK_CHECK(vkBindBufferMemory(ctx.device, m_vk_buffer, m_vk_device_memory, 0));
 
 		/* Add to manager */
-		m_hash = VkResourceManager::get_instance(context.device)->add_buffer(m_vk_buffer, m_vk_device_memory);
+		m_hash = VkResourceManager::get_instance(ctx.device)->add_buffer(m_vk_buffer, m_vk_device_memory);
 	}
 }
 void copy_from_buffer(const vk::buffer& src, const vk::buffer& dst, VkDeviceSize size)

@@ -23,7 +23,6 @@ public:
 	void show_demo();
 	void end();
 	void exit();
-	void show_gizmo(const camera& camera, const KeyEvent& event, glm::mat4& selected_object_transform);
 	void show_toolbar();
 	void show_hierarchy(ObjectManager& object_manager);
 	void show_draw_statistics(IRenderer::DrawStats draw_stats);
@@ -38,12 +37,11 @@ public:
 
 	bool is_inactive();
 	
-	bool is_scene_viewport_hovered();
-	bool m_is_scene_viewport_hovered = false;
+	bool b_is_scene_viewport_active = false;
 	float viewport_aspect_ratio = 1.0;
 
 	bool is_not_selecting_gizmo() const;
-
+	bool is_scene_viewport_active() const;
 	float x, y;
 	camera *h_camera;
 

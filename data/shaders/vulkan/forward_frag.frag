@@ -1,6 +1,6 @@
 #version 460
 
-#include "headers/framedata.glsl"
+#include "headers/data.glsl"
 #include "headers/normal_mapping.glsl"
 #include "headers/brdf.glsl"
 
@@ -9,7 +9,6 @@
 layout(location = 0) in vec4 position_ws;
 layout(location = 1) in vec4 normal_ws;
 layout(location = 2) in vec2 uv;
-layout(location = 3) in vec4 instance_color;
 
 layout(location = 0) out vec4 out_color;
 

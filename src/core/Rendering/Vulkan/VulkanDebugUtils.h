@@ -45,7 +45,7 @@ static void set_object_name(VkObjectType obj_type, uint64_t obj_handle, const ch
 	//	.pObjectName = obj_name,
 	//};
 
-	//fpSetDebugUtilsObjectNameEXT(context.device, &debug_info);
+	//fpSetDebugUtilsObjectNameEXT(ctx.device, &debug_info);
 #endif // ENGINE_DEBUG
 }
 

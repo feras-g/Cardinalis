@@ -11,7 +11,9 @@
 #include "rendering/vulkan/Renderers/DeferredRenderer.hpp"
 #include "rendering/vulkan/Renderers/ForwardRenderer.hpp"
 #include "rendering/vulkan/Renderers/SkyboxRenderer.hpp"
+#include "rendering/lighting.h"
 
+static light_manager lights;
 static ForwardRenderer forward_renderer;
 static DebugLineRenderer debug_line_renderer;
 static DeferredRenderer deferred_renderer;
@@ -30,11 +32,12 @@ void SampleProject::init()
 {
 	ObjectManager::get_instance().init();
 
+	lights.init();
 	debug_line_renderer.init();
 	forward_renderer.p_debug_line_renderer = &debug_line_renderer;
 	forward_renderer.init();
 
-	ibl_renderer.init("footprint_court.hdr");
+	ibl_renderer.init("DF360_005_Reloaded_4k_sRGB.hdr");
 	skybox_renderer.init();
 	deferred_renderer.init();
 	m_camera.update_aspect_ratio(1.0f);
@@ -51,10 +54,11 @@ void SampleProject::compose_gui()
 	m_gui.show_hierarchy(object_manager);
 	m_gui.show_draw_statistics(IRenderer::draw_stats);
 	m_gui.show_shader_library();
-	m_gui.show_viewport_window(deferred_renderer.ui_texture_ids[context.curr_frame_idx].final_lighting, m_camera, object_manager);
+	m_gui.show_viewport_window(deferred_renderer.ui_texture_ids[ctx.curr_frame_idx].final_lighting, m_camera, object_manager);
 	m_camera.show_ui();
 	deferred_renderer.show_ui(m_camera);
 	ibl_renderer.show_ui();
+	lights.show_ui();
 	m_gui.end();
 }
 
@@ -67,7 +71,7 @@ void SampleProject::update_frame_ubo()
 	frame_data.view_proj_inv = glm::inverse(frame_data.view_proj);
 	frame_data.camera_pos_ws = glm::vec4(m_camera.position, 1);
 	frame_data.time = m_time;
-	VulkanRendererCommon::get_instance().update_frame_data(frame_data, context.curr_frame_idx);
+	VulkanRendererCommon::get_instance().update_frame_data(frame_data, ctx.curr_frame_idx);
 }
 
 void SampleProject::update(float t, float dt)
@@ -118,12 +122,12 @@ void SampleProject::update(float t, float dt)
 
 void SampleProject::render()
 {
-	VkCommandBuffer& cmd_buffer = context.get_current_frame().cmd_buffer;
+	VkCommandBuffer& cmd_buffer = ctx.get_current_frame().cmd_buffer;
 	IRenderer::draw_stats.reset();
 	
 	set_polygon_mode(cmd_buffer, IRenderer::global_polygon_mode);
 
-	context.swapchain->clear_color(cmd_buffer);
+	ctx.swapchain->clear_color(cmd_buffer);
 
 	deferred_renderer.render(cmd_buffer, drawable_list);
 	skybox_renderer.render(cmd_buffer);
@@ -148,13 +152,12 @@ void SampleProject::create_scene()
 	plane.create_from_file("basic/unit_plane.glb");
 	drawable_list.push_back(ObjectManager::get_instance().add_mesh(plane, "Floor", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  25, 25, 25 } }));
 	mesh_1.create_from_file("scenes/shield/scene.gltf");
-	//mesh_2.create_from_file("scenes/temple/gltf/scene.gltf");
+	mesh_2.create_from_file("scenes/temple/gltf/scene.gltf");
 	//mesh_2.create_from_file("scenes/sponza/scene.gltf");
 
 
 	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.1, 0.1f, 0.1f } }));
-
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_2, "mesh_2", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.025f, 0.025f, 0.025f  } }));
+	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_2, "mesh_2", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.025f, 0.025f, 0.025f  } }));
 	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_test_roughness, "mesh_test_roughness", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.75f,0.75f,0.75f } }));
 
 	//VulkanMesh mesh_sponza, mesh_ivy, mesh_curtains;
@@ -232,7 +235,7 @@ void SampleProject::on_mouse_move(MouseEvent event)
 		}
 
 
-		if (m_event_manager->mouse_event.b_lmb_click && m_gui.is_not_selecting_gizmo())
+		if (m_event_manager->mouse_event.b_lmb_click && m_gui.is_not_selecting_gizmo() && m_gui.is_scene_viewport_active())
 		{
 			glm::vec2 mouse_pos = { m_event_manager->mouse_event.curr_pos_x, m_event_manager->mouse_event.curr_pos_y };
 			m_camera.rotate(mouse_pos);

@@ -5,9 +5,9 @@
 #include <unordered_map>
 
 #include <core/rendering/vulkan/VulkanRenderInterface.h>
-#include <core/rendering/vulkan/RenderPass.h>
-#include <core/rendering/vulkan/VulkanMesh.h>
-#include "DescriptorSet.h"
+#include "core/engine/vulkan/objects/vk_renderpass.h"
+#include "core/rendering/vulkan/VulkanMesh.h"
+#include "core/engine/vulkan/objects/vk_descriptor_set.hpp"
 
 class VulkanRendererCommon
 {
@@ -38,9 +38,9 @@ public:
 		float time; /* Time in seconds */
 		glm::vec3 pad;
 	};
-	Buffer m_ubo_framedata[NUM_FRAMES];
-	DescriptorSetLayout m_framedata_desc_set_layout;
-	DescriptorSet m_framedata_desc_set[NUM_FRAMES];
+	vk::buffer m_ubo_framedata[NUM_FRAMES];
+	vk::descriptor_set_layout m_framedata_desc_set_layout;
+	vk::descriptor_set m_framedata_desc_set[NUM_FRAMES];
 
 	void init();
 	void create_descriptor_sets();

@@ -3,7 +3,7 @@
 layout(location = 0) out vec4 color;
 
 #include "headers/debug_line_rendering.glsl"
-#include "headers/framedata.glsl"
+#include "headers/data.glsl"
 
 layout(set = 1, binding = 0) uniform FrameDataBlock 
 { 

@@ -5,6 +5,7 @@
 #include "core/rendering/vulkan/VulkanTexture.h"
 #include "core/rendering/vulkan/VulkanUI.h"
 #include "core/rendering/vulkan/Renderers/IBLPrefiltering.hpp"
+#include "core/rendering/lighting.h"
 
 struct DeferredRenderer : public IRenderer
 {
@@ -43,20 +44,20 @@ struct DeferredRenderer : public IRenderer
 			gbuffer[i].metalness_roughness_attachment.init(metalness_roughness_format, render_size, render_size, 1, false, "[Deferred Renderer] Metalness Roughness Attachment");
 			gbuffer[i].depth_attachment.init(depth_format, render_size, render_size, 1, false, "[Deferred Renderer] Depth Attachment");
 
-			gbuffer[i].base_color_attachment.create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-			gbuffer[i].normal_attachment.create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-			gbuffer[i].metalness_roughness_attachment.create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-			gbuffer[i].depth_attachment.create(context.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+			gbuffer[i].base_color_attachment.create(ctx.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+			gbuffer[i].normal_attachment.create(ctx.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+			gbuffer[i].metalness_roughness_attachment.create(ctx.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+			gbuffer[i].depth_attachment.create(ctx.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
 			/* Create final attachment compositing all geometry information */
 			gbuffer[i].final_lighting.init(VulkanRendererCommon::get_instance().swapchain_color_format, render_size, render_size, 1, 0, "[Deferred Renderer] Composite Color Attachment");
-			gbuffer[i].final_lighting.create(context.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+			gbuffer[i].final_lighting.create(ctx.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 		}
 	}
 
 	void create_pipeline()
 	{
-		create_pipeline_gbuffer_pass();
+		create_pipeline_geometry_pass();
 		create_pipeline_lighting_pass();
 	}
 
@@ -87,7 +88,7 @@ struct DeferredRenderer : public IRenderer
 		}
 	}
 
-	void create_pipeline_gbuffer_pass()
+	void create_pipeline_geometry_pass()
 	{
 		VkFormat attachment_formats[]
 		{
@@ -118,7 +119,7 @@ struct DeferredRenderer : public IRenderer
 	{
 		VkFormat attachment_formats[]
 		{
-			context.swapchain->info.color_format
+			ctx.swapchain->info.color_format
 		};
 
 		std::array<VkDescriptorPoolSize, 1> pool_sizes
@@ -169,6 +170,7 @@ struct DeferredRenderer : public IRenderer
 		{
 			VulkanRendererCommon::get_instance().m_framedata_desc_set_layout,
 			sampled_images_descriptor_set_layout,
+			light_manager::descriptor_set.layout
 		};
 
 		lighting_pass_pipeline.layout.create(descriptor_set_layouts);
@@ -185,16 +187,16 @@ struct DeferredRenderer : public IRenderer
 
 		vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, geometry_pass_pipeline);
 
-		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, geometry_pass_pipeline.layout, 0, 1, &VulkanRendererCommon::get_instance().m_framedata_desc_set[context.curr_frame_idx].vk_set, 0, nullptr);
+		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, geometry_pass_pipeline.layout, 0, 1, &VulkanRendererCommon::get_instance().m_framedata_desc_set[ctx.curr_frame_idx].vk_set, 0, nullptr);
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, geometry_pass_pipeline.layout, 1, 1, &ObjectManager::get_instance().m_descriptor_set_bindless_textures.vk_set, 0, nullptr);
 		
 		/* TODO : batch transitions ? */
-		gbuffer[context.curr_frame_idx].base_color_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
-		gbuffer[context.curr_frame_idx].normal_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
-		gbuffer[context.curr_frame_idx].metalness_roughness_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
-		gbuffer[context.curr_frame_idx].depth_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
+		gbuffer[ctx.curr_frame_idx].base_color_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+		gbuffer[ctx.curr_frame_idx].normal_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+		gbuffer[ctx.curr_frame_idx].metalness_roughness_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+		gbuffer[ctx.curr_frame_idx].depth_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
 
-		renderpass_geometry[context.curr_frame_idx].begin(cmd_buffer, { render_size, render_size });
+		renderpass_geometry[ctx.curr_frame_idx].begin(cmd_buffer, { render_size, render_size });
 		const ObjectManager& object_manager = ObjectManager::get_instance();
 		for (size_t mesh_idx : mesh_list)
 		{
@@ -219,14 +221,14 @@ struct DeferredRenderer : public IRenderer
 			}
 		}
 
-		renderpass_geometry[context.curr_frame_idx].end(cmd_buffer);
+		renderpass_geometry[ctx.curr_frame_idx].end(cmd_buffer);
 
 
 		/* TODO : batch transitions ? */
-		gbuffer[context.curr_frame_idx].base_color_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
-		gbuffer[context.curr_frame_idx].normal_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
-		gbuffer[context.curr_frame_idx].metalness_roughness_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
-		gbuffer[context.curr_frame_idx].depth_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
+		gbuffer[ctx.curr_frame_idx].base_color_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
+		gbuffer[ctx.curr_frame_idx].normal_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
+		gbuffer[ctx.curr_frame_idx].metalness_roughness_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
+		gbuffer[ctx.curr_frame_idx].depth_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
 	}
 
 	/* Compositing render pass using G-Buffers to compute lighting and render to fullscreen quad */
@@ -235,19 +237,25 @@ struct DeferredRenderer : public IRenderer
 		VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Deferred Lighting Pass");
 		vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lighting_pass_pipeline);
 
-		glm::vec2 render_size = { gbuffer[context.curr_frame_idx].final_lighting.info.width, gbuffer[context.curr_frame_idx].final_lighting.info.height };
+		glm::vec2 render_size = { gbuffer[ctx.curr_frame_idx].final_lighting.info.width, gbuffer[ctx.curr_frame_idx].final_lighting.info.height };
 
 		// Invert when drawing to swapchain
 		set_viewport_scissor(cmd_buffer, render_size.x, render_size.y);
 
-		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lighting_pass_pipeline.layout, 0, 1, &VulkanRendererCommon::get_instance().m_framedata_desc_set[context.curr_frame_idx].vk_set, 0, nullptr);
-		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lighting_pass_pipeline.layout, 1, 1, &sampled_images_descriptor_set[context.curr_frame_idx].vk_set, 0, nullptr);
+		VkDescriptorSet bound_descriptor_sets[]
+		{
+			VulkanRendererCommon::get_instance().m_framedata_desc_set[ctx.curr_frame_idx].vk_set,
+			sampled_images_descriptor_set[ctx.curr_frame_idx].vk_set,
+			light_manager::descriptor_set.vk_set,
+		};
 
-		gbuffer[context.curr_frame_idx].final_lighting.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
-		renderpass_lighting[context.curr_frame_idx].begin(cmd_buffer, { render_size.x, render_size.y });
+		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lighting_pass_pipeline.layout, 0, 3, bound_descriptor_sets, 0, nullptr);
+
+		gbuffer[ctx.curr_frame_idx].final_lighting.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+		renderpass_lighting[ctx.curr_frame_idx].begin(cmd_buffer, { render_size.x, render_size.y });
 		vkCmdDraw(cmd_buffer, 3, 1, 0, 0);
-		renderpass_lighting[context.curr_frame_idx].end(cmd_buffer);
-		gbuffer[context.curr_frame_idx].final_lighting.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
+		renderpass_lighting[ctx.curr_frame_idx].end(cmd_buffer);
+		gbuffer[ctx.curr_frame_idx].final_lighting.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
 
 	}
 
@@ -308,26 +316,26 @@ struct DeferredRenderer : public IRenderer
 			const ImVec2 main_img_size  = { render_size, render_size };
 			const ImVec2 thumb_img_size = { 256, 256 };
 
-			static ImTextureID curr_main_image = ui_texture_ids[context.curr_frame_idx].final_lighting;
+			static ImTextureID curr_main_image = ui_texture_ids[ctx.curr_frame_idx].final_lighting;
 
 			if (ImGui::Begin("GBuffer View"))
 			{
-				if (ImGui::ImageButton(ui_texture_ids[context.curr_frame_idx].base_color, thumb_img_size))
+				if (ImGui::ImageButton(ui_texture_ids[ctx.curr_frame_idx].base_color, thumb_img_size))
 				{
-					curr_main_image = ui_texture_ids[context.curr_frame_idx].base_color;
+					curr_main_image = ui_texture_ids[ctx.curr_frame_idx].base_color;
 				}
 				
-				if (ImGui::ImageButton(ui_texture_ids[context.curr_frame_idx].normal, thumb_img_size))
+				if (ImGui::ImageButton(ui_texture_ids[ctx.curr_frame_idx].normal, thumb_img_size))
 				{
-					curr_main_image = ui_texture_ids[context.curr_frame_idx].normal;
+					curr_main_image = ui_texture_ids[ctx.curr_frame_idx].normal;
 				}
-				if (ImGui::ImageButton(ui_texture_ids[context.curr_frame_idx].metalness_roughness, thumb_img_size))
+				if (ImGui::ImageButton(ui_texture_ids[ctx.curr_frame_idx].metalness_roughness, thumb_img_size))
 				{
-					curr_main_image = ui_texture_ids[context.curr_frame_idx].metalness_roughness;
+					curr_main_image = ui_texture_ids[ctx.curr_frame_idx].metalness_roughness;
 				}
-				if (ImGui::ImageButton(ui_texture_ids[context.curr_frame_idx].depth, { thumb_img_size.x, thumb_img_size.y }))
+				if (ImGui::ImageButton(ui_texture_ids[ctx.curr_frame_idx].depth, { thumb_img_size.x, thumb_img_size.y }))
 				{
-					curr_main_image = ui_texture_ids[context.curr_frame_idx].depth;
+					curr_main_image = ui_texture_ids[ctx.curr_frame_idx].depth;
 				}
 			}
 			ImGui::End();
@@ -360,7 +368,7 @@ struct DeferredRenderer : public IRenderer
 
 	bool reload_pipeline() override
 	{
-		vkDeviceWaitIdle(context.device);
+		vkDeviceWaitIdle(ctx.device);
 
 		if (shader_geometry_pass.compile())
 		{
@@ -397,18 +405,18 @@ struct DeferredRenderer : public IRenderer
 	VertexFragmentShader shader_geometry_pass;
 	VertexFragmentShader shader_lighting_pass;
 	bool render_ok = false;
-	VulkanRenderPassDynamic renderpass_geometry[NUM_FRAMES];
-	VulkanRenderPassDynamic renderpass_lighting[NUM_FRAMES];
+	vk::renderpass_dynamic renderpass_geometry[NUM_FRAMES];
+	vk::renderpass_dynamic renderpass_lighting[NUM_FRAMES];
 	
 	Pipeline geometry_pass_pipeline;
 	Pipeline lighting_pass_pipeline;
-	DescriptorSet sampled_images_descriptor_set[NUM_FRAMES];
-	DescriptorSetLayout sampled_images_descriptor_set_layout;
+	vk::descriptor_set sampled_images_descriptor_set[NUM_FRAMES];
+	vk::descriptor_set_layout sampled_images_descriptor_set_layout;
 
-	VulkanRenderPassDynamic renderpass[NUM_FRAMES];
+	vk::renderpass_dynamic renderpass[NUM_FRAMES];
 
 	VkDescriptorPool descriptor_pool;
-	DescriptorSet descriptor_set;
+	vk::descriptor_set descriptor_set;
 	/* Contains different state toggles used inside fragment shader */
 	struct ShaderToggles
 	{

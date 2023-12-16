@@ -21,7 +21,7 @@ struct DebugLineRenderer : public IRenderer
 		staging.create();
 
 		VkDrawIndirectCommand init_indirect_cmd{0, 1, 0, 0};
-		staging.upload(context.device, &init_indirect_cmd, 0, sizeof(VkDrawIndirectCommand));
+		staging.upload(ctx.device, &init_indirect_cmd, 0, sizeof(VkDrawIndirectCommand));
 
 		indirect_cmd_buffer.init(vk::buffer::type::INDIRECT, sizeof(VkDrawIndirectCommand), "DebugLineRenderer Indirect Command"); /* Device local */
 		indirect_cmd_buffer.create();
@@ -64,14 +64,14 @@ struct DebugLineRenderer : public IRenderer
 
 	void create_renderpass() override
 	{
-		color_format = context.swapchain->color_attachments[0].info.imageFormat;
-		depth_format = context.swapchain->depth_attachments[0].info.imageFormat;
+		color_format = ctx.swapchain->color_attachments[0].info.imageFormat;
+		depth_format = ctx.swapchain->depth_attachments[0].info.imageFormat;
 
 		for (uint32_t i = 0; i < NUM_FRAMES; i++)
 		{
 			renderpass[i].reset();
-			renderpass[i].add_color_attachment(context.swapchain->color_attachments[i].view, VK_ATTACHMENT_LOAD_OP_LOAD);
-			renderpass[i].add_depth_attachment(context.swapchain->depth_attachments[i].view, VK_ATTACHMENT_LOAD_OP_LOAD);
+			renderpass[i].add_color_attachment(ctx.swapchain->color_attachments[i].view, VK_ATTACHMENT_LOAD_OP_LOAD);
+			renderpass[i].add_depth_attachment(ctx.swapchain->depth_attachments[i].view, VK_ATTACHMENT_LOAD_OP_LOAD);
 		}
 	}
 
@@ -86,12 +86,12 @@ struct DebugLineRenderer : public IRenderer
 			vtx_buffer_populated = true;
 		}
 
-		renderpass[context.curr_frame_idx].begin(cmd_buffer, { context.swapchain->info.width, context.swapchain->info.height });
+		renderpass[ctx.curr_frame_idx].begin(cmd_buffer, { ctx.swapchain->info.width, ctx.swapchain->info.height });
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline.layout, 0, 1, debug_line_descriptor_set, 0, nullptr);
 		vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline.pipeline);
-		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline.layout, 1, 1, &VulkanRendererCommon::get_instance().m_framedata_desc_set[context.curr_frame_idx].vk_set, 0, nullptr);
+		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline.layout, 1, 1, &VulkanRendererCommon::get_instance().m_framedata_desc_set[ctx.curr_frame_idx].vk_set, 0, nullptr);
 		vkCmdDrawIndirect(cmd_buffer, indirect_cmd_buffer, 0, 1, 0);
-		renderpass[context.curr_frame_idx].end(cmd_buffer);
+		renderpass[ctx.curr_frame_idx].end(cmd_buffer);
 	}
 
 	void on_window_resize()
@@ -126,11 +126,11 @@ struct DebugLineRenderer : public IRenderer
 	VertexFragmentShader render_shader;
 	VkDrawIndirectCommand command;
 	VkDescriptorPool descriptor_pool;
-	DescriptorSet debug_line_descriptor_set;
+	vk::descriptor_set debug_line_descriptor_set;
 	vk::buffer vertex_buffer;
 	vk::buffer indirect_cmd_buffer;
 	Pipeline graphics_pipeline;
-	VulkanRenderPassDynamic renderpass[NUM_FRAMES];
+	vk::renderpass_dynamic renderpass[NUM_FRAMES];
 
 	size_t max_lines  = 16384;
 	size_t vtx_buffer_max_size = 2 * sizeof(DebugPoint) * max_lines;

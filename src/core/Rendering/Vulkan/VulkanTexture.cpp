@@ -46,7 +46,7 @@ void Texture2D::create_from_file(
         init(format, image_data.w, image_data.h, 1, use_mipmaps, filename);
     }
     create_from_data(&image_data, imageUsage, layout);
-    create_view(context.device, ImageViewTexture2D);
+    create_view(ctx.device, ImageViewTexture2D);
 }
 
 void Texture2D::create_from_data(
@@ -55,11 +55,11 @@ void Texture2D::create_from_data(
     VkImageLayout		layout)
 {
 	assert(initialized);
-    create_vk_image(context.device, false, imageUsage);
+    create_vk_image(ctx.device, false, imageUsage);
     
     transition_immediate(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_TRANSFER_WRITE_BIT);
 
-    upload_data(context.device, data);
+    upload_data(ctx.device, data);
 
 	transition_immediate(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
 
@@ -126,7 +126,7 @@ void Texture::create_vk_image(VkDevice device, bool isCubemap, VkImageUsageFlags
     {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize = imageMemReq.size,
-        .memoryTypeIndex = EngineUtils::FindMemoryType(context.device.physical_device, imageMemReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+        .memoryTypeIndex = EngineUtils::FindMemoryType(ctx.device.physical_device, imageMemReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
     };
     
     VK_CHECK(vkAllocateMemory(device, &allocInfo, nullptr, &deviceMemory));
@@ -169,10 +169,10 @@ void Texture::upload_data(VkDevice device, void* data)
     VkDeviceSize layerSizeInBytes = info.width * info.height * bpp;
     VkDeviceSize imageSizeInBytes = layerSizeInBytes * info.layerCount;
     // Create temp CPU-GPU visible buffer holding image data 
-    Buffer stagingBuffer;
-	stagingBuffer.init(Buffer::Type::STAGING, imageSizeInBytes, "Image Staging Buffer");
+    vk::buffer stagingBuffer;
+	stagingBuffer.init(vk::buffer::type::STAGING, imageSizeInBytes, "Image Staging Buffer");
     stagingBuffer.create();
-	stagingBuffer.upload(context.device, data, 0, imageSizeInBytes);
+	stagingBuffer.upload(ctx.device, data, 0, imageSizeInBytes);
 
     VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
     copy_from_buffer(cmd_buffer, stagingBuffer);
@@ -188,12 +188,12 @@ void Texture::destroy()
 {
     if (hash)
     {
-        VkResourceManager::get_instance(context.device)->destroy_image(hash);
+        VkResourceManager::get_instance(ctx.device)->destroy_image(hash);
     }
 
     if (view_hash)
     {
-        VkResourceManager::get_instance(context.device)->destroy_image_view(view_hash);
+        VkResourceManager::get_instance(ctx.device)->destroy_image_view(view_hash);
     }
 
     *this = {};
@@ -564,10 +564,10 @@ VkImageView create_texture_view(
 	}
 
 	VkImageView out_view;
-	vkCreateImageView(context.device, &createInfo, nullptr, &out_view);
+	vkCreateImageView(ctx.device, &createInfo, nullptr, &out_view);
 
     /* Add to resource manager */
-    VkResourceManager::get_instance(context.device)->add_image_view(out_view);
+    VkResourceManager::get_instance(ctx.device)->add_image_view(out_view);
 
 	return out_view;
 }
@@ -620,10 +620,10 @@ void Texture2D::create_texture_2d_layer_view(VkImageView& out_view, const Textur
         .layerCount     { 1 },
     };
 
-    assert(vkCreateImageView(context.device, &createInfo, nullptr, &out_view) == VK_SUCCESS);
+    assert(vkCreateImageView(ctx.device, &createInfo, nullptr, &out_view) == VK_SUCCESS);
 
     /* Add to resource manager */
-    VkResourceManager::get_instance(context.device)->add_image_view(out_view);
+    VkResourceManager::get_instance(ctx.device)->add_image_view(out_view);
 }
 
 void Texture2D::create_texture_2d_mip_view(VkImageView& out_view, const Texture2D& texture, VkDevice device, uint32_t mip_level)
@@ -653,8 +653,8 @@ void Texture2D::create_texture_2d_mip_view(VkImageView& out_view, const Texture2
         .layerCount     { 1 },
     };
 
-    assert(vkCreateImageView(context.device, &createInfo, nullptr, &out_view) == VK_SUCCESS);
+    assert(vkCreateImageView(ctx.device, &createInfo, nullptr, &out_view) == VK_SUCCESS);
 
     /* Add to resource manager */
-    VkResourceManager::get_instance(context.device)->add_image_view(out_view);
+    VkResourceManager::get_instance(ctx.device)->add_image_view(out_view);
 }

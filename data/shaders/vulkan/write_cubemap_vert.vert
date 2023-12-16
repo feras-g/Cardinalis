@@ -2,7 +2,7 @@
 #extension GL_EXT_multiview : enable
 
 #include "headers/vertex.glsl"
-#include "headers/framedata.glsl"
+#include "headers/data.glsl"
 
 layout(location = 0) out vec4 position_os;
 layout(location = 1) out vec4 debug_color;

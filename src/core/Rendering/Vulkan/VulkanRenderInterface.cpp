@@ -6,7 +6,7 @@
 
 #include <vector>
 
-VulkanContext context;
+vk::context ctx;
 
 static void GetInstanceExtensionNames(std::vector<const char*>& extensions);
 static void GetInstanceLayerNames(std::vector<const char*>& layers);
@@ -32,34 +32,34 @@ void RenderInterface::init()
 
 void RenderInterface::terminate()
 {
-	vkDeviceWaitIdle(context.device);
-	VkResourceManager::get_instance(context.device)->destroy_all_resources();
+	vkDeviceWaitIdle(ctx.device);
+	VkResourceManager::get_instance(ctx.device)->destroy_all_resources();
 
 	for (uint32_t i = 0; i < NUM_FRAMES; i++)
 	{
-		destroy(context.device, context.frames[i]);
+		destroy(ctx.device, ctx.frames[i]);
 	}
 
-	vkDestroyCommandPool(context.device, context.temp_cmd_pool, nullptr);
+	vkDestroyCommandPool(ctx.device, ctx.temp_cmd_pool, nullptr);
 
-	context.swapchain->destroy();
-	vkDestroySurfaceKHR(context.device.instance, surface, nullptr);
+	ctx.swapchain->destroy();
+	vkDestroySurfaceKHR(ctx.device.instance, surface, nullptr);
 
-	vkDestroyDevice(context.device, nullptr);
-	vkDestroyInstance(context.device.instance, nullptr);
+	vkDestroyDevice(ctx.device, nullptr);
+	vkDestroyInstance(ctx.device.instance, nullptr);
 }
 
 void RenderInterface::create_device()
 {
-	context.device.create();
+	ctx.device.create();
 }
 
 void RenderInterface::create_command_structures()
 {
 	for (uint32_t i = 0; i < NUM_FRAMES; i++)
 	{
-		context.frames[i].cmd_buffer.init(context.device, context.device.queue_family_indices[vk::queue_family::graphics]);
-		context.frames[i].cmd_buffer.create(context.device);
+		ctx.frames[i].cmd_buffer.init(ctx.device, ctx.device.queue_family_indices[vk::queue_family::graphics]);
+		ctx.frames[i].cmd_buffer.create(ctx.device);
 	}
 }
 
@@ -70,10 +70,10 @@ void RenderInterface::create_synchronization_structures()
 
 	for (uint32_t i = 0; i < NUM_FRAMES; i++)
 	{
-		VK_CHECK(vkCreateFence(context.device, &fenceInfo, nullptr, &context.frames[i].fence_queue_submitted));
+		VK_CHECK(vkCreateFence(ctx.device, &fenceInfo, nullptr, &ctx.frames[i].fence_queue_submitted));
 
-		VK_CHECK(vkCreateSemaphore(context.device, &semaphoreInfo, nullptr, &context.frames[i].semaphore_swapchain_acquire));
-		VK_CHECK(vkCreateSemaphore(context.device, &semaphoreInfo, nullptr, &context.frames[i].smp_queue_submitted));
+		VK_CHECK(vkCreateSemaphore(ctx.device, &semaphoreInfo, nullptr, &ctx.frames[i].semaphore_swapchain_acquire));
+		VK_CHECK(vkCreateSemaphore(ctx.device, &semaphoreInfo, nullptr, &ctx.frames[i].smp_queue_submitted));
 	}
 }
 
@@ -95,7 +95,7 @@ void RenderInterface::create_surface(Window* window)
 		.hwnd = window->GetData()->hWnd
 	};
 
-	VK_CHECK(vkCreateWin32SurfaceKHR(context.device.instance, &surfaceInfo, nullptr, &surface));
+	VK_CHECK(vkCreateWin32SurfaceKHR(ctx.device.instance, &surfaceInfo, nullptr, &surface));
 
 	LOG_INFO("vkCreateWin32SurfaceKHR() success.");
 
@@ -106,40 +106,40 @@ void RenderInterface::create_surface(Window* window)
 
 void RenderInterface::create_swapchain()
 {
-	context.swapchain.reset(new VulkanSwapchain(surface));
-	context.swapchain->init(VulkanRendererCommon::get_instance().swapchain_color_format, 
+	ctx.swapchain.reset(new vk::swapchain(surface));
+	ctx.swapchain->init(VulkanRendererCommon::get_instance().swapchain_color_format, 
 	                        VulkanRendererCommon::get_instance().swapchain_colorspace, 
 	                        VulkanRendererCommon::get_instance().swapchain_depth_format);
 }
 
 vk::frame& RenderInterface::get_current_frame()
 {
-	return context.frames[context.frame_count % NUM_FRAMES];
+	return ctx.frames[ctx.frame_count % NUM_FRAMES];
 }
 
 [[nodiscard]] VkCommandBuffer begin_temp_cmd_buffer()
 {
 	VkCommandBuffer temp_cmd_buffer = VK_NULL_HANDLE;
 
-	if (context.temp_cmd_pool == VK_NULL_HANDLE)
+	if (ctx.temp_cmd_pool == VK_NULL_HANDLE)
 	{
 		VkCommandPoolCreateInfo temp_cmd_pool_info
 		{
 			.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO
 		};
 
-		vkCreateCommandPool(context.device, &temp_cmd_pool_info, nullptr, &context.temp_cmd_pool);
+		vkCreateCommandPool(ctx.device, &temp_cmd_pool_info, nullptr, &ctx.temp_cmd_pool);
 	}
 
 	VkCommandBufferAllocateInfo alloc_info
 	{
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-		.commandPool = context.temp_cmd_pool,
+		.commandPool = ctx.temp_cmd_pool,
 		.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
 		.commandBufferCount = 1,
 	};
 
-	VK_CHECK(vkAllocateCommandBuffers(context.device, &alloc_info, &temp_cmd_buffer));
+	VK_CHECK(vkAllocateCommandBuffers(ctx.device, &alloc_info, &temp_cmd_buffer));
 
 	VkCommandBufferBeginInfo beginInfo
 	{
@@ -171,14 +171,14 @@ void end_temp_cmd_buffer(VkCommandBuffer cmd_buffer)
 	};
 	VkFence submit_fence;
 
-	VK_CHECK(vkCreateFence(context.device, &submit_fence_info, nullptr, &submit_fence));
-	VK_CHECK(vkQueueSubmit(context.device.graphics_queue, 1, &submit_info, submit_fence));
+	VK_CHECK(vkCreateFence(ctx.device, &submit_fence_info, nullptr, &submit_fence));
+	VK_CHECK(vkQueueSubmit(ctx.device.graphics_queue, 1, &submit_info, submit_fence));
 
 	/* Destroy temporary command buffers */
-	vkWaitForFences(context.device, 1, &submit_fence, VK_TRUE, 1000000000ull);
+	vkWaitForFences(ctx.device, 1, &submit_fence, VK_TRUE, 1000000000ull);
 
-	vkFreeCommandBuffers(context.device, context.temp_cmd_pool, 1, &cmd_buffer);
-	vkDestroyFence(context.device, submit_fence, nullptr);
+	vkFreeCommandBuffers(ctx.device, ctx.temp_cmd_pool, 1, &cmd_buffer);
+	vkDestroyFence(ctx.device, submit_fence, nullptr);
 }
 
 void EndCommandBuffer(VkCommandBuffer cmdBuffer)
@@ -287,10 +287,10 @@ bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, VkRenderPass* out
 		.pDependencies	 = dependencies.data()
 	};
 
-	return (vkCreateRenderPass(context.device, &renderPassInfo, nullptr, out_renderPass) == VK_SUCCESS);
+	return (vkCreateRenderPass(ctx.device, &renderPassInfo, nullptr, out_renderPass) == VK_SUCCESS);
 }
 
-bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const VulkanSwapchain* swapchain, VkFramebuffer* out_Framebuffers, bool useDepth)
+bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const vk::swapchain* swapchain, VkFramebuffer* out_Framebuffers, bool useDepth)
 {
 	return CreateColorDepthFramebuffers(renderPass, swapchain->color_attachments.data(), swapchain->depth_attachments.data(), out_Framebuffers, useDepth);
 }
@@ -309,10 +309,10 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const VulkanSwapchain
 	};
 
 	VkDescriptorSetLayout out;
-	VK_CHECK(vkCreateDescriptorSetLayout(context.device, &layout_info, nullptr, &out));
+	VK_CHECK(vkCreateDescriptorSetLayout(ctx.device, &layout_info, nullptr, &out));
 
 	/* Add to resource manager */
-	VkResourceManager::get_instance(context.device)->add_descriptor_set_layout(out);
+	VkResourceManager::get_instance(ctx.device)->add_descriptor_set_layout(out);
 
 	return out;
 }
@@ -330,7 +330,7 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const VulkanSwapchain
 		.pSetLayouts		= &layout,
 	};
 
-	VK_CHECK(vkAllocateDescriptorSets(context.device, &allocInfo, &out));
+	VK_CHECK(vkAllocateDescriptorSets(ctx.device, &allocInfo, &out));
 	return out;
 }
 
@@ -354,7 +354,7 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colo
 		fbInfo.width  = colorAttachments[i].info.width;
 		fbInfo.height = colorAttachments[i].info.height;
 
-		VK_CHECK(vkCreateFramebuffer(context.device, &fbInfo, nullptr, &out_Framebuffers[i]));
+		VK_CHECK(vkCreateFramebuffer(ctx.device, &fbInfo, nullptr, &out_Framebuffers[i]));
 	}
 
 	return true;
@@ -373,10 +373,10 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colo
 		.pPoolSizes = pool_sizes.data()
 	};
 
-	VK_CHECK(vkCreateDescriptorPool(context.device, &poolInfo, nullptr, &out));
+	VK_CHECK(vkCreateDescriptorPool(ctx.device, &poolInfo, nullptr, &out));
 
 	/* Add to resource manager */
-	VkResourceManager::get_instance(context.device)->add_descriptor_pool(out);
+	VkResourceManager::get_instance(ctx.device)->add_descriptor_pool(out);
 
 	return out;
 }
@@ -418,10 +418,10 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colo
 		.pPoolSizes = poolSizes.data()
 	};
 
-	VK_CHECK(vkCreateDescriptorPool(context.device, &poolInfo, nullptr, &out));
+	VK_CHECK(vkCreateDescriptorPool(ctx.device, &poolInfo, nullptr, &out));
 
 	/* Add to resource manager */
-	VkResourceManager::get_instance(context.device)->add_descriptor_pool(out);
+	VkResourceManager::get_instance(ctx.device)->add_descriptor_pool(out);
 
 	return out;
 }
@@ -576,10 +576,10 @@ void Pipeline::create_graphics(const VertexFragmentShader& shader, uint32_t numC
 		.basePipelineIndex=0
 	};
 
-	VK_CHECK(vkCreateGraphicsPipelines(context.device, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &pipeline));
+	VK_CHECK(vkCreateGraphicsPipelines(ctx.device, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &pipeline));
 
 	/* Add to resource manager */
-	VkResourceManager::get_instance(context.device)->add_pipeline(pipeline);
+	VkResourceManager::get_instance(ctx.device)->add_pipeline(pipeline);
 }
 
 void Pipeline::create_compute(const Shader& shader)
@@ -591,10 +591,10 @@ void Pipeline::create_compute(const Shader& shader)
 	compute_ppl_info.stage = shader.stages[0];
 	compute_ppl_info.layout = layout;
 
-	VK_CHECK(vkCreateComputePipelines(context.device, VK_NULL_HANDLE, 1, &compute_ppl_info, nullptr, &pipeline));
+	VK_CHECK(vkCreateComputePipelines(ctx.device, VK_NULL_HANDLE, 1, &compute_ppl_info, nullptr, &pipeline));
 
 	/* Add to resource manager */
-	VkResourceManager::get_instance(context.device)->add_pipeline(pipeline);
+	VkResourceManager::get_instance(ctx.device)->add_pipeline(pipeline);
 }
 
 bool Pipeline::reload_pipeline()
@@ -607,7 +607,7 @@ bool Pipeline::reload_pipeline()
 		return false;
 	}
 
-	result = vkCreateGraphicsPipelines(context.device, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &ppl);
+	result = vkCreateGraphicsPipelines(ctx.device, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &ppl);
 	if (result == VK_SUCCESS)
 	{
 		pipeline = ppl;
@@ -626,24 +626,24 @@ void Pipeline::bind(VkCommandBuffer cmd_buffer) const
 	vkCmdBindPipeline(cmd_buffer, bind_point, pipeline);
 }
 
-size_t create_vertex_index_buffer(Buffer& result, const void* vtxData, size_t& vtxBufferSizeInBytes, const void* idxData, size_t& idxBufferSizeInBytes)
+size_t create_vertex_index_buffer(vk::buffer& result, const void* vtxData, size_t& vtxBufferSizeInBytes, const void* idxData, size_t& idxBufferSizeInBytes)
 {
 	/* Compute a good alignment */
 	size_t total_size_bytes = vtxBufferSizeInBytes + idxBufferSizeInBytes;
 
 	// Staging buffer
-	Buffer stagingBuffer;
-	stagingBuffer.init(Buffer::Type::STAGING, total_size_bytes, "Vertex/Index Staging Buffer");
+	vk::buffer stagingBuffer;
+	stagingBuffer.init(vk::buffer::type::STAGING, total_size_bytes, "Vertex/Index Staging Buffer");
 	stagingBuffer.create();
 	// Copy vertex + index data to staging buffer
 	
-	void* pData = stagingBuffer.map(context.device, 0, total_size_bytes);
+	void* pData = stagingBuffer.map(ctx.device, 0, total_size_bytes);
 	memcpy(pData, vtxData, vtxBufferSizeInBytes);
 	memcpy((unsigned char*)pData + vtxBufferSizeInBytes, idxData, idxBufferSizeInBytes);
-	stagingBuffer.unmap(context.device);
+	stagingBuffer.unmap(ctx.device);
 
 	// Create storage buffer containing non-interleaved vertex + index data 
-	result.init(Buffer::Type::STORAGE, total_size_bytes, "Vertex/Index SSBO");
+	result.init(vk::buffer::type::STORAGE, total_size_bytes, "Vertex/Index SSBO");
 	result.create();
 	copy_from_buffer(stagingBuffer, result, total_size_bytes);
 
@@ -719,10 +719,10 @@ void create_sampler(VkDevice device, VkFilter min, VkFilter mag, VkSamplerAddres
 	sampler_create_info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 	sampler_create_info.unnormalizedCoordinates = VK_FALSE;
 	
-	VK_CHECK(vkCreateSampler(context.device, &sampler_create_info, nullptr, &out_Sampler));
+	VK_CHECK(vkCreateSampler(ctx.device, &sampler_create_info, nullptr, &out_Sampler));
 
 	/* Add to resource manager */
-	VkResourceManager::get_instance(context.device)->add_sampler(out_Sampler);
+	VkResourceManager::get_instance(ctx.device)->add_sampler(out_Sampler);
 }
 
 void BeginRenderpass(VkCommandBuffer cmdBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer, VkRect2D renderArea, const VkClearValue* clearValues, uint32_t clearValueCount)
@@ -798,7 +798,7 @@ void set_polygon_mode(VkCommandBuffer cmdBuffer, VkPolygonMode mode)
 	VK_CHECK(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &out));
 
 	/* Add to resource manager */
-	VkResourceManager::get_instance(context.device)->add_pipeline_layout(out);
+	VkResourceManager::get_instance(ctx.device)->add_pipeline_layout(out);
 
 	return out;
 }

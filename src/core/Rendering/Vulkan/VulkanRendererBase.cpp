@@ -39,39 +39,39 @@ void VulkanRendererCommon::create_descriptor_sets()
 		
 		VkDescriptorBufferInfo info = { m_ubo_framedata[frame_idx],  0, sizeof(VulkanRendererCommon::FrameData) };
 		VkWriteDescriptorSet write = BufferWriteDescriptorSet(m_framedata_desc_set[frame_idx].vk_set, 0, info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-		vkUpdateDescriptorSets(context.device, 1, &write, 0, nullptr);
+		vkUpdateDescriptorSets(ctx.device, 1, &write, 0, nullptr);
 	}
 }
 
 void VulkanRendererCommon::create_samplers()
 {
-	create_sampler(context.device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, s_SamplerRepeatLinear);
-	create_sampler(context.device, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, s_SamplerRepeatNearest);
-	create_sampler(context.device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, s_SamplerClampLinear);
-	create_sampler(context.device, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, s_SamplerClampNearest);
+	create_sampler(ctx.device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, s_SamplerRepeatLinear);
+	create_sampler(ctx.device, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, s_SamplerRepeatNearest);
+	create_sampler(ctx.device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, s_SamplerClampLinear);
+	create_sampler(ctx.device, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, s_SamplerClampNearest);
 }
 
 void VulkanRendererCommon::create_buffers()
 {
 	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
-		m_ubo_framedata[frame_idx].init(Buffer::Type::UNIFORM, sizeof(FrameData), "FrameData UBO");
+		m_ubo_framedata[frame_idx].init(vk::buffer::type::UNIFORM, sizeof(FrameData), "FrameData UBO");
 		m_ubo_framedata[frame_idx].create();
 	}
 }
 
 void VulkanRendererCommon::update_frame_data(const FrameData& data, size_t current_frame_idx)
 {
-	m_ubo_framedata[current_frame_idx].upload(context.device, (void*)&data, 0, sizeof(data));
+	m_ubo_framedata[current_frame_idx].upload(ctx.device, (void*)&data, 0, sizeof(data));
 }
 
 VulkanRendererCommon::~VulkanRendererCommon()
 {
-	//vkDeviceWaitIdle(context.device);
-	//vkDestroySampler(context.device, s_SamplerRepeatLinear, nullptr);
-	//vkDestroySampler(context.device, s_SamplerClampLinear, nullptr);
-	//vkDestroySampler(context.device, s_SamplerClampNearest, nullptr);
-	//vkDestroySampler(context.device, s_SamplerRepeatNearest, nullptr);
+	//vkDeviceWaitIdle(ctx.device);
+	//vkDestroySampler(ctx.device, s_SamplerRepeatLinear, nullptr);
+	//vkDestroySampler(ctx.device, s_SamplerClampLinear, nullptr);
+	//vkDestroySampler(ctx.device, s_SamplerClampNearest, nullptr);
+	//vkDestroySampler(ctx.device, s_SamplerRepeatNearest, nullptr);
 }
 
 

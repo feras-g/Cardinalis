@@ -5,7 +5,7 @@
 
 layout(location = 1) in vec4 normal_ws;
 layout(location = 2) in vec2 uv;
-layout(location = 4) in vec3 vertex_to_eye_ws;
+layout(location = 3) in vec3 vertex_to_eye_ws;
 
 layout(location = 0) out vec4  gbuffer_base_color;
 layout(location = 1) out vec4  gbuffer_normal_ws;

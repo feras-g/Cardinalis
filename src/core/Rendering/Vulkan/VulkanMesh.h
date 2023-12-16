@@ -1,7 +1,8 @@
 #pragma once
 
 #include <vulkan/vulkan.hpp> 
-#include "core/rendering/vulkan/VulkanResources.h"
+#include "core/engine/vulkan/objects/vk_buffer.h"
+
 
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
@@ -91,7 +92,7 @@ struct VulkanMesh
 	glm::mat4 model;
 
 	/* Non-interleaved vertex and index data. Used for vertex pulling. */
-	Buffer m_vertex_index_buffer;
+	vk::buffer m_vertex_index_buffer;
 
 	GeometryData geometry_data;
 	std::vector<Node*> nodes;

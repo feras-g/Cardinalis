@@ -10,17 +10,17 @@
 
 #include "core/engine/common.h"
 #include "core/engine/vulkan/vk_common.h"
+#include "core/engine/vulkan/vk_context.h"
 #include "core/engine/vulkan/objects/vk_device.h"
 
 #include "core/engine/logger.h"
 
 #include <vulkan/vk_enum_string_helper.h>
 
-#include "core/rendering/vulkan/VulkanResources.h"
-#include "core/rendering/vulkan/VulkanSwapchain.h"
+#include "core/engine/vulkan/objects/vk_buffer.h"
+#include "core/engine/vulkan/objects/vk_swapchain.h"
 #include "core/rendering/vulkan/VulkanTexture.h"
 #include "core/engine/Image.h"
-#include "core/rendering/vulkan/vk_frame.hpp"
 #include "core/rendering/vulkan/VulkanShader.h"
 
 #include <glm/vec2.hpp>
@@ -40,27 +40,7 @@ inline PFN_vkCmdEndRenderingKHR				fpCmdEndRenderingKHR;
 
 class Window;
 
-// Number of frames to work on 
-static constexpr uint32_t NUM_FRAMES = 2;
 
-struct VulkanContext
-{
-	VkCommandPool frames_cmd_pool;
-	VkCommandPool temp_cmd_pool;
-	
-	vk::device device;
-	vk::frame frames[NUM_FRAMES];
-
-	vk::frame& get_current_frame() { return frames[curr_frame_idx]; }
-	void update_frame_index() { curr_frame_idx = (curr_frame_idx + 1) % NUM_FRAMES; }
-
-	std::unique_ptr<VulkanSwapchain> swapchain;
-
-	uint32_t frame_count= 0;
-	uint32_t curr_frame_idx = 0;
-	uint32_t curr_backbuffer_idx = 0; 
-};
-extern VulkanContext context;
 
 class RenderInterface
 {
@@ -79,9 +59,9 @@ public:
 	void create_synchronization_structures();
 
 	vk::frame& get_current_frame();
-	inline VulkanSwapchain* get_swapchain() const { return context.swapchain.get(); }
+	inline vk::swapchain* get_swapchain() const { return ctx.swapchain.get(); }
 
-	inline size_t get_current_frame_index() const { return context.frame_count % NUM_FRAMES;  }
+	inline size_t get_current_frame_index() const { return ctx.frame_count % NUM_FRAMES;  }
 
 	static inline VkPhysicalDeviceLimits device_limits = {};
 
@@ -90,7 +70,7 @@ public:
 private:
 
 	std::vector<const char*> extensions;
-	void create_framebuffers(VkRenderPass renderPass, VulkanSwapchain& swapchain);
+	void create_framebuffers(VkRenderPass renderPass, vk::swapchain& swapchain);
 
 	const char* m_name;
 	int min_ver, maj_ver, patch_ver;
@@ -126,7 +106,7 @@ void end_temp_cmd_buffer(VkCommandBuffer cmd_buffer);
 void EndCommandBuffer(VkCommandBuffer cmdBuffer);
 // Create a simple render pass with color and/or depth and a single subpass
 bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, VkRenderPass* out_renderPass);
-bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const VulkanSwapchain* swapchain, VkFramebuffer* out_Framebuffers, bool useDepth);
+bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const vk::swapchain* swapchain, VkFramebuffer* out_Framebuffers, bool useDepth);
 bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colorAttachments, const Texture2D* depthAttachments, VkFramebuffer* out_Framebuffers, bool useDepth);
 
 VkDescriptorPool create_descriptor_pool(VkDescriptorPoolCreateFlags flags, uint32_t num_ssbo, uint32_t num_ubo, uint32_t num_combined_img_smp, uint32_t num_dynamic_ubo, uint32_t num_storage_image, uint32_t max_sets = NUM_FRAMES);
@@ -174,7 +154,7 @@ struct Pipeline
 			pipeline_layout_info.pPushConstantRanges = push_constant_ranges.empty() ? nullptr : push_constant_ranges.data();
 			pipeline_layout_info.pushConstantRangeCount = (uint32_t)push_constant_ranges.size();
 
-			vkCreatePipelineLayout(context.device, &pipeline_layout_info, nullptr, &vk_pipeline_layout);
+			vkCreatePipelineLayout(ctx.device, &pipeline_layout_info, nullptr, &vk_pipeline_layout);
 		}
 
 		std::unordered_map<std::string, VkPushConstantRange> ranges;
@@ -233,7 +213,7 @@ static Pipeline::Flags operator|(Pipeline::Flags a, Pipeline::Flags b)
 // Create a storage buffer containing non-interleaved vertex and index data
 // Return the created buffer's size 
 // May modify sizes to comply to SSBO alignment
-size_t create_vertex_index_buffer(Buffer& result, const void* vtxData, size_t& vtxBufferSizeInBytes, const void* idxData, size_t& idxBufferSizeInBytes);
+size_t create_vertex_index_buffer(vk::buffer& result, const void* vtxData, size_t& vtxBufferSizeInBytes, const void* idxData, size_t& idxBufferSizeInBytes);
 
 VkPipelineShaderStageCreateInfo PipelineShaderStageCreateInfo(VkShaderModule shaderModule, VkShaderStageFlagBits shaderStage, const char* entryPoint);
 VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptor_set, uint32_t binding, const VkDescriptorBufferInfo& desc_info, VkDescriptorType desc_type);

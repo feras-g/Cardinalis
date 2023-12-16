@@ -8,3 +8,9 @@ struct FrameData
     float time; /* Time in seconds */
     vec3 pad;
 };
+
+struct InstanceData
+{
+    mat4  model;
+    vec4  color;
+};

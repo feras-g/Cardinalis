@@ -41,37 +41,6 @@ void VulkanGUI::exit()
 	m_renderer.destroy();
 }
 
-void VulkanGUI::show_gizmo(const camera& camera, const KeyEvent& event, glm::mat4& selected_object_transform)
-{
-	ImGuizmo::OPERATION current_gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
-	ImGuizmo::MODE current_gizmo_mode = ImGuizmo::MODE::WORLD;
-
-	ImGuizmo::BeginFrame();
-	ImGuizmo::SetDrawlist(ImGui::GetWindowDrawList());
-	ImGuizmo::SetRect(0, 0, m_renderer.get_render_area().x, m_renderer.get_render_area().y);
-
-	ImGuizmo::SetOrthographic(false);
-
-	//const glm::f32* view = glm::value_ptr(camera.get_view());
-	//const glm::f32* proj = glm::value_ptr(camera.get_proj());
-
-	glm::mat4 transform = glm::identity<glm::mat4>();
-
-	const char* items[] = { "Translate", "Rotate", "Scale" };
-	static int current_item = 0;
-
-	//if (event.is_key_pressed_async(Key::R))
-	//{
-	//	gizmo_operation = ImGuizmo::OPERATION::ROTATE;
-	//}
-	//else if (event.is_key_pressed_async(Key::T))
-	//{
-	//	gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
-	//}
-
-	//ImGuizmo::Manipulate(view, proj, gizmo_operation, ImGuizmo::MODE::WORLD, glm::value_ptr(selected_object_transform));
-}
-
 void VulkanGUI::show_toolbar()
 {
 	if (ImGui::Begin("Toolbar"))
@@ -197,15 +166,14 @@ bool VulkanGUI::is_inactive()
 	return !ImGui::IsAnyItemActive();
 }
 
-bool VulkanGUI::is_scene_viewport_hovered()
-{
-	return m_is_scene_viewport_hovered;
-}
-
-
 bool VulkanGUI::is_not_selecting_gizmo() const
 {
 	return !ImGuizmo::IsUsing();
+}
+
+bool VulkanGUI::is_scene_viewport_active() const
+{
+	return b_is_scene_viewport_active;
 }
 
 
@@ -217,6 +185,8 @@ void VulkanGUI::show_viewport_window(ImTextureID scene_image_id, camera& camera,
 		{
 			camera.update_aspect_ratio(viewport_aspect_ratio);
 		}
+
+		b_is_scene_viewport_active = ImGui::IsItemActive();
 
 		/* Scene view */
 		ImVec2 window_size = ImGui::GetContentRegionAvail();

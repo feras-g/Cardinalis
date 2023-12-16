@@ -7,7 +7,6 @@
 #include "Headers/BRDF.glsl"
 #include "Headers/ShadowMapping.glsl"
 #include "Headers/Tonemapping.glsl"
-#include "Headers/Fog.glsl"
 
 
 layout(location = 0) in vec2 uv;
@@ -102,7 +101,6 @@ void main()
     float shadow_factor = GetShadowFactor(P_WS, P_VS.z, shadow_cascades.data.num_cascades.x, shadow_cascades.data.view_proj, shadow_cascades.data.splits, gbuffer_shadow_map);
     color = mix(color * 0.27, color, shadow_factor);
         
-    //color += fog(color, abs(P_VS.z) , 0.001);
     color = uncharted2_filmic(color);
 
     out_color = vec4(color, 1.0);

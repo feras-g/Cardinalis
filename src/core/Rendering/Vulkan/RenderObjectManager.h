@@ -1,7 +1,9 @@
 #pragma once 
 
-#include "VulkanResources.h"
-#include "DescriptorSet.h"
+#include "core/engine/vulkan/objects/vk_buffer.h"
+
+#include "core/engine/vulkan/objects/vk_descriptor_set.hpp"
+
 #include "../Material.hpp"
 
 #include <unordered_map>
@@ -36,7 +38,7 @@ public:
 	std::vector<Material> m_materials;
 	std::unordered_map<size_t, int> m_material_id_from_hash;
 
-	Buffer m_materials_ssbo;
+	vk::buffer m_materials_ssbo;
 
 	int add_texture(const Texture2D& texture);
 
@@ -56,7 +58,6 @@ public:
 	size_t add_mesh(const VulkanMesh& mesh, std::string_view mesh_name, const Transform& transform);
 	void add_mesh_instance(std::string_view mesh_name,GPUInstanceData data, std::string_view instance_name = "");
 
-
 	/* Updates the SSBO instance data for mesh correponding to mesh_name */
 	void update_instances_ssbo(std::string_view mesh_name);
 
@@ -74,14 +75,14 @@ public:
 			2: SSBO for Mesh Instance Data
 			3: UBO for Mesh Material Data
 	*/
-	std::vector<DescriptorSet> m_descriptor_sets;
+	std::vector<vk::descriptor_set> m_descriptor_sets;
 
 	/* Descriptor set holding array of texture descriptors */
 	uint32_t texture_descriptor_array_binding = 0;
-	DescriptorSet m_descriptor_set_bindless_textures;
-	DescriptorSetLayout m_bindless_layout; 
+	vk::descriptor_set m_descriptor_set_bindless_textures;
+	vk::descriptor_set_layout m_bindless_layout; 
 	
-	/* Each element corresponds to the instance data for a mesh */
+	/* Each element corresponds to an array of all the instances data for a mesh */
 	std::vector<std::vector<GPUInstanceData>> m_mesh_instance_data;
 
 
@@ -93,9 +94,9 @@ public:
 	uint32_t default_material_id	 = 0;
 
 	/* Store for mesh at index i an SSBO containing the shader data for all instances of the mesh */
-	std::vector<Buffer> 	  m_mesh_instance_data_ssbo;
+	std::vector<vk::buffer> 	  m_mesh_instance_data_ssbo;
 
-	static inline DescriptorSetLayout mesh_descriptor_set_layout;
+	static inline vk::descriptor_set_layout mesh_descriptor_set_layout;
 
 	// WIP
 	size_t current_selected_mesh_id = 0;

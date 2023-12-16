@@ -50,14 +50,14 @@ struct ForwardRenderer : public IRenderer
 
 	void create_renderpass()
 	{
-		color_format = context.swapchain->color_attachments[0].info.imageFormat;
-		depth_format = context.swapchain->depth_attachments[0].info.imageFormat;
+		color_format = ctx.swapchain->color_attachments[0].info.imageFormat;
+		depth_format = ctx.swapchain->depth_attachments[0].info.imageFormat;
 
 		for (uint32_t i = 0; i < NUM_FRAMES; i++)
 		{
 			renderpass[i].reset();
-			renderpass[i].add_color_attachment(context.swapchain->color_attachments[i].view, VK_ATTACHMENT_LOAD_OP_CLEAR);
-			renderpass[i].add_depth_attachment(context.swapchain->depth_attachments[i].view, VK_ATTACHMENT_LOAD_OP_CLEAR);
+			renderpass[i].add_color_attachment(ctx.swapchain->color_attachments[i].view, VK_ATTACHMENT_LOAD_OP_CLEAR);
+			renderpass[i].add_depth_attachment(ctx.swapchain->depth_attachments[i].view, VK_ATTACHMENT_LOAD_OP_CLEAR);
 		}
 	}
 
@@ -75,11 +75,11 @@ struct ForwardRenderer : public IRenderer
 		vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
 
 		/* Frame level descriptor sets 1,2,3 */
-		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 0, 1, &VulkanRendererCommon::get_instance().m_framedata_desc_set[context.curr_frame_idx].vk_set, 0, nullptr);
+		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 0, 1, &VulkanRendererCommon::get_instance().m_framedata_desc_set[ctx.curr_frame_idx].vk_set, 0, nullptr);
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 1, 1, &ObjectManager::get_instance().m_descriptor_set_bindless_textures.vk_set, 0, nullptr);
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 3, 1, &descriptor_set.vk_set, 0, nullptr);
 
-		renderpass[context.curr_frame_idx].begin(cmd_buffer, { context.swapchain->info.width, context.swapchain->info.height });
+		renderpass[ctx.curr_frame_idx].begin(cmd_buffer, { ctx.swapchain->info.width, ctx.swapchain->info.height });
 
 		const ObjectManager& object_manager = ObjectManager::get_instance();
 		for (size_t mesh_idx : mesh_list)
@@ -104,12 +104,12 @@ struct ForwardRenderer : public IRenderer
 				forward_renderer_stats.increment_drawcall_count(1);
 			}
 		}
-		renderpass[context.curr_frame_idx].end(cmd_buffer);
+		renderpass[ctx.curr_frame_idx].end(cmd_buffer);
 	}
 
 	void update_shader_toggles()
 	{
-		ssbo_shader_toggles.upload(context.device, &shader_params, 0, sizeof(ShaderToggles));
+		ssbo_shader_toggles.upload(ctx.device, &shader_params, 0, sizeof(ShaderToggles));
 	}
 
 	void show_ui() override
@@ -119,7 +119,7 @@ struct ForwardRenderer : public IRenderer
 
 	bool reload_pipeline() override
 	{
-		vkDeviceWaitIdle(context.device);
+		vkDeviceWaitIdle(ctx.device);
 		return pipeline.reload_pipeline();
 	}
 
@@ -127,10 +127,10 @@ struct ForwardRenderer : public IRenderer
 	VkFormat depth_format;
 	VertexFragmentShader shader;
 	Pipeline pipeline;
-	VulkanRenderPassDynamic renderpass[NUM_FRAMES];
+	vk::renderpass_dynamic renderpass[NUM_FRAMES];
 
 	VkDescriptorPool descriptor_pool;
-	DescriptorSet descriptor_set;
+	vk::descriptor_set descriptor_set;
 	/* Contains different state toggles used inside fragment shader */
 	struct ShaderToggles
 	{

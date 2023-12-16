@@ -65,12 +65,12 @@ bool Shader::create_shader_module(const VkShaderStageFlagBits stage, std::string
 	};
 
 	VkShaderModule out_module = VK_NULL_HANDLE;
-	VK_CHECK(vkCreateShaderModule(context.device, &mci, nullptr, &out_module));
+	VK_CHECK(vkCreateShaderModule(ctx.device, &mci, nullptr, &out_module));
 
 	stages.push_back(PipelineShaderStageCreateInfo(out_module, stage, "main"));
 
 	/* Add to resource manager */
-	module_hash = VkResourceManager::get_instance(context.device)->add_shader_module(out_module);
+	module_hash = VkResourceManager::get_instance(ctx.device)->add_shader_module(out_module);
 
 	LOG_INFO("{1} : Created {0} module successfully.", vk_object_to_string(stage), filename);
 
@@ -131,8 +131,8 @@ bool VertexFragmentShader::recreate_modules()
 		hash_vertex_module = hash_vertex;
 		hash_fragment_module = hash_fragment;
 
-		VkResourceManager::get_instance(context.device)->destroy_shader_module(prev_hash_vertex);
-		VkResourceManager::get_instance(context.device)->destroy_shader_module(prev_hash_fragment);
+		VkResourceManager::get_instance(ctx.device)->destroy_shader_module(prev_hash_vertex);
+		VkResourceManager::get_instance(ctx.device)->destroy_shader_module(prev_hash_fragment);
 
 		return true;
 	}
@@ -147,8 +147,8 @@ bool VertexFragmentShader::recreate_modules()
 void VertexFragmentShader::destroy()
 {
 	stages.clear();
-	VkResourceManager::get_instance(context.device)->destroy_shader_module(hash_vertex_module);
-	VkResourceManager::get_instance(context.device)->destroy_shader_module(hash_fragment_module);
+	VkResourceManager::get_instance(ctx.device)->destroy_shader_module(hash_vertex_module);
+	VkResourceManager::get_instance(ctx.device)->destroy_shader_module(hash_fragment_module);
 }
 
 void ComputeShader::create(const char* compute_shader_path)
@@ -158,7 +158,7 @@ void ComputeShader::create(const char* compute_shader_path)
 
 void ComputeShader::destroy()
 {
-	VkResourceManager::get_instance(context.device)->destroy_shader_module(hash_compute_module);
+	VkResourceManager::get_instance(ctx.device)->destroy_shader_module(hash_compute_module);
 }
 
 bool ComputeShader::recompile()
