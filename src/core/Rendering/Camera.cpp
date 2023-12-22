@@ -25,17 +25,21 @@ void camera::init_projection(float fov, float aspect_ratio, float znear, float z
 	this->aspect_ratio = aspect_ratio;
 	this->znear = znear;
 	this->zfar = zfar;
-	projection = glm::perspective(fov, aspect_ratio, znear, zfar);
+	projection = glm::perspectiveRH_ZO(fov, aspect_ratio, znear, zfar);
 }
 
 void camera::update_view()
 {
-	view = glm::lookAt(position, position + forward, up);
+	//forward = glm::normalize(forward);
+	//right = glm::normalize(glm::cross(forward, { 0,1,0 }));
+	//up = glm::normalize(glm::cross(right, forward));
+
+	view = glm::lookAtRH(position, position + forward, up);
 }
 
 void camera::update_projection()
 {
-	projection = glm::perspective(fov, aspect_ratio, znear, zfar);
+	projection = glm::perspectiveRH_ZO(fov, aspect_ratio, znear, zfar);
 }
 
 void camera::update_aspect_ratio(float aspect_ratio)
@@ -109,8 +113,11 @@ void camera::show_ui()
 		ImGui::InputFloat4("R1 - Projection", glm::value_ptr(projection[1]));
 		ImGui::InputFloat4("R2 - Projection", glm::value_ptr(projection[2]));
 		ImGui::InputFloat4("R3 - Projection", glm::value_ptr(projection[3]));
+
+		if (ImGui::InputFloat("Z Near", &znear) || ImGui::InputFloat("Z Far", &zfar))
+		{
+			update_projection();
+		}
 	}
 	ImGui::End();
 }
-
-

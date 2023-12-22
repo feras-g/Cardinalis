@@ -7,7 +7,7 @@
 void light_manager::init()
 {
 	dir_light.color = glm::vec4(0.8, 0.4, 0.2, 1.0);
-	dir_light.dir	= glm::normalize(-glm::vec4(0, -1, 0.5, 0.0));
+	dir_light.dir	= glm::normalize(glm::vec4(0.5f, 0.5f, 0.5f, 0.0));
 
 	size_t point_light_size = 3 * sizeof(glm::vec4);
 	ssbo.init(vk::buffer::type::STORAGE, max_point_lights * point_light_size + sizeof(directional_light), "SSBO Lighting");
@@ -44,8 +44,8 @@ void light_manager::show_ui()
 	{
 		directional_light prev = dir_light;
 		ImGui::SeparatorText("Directional Light");
-		ImGui::SliderFloat4("Direction", glm::value_ptr(dir_light.dir), -1.0, 1.0);
-		ImGui::SliderFloat4("Color", glm::value_ptr(dir_light.color), 0.0, 1.0);
+		ImGui::InputFloat4("Direction", glm::value_ptr(dir_light.dir));
+		ImGui::ColorPicker4("Color", glm::value_ptr(dir_light.color));
 
 		if (dir_light.color != prev.color || dir_light.dir != prev.dir )
 		{

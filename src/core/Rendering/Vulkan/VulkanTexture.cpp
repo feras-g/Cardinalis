@@ -113,7 +113,8 @@ void Texture::create_vk_image(VkDevice device, bool isCubemap, VkImageUsageFlags
 
     if (isCubemap)
     {
-        createInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+        info.create_flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+        createInfo.flags |= info.create_flags;
     }
 
     VK_CHECK(vkCreateImage(device, &createInfo, nullptr, &image));
@@ -181,7 +182,22 @@ void Texture::upload_data(VkDevice device, void* data)
 
 void Texture::create_view(VkDevice device, const ImageViewInitInfo& viewInfo)
 {
-    view = create_texture_view(*this, info.imageFormat, viewInfo.viewType, viewInfo.aspectMask);
+    if (info.layerCount > 1)
+    {
+        if (!!(info.create_flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT))
+        {
+            view = Texture2D::create_texture_cube_view(*(Texture2D*)this, info.imageFormat, info.aspect);
+        }
+        else
+        {
+            view = Texture2D::create_texture_2d_array_view(*(Texture2D*)this, info.imageFormat, info.aspect);
+        }
+    }
+    else
+    {
+        view = create_texture_view(*this, info.imageFormat, viewInfo.viewType, viewInfo.aspectMask);
+    }
+
 }
 
 void Texture::destroy()
@@ -307,7 +323,7 @@ void Texture::transition(VkCommandBuffer cmdBuffer, VkImageLayout new_layout, Vk
         .subresourceRange = subresourceRange ? *subresourceRange :
         VkImageSubresourceRange
         {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .aspectMask = info.aspect,
             .baseMipLevel = 0,
             .levelCount = info.mipLevels, // Transition all mip levels by default
             .baseArrayLayer = 0,
@@ -613,7 +629,7 @@ void Texture2D::create_texture_2d_layer_view(VkImageView& out_view, const Textur
 
     createInfo.subresourceRange =
     {
-        .aspectMask     { VK_IMAGE_ASPECT_COLOR_BIT },
+        .aspectMask     { texture.info.aspect },
         .baseMipLevel   { 0 },
         .levelCount     { 1 },
         .baseArrayLayer { layer },

@@ -37,9 +37,9 @@ struct light_manager
 	static inline vk::descriptor_set descriptor_set;
 	vk::buffer ssbo;
 
-	directional_light dir_light;
+	static inline directional_light dir_light;
 	point_lights point_lights;
 
-	size_t max_point_lights = 16384;
+	size_t max_point_lights = 4096;
 };
 

@@ -5,11 +5,13 @@
 #include "core/rendering/vulkan/VulkanTexture.h"
 #include "core/rendering/vulkan/VulkanUI.h"
 #include "core/rendering/vulkan/Renderers/IBLPrefiltering.hpp"
+#include "core/rendering/vulkan/Renderers/ShadowRenderer.hpp"
+
 #include "core/rendering/lighting.h"
 
 struct DeferredRenderer : public IRenderer
 {
-	static constexpr int render_size = 2048;
+	static constexpr int render_size = 1024;
 	
 	VkFormat base_color_format = VK_FORMAT_R8G8B8A8_SRGB;
 	VkFormat normal_format = VK_FORMAT_R16G16B16A16_SFLOAT;// VK_FORMAT_R16G16_SFLOAT;	// Only store X and Y components
@@ -28,7 +30,7 @@ struct DeferredRenderer : public IRenderer
 	void init()
 	{
 		name = "Deferred Renderer";
-		deferred_renderer_stats = IRenderer::draw_stats.add_entry(name.c_str());
+		draw_metrics = DrawMetricsManager::add_entry(name.c_str());
 		init_gbuffer();
 		create_renderpass();
 		create_pipeline();
@@ -157,6 +159,7 @@ struct DeferredRenderer : public IRenderer
 			sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(1, gbuffer[i].normal_attachment.view, sampler_clamp_nearest);
 			sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(2, gbuffer[i].metalness_roughness_attachment.view, sampler_clamp_nearest);
 			sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(3, gbuffer[i].depth_attachment.view, sampler_clamp_nearest);
+
 			if (IBLRenderer::is_initialized)
 			{
 				// Only use a nearest sampler to sample these image, linear introduces artifacts probably due to averaging texels
@@ -170,7 +173,8 @@ struct DeferredRenderer : public IRenderer
 		{
 			VulkanRendererCommon::get_instance().m_framedata_desc_set_layout,
 			sampled_images_descriptor_set_layout,
-			light_manager::descriptor_set.layout
+			light_manager::descriptor_set.layout,
+			ShadowRenderer::descriptor_set_layout,
 		};
 
 		lighting_pass_pipeline.layout.create(descriptor_set_layouts);
@@ -189,7 +193,7 @@ struct DeferredRenderer : public IRenderer
 
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, geometry_pass_pipeline.layout, 0, 1, &VulkanRendererCommon::get_instance().m_framedata_desc_set[ctx.curr_frame_idx].vk_set, 0, nullptr);
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, geometry_pass_pipeline.layout, 1, 1, &ObjectManager::get_instance().m_descriptor_set_bindless_textures.vk_set, 0, nullptr);
-		
+
 		/* TODO : batch transitions ? */
 		gbuffer[ctx.curr_frame_idx].base_color_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 		gbuffer[ctx.curr_frame_idx].normal_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
@@ -197,7 +201,8 @@ struct DeferredRenderer : public IRenderer
 		gbuffer[ctx.curr_frame_idx].depth_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
 
 		renderpass_geometry[ctx.curr_frame_idx].begin(cmd_buffer, { render_size, render_size });
-		const ObjectManager& object_manager = ObjectManager::get_instance();
+		ObjectManager& object_manager = ObjectManager::get_instance();
+
 		for (size_t mesh_idx : mesh_list)
 		{
 			/* Mesh descriptor set */
@@ -206,18 +211,16 @@ struct DeferredRenderer : public IRenderer
 			const VulkanMesh& mesh = object_manager.m_meshes[mesh_idx];
 
 			uint32_t instance_count = (uint32_t)object_manager.m_mesh_instance_data[mesh_idx].size();
-			deferred_renderer_stats.increment_instance_count(instance_count);
+
 
 			for (int prim_idx = 0; prim_idx < mesh.geometry_data.primitives.size(); prim_idx++)
 			{
 				const Primitive& p = mesh.geometry_data.primitives[prim_idx];
-				deferred_renderer_stats.increment_vertex_count(p.vertex_count * instance_count);
 
 				geometry_pass_pipeline.layout.cmd_push_constants(cmd_buffer, "Material", &object_manager.m_materials[p.material_id]);
 				geometry_pass_pipeline.layout.cmd_push_constants(cmd_buffer, "Primitive Model Matrix", &p.model);
 
 				vkCmdDraw(cmd_buffer, p.vertex_count, instance_count, p.first_vertex, 0);
-				deferred_renderer_stats.increment_drawcall_count(1);
 			}
 		}
 
@@ -247,9 +250,10 @@ struct DeferredRenderer : public IRenderer
 			VulkanRendererCommon::get_instance().m_framedata_desc_set[ctx.curr_frame_idx].vk_set,
 			sampled_images_descriptor_set[ctx.curr_frame_idx].vk_set,
 			light_manager::descriptor_set.vk_set,
+			ShadowRenderer::descriptor_set[ctx.curr_frame_idx].vk_set,
 		};
 
-		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lighting_pass_pipeline.layout, 0, 3, bound_descriptor_sets, 0, nullptr);
+		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lighting_pass_pipeline.layout, 0, 4, bound_descriptor_sets, 0, nullptr);
 
 		gbuffer[ctx.curr_frame_idx].final_lighting.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 		renderpass_lighting[ctx.curr_frame_idx].begin(cmd_buffer, { render_size.x, render_size.y });
@@ -267,8 +271,6 @@ struct DeferredRenderer : public IRenderer
 	void render(VkCommandBuffer cmd_buffer, std::span<size_t> mesh_list)
 	{
 		VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Deferred Pass");
-
-		draw_stats.reset();
 
 		render_geometry_pass(cmd_buffer, mesh_list);
 		render_lighting_pass(cmd_buffer);
@@ -423,6 +425,5 @@ struct DeferredRenderer : public IRenderer
 		
 	} shader_params;
 
-	DrawStatsEntry deferred_renderer_stats;
-
+	DrawMetricsEntry draw_metrics;
 };

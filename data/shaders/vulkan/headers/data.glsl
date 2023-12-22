@@ -7,6 +7,9 @@ struct FrameData
     vec4 eye_pos_ws;
     float time; /* Time in seconds */
     vec3 pad;
+    vec4 pad1;
+    vec4 pad2;
+
 };
 
 struct InstanceData

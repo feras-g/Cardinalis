@@ -2,8 +2,9 @@
 #include "VulkanRenderInterface.h"
 #include "VulkanMesh.h"
 #include "VulkanRendererBase.h"
-
 #include "core/engine/Image.h"
+#include "core/rendering/vulkan/Renderers/IRenderer.h"
+
 
 uint32_t ObjectManager::add_material(const Material& material)
 {
@@ -182,4 +183,27 @@ void ObjectManager::create_textures_descriptor_set(VkDescriptorPool pool)
 	m_descriptor_set_bindless_textures.assign_layout(m_bindless_layout);
 	m_descriptor_set_bindless_textures.create(m_descriptor_pool, "Bindless Textures Descriptor Set");
 
+}
+
+void ObjectManager::draw_mesh_list(VkCommandBuffer cmd_buffer, std::span<size_t> mesh_list, VkPipelineLayout pipeline_layout, std::span<VkDescriptorSet> additional_bound_descriptor_sets, DrawMetricsEntry& renderer_draw_metrics)
+{
+	for (size_t mesh_idx : mesh_list)
+	{
+		/* Mesh descriptor set must always be the first */
+		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, m_descriptor_sets[mesh_idx], 0, nullptr);
+
+		const VulkanMesh& mesh = m_meshes[mesh_idx];
+
+		uint32_t instance_count = (uint32_t)m_mesh_instance_data[mesh_idx].size();
+		renderer_draw_metrics.increment_instance_count(instance_count);
+
+		for (int prim_idx = 0; prim_idx < mesh.geometry_data.primitives.size(); prim_idx++)
+		{
+			const Primitive& p = mesh.geometry_data.primitives[prim_idx];
+			vkCmdPushConstants(cmd_buffer, pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &p.model);
+			vkCmdDraw(cmd_buffer, p.vertex_count, instance_count, p.first_vertex, 0);
+			renderer_draw_metrics.increment_drawcall_count(1);
+			renderer_draw_metrics.increment_vertex_count(p.vertex_count * instance_count);
+		}
+	}
 }

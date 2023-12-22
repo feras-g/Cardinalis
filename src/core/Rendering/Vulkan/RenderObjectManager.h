@@ -12,6 +12,7 @@
 #include "glm/mat4x4.hpp"
 #include "glm/gtx/euler_angles.hpp"
 #include "glm/ext/matrix_transform.hpp"
+#include "core/rendering/draw_metrics.h"
 
 struct VulkanMesh;
 
@@ -101,6 +102,7 @@ public:
 	// WIP
 	size_t current_selected_mesh_id = 0;
 
+	void draw_mesh_list(VkCommandBuffer cmd_buffer, std::span<size_t> mesh_list, VkPipelineLayout pipeline_layout, std::span<VkDescriptorSet> additional_bound_descriptor_sets, DrawMetricsEntry& renderer_draw_metrics);
 
 public:
 	void init();

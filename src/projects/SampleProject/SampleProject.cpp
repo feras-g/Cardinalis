@@ -11,6 +11,7 @@
 #include "rendering/vulkan/Renderers/DeferredRenderer.hpp"
 #include "rendering/vulkan/Renderers/ForwardRenderer.hpp"
 #include "rendering/vulkan/Renderers/SkyboxRenderer.hpp"
+#include "rendering/vulkan/Renderers/ShadowRenderer.hpp"
 #include "rendering/lighting.h"
 
 static light_manager lights;
@@ -19,6 +20,7 @@ static DebugLineRenderer debug_line_renderer;
 static DeferredRenderer deferred_renderer;
 static SkyboxRenderer skybox_renderer;
 static IBLRenderer ibl_renderer;
+static ShadowRenderer shadow_renderer;
 
 static std::vector<size_t> drawable_list;
 
@@ -33,6 +35,7 @@ void SampleProject::init()
 	ObjectManager::get_instance().init();
 
 	lights.init();
+	shadow_renderer.init();
 	debug_line_renderer.init();
 	forward_renderer.p_debug_line_renderer = &debug_line_renderer;
 	forward_renderer.init();
@@ -52,26 +55,27 @@ void SampleProject::compose_gui()
 	m_gui.begin();
 	m_gui.show_toolbar();
 	m_gui.show_hierarchy(object_manager);
-	m_gui.show_draw_statistics(IRenderer::draw_stats);
+	m_gui.show_draw_metrics();
 	m_gui.show_shader_library();
 	m_gui.show_viewport_window(deferred_renderer.ui_texture_ids[ctx.curr_frame_idx].final_lighting, m_camera, object_manager);
 	m_camera.show_ui();
 	deferred_renderer.show_ui(m_camera);
 	ibl_renderer.show_ui();
+	shadow_renderer.show_ui();
 	lights.show_ui();
 	m_gui.end();
 }
 
 void SampleProject::update_frame_ubo()
 {
-	VulkanRendererCommon::FrameData frame_data;
-	frame_data.view = m_camera.view;
-	frame_data.proj = m_camera.projection;
-	frame_data.view_proj = frame_data.proj * frame_data.view;
-	frame_data.view_proj_inv = glm::inverse(frame_data.view_proj);
-	frame_data.camera_pos_ws = glm::vec4(m_camera.position, 1);
-	frame_data.time = m_time;
-	VulkanRendererCommon::get_instance().update_frame_data(frame_data, ctx.curr_frame_idx);
+	VulkanRendererCommon::FrameData& data = VulkanRendererCommon::get_instance().m_framedata[ctx.curr_frame_idx];
+	data.view = m_camera.view;
+	data.proj = m_camera.projection;
+	data.view_proj = data.proj* data.view;
+	data.view_proj_inv = glm::inverse(data.view_proj);
+	data.camera_pos_ws = glm::vec4(m_camera.position, 1);
+	data.time = m_time;
+	VulkanRendererCommon::get_instance().update_frame_data(data, ctx.curr_frame_idx);
 }
 
 void SampleProject::update(float t, float dt)
@@ -113,7 +117,6 @@ void SampleProject::update(float t, float dt)
 				m_camera.translate(-m_camera.up * m_delta_time);
 			}
 		}
-	
 	}
 
 
@@ -123,42 +126,38 @@ void SampleProject::update(float t, float dt)
 void SampleProject::render()
 {
 	VkCommandBuffer& cmd_buffer = ctx.get_current_frame().cmd_buffer;
-	IRenderer::draw_stats.reset();
-	
+	DrawMetricsManager::reset();
+
 	set_polygon_mode(cmd_buffer, IRenderer::global_polygon_mode);
 
 	ctx.swapchain->clear_color(cmd_buffer);
 
+	shadow_renderer.render(cmd_buffer, drawable_list, m_camera, VulkanRendererCommon::get_instance().m_framedata[ctx.curr_frame_idx], lights.dir_light.dir);
 	deferred_renderer.render(cmd_buffer, drawable_list);
 	skybox_renderer.render(cmd_buffer);
 	//forward_renderer.render(cmd_buffer, drawable_list);
 	//debug_line_renderer.render(cmd_buffer);
 	m_gui.render(cmd_buffer);
-
 	update_gpu_buffers();
 }
 
 void SampleProject::update_gpu_buffers()
 {
-	update_instances_ssbo();
 	update_frame_ubo();
+	update_instances_ssbo();
 }
 
 void SampleProject::create_scene()
 {
-	VulkanMesh mesh_1, mesh_2, mesh_test_roughness, plane; 
+	VulkanMesh mesh_1, mesh_2, mesh_test_roughness; 
 	mesh_test_roughness.create_from_file("test/metallic_roughness_test/scene.gltf");
 
-	plane.create_from_file("basic/unit_plane.glb");
-	drawable_list.push_back(ObjectManager::get_instance().add_mesh(plane, "Floor", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  25, 25, 25 } }));
 	mesh_1.create_from_file("scenes/shield/scene.gltf");
-	mesh_2.create_from_file("scenes/temple/gltf/scene.gltf");
-	//mesh_2.create_from_file("scenes/sponza/scene.gltf");
-
+	mesh_2.create_from_file("scenes/bistro/scene.gltf");
 
 	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.1, 0.1f, 0.1f } }));
-	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_2, "mesh_2", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.025f, 0.025f, 0.025f  } }));
-	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_test_roughness, "mesh_test_roughness", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.75f,0.75f,0.75f } }));
+	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_2, "mesh_2", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {   1.0f, 1.0f, 1.0f  } }));
+	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_test_roughness, "mesh_test_roughness", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f } }));
 
 	//VulkanMesh mesh_sponza, mesh_ivy, mesh_curtains;
 	//mesh_sponza.create_from_file("scenes/intel_sponza/main/scene.gltf");
@@ -170,21 +169,19 @@ void SampleProject::create_scene()
 	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_curtains, "mesh_curtains", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
 
 
-	//for (int x = -5; x < 5; x++)
-	//for (int y = -5; y < 5; y++)
-	//for (int z = -5; z < 5; z++)
+	VulkanMesh plane;
+	plane.create_from_file("basic/unit_plane.glb");
+	drawable_list.push_back(ObjectManager::get_instance().add_mesh(plane, "Floor", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  25, 25, 25 } }));
+
+	//VulkanMesh mesh_lantern;
+	//mesh_lantern.create_from_file("basic/lantern/scene.gltf");
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_lantern, "mesh_lantern", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1,1,1  } }));
+
+	//for (int z = 0; z < 20; z++)
 	//{
 	//	float spacing = 10.0f;
-	//	Transform t = { .position = spacing * glm::vec3(x, y, z), .rotation = {0,0,0}, .scale = glm::vec3{  0.025f, 0.025f, 0.025f } };
-
-	//	//if ((x + z + 0) % 2 == 0)
-	//	//{
-	//	//	ObjectManager::get_instance().add_mesh_instance("mesh_1", ObjectManager::GPUInstanceData{ .model = glm::mat4(t) });
-	//	//}
-	//	//else
-	//	//{
-	//	//	ObjectManager::get_instance().add_mesh_instance("mesh_2", ObjectManager::GPUInstanceData{ .model = glm::mat4(t), .color = glm::vec4(glm::sphericalRand(1.0f), 1.0f)});
-	//	//}
+	//	Transform t = { .position = spacing * glm::vec3(0, 0, z), .rotation = {0,0,0}, .scale = glm::vec3{  1,1,1 } };
+	//	ObjectManager::get_instance().add_mesh_instance("mesh_lantern", ObjectManager::GPUInstanceData{ .model = glm::mat4(t) });
 	//}
 }
 

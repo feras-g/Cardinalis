@@ -10,7 +10,7 @@ struct ForwardRenderer : public IRenderer
 		name = "Forward Renderer";
 		create_renderpass();
 		create_pipeline();
-		forward_renderer_stats = IRenderer::draw_stats.add_entry(name.c_str());
+		draw_metrics = DrawMetricsManager::add_entry(name.c_str());
 	}
 
 	void create_pipeline()
@@ -70,8 +70,6 @@ struct ForwardRenderer : public IRenderer
 	{
 		VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Forward Pass");
 
-		draw_stats.reset();
-
 		vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
 
 		/* Frame level descriptor sets 1,2,3 */
@@ -90,18 +88,18 @@ struct ForwardRenderer : public IRenderer
 			const VulkanMesh& mesh = object_manager.m_meshes[mesh_idx];
 
 			uint32_t instance_count = (uint32_t)object_manager.m_mesh_instance_data[mesh_idx].size();
-			forward_renderer_stats.increment_instance_count(instance_count);
+			draw_metrics.increment_instance_count(instance_count);
 
 			for (int prim_idx = 0; prim_idx < mesh.geometry_data.primitives.size(); prim_idx++)
 			{
 				const Primitive& p = mesh.geometry_data.primitives[prim_idx];
-				forward_renderer_stats.increment_vertex_count(p.vertex_count * instance_count);
+				draw_metrics.increment_vertex_count(p.vertex_count * instance_count);
 
 				pipeline.layout.cmd_push_constants(cmd_buffer, "Material", &object_manager.m_materials[p.material_id]);
 				pipeline.layout.cmd_push_constants(cmd_buffer, "Primitive Model Matrix", &p.model);
 
 				vkCmdDraw(cmd_buffer, p.vertex_count, instance_count, p.first_vertex, 0);
-				forward_renderer_stats.increment_drawcall_count(1);
+				draw_metrics.increment_drawcall_count(1);
 			}
 		}
 		renderpass[ctx.curr_frame_idx].end(cmd_buffer);
@@ -141,5 +139,5 @@ struct ForwardRenderer : public IRenderer
 
 	DebugLineRenderer* p_debug_line_renderer = nullptr;
 
-	DrawStatsEntry forward_renderer_stats;
+	DrawMetricsEntry draw_metrics;
 };

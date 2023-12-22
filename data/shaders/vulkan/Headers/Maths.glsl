@@ -23,6 +23,7 @@ vec3 ws_pos_from_depth(vec2 uv, float z, mat4 inv_view_proj)
     return ws_pos.xyz;
 }
 
+
 // Source: https://github.com/Microsoft/DirectX-Graphics-Samples/blob/master/MiniEngine/Core/Shaders/ColorSpaceUtility.hlsli
 vec3 ApplySRGBCurve( vec3 x )
 {

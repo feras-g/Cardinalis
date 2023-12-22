@@ -25,7 +25,7 @@ public:
 	void exit();
 	void show_toolbar();
 	void show_hierarchy(ObjectManager& object_manager);
-	void show_draw_statistics(IRenderer::DrawStats draw_stats);
+	void show_draw_metrics();
 	void show_viewport_window(ImTextureID scene_image_id, camera& camera, ObjectManager& object_manager);
 	void show_shader_library();
 	void start_overlay(const char* title);

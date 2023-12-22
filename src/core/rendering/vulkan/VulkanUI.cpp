@@ -136,27 +136,26 @@ void VulkanGUI::start_overlay(const char* title)
 	ImGui::Begin(title, 0, overlayFlags);
 }
 
-void VulkanGUI::show_draw_statistics(IRenderer::DrawStats draw_stats)
+void VulkanGUI::show_draw_metrics()
 {
 	start_overlay("Draw statistics");
 
 	ImGui::Text("DRAW STATISTICS");
-	for (size_t i = 0; i < draw_stats.renderer_names.size(); i++)
+	for (size_t i = 0; i < DrawMetricsManager::renderer_names.size(); i++)
 	{
-		ImGui::Text("%s", draw_stats.renderer_names[i]);
+		ImGui::Text("%s", DrawMetricsManager::renderer_names[i]);
 		ImGui::Indent();
-		ImGui::BulletText("Draw calls : %u", draw_stats.num_drawcalls[i]);
-		ImGui::BulletText("Num Vertices : %u", draw_stats.num_vertices[i]);
-		ImGui::BulletText("Num Instances : %u", draw_stats.num_instances[i]);
+		ImGui::BulletText("Draw calls : %u", DrawMetricsManager::num_drawcalls[i]);
+		ImGui::BulletText("Num Vertices : %u", DrawMetricsManager::num_vertices[i]);
+		ImGui::BulletText("Num Instances : %u", DrawMetricsManager::num_instances[i]);
 
 		ImGui::Unindent();
 	}
 
 	ImGui::Text("Total:");
-	ImGui::BulletText("Draw calls : %u", draw_stats.total_drawcalls);
-	ImGui::BulletText("Num Vertices : %u", draw_stats.total_vertices);
-	ImGui::BulletText("Num Instances : %u", draw_stats.total_instances);
-
+	ImGui::BulletText("Draw calls : %u", DrawMetricsManager::total_drawcalls);
+	ImGui::BulletText("Num Vertices : %u", DrawMetricsManager::total_vertices);
+	ImGui::BulletText("Num Instances : %u", DrawMetricsManager::total_instances);
 
 	ImGui::End();
 }

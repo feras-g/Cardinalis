@@ -62,7 +62,7 @@ void VulkanRendererCommon::create_buffers()
 
 void VulkanRendererCommon::update_frame_data(const FrameData& data, size_t current_frame_idx)
 {
-	m_ubo_framedata[current_frame_idx].upload(ctx.device, (void*)&data, 0, sizeof(data));
+	m_ubo_framedata[current_frame_idx].upload(ctx.device, (void*)&data, 0, sizeof(FrameData));
 }
 
 VulkanRendererCommon::~VulkanRendererCommon()
