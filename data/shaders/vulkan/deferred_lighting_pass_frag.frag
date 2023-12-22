@@ -105,9 +105,9 @@ void main()
     vec3 T2 = (F0 * brdf.x + brdf.y);
     out_color.rgb += T1 * T2;   
 
-        out_color.rgb *= shadow.a;
+    out_color.rgb *= shadow.a;
 
-	if(shadow_cascades.data.show_debug_view)
+	if(shadow_cascades.data.show_debug_view)    
     {
         out_color.rgb *= shadow.rgb;
     }

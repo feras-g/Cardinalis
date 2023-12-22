@@ -153,7 +153,7 @@ void SampleProject::create_scene()
 	mesh_test_roughness.create_from_file("test/metallic_roughness_test/scene.gltf");
 
 	mesh_1.create_from_file("scenes/shield/scene.gltf");
-	mesh_2.create_from_file("scenes/bistro/scene.gltf");
+	mesh_2.create_from_file("scenes/sponza/scene.gltf");
 
 	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.1, 0.1f, 0.1f } }));
 	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_2, "mesh_2", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {   1.0f, 1.0f, 1.0f  } }));
