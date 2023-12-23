@@ -19,7 +19,6 @@ project("corelib")
 		project_path .. "**.h", 
 		project_path .. "**.cpp",
 		project_path .. "**.hpp",
-		engine_root .. "data/**",
 	}
 	removefiles 
 	{ 

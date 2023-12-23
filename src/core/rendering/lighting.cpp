@@ -44,7 +44,7 @@ void light_manager::show_ui()
 	{
 		directional_light prev = dir_light;
 		ImGui::SeparatorText("Directional Light");
-		ImGui::InputFloat4("Direction", glm::value_ptr(dir_light.dir));
+		ImGui::DragFloat4("Direction", glm::value_ptr(dir_light.dir), 0.005f, -1000, 1000);
 		ImGui::ColorPicker4("Color", glm::value_ptr(dir_light.color));
 
 		if (dir_light.color != prev.color || dir_light.dir != prev.dir )

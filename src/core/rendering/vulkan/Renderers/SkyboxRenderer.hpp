@@ -13,7 +13,7 @@ struct SkyboxRenderer : public IRenderer
 	void init(const Texture2D& cubemap)
 	{
 		/* Create descriptor set containing the cubemap */
-		VkSampler sampler_clamp_linear = VulkanRendererCommon::get_instance().s_SamplerClampNearest;
+		VkSampler sampler_clamp_linear = VulkanRendererCommon::get_instance().s_SamplerClampLinear;
 		VkDescriptorPoolSize pool_sizes[1]
 		{
 			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1},

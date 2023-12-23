@@ -24,7 +24,7 @@ layout(push_constant) uniform constants
 
 layout(set = 1, binding = 0) uniform sampler2D bindless_tex[];
 
-vec3 unpack_gltf_normal_map(vec3 normal)
+vec3 decode_gltf_normal_map(vec3 normal)
 {
     // GLTF normal map values are in [0, 1] range.
     return normal * 2.0 - 1.0;
@@ -49,7 +49,7 @@ void main()
     https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#additional-textures */
     if(material.texture_normal_map_idx != -1)
     {
-		vec3 N_map = unpack_gltf_normal_map(texture(bindless_tex[material.texture_normal_map_idx], uv.xy).xyz); 
+		vec3 N_map = decode_gltf_normal_map(texture(bindless_tex[material.texture_normal_map_idx], uv.xy).xyz); 
 		N = perturb_normal(N, N_map, vertex_to_eye_ws, uv.xy);
     }
     gbuffer_normal_ws = vec4(N.xyz, 0); 
