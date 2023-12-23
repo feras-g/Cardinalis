@@ -28,7 +28,7 @@ float lookup_shadow(sampler2DArray tex_shadow, vec4 pos_light_space, vec2 offset
 
 	if (shadow_map_depth + bias < pos_light_space.z) 
 	{
-		shadow = 0.27;
+		shadow = 0.25;
 	}
 	return shadow;
 }
@@ -46,7 +46,6 @@ float filter_shadow_pcf(sampler2DArray tex_shadow, vec4 pos_light_space, uint la
 			acc += lookup_shadow(tex_shadow, pos_light_space, vec2(x,y) * scale, layer);
 		}
 	}
-
 	return acc / 16.0;
 }
 
@@ -62,7 +61,6 @@ vec4 GetShadowFactor(vec3 position_ws, float depth_vs, CascadesData data, sample
 		}
 	}
 
-	
 	vec4 out_val = vec4(0);
 
 	{

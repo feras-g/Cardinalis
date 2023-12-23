@@ -7,7 +7,7 @@
 void light_manager::init()
 {
 	dir_light.color = glm::vec4(0.8, 0.4, 0.2, 1.0);
-	dir_light.dir	= glm::normalize(glm::vec4(0.5f, 0.5f, 0.5f, 0.0));
+	dir_light.dir	= glm::normalize(glm::vec4(0.25f, -1.0f, 0.5f, 0.0));
 
 	size_t point_light_size = 3 * sizeof(glm::vec4);
 	ssbo.init(vk::buffer::type::STORAGE, max_point_lights * point_light_size + sizeof(directional_light), "SSBO Lighting");

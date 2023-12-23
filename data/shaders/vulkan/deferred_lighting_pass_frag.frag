@@ -66,7 +66,7 @@ void main()
     
     out_color.rgb = vec3(0.0);
 
-    out_color += vec4(brdf_cook_torrance(brdf_data,  lights.dir_light.color.rgb), 1.0);
+    out_color += vec4(brdf_cook_torrance(brdf_data,  lights.dir_light.color.rgb*5), 1.0);
     
     // for(int i = -5; i < 5; i++)
     // {
@@ -85,14 +85,15 @@ void main()
     vec3 F0 = vec3(0.04);
     F0 = mix(F0, brdf_data.albedo, metallic);
 
-    // // IBL Diffuse
+    // Shadow mapping
+    vec4 shadow = GetShadowFactor(position_ws, position_vs.z, shadow_cascades.data, shadow_map_cascades);
+
+    // IBL Diffuse
     vec3 diffuse_reflectance = brdf_data.albedo * (1.0 - metallic);
     vec2 diffuse_sample_uv = SampleSphericalMap_ZXY(brdf_data.normal_ws);
     out_color.rgb += diffuse_reflectance * texture(prefiltered_env_map_diffuse, diffuse_sample_uv).rgb;
 
-    // Shadow mapping
-    vec4 shadow = GetShadowFactor(position_ws, position_vs.z, shadow_cascades.data, shadow_map_cascades);
-
+    out_color.rgb *= shadow.a;
 
     // IBL Specular
     vec3 R = reflect(-brdf_data.viewdir_ws, brdf_data.normal_ws);
@@ -105,7 +106,6 @@ void main()
     vec3 T2 = (F0 * brdf.x + brdf.y);
     out_color.rgb += T1 * T2;   
 
-    out_color.rgb *= shadow.a;
 
 	if(shadow_cascades.data.show_debug_view)    
     {

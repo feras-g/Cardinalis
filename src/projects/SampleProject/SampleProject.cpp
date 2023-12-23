@@ -40,7 +40,7 @@ void SampleProject::init()
 	forward_renderer.p_debug_line_renderer = &debug_line_renderer;
 	forward_renderer.init();
 
-	ibl_renderer.init("DF360_005_Reloaded_4k_sRGB.hdr");
+	ibl_renderer.init("pisa.hdr");
 	skybox_renderer.init();
 	deferred_renderer.init();
 	m_camera.update_aspect_ratio(1.0f);
@@ -119,7 +119,6 @@ void SampleProject::update(float t, float dt)
 		}
 	}
 
-
 	compose_gui();
 }
 
@@ -149,15 +148,14 @@ void SampleProject::update_gpu_buffers()
 
 void SampleProject::create_scene()
 {
-	VulkanMesh mesh_1, mesh_2, mesh_test_roughness; 
-	mesh_test_roughness.create_from_file("test/metallic_roughness_test/scene.gltf");
+	//VulkanMesh mesh_1, mesh_2, mesh_test_roughness; 
+	//mesh_test_roughness.create_from_file("test/metallic_roughness_test/scene.gltf");
 
-	mesh_1.create_from_file("scenes/shield/scene.gltf");
-	mesh_2.create_from_file("scenes/sponza/scene.gltf");
+	//mesh_1.create_from_file("scenes/shield/scene.gltf");
 
-	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.1, 0.1f, 0.1f } }));
-	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_2, "mesh_2", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {   1.0f, 1.0f, 1.0f  } }));
-	drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_test_roughness, "mesh_test_roughness", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f } }));
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.1, 0.1f, 0.1f } }));
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_2, "mesh_2", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {   1.0f, 1.0f, 1.0f  } }));
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_test_roughness, "mesh_test_roughness", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f } }));
 
 	//VulkanMesh mesh_sponza, mesh_ivy, mesh_curtains;
 	//mesh_sponza.create_from_file("scenes/intel_sponza/main/scene.gltf");
@@ -171,18 +169,15 @@ void SampleProject::create_scene()
 
 	VulkanMesh plane;
 	plane.create_from_file("basic/unit_plane.glb");
-	drawable_list.push_back(ObjectManager::get_instance().add_mesh(plane, "Floor", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  25, 25, 25 } }));
+	drawable_list.push_back(ObjectManager::get_instance().add_mesh(plane, "Floor", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  250, 250, 250 } }));
 
-	//VulkanMesh mesh_lantern;
-	//mesh_lantern.create_from_file("basic/lantern/scene.gltf");
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_lantern, "mesh_lantern", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1,1,1  } }));
+	VulkanMesh sponza;
+	sponza.create_from_file("scenes/sponza/scene.gltf");
+	drawable_list.push_back(ObjectManager::get_instance().add_mesh(sponza, "Sponza", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }));
 
-	//for (int z = 0; z < 20; z++)
-	//{
-	//	float spacing = 10.0f;
-	//	Transform t = { .position = spacing * glm::vec3(0, 0, z), .rotation = {0,0,0}, .scale = glm::vec3{  1,1,1 } };
-	//	ObjectManager::get_instance().add_mesh_instance("mesh_lantern", ObjectManager::GPUInstanceData{ .model = glm::mat4(t) });
-	//}
+	VulkanMesh teapot;
+	teapot.create_from_file("basic/teapot.gltf");
+	drawable_list.push_back(ObjectManager::get_instance().add_mesh(teapot, "Teapot", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.1f, 0.1f, 0.1f } }));
 }
 
 void SampleProject::update_instances_ssbo()

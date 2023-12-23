@@ -9,7 +9,6 @@
 
 
 
-static ImGuizmo::OPERATION gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
 
 VulkanGUI::VulkanGUI()
 {
@@ -43,42 +42,7 @@ void VulkanGUI::exit()
 
 void VulkanGUI::show_toolbar()
 {
-	if (ImGui::Begin("Toolbar"))
-	{
-		/* Gizmo mode */
-		ImGui::SeparatorText("Transform Mode");
 
-		if (ImGui::Button("Translation", ImVec2(70, 40)))
-		{
-			gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
-
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("Rotation", ImVec2(70, 40)))
-		{
-			ImGui::SameLine();
-			gizmo_operation = ImGuizmo::OPERATION::ROTATE;
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("Scale", ImVec2(70, 40)))
-		{
-			ImGui::SameLine();
-			gizmo_operation = ImGuizmo::OPERATION::SCALE;
-		}
-
-		/* Render modes */
-		ImGui::SeparatorText("Rendering mode");
-		if (ImGui::Button("Default"))
-		{
-			IRenderer::global_polygon_mode = VK_POLYGON_MODE_FILL;
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("Wireframe"))
-		{
-			IRenderer::global_polygon_mode = VK_POLYGON_MODE_LINE;
-		}
-	}
-	ImGui::End();
 }
 
 void VulkanGUI::show_hierarchy(ObjectManager& object_manager)
@@ -178,6 +142,59 @@ bool VulkanGUI::is_scene_viewport_active() const
 
 void VulkanGUI::show_viewport_window(ImTextureID scene_image_id, camera& camera, ObjectManager& object_manager)
 {
+	static ImGuizmo::OPERATION gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
+	static ImGuizmo::MODE transform_mode = ImGuizmo::MODE::WORLD;
+
+	if (ImGui::Begin("Toolbar"))
+	{
+		/* Gizmo mode */
+		ImGui::SeparatorText("Transform Mode");
+
+		if (ImGui::Button("Translation", ImVec2(70, 40)))
+		{
+			gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
+
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Rotation", ImVec2(70, 40)))
+		{
+			ImGui::SameLine();
+			gizmo_operation = ImGuizmo::OPERATION::ROTATE;
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Scale", ImVec2(70, 40)))
+		{
+			ImGui::SameLine();
+			gizmo_operation = ImGuizmo::OPERATION::SCALE;
+		}
+
+		if (ImGui::Button("Local"))
+		{
+			transform_mode = ImGuizmo::MODE::LOCAL;
+		}
+		if (ImGui::Button("World"))
+		{
+			transform_mode = ImGuizmo::MODE::WORLD;
+		}
+
+
+
+		/* Render modes */
+		ImGui::SeparatorText("Rendering mode");
+		if (ImGui::Button("Default"))
+		{
+			IRenderer::global_polygon_mode = VK_POLYGON_MODE_FILL;
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Wireframe"))
+		{
+			IRenderer::global_polygon_mode = VK_POLYGON_MODE_LINE;
+		}
+	}
+	ImGui::End();
+
+
+
 	if (ImGui::Begin("Scene"))
 	{
 		if (viewport_aspect_ratio != camera.aspect_ratio)
@@ -195,7 +212,8 @@ void VulkanGUI::show_viewport_window(ImTextureID scene_image_id, camera& camera,
 		/* Gizmos */
 		ImGuizmo::BeginFrame();
 		ImGuizmo::SetDrawlist(ImGui::GetWindowDrawList());
-		ImGuizmo::SetRect(0, 0, window_size.x, window_size.y);
+
+		ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, window_size.x, window_size.y);
 		ImGuizmo::SetOrthographic(false);
 
 		glm::mat4& selected_object_transform = object_manager.m_mesh_instance_data[object_manager.current_selected_mesh_id][0].model;
@@ -203,7 +221,7 @@ void VulkanGUI::show_viewport_window(ImTextureID scene_image_id, camera& camera,
 		const glm::f32* view = glm::value_ptr(camera.view);
 		const glm::f32* proj = glm::value_ptr(camera.projection);
 
-		ImGuizmo::Manipulate(view, proj, gizmo_operation, ImGuizmo::MODE::WORLD, glm::value_ptr(selected_object_transform));
+		ImGuizmo::Manipulate(view, proj, gizmo_operation, transform_mode, glm::value_ptr(selected_object_transform));
 	}
 	ImGui::End();
 }
