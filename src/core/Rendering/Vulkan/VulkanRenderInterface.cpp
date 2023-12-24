@@ -427,7 +427,7 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colo
 }
 
 void Pipeline::create_graphics(const VertexFragmentShader& shader, std::span<VkFormat> color_formats, VkFormat depth_format, Flags flags, VkPipelineLayout pipeline_layout, VkPrimitiveTopology topology,
-	VkCullModeFlags cull_mode, VkFrontFace front_face, uint32_t view_mask)
+	VkCullModeFlags cull_mode, VkFrontFace front_face, uint32_t view_mask, VkPolygonMode polygonMode)
 {
 	for (VkFormat format : color_formats)
 	{
@@ -450,16 +450,13 @@ void Pipeline::create_graphics(const VertexFragmentShader& shader, std::span<VkF
 		pipeline_flags = Flags(( (int)pipeline_flags | (int)Flags::ENABLE_DEPTH_STATE));
 	}
 
-	create_graphics(shader, (uint32_t)color_formats.size(), pipeline_flags, nullptr, pipeline_layout, topology, cull_mode, front_face, &dynamic_pipeline_create_info);
+	create_graphics(shader, (uint32_t)color_formats.size(), pipeline_flags, nullptr, pipeline_layout, topology, cull_mode, front_face, &dynamic_pipeline_create_info, polygonMode);
 }
 
 void Pipeline::create_graphics(const VertexFragmentShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPrimitiveTopology topology,
-	VkCullModeFlags cullMode, VkFrontFace frontFace, VkPipelineRenderingCreateInfoKHR* dynamic_pipeline_create)
+	VkCullModeFlags cullMode, VkFrontFace frontFace, VkPipelineRenderingCreateInfoKHR* dynamic_pipeline_create, VkPolygonMode polygonMode)
 {
 	is_graphics = true;
-
-	// Pipeline stages
-	VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL;
 
 	if (topology == VK_PRIMITIVE_TOPOLOGY_POINT_LIST)
 	{
@@ -520,11 +517,11 @@ void Pipeline::create_graphics(const VertexFragmentShader& shader, uint32_t numC
 		colorBlendAttachments.push_back(
 			{
 				.blendEnable = !!(flags & ENABLE_ALPHA_BLENDING),
-				.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
-				.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+				.srcColorBlendFactor = VK_BLEND_FACTOR_ONE,
+				.dstColorBlendFactor = VK_BLEND_FACTOR_ONE,
 				.colorBlendOp = VK_BLEND_OP_ADD,
 				.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
-				.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+				.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
 				.alphaBlendOp = VK_BLEND_OP_ADD,
 				.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
 			}

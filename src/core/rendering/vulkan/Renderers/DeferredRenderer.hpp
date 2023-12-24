@@ -24,6 +24,7 @@ struct DeferredRenderer : public IRenderer
 		Texture2D normal_attachment;
 		Texture2D metalness_roughness_attachment;
 		Texture2D depth_attachment;
+		Texture2D light_accumulation_attachment;
 		Texture2D final_lighting;
 	} gbuffer[NUM_FRAMES];
 
@@ -45,11 +46,13 @@ struct DeferredRenderer : public IRenderer
 			gbuffer[i].normal_attachment.init(normal_format, render_size, render_size, 1, false, "[Deferred Renderer] Packed XY Normals Attachment");
 			gbuffer[i].metalness_roughness_attachment.init(metalness_roughness_format, render_size, render_size, 1, false, "[Deferred Renderer] Metalness Roughness Attachment");
 			gbuffer[i].depth_attachment.init(depth_format, render_size, render_size, 1, false, "[Deferred Renderer] Depth Attachment");
+			gbuffer[i].light_accumulation_attachment.init(depth_format, render_size, render_size, 1, false, "[Deferred Renderer] Lighting Accumulation");
 
 			gbuffer[i].base_color_attachment.create(ctx.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 			gbuffer[i].normal_attachment.create(ctx.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 			gbuffer[i].metalness_roughness_attachment.create(ctx.device, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 			gbuffer[i].depth_attachment.create(ctx.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+			gbuffer[i].light_accumulation_attachment.create(ctx.device, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
 			/* Create final attachment compositing all geometry information */
 			gbuffer[i].final_lighting.init(VulkanRendererCommon::get_instance().swapchain_color_format, render_size, render_size, 1, 0, "[Deferred Renderer] Composite Color Attachment");
@@ -60,12 +63,14 @@ struct DeferredRenderer : public IRenderer
 	void create_pipeline()
 	{
 		create_pipeline_geometry_pass();
+		create_pipeline_light_accumulation_pass();
 		create_pipeline_lighting_pass();
 	}
 
 	void create_renderpass() override
 	{
 		create_geometry_renderpass();
+		create_light_accumulation_renderpass();
 		create_lighting_renderpass();
 	}
 
@@ -79,6 +84,12 @@ struct DeferredRenderer : public IRenderer
 			renderpass_geometry[i].add_color_attachment(gbuffer[i].metalness_roughness_attachment.view, VK_ATTACHMENT_LOAD_OP_CLEAR);;
 			renderpass_geometry[i].add_depth_attachment(gbuffer[i].depth_attachment.view, VK_ATTACHMENT_LOAD_OP_CLEAR);
 		}
+	}
+
+
+	void create_light_accumulation_renderpass()
+	{
+
 	}
 
 	void create_lighting_renderpass()
@@ -115,6 +126,11 @@ struct DeferredRenderer : public IRenderer
 		Pipeline::Flags flags = Pipeline::Flags::ENABLE_DEPTH_STATE;
 
 		geometry_pass_pipeline.create_graphics(shader_geometry_pass, attachment_formats, depth_format, flags, geometry_pass_pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+	}
+
+	void create_pipeline_light_accumulation_pass()
+	{
+
 	}
 
 	void create_pipeline_lighting_pass()
@@ -173,13 +189,15 @@ struct DeferredRenderer : public IRenderer
 		{
 			VulkanRendererCommon::get_instance().m_framedata_desc_set_layout,
 			sampled_images_descriptor_set_layout,
+			ObjectManager::get_instance().mesh_descriptor_set_layout,
 			light_manager::descriptor_set.layout,
 			ShadowRenderer::descriptor_set_layout,
 		};
 
+		lighting_pass_pipeline.layout.add_push_constant_range("Primitive Model Matrix", { .stageFlags = VK_SHADER_STAGE_VERTEX_BIT, .offset = 0, .size = sizeof(glm::mat4) });
 		lighting_pass_pipeline.layout.create(descriptor_set_layouts);
-		shader_lighting_pass.create("fullscreen_quad_vert.vert.spv", "deferred_lighting_pass_frag.frag.spv");
-		lighting_pass_pipeline.create_graphics(shader_lighting_pass, attachment_formats, depth_format, Pipeline::Flags::ENABLE_DEPTH_STATE, lighting_pass_pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_CLOCKWISE);
+		shader_lighting_pass.create("instanced_mesh_vert.vert.spv", "deferred_lighting_pass_frag.frag.spv");
+		lighting_pass_pipeline.create_graphics(shader_lighting_pass, attachment_formats, {}, Pipeline::Flags::ENABLE_ALPHA_BLENDING, lighting_pass_pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE, 0, VK_POLYGON_MODE_FILL);
 	}
 
 	/* Render pass writing geometry information to G-Buffers */
@@ -234,6 +252,12 @@ struct DeferredRenderer : public IRenderer
 		gbuffer[ctx.curr_frame_idx].depth_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
 	}
 
+	/* Renders a volume for each type of light, corresponding to its influence */
+	void render_light_volumes()
+	{
+
+	}
+
 	/* Compositing render pass using G-Buffers to compute lighting and render to fullscreen quad */
 	void render_lighting_pass(VkCommandBuffer cmd_buffer)
 	{
@@ -243,25 +267,38 @@ struct DeferredRenderer : public IRenderer
 		glm::vec2 render_size = { gbuffer[ctx.curr_frame_idx].final_lighting.info.width, gbuffer[ctx.curr_frame_idx].final_lighting.info.height };
 
 		// Invert when drawing to swapchain
-		set_viewport_scissor(cmd_buffer, render_size.x, render_size.y);
+		set_viewport_scissor(cmd_buffer, render_size.x, render_size.y, true);
 
 		VkDescriptorSet bound_descriptor_sets[]
 		{
 			VulkanRendererCommon::get_instance().m_framedata_desc_set[ctx.curr_frame_idx].vk_set,
 			sampled_images_descriptor_set[ctx.curr_frame_idx].vk_set,
+			ObjectManager::get_instance().m_descriptor_sets[light_manager::point_light_volume_mesh_id],
 			light_manager::descriptor_set.vk_set,
 			ShadowRenderer::descriptor_set[ctx.curr_frame_idx].vk_set,
 		};
 
-		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lighting_pass_pipeline.layout, 0, 4, bound_descriptor_sets, 0, nullptr);
+		// Draw light volumes
+		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lighting_pass_pipeline.layout, 0, 5, bound_descriptor_sets, 0, nullptr);
 
 		gbuffer[ctx.curr_frame_idx].final_lighting.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 		renderpass_lighting[ctx.curr_frame_idx].begin(cmd_buffer, { render_size.x, render_size.y });
-		vkCmdDraw(cmd_buffer, 3, 1, 0, 0);
+
+		{
+			ObjectManager& object_manager = ObjectManager::get_instance();
+			const VulkanMesh& mesh = object_manager.m_meshes[light_manager::point_light_volume_mesh_id];
+
+			uint32_t instance_count = (uint32_t)object_manager.m_mesh_instance_data[light_manager::point_light_volume_mesh_id].size();
+
+			const Primitive& p = mesh.geometry_data.primitives[0];
+			vkCmdPushConstants(cmd_buffer, lighting_pass_pipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &p.model);
+			vkCmdDraw(cmd_buffer, p.vertex_count, instance_count, p.first_vertex, 0);
+		}
+
 		renderpass_lighting[ctx.curr_frame_idx].end(cmd_buffer);
 		gbuffer[ctx.curr_frame_idx].final_lighting.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
-
 	}
+
 
 	void render(VkCommandBuffer cmd_buffer)
 	{
@@ -289,6 +326,7 @@ struct DeferredRenderer : public IRenderer
 		ImTextureID normal;
 		ImTextureID metalness_roughness;
 		ImTextureID depth;
+		ImTextureID light_accumulation;
 		ImTextureID final_lighting;
 	} ui_texture_ids[NUM_FRAMES];
 
@@ -302,6 +340,7 @@ struct DeferredRenderer : public IRenderer
 			ui_texture_ids[i].normal = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_linear, gbuffer[i].normal_attachment.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
 			ui_texture_ids[i].metalness_roughness = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_linear, gbuffer[i].metalness_roughness_attachment.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
 			ui_texture_ids[i].depth = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_linear, gbuffer[i].depth_attachment.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
+			ui_texture_ids[i].light_accumulation = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_linear, gbuffer[i].light_accumulation_attachment.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
 			ui_texture_ids[i].final_lighting = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_linear, gbuffer[i].final_lighting.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
 		}
 	}
@@ -338,6 +377,11 @@ struct DeferredRenderer : public IRenderer
 				if (ImGui::ImageButton(ui_texture_ids[ctx.curr_frame_idx].depth, { thumb_img_size.x, thumb_img_size.y }))
 				{
 					curr_main_image = ui_texture_ids[ctx.curr_frame_idx].depth;
+				}
+
+				if (ImGui::ImageButton(ui_texture_ids[ctx.curr_frame_idx].light_accumulation, { thumb_img_size.x, thumb_img_size.y }))
+				{
+					curr_main_image = ui_texture_ids[ctx.curr_frame_idx].light_accumulation;
 				}
 			}
 			ImGui::End();
@@ -404,21 +448,31 @@ struct DeferredRenderer : public IRenderer
 		return true;
 	}
 
+
+	// Geometry pass
+	Pipeline geometry_pass_pipeline;
 	VertexFragmentShader shader_geometry_pass;
-	VertexFragmentShader shader_lighting_pass;
-	bool render_ok = false;
 	vk::renderpass_dynamic renderpass_geometry[NUM_FRAMES];
+
+	// Lighting Accumulation pass
+	Pipeline light_accumulation_pass_pipeline;
+	VertexFragmentShader shader_light_accumulation;
+	vk::renderpass_dynamic renderpass_light_accumulation[NUM_FRAMES];
+
+	// Lighting pass
+	Pipeline lighting_pass_pipeline;
+	VertexFragmentShader shader_lighting_pass;
 	vk::renderpass_dynamic renderpass_lighting[NUM_FRAMES];
 	
-	Pipeline geometry_pass_pipeline;
-	Pipeline lighting_pass_pipeline;
 	vk::descriptor_set sampled_images_descriptor_set[NUM_FRAMES];
 	vk::descriptor_set_layout sampled_images_descriptor_set_layout;
 
 	vk::renderpass_dynamic renderpass[NUM_FRAMES];
+	bool render_ok = false;
 
 	VkDescriptorPool descriptor_pool;
 	vk::descriptor_set descriptor_set;
+
 	/* Contains different state toggles used inside fragment shader */
 	struct ShaderToggles
 	{

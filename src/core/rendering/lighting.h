@@ -12,19 +12,12 @@ struct directional_light
 
 struct point_light
 {
-	glm::vec4 position;
-	glm::vec4 color;
+	glm::vec3 position;
+	float pad;
+	glm::vec3 color;
 	float radius;
-	glm::vec3 padding;
 };
 
-struct point_lights
-{
-	std::vector<glm::vec4> position;
-	std::vector<glm::vec4> color;
-	std::vector<float> radius;
-	std::vector<glm::vec3> padding;
-};
 
 struct light_manager
 {
@@ -38,8 +31,9 @@ struct light_manager
 	vk::buffer ssbo;
 
 	static inline directional_light dir_light;
-	point_lights point_lights;
+	std::vector<point_light> point_lights;
 
-	size_t max_point_lights = 4096;
+	static inline size_t point_light_volume_mesh_id;
+	size_t max_point_lights = 8096;
 };
 

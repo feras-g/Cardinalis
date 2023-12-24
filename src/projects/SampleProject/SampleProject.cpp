@@ -175,6 +175,18 @@ void SampleProject::create_scene()
 	sponza.create_from_file("scenes/sponza/scene.gltf");
 	drawable_list.push_back(ObjectManager::get_instance().add_mesh(sponza, "Sponza", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }));
 
+	//VulkanMesh bistro;
+	//bistro.create_from_file("scenes/bistro/scene.gltf");
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(bistro, "Bistro", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }));
+
+	//VulkanMesh powerplant;
+	//powerplant.create_from_file("scenes/powerplant/scene.gltf");
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(powerplant, "Powerplant", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }));
+
+	//VulkanMesh temple;
+	//temple.create_from_file("scenes/temple/gltf/scene.gltf");
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(temple, "Temple", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }));
+
 	VulkanMesh teapot;
 	teapot.create_from_file("basic/teapot.gltf");
 	drawable_list.push_back(ObjectManager::get_instance().add_mesh(teapot, "Teapot", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.1f, 0.1f, 0.1f } }));

@@ -3,14 +3,14 @@
 #include "lighting.h"
 #include "core/rendering/vulkan/VulkanRenderInterface.h"
 #include "core/rendering/vulkan/VulkanUI.h"
+#include "core/rendering/vulkan/RenderObjectManager.h"
 
 void light_manager::init()
 {
 	dir_light.color = glm::vec4(0.8, 0.4, 0.2, 1.0);
 	dir_light.dir	= glm::normalize(glm::vec4(0.25f, -1.0f, 0.5f, 0.0));
 
-	size_t point_light_size = 3 * sizeof(glm::vec4);
-	ssbo.init(vk::buffer::type::STORAGE, max_point_lights * point_light_size + sizeof(directional_light), "SSBO Lighting");
+	ssbo.init(vk::buffer::type::STORAGE, max_point_lights * sizeof(point_light) + sizeof(directional_light), "SSBO Lighting");
 	ssbo.create();
 
 	update_dir_light(dir_light);
@@ -25,6 +25,14 @@ void light_manager::init()
 	descriptor_set.layout.create("Light Manager Layout");
 	descriptor_set.create(descriptor_pool, "Light Manager");
 	descriptor_set.write_descriptor_storage_buffer(0, ssbo, 0, VK_WHOLE_SIZE);
+
+	/* Light volumes */
+	ObjectManager& object_manager = ObjectManager::get_instance();
+	VulkanMesh point_light_volume;
+	point_light_volume.create_from_file("basic/unit_sphere.glb");
+	point_light_volume_mesh_id = object_manager.add_mesh(point_light_volume, "Point Light Volume", {});
+
+	update_point_lights();
 }
 
 void light_manager::update_dir_light(directional_light dir_light)
@@ -35,7 +43,31 @@ void light_manager::update_dir_light(directional_light dir_light)
 
 void light_manager::update_point_lights()
 {
+	const int x = 10;
+	const int y = 10;
 
+	ObjectManager& object_manager = ObjectManager::get_instance();
+
+	for (int i = 0; i < 32; i++)
+	{
+		for (int j = 0; j < 32; j++)
+		{
+			point_light p;
+			p.position = glm::vec3(i, 1.0, j);
+			p.color = glm::vec3(1.0f, 1.0f, 1.0f);
+			p.radius = 1.0f;
+
+			point_lights.push_back(p);
+
+			/* Light volume */
+			glm::mat4 model = glm::identity<glm::mat4>();
+			ObjectManager::GPUInstanceData instance_data;
+			instance_data.model = glm::translate(model, p.position) * glm::scale(model, glm::vec3(p.radius));
+			object_manager.add_mesh_instance("Point Light Volume", instance_data);
+		}
+	}
+
+	ssbo.upload(ctx.device, point_lights.data(), sizeof(directional_light), point_lights.size() * sizeof(point_light));
 }
 
 void light_manager::show_ui()
@@ -50,6 +82,13 @@ void light_manager::show_ui()
 		if (dir_light.color != prev.color || dir_light.dir != prev.dir )
 		{
 			update_dir_light(dir_light);
+		}
+
+		for (int i = 0; i < point_lights.size(); i++)
+		{
+			std::string name = "Position #" + std::to_string(i);
+			ImGui::DragFloat3(name.c_str(), glm::value_ptr(point_lights[i].position), 0.005f, -1000, 1000);
+			ImGui::DragFloat3("Color", glm::value_ptr(point_lights[i].color));
 		}
 	}
 

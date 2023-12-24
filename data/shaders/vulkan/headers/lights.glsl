@@ -1,15 +1,27 @@
 struct PointLight
 {
-    vec4 position;
-    vec4 color;
+    vec3 position;
+    float pad;
+    vec3 color;
     float radius;
-    vec3 padding;
 };
 
 struct DirectionalLight
 {
     vec4 dir;
     vec4 color;
+};
+
+struct Spotlight
+{
+    vec3 pos;
+    vec3 dir;
+    vec3 color;
+
+    float angle_umbra;
+    float angle_penumbra;
+    float falloff;
+    float cos_cutoff_angle; // cosine of angle between spotlight direction and spotlight cone "edge"
 };
 
 /* 

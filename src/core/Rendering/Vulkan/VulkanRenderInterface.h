@@ -169,9 +169,10 @@ struct Pipeline
 	operator VkPipeline() { return pipeline; }
 
 	void create_graphics(const VertexFragmentShader& shader, std::span<VkFormat> color_formats, VkFormat depth_format, Flags flags, VkPipelineLayout pipeline_layout,
-		VkPrimitiveTopology topology, VkCullModeFlags cull_mode, VkFrontFace front_face, uint32_t view_mask = 0);
+		VkPrimitiveTopology topology, VkCullModeFlags cull_mode, VkFrontFace front_face, uint32_t view_mask = 0, VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL);
 	void create_graphics(const VertexFragmentShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPrimitiveTopology topology,
-		VkCullModeFlags cullMode, VkFrontFace frontFace, VkPipelineRenderingCreateInfoKHR* dynamic_pipeline_create);
+		VkCullModeFlags cullMode, VkFrontFace frontFace, VkPipelineRenderingCreateInfoKHR* dynamic_pipeline_create,
+		VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL);
 	void create_compute(const Shader& shader);
 	bool reload_pipeline();
 

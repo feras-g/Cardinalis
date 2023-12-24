@@ -31,7 +31,7 @@ float lookup_shadow(sampler2DArray tex_shadow, vec4 position_light_space, vec2 o
 
 	if (shadow_map_depth + bias < position_light_space.z) 
 	{
-		shadow = 0.1;
+		shadow = 0.0;
 	}
 	return shadow;
 }
