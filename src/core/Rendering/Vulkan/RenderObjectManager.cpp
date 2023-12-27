@@ -81,16 +81,6 @@ size_t ObjectManager::add_mesh(const VulkanMesh& mesh, std::string_view mesh_nam
 
 	m_descriptor_sets.push_back(descriptor_set);
 
-	if (m_mesh_id_from_name.contains(mesh_name.data()))
-	{
-		size_t mesh_idx = m_mesh_id_from_name.at(mesh_name.data());
-		size_t offset = std::max(0ull, (m_mesh_instance_data[mesh_idx].size() - 1) * sizeof(GPUInstanceData));
-
-		if ((offset + sizeof(GPUInstanceData)) < (max_instance_count * sizeof(GPUInstanceData)))
-		{
-			m_mesh_instance_data_ssbo[mesh_idx].upload(ctx.device, &m_mesh_instance_data[mesh_idx].back(), offset, sizeof(GPUInstanceData));
-		}
-	}
 
 	return mesh_idx;
 }
@@ -122,9 +112,6 @@ void ObjectManager::update_instances_ssbo(std::string_view mesh_name)
 void ObjectManager::init()
 {
 	create_materials_ssbo();
-	
-	/* Create a default material */
-	add_material({ -1, -1, -1, -1});
 
 	/*
 		Mesh descriptor set layout
@@ -161,13 +148,12 @@ void ObjectManager::create_materials_ssbo()
 {
 	size_t buf_size_bytes = max_material_count * sizeof(Material);
 	std::string buf_name = "Materials";
-	m_materials.resize(max_material_count);
-
-	// Default material
-	m_materials[0] = { -1, -1, -1, -1, {1.0f, 0.0f, 1.0f, 1.0f}, { 0.0f, 1.0f } };
 
 	m_materials_ssbo.init(vk::buffer::type::STORAGE, buf_size_bytes, buf_name.c_str());
 	m_materials_ssbo.create();
+
+	// Add default material
+	add_material(s_default_material);
 }
 
 void ObjectManager::create_textures_descriptor_set(VkDescriptorPool pool)

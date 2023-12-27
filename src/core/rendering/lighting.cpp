@@ -21,6 +21,7 @@ void light_manager::init()
 	};
 
 	descriptor_pool = create_descriptor_pool(pool_sizes, NUM_FRAMES);
+
 	descriptor_set.layout.add_storage_buffer_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, "DirectLightingDataBlock");
 	descriptor_set.layout.create("Light Manager Layout");
 	descriptor_set.create(descriptor_pool, "Light Manager");
@@ -29,8 +30,16 @@ void light_manager::init()
 	/* Light volumes */
 	ObjectManager& object_manager = ObjectManager::get_instance();
 	VulkanMesh point_light_volume;
-	point_light_volume.create_from_file("basic/unit_sphere.glb");
+	point_light_volume.create_from_file("basic/unit_sphere_ico.glb");
 	point_light_volume_mesh_id = object_manager.add_mesh(point_light_volume, "Point Light Volume", {});
+
+	point_light p;
+	p.position = glm::vec3(0, 0.0, 0);
+	p.color = glm::linearRand(glm::vec3(0.1f), glm::vec3(1.0f));
+	p.radius = 1.0f;
+	point_lights.push_back(p);
+
+
 	update_point_lights();
 
 
@@ -39,7 +48,7 @@ void light_manager::init()
 	{
 		VertexData{  { -1, -1, 0 }, { 0, 0, 0 }, { 0, 0, 0 } },	// Lower-left
 		VertexData{  { 3, -1, 0 }, { 0, 0, 0 }, { 1, 1, 0 } },	// Upper-Right
-		VertexData{  { -1, 3	, 0 }, { 0, 0, 0 }, { 0, 1, 0 } },	// Upper-left
+		VertexData{  { -1, 3 , 0 }, { 0, 0, 0 }, { 0, 1, 0 } },	// Upper-left
 	};
 	std::array<unsigned int, 3> fullscreen_quad_indices
 	{
@@ -66,20 +75,19 @@ void light_manager::update_dir_light(directional_light dir_light)
 
 void light_manager::update_point_lights()
 {
-	const int x = 10;
-	const int y = 10;
+	const int x = 128;
+	const int y = 128;
 
 	ObjectManager& object_manager = ObjectManager::get_instance();
 
-	for (int i = 0; i < 32; i++)
+	for (int i = -x/2; i < x/2; i++)
 	{
-		for (int j = 0; j < 32; j++)
+		for (int j = -y/2; j < y/2; j++)
 		{
 			point_light p;
-			p.position = glm::vec3(i, 1.0, j);
-			p.color = glm::vec3(1.0f, 1.0f, 1.0f);
+			p.color = glm::linearRand(glm::vec3(0.1f), glm::vec3(1.0f));
 			p.radius = 1.0f;
-
+			p.position = glm::vec3(i + p.radius, 0.0, j);
 			point_lights.push_back(p);
 
 			/* Light volume */

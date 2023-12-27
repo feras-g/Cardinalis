@@ -40,7 +40,7 @@ void SampleProject::init()
 	forward_renderer.p_debug_line_renderer = &debug_line_renderer;
 	forward_renderer.init();
 
-	ibl_renderer.init("pisa.hdr");
+	ibl_renderer.init("blaubeuren_night_1k.hdr");
 	skybox_renderer.init();
 	deferred_renderer.init();
 	m_camera.update_aspect_ratio(1.0f);
@@ -134,8 +134,6 @@ void SampleProject::render()
 	shadow_renderer.render(cmd_buffer, drawable_list, m_camera, VulkanRendererCommon::get_instance().m_framedata[ctx.curr_frame_idx], lights.dir_light.dir);
 	deferred_renderer.render(cmd_buffer, drawable_list);
 	skybox_renderer.render(cmd_buffer);
-	//forward_renderer.render(cmd_buffer, drawable_list);
-	//debug_line_renderer.render(cmd_buffer);
 	m_gui.render(cmd_buffer);
 	update_gpu_buffers();
 }
@@ -171,9 +169,9 @@ void SampleProject::create_scene()
 	plane.create_from_file("basic/unit_plane.glb");
 	drawable_list.push_back(ObjectManager::get_instance().add_mesh(plane, "Floor", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  250, 250, 250 } }));
 
-	VulkanMesh sponza;
-	sponza.create_from_file("scenes/sponza/scene.gltf");
-	drawable_list.push_back(ObjectManager::get_instance().add_mesh(sponza, "Sponza", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }));
+	//VulkanMesh sponza;
+	//sponza.create_from_file("scenes/sponza/scene.gltf");
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(sponza, "Sponza", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }));
 
 	//VulkanMesh bistro;
 	//bistro.create_from_file("scenes/bistro/scene.gltf");
@@ -183,9 +181,9 @@ void SampleProject::create_scene()
 	//powerplant.create_from_file("scenes/powerplant/scene.gltf");
 	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(powerplant, "Powerplant", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }));
 
-	//VulkanMesh temple;
-	//temple.create_from_file("scenes/temple/gltf/scene.gltf");
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(temple, "Temple", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }));
+	VulkanMesh temple;
+	temple.create_from_file("scenes/temple/gltf/scene.gltf");
+	drawable_list.push_back(ObjectManager::get_instance().add_mesh(temple, "Temple", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }));
 
 	VulkanMesh teapot;
 	teapot.create_from_file("basic/teapot.gltf");

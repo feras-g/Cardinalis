@@ -8,9 +8,11 @@ struct Material
 	int texture_normal_map_idx = -1;
 	int texture_metalness_roughness_idx = -1;
 	int texture_emissive_map_idx = -1;
-    glm::vec4 base_color;
-    glm::vec2 metalness_roughness;
+    glm::vec4 base_color = { 0.27f,  0.27f,  0.27f, 1.0f };
+    glm::vec2 metalness_roughness = { 0.0f, 0.5f };
 };
+
+static constexpr Material s_default_material = Material();
 
 /* https://live.boost.org/doc/libs/1_42_0/boost/functional/hash/hash.hpp */
 template <class T>
@@ -30,6 +32,7 @@ struct MaterialHash
         hash_combine(h, m.texture_metalness_roughness_idx);
         hash_combine(h, m.texture_emissive_map_idx);
         hash_combine(h, m.base_color);
+        hash_combine(h, m.metalness_roughness);
         return h;
     }
 };

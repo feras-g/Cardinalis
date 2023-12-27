@@ -18,7 +18,7 @@ struct DeferredRenderer : public IRenderer
 	VkFormat normal_format = VK_FORMAT_R16G16B16A16_SFLOAT;// VK_FORMAT_R16G16_SFLOAT;	// Only store X and Y components
 	VkFormat metalness_roughness_format = VK_FORMAT_R8G8_UNORM;
 	VkFormat depth_format = VK_FORMAT_D32_SFLOAT;
-	VkFormat light_accumulation_format = VK_FORMAT_R8G8B8A8_SRGB;
+	VkFormat light_accumulation_format = VK_FORMAT_R8G8B8A8_UNORM;
 	
 	
 	const int light_volume_type_directional = 1;
@@ -70,14 +70,12 @@ struct DeferredRenderer : public IRenderer
 	void create_pipeline()
 	{
 		create_pipeline_geometry_pass();
-		create_pipeline_light_accumulation_pass();
 		create_pipeline_lighting_pass();
 	}
 
 	void create_renderpass() override
 	{
 		create_geometry_renderpass();
-		create_light_accumulation_renderpass();
 		create_lighting_renderpass();
 	}
 
@@ -90,21 +88,6 @@ struct DeferredRenderer : public IRenderer
 			renderpass_geometry[i].add_color_attachment(gbuffer[i].normal_attachment.view, VK_ATTACHMENT_LOAD_OP_CLEAR);
 			renderpass_geometry[i].add_color_attachment(gbuffer[i].metalness_roughness_attachment.view, VK_ATTACHMENT_LOAD_OP_CLEAR);;
 			renderpass_geometry[i].add_depth_attachment(gbuffer[i].depth_attachment.view, VK_ATTACHMENT_LOAD_OP_CLEAR);
-		}
-	}
-
-
-	void create_light_accumulation_renderpass()
-	{
-
-	}
-
-	void create_lighting_renderpass()
-	{
-		for (int i = 0; i < NUM_FRAMES; i++)
-		{
-			renderpass_lighting[i].reset();
-			renderpass_lighting[i].add_color_attachment(gbuffer[i].light_accumulation_attachment.view, VK_ATTACHMENT_LOAD_OP_CLEAR);
 		}
 	}
 
@@ -134,17 +117,20 @@ struct DeferredRenderer : public IRenderer
 
 		geometry_pass_pipeline.create_graphics(shader_geometry_pass, attachment_formats, depth_format, flags, geometry_pass_pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
 	}
-
-	void create_pipeline_light_accumulation_pass()
+	void create_lighting_renderpass()
 	{
-
+		for (int i = 0; i < NUM_FRAMES; i++)
+		{
+			renderpass_lighting[i].reset();
+			renderpass_lighting[i].add_color_attachment(gbuffer[i].light_accumulation_attachment.view, VK_ATTACHMENT_LOAD_OP_CLEAR);
+		}
 	}
 
 	void create_pipeline_lighting_pass()
 	{
 		VkFormat attachment_formats[]
 		{
-			ctx.swapchain->info.color_format
+			light_accumulation_format
 		};
 
 		std::array<VkDescriptorPoolSize, 1> pool_sizes
@@ -201,8 +187,10 @@ struct DeferredRenderer : public IRenderer
 			ShadowRenderer::descriptor_set_layout,
 		};
 
-		lighting_pass_pipeline.layout.add_push_constant_range("Light Volume MVP", { .stageFlags = VK_SHADER_STAGE_VERTEX_BIT, .offset = 0, .size = sizeof(glm::mat4) });
-		lighting_pass_pipeline.layout.add_push_constant_range("Light Volume Type", { .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .offset = sizeof(glm::mat4), .size = sizeof(int) });
+
+		light_volume_pass_data.inv_screen_size = 1.0 / render_size;
+
+		lighting_pass_pipeline.layout.add_push_constant_range("Light Volume Pass Data", { .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, .offset = 0, .size = sizeof(light_volume_pass_data) });
 
 		lighting_pass_pipeline.layout.create(descriptor_set_layouts);
 		shader_lighting_pass.create("light_volume_pass_vert.vert.spv", "deferred_lighting_pass_frag.frag.spv");
@@ -293,30 +281,29 @@ struct DeferredRenderer : public IRenderer
 		gbuffer[ctx.curr_frame_idx].light_accumulation_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 		renderpass_lighting[ctx.curr_frame_idx].begin(cmd_buffer, { render_size.x, render_size.y });
 
+		ObjectManager& object_manager = ObjectManager::get_instance();
+		const glm::mat4 identity = glm::identity<glm::mat4>();
+
+		// Draw directional light volume
 		{
-			ObjectManager& object_manager = ObjectManager::get_instance();
-			const glm::mat4 identity = glm::identity<glm::mat4>();
+			light_volume_pass_data.light_type = light_volume_type_directional;
+			light_volume_pass_data.view_proj = identity;
 
-			// Draw directional light volume
-			{
-				const VulkanMesh& mesh_fs_quad = object_manager.m_meshes[light_manager::directional_light_volume_mesh_id];
-				lighting_pass_pipeline.layout.cmd_push_constants(cmd_buffer, "Light Volume MVP", &identity);
-				lighting_pass_pipeline.layout.cmd_push_constants(cmd_buffer, "Light Volume Type", &light_volume_type_directional);
-				vkCmdDraw(cmd_buffer, mesh_fs_quad.m_num_vertices, 1, 0, 0);
-			}
+			const VulkanMesh& mesh_fs_quad = object_manager.m_meshes[light_manager::directional_light_volume_mesh_id];
+			lighting_pass_pipeline.layout.cmd_push_constants(cmd_buffer, "Light Volume Pass Data", &light_volume_pass_data);
+			vkCmdDraw(cmd_buffer, mesh_fs_quad.m_num_vertices, 1, 0, 0);
+		}
 
-			{
-				// Draw point light volumes
-				vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lighting_pass_pipeline.layout, 2, 1, &ObjectManager::get_instance().m_descriptor_sets[light_manager::point_light_volume_mesh_id].vk_set, 0, nullptr);
-				const VulkanMesh& mesh_sphere = object_manager.m_meshes[light_manager::point_light_volume_mesh_id];
-				uint32_t instance_count = (uint32_t)object_manager.m_mesh_instance_data[light_manager::point_light_volume_mesh_id].size();
-				const Primitive& p = mesh_sphere.geometry_data.primitives[0];
-				const glm::mat4 mvp = VulkanRendererCommon::get_instance().m_framedata[ctx.curr_frame_idx].view_proj * p.model;
-				lighting_pass_pipeline.layout.cmd_push_constants(cmd_buffer, "Light Volume MVP", &mvp);
-				lighting_pass_pipeline.layout.cmd_push_constants(cmd_buffer, "Light Volume Type", &light_volume_type_point);
-				vkCmdDraw(cmd_buffer, p.vertex_count, instance_count, p.first_vertex, 0);
-			}
+		// Draw point light volumes
+		{
+			light_volume_pass_data.light_type = light_volume_type_point;
+			light_volume_pass_data.view_proj = VulkanRendererCommon::get_instance().m_framedata[ctx.curr_frame_idx].view_proj;
 
+			vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lighting_pass_pipeline.layout, 2, 1, &ObjectManager::get_instance().m_descriptor_sets[light_manager::point_light_volume_mesh_id].vk_set, 0, nullptr);
+			const VulkanMesh& mesh_sphere = object_manager.m_meshes[light_manager::point_light_volume_mesh_id];
+			uint32_t instance_count = (uint32_t)object_manager.m_mesh_instance_data[light_manager::point_light_volume_mesh_id].size();
+			lighting_pass_pipeline.layout.cmd_push_constants(cmd_buffer, "Light Volume Pass Data", &light_volume_pass_data);
+			vkCmdDraw(cmd_buffer, mesh_sphere.m_num_vertices, instance_count, 0, 0);
 		}
 
 		renderpass_lighting[ctx.curr_frame_idx].end(cmd_buffer);
@@ -381,7 +368,7 @@ struct DeferredRenderer : public IRenderer
 			const ImVec2 main_img_size  = { render_size, render_size };
 			const ImVec2 thumb_img_size = { 256, 256 };
 
-			static ImTextureID curr_main_image = ui_texture_ids[ctx.curr_frame_idx].final_lighting;
+			static ImTextureID curr_main_image = ui_texture_ids[ctx.curr_frame_idx].light_accumulation;
 
 			if (ImGui::Begin("GBuffer View"))
 			{
@@ -478,12 +465,14 @@ struct DeferredRenderer : public IRenderer
 	VertexFragmentShader shader_geometry_pass;
 	vk::renderpass_dynamic renderpass_geometry[NUM_FRAMES];
 
-	// Lighting Accumulation pass
-	Pipeline light_accumulation_pass_pipeline;
-	VertexFragmentShader shader_light_accumulation;
-	vk::renderpass_dynamic renderpass_light_accumulation[NUM_FRAMES];
-
 	// Lighting pass
+	struct light_volume_pass_data
+	{
+		glm::mat4 view_proj;
+		float inv_screen_size;
+		int light_type;
+	} light_volume_pass_data;
+
 	Pipeline lighting_pass_pipeline;
 	VertexFragmentShader shader_lighting_pass;
 	vk::renderpass_dynamic renderpass_lighting[NUM_FRAMES];

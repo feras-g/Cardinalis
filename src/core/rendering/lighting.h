@@ -13,9 +13,9 @@ struct directional_light
 struct point_light
 {
 	glm::vec3 position;
-	float pad;
-	glm::vec3 color;
 	float radius;
+	glm::vec3 color;
+	float pad1;
 };
 
 
@@ -33,7 +33,7 @@ struct light_manager
 	static inline directional_light dir_light;
 	std::vector<point_light> point_lights;
 
-	size_t max_point_lights = 8096;
+	size_t max_point_lights = 20000;
 
 	/* Light volumes */
 	static inline size_t point_light_volume_mesh_id;

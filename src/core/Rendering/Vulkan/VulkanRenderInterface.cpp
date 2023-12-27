@@ -514,18 +514,22 @@ void Pipeline::create_graphics(const VertexFragmentShader& shader, uint32_t numC
 
 	for (uint32_t i = 0; i < numColorAttachments; i++)
 	{
-		colorBlendAttachments.push_back(
-			{
-				.blendEnable = !!(flags & ENABLE_ALPHA_BLENDING),
-				.srcColorBlendFactor = VK_BLEND_FACTOR_ONE,
-				.dstColorBlendFactor = VK_BLEND_FACTOR_ONE,
-				.colorBlendOp = VK_BLEND_OP_ADD,
-				.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
-				.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
-				.alphaBlendOp = VK_BLEND_OP_ADD,
-				.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
-			}
-		);
+		VkPipelineColorBlendAttachmentState color_blend_state = {};
+
+		color_blend_state.blendEnable = !!(flags & ENABLE_ALPHA_BLENDING);
+		color_blend_state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+		// src = Value output by the fragment shader
+		color_blend_state.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+		color_blend_state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+
+		// dst = Value that already exists inside the color attachment
+		color_blend_state.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+		color_blend_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+
+		color_blend_state.colorBlendOp = VK_BLEND_OP_ADD;
+		color_blend_state.alphaBlendOp = VK_BLEND_OP_ADD;
+		colorBlendAttachments.push_back(color_blend_state);
 	}
 
 	colorBlendState =
@@ -564,7 +568,7 @@ void Pipeline::create_graphics(const VertexFragmentShader& shader, uint32_t numC
 		.pRasterizationState=&raster_state_info,
 		.pMultisampleState=&multisampleState,
 		.pDepthStencilState= !!(flags & ENABLE_DEPTH_STATE) ? &depthStencilState : VK_NULL_HANDLE,
-		.pColorBlendState=&colorBlendState,
+		.pColorBlendState= &colorBlendState,
 		.pDynamicState=&dynamicState,
 		.layout=pipelineLayout,
 		.renderPass=renderPass,
