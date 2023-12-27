@@ -31,8 +31,31 @@ void light_manager::init()
 	VulkanMesh point_light_volume;
 	point_light_volume.create_from_file("basic/unit_sphere.glb");
 	point_light_volume_mesh_id = object_manager.add_mesh(point_light_volume, "Point Light Volume", {});
-
 	update_point_lights();
+
+
+	VulkanMesh directional_light_volume;
+	std::array<VertexData, 3> fullscreen_quad_vertices
+	{
+		VertexData{  { -1, -1, 0 }, { 0, 0, 0 }, { 0, 0, 0 } },	// Lower-left
+		VertexData{  { 3, -1, 0 }, { 0, 0, 0 }, { 1, 1, 0 } },	// Upper-Right
+		VertexData{  { -1, 3	, 0 }, { 0, 0, 0 }, { 0, 1, 0 } },	// Upper-left
+	};
+	std::array<unsigned int, 3> fullscreen_quad_indices
+	{
+		// Left triangle CCW
+		0, 1, 2,
+	};
+
+	directional_light_volume.create_from_data(fullscreen_quad_vertices, fullscreen_quad_indices);
+	directional_light_volume.model = glm::identity<glm::mat4>();
+	directional_light_volume.geometry_data.primitives.push_back
+	(
+		{
+			0, 3, glm::identity<glm::mat4>(), 0
+		}
+	);
+	directional_light_volume_mesh_id = object_manager.add_mesh(directional_light_volume, "Directional Light Volume", {});
 }
 
 void light_manager::update_dir_light(directional_light dir_light)

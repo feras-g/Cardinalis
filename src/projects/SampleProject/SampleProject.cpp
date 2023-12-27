@@ -57,7 +57,7 @@ void SampleProject::compose_gui()
 	m_gui.show_hierarchy(object_manager);
 	m_gui.show_draw_metrics();
 	m_gui.show_shader_library();
-	m_gui.show_viewport_window(deferred_renderer.ui_texture_ids[ctx.curr_frame_idx].final_lighting, m_camera, object_manager);
+	m_gui.show_viewport_window(deferred_renderer.ui_texture_ids[ctx.curr_frame_idx].light_accumulation, m_camera, object_manager);
 	m_camera.show_ui();
 	deferred_renderer.show_ui(m_camera);
 	ibl_renderer.show_ui();
