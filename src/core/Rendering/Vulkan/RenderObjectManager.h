@@ -56,7 +56,7 @@ public:
 		glm::vec4 color;
 	};
 
-	size_t add_mesh(const VulkanMesh& mesh, std::string_view mesh_name, const Transform& transform);
+	size_t add_mesh(const VulkanMesh& mesh, std::string_view mesh_name, const Transform& transform, bool add_base_instance = true);
 	void add_mesh_instance(std::string_view mesh_name,GPUInstanceData data, std::string_view instance_name = "");
 
 	/* Updates the SSBO instance data for mesh correponding to mesh_name */
