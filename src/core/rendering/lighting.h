@@ -22,8 +22,16 @@ struct point_light
 struct light_manager
 {
 	void init();
+
+	void create_ssbo();
+	void write_ssbo();
+	void create_descriptor_set();
+	static void create_light_volumes();
+	static void add_point_light(point_light p);
+	static void set_directional_light(directional_light d);
+
 	void update_dir_light(directional_light dir_light);
-	void update_point_lights();
+	void add_test_point_lights();
 	void show_ui();
 
 	VkDescriptorPool descriptor_pool;
@@ -31,7 +39,7 @@ struct light_manager
 	vk::buffer ssbo;
 
 	static inline directional_light dir_light;
-	std::vector<point_light> point_lights;
+	static inline std::vector<point_light> point_lights;
 
 	size_t max_point_lights = 20000;
 

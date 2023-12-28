@@ -2,6 +2,7 @@
 
 #include <vulkan/vulkan.hpp> 
 #include "core/engine/vulkan/objects/vk_buffer.h"
+#include "core/rendering/lighting.h"
 
 
 #include <glm/vec2.hpp>

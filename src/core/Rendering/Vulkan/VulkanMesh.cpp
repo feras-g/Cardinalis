@@ -283,28 +283,55 @@ static void process_node(cgltf_node* p_node, Node* parent, VulkanMesh& model)
 	if (p_node->light)
 	{
 		cgltf_light* light = p_node->light;
-		
+
+		glm::vec3 color = glm::vec3(light->color[0], light->color[1], light->color[2]);
+		if(p_node->has_translation)
+		{
+
+		}
+		else
+		{
+
+		}
+
 		if (light->type == cgltf_light_type_point)
 		{
-			model.geometry_data.punctual_lights_positions.push_back
-			(
-				glm::vec4(
-					p_node->translation[0],
-					p_node->translation[1],
-					p_node->translation[2],
-					1.0
-				)
-			);
+			point_light p;
+			p.color  = color;
+
+
+			if (p_node->has_translation)
+			{
+				p.position = glm::vec3(p_node->translation[0], p_node->translation[1], p_node->translation[2]);
+			}
+			else
+			{
+				glm::vec4 pos = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+				glm::mat4 mat;
+				memcpy(glm::value_ptr(mat), p_node->matrix, sizeof(p_node->matrix));
+				p.position = glm::vec3(mat * pos);
+			}
+
+
+			if (p_node->has_scale)
+			{
+				p.radius = glm::length(glm::vec3(p_node->scale[0], p_node->scale[2], p_node->scale[2]));
+			}
+			else
+			{
+				p.radius = 1.0f;
+			}
+
+			light_manager::add_point_light(p);
 			
-			model.geometry_data.punctual_lights_colors.push_back
-			(
-				glm::vec4(
-					light->color[0],
-					light->color[1],
-					light->color[2],
-					1.0
-				)
-			);
+		}
+
+		if (light->type == cgltf_light_type_directional)
+		{
+			directional_light d;
+			d.color = glm::vec4(color, 1.0);
+			d.dir = glm::vec4(0, -1, 0, 0); // set a default direction
+			light_manager::set_directional_light(d);
 		}
 	}
 
@@ -403,7 +430,7 @@ void VulkanMesh::create_from_file_gltf(const std::string& filename)
 
 		create_from_data(geometry_data.vertices, geometry_data.indices);
 
-		LOG_INFO("Loaded {} : {} Materials, {} Textures, Meshes : {}", filename, data->materials_count, data->textures_count, data->meshes_count);
+		LOG_INFO("Loaded {} : {} Materials, {} Textures, Meshes : {} Point Lights: {}", filename, data->materials_count, data->textures_count, data->meshes_count);
 
 		cgltf_free(data);
 	}

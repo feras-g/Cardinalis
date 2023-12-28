@@ -55,7 +55,7 @@ int ObjectManager::get_texture_id(std::string_view name)
 	return -1;
 }
 
-size_t ObjectManager::add_mesh(const VulkanMesh& mesh, std::string_view mesh_name, const Transform& transform)
+size_t ObjectManager::add_mesh(const VulkanMesh& mesh, std::string_view mesh_name, const Transform& transform, bool add_base_instance)
 {
 	size_t mesh_idx = m_meshes.size();
 	m_mesh_names.push_back(mesh_name.data());
@@ -69,7 +69,10 @@ size_t ObjectManager::add_mesh(const VulkanMesh& mesh, std::string_view mesh_nam
 	
 	create_instance_buffer();
 	
-	add_mesh_instance(mesh_name, data, "BaseInstance");
+	if (add_base_instance)
+	{
+		add_mesh_instance(mesh_name, data, "BaseInstance");
+	}
 
 	vk::descriptor_set descriptor_set;
 	descriptor_set.assign_layout(mesh_descriptor_set_layout);
