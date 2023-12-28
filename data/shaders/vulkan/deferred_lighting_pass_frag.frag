@@ -73,16 +73,18 @@ void main()
     BRDFData brdf_data;
     brdf_data.albedo = texture(gbuffer_base_color, fragcoord).rgb;
     brdf_data.metalness_roughness = texture(gbuffer_metalness_roughness, fragcoord).rg;
-    brdf_data.normal_ws = normalize((texture(gbuffer_normal_ws, fragcoord).xyz));
+    brdf_data.normal_ws.xy = texture(gbuffer_normal_ws, fragcoord).xy;
+    brdf_data.normal_ws.z = sqrt(1.0f - (brdf_data.normal_ws.x * brdf_data.normal_ws.x) - (brdf_data.normal_ws.y * brdf_data.normal_ws.y));
+
     brdf_data.viewdir_ws = normalize(frame.data.eye_pos_ws.xyz - position_ws);
     brdf_data.lightdir_ws = normalize(-lights.dir_light.dir.xyz);
     brdf_data.halfvec_ws = normalize(brdf_data.lightdir_ws + brdf_data.viewdir_ws);
     float metallic  = brdf_data.metalness_roughness.x;
     float roughness = brdf_data.metalness_roughness.y;
 
-    out_color = vec4(0,0,0 ,1);
+    out_color = vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
-    vec3 sun_color = lights.dir_light.color.rgb;
+    vec3 sun_color = lights.dir_light.color.rgb * 25;
 
     /*
         ----------------------------------------------------------------------------------------------------
@@ -91,7 +93,7 @@ void main()
     */
     int cascade_index = 0;
     mat4 shadow_view_proj = get_cascade_view_proj(position_vs.z, shadow_cascades.data, cascade_index);
-    vec4 position_light_space = shadow_view_proj * vec4(position_ws, 1);
+    vec4 position_light_space = shadow_view_proj * vec4(position_ws, 1.0f);
     float shadow_factor = get_shadow_factor(tex_shadow_maps, position_light_space, cascade_index);
 
     if(shadow_cascades.data.show_debug_view)    
@@ -118,18 +120,19 @@ void main()
     {
         /*
             ----------------------------------------------------------------------------------------------------
-            Volumetric fog
-            ----------------------------------------------------------------------------------------------------
-        */ 
-        vec3 fog = raymarch_fog(tex_shadow_maps, cascade_index, frame.data.eye_pos_ws.xyz, position_ws, shadow_view_proj, brdf_data.lightdir_ws, sun_color);
-        out_color.rgb += fog;
-    
-        /*
-            ----------------------------------------------------------------------------------------------------
             Direct Lighting
             ----------------------------------------------------------------------------------------------------
         */
-        out_color.rgb += brdf_cook_torrance(brdf_data,  sun_color) * shadow_factor;
+        out_color.rgb += brdf_cook_torrance(brdf_data, sun_color) * shadow_factor;
+
+        /*
+            ----------------------------------------------------------------------------------------------------
+            Volumetric fog
+            ----------------------------------------------------------------------------------------------------
+        */ 
+        vec3 fog = raymarch_fog_sunlight(tex_shadow_maps, cascade_index, frame.data.eye_pos_ws.xyz, position_ws, shadow_view_proj, brdf_data.lightdir_ws, sun_color);
+        out_color.rgb += fog;
+
 
         /*
             ----------------------------------------------------------------------------------------------------
@@ -161,7 +164,11 @@ void main()
         float atten = atten_test(dist, radius);
         brdf_data.lightdir_ws = L;
         brdf_data.halfvec_ws = normalize(brdf_data.lightdir_ws + brdf_data.viewdir_ws);
-        out_color.rgb += brdf_cook_torrance(brdf_data,  lights.point_lights[light_instance_index].color * 10) * atten;
+
+        // vec3 fog = raymarch_fog_omni_spot_light(frame.data.eye_pos_ws, position_ws);
+        // out_color.rgb += fog  * atten;
+
+        out_color.rgb += brdf_cook_torrance(brdf_data,  lights.point_lights[light_instance_index].color) * atten;
     }
 
     out_color = vec4(out_color.rgb, 1.0);

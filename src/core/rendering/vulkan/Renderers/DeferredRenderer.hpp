@@ -13,13 +13,12 @@
 struct DeferredRenderer : public IRenderer
 {
 	static constexpr int render_size = 2048;
-	
+
 	VkFormat base_color_format = VK_FORMAT_R8G8B8A8_SRGB;
-	VkFormat normal_format = VK_FORMAT_R16G16B16A16_SFLOAT;// VK_FORMAT_R16G16_SFLOAT;	// Only store X and Y components
+	VkFormat normal_format = VK_FORMAT_R16G16_SFLOAT;	// Only store X and Y components
 	VkFormat metalness_roughness_format = VK_FORMAT_R8G8_UNORM;
 	VkFormat depth_format = VK_FORMAT_D32_SFLOAT;
-	VkFormat light_accumulation_format = VK_FORMAT_R8G8B8A8_UNORM;
-	
+	VkFormat light_accumulation_format = VK_FORMAT_R8G8B8A8_SRGB;
 	
 	const int light_volume_type_directional = 1;
 	const int light_volume_type_point = 2;
@@ -305,8 +304,8 @@ struct DeferredRenderer : public IRenderer
 			lighting_pass_pipeline.layout.cmd_push_constants(cmd_buffer, "Light Volume Pass Data", &light_volume_pass_data);
 			vkCmdDraw(cmd_buffer, mesh_sphere.m_num_vertices, instance_count, 0, 0);
 		}
-
 		renderpass_lighting[ctx.curr_frame_idx].end(cmd_buffer);
+
 		gbuffer[ctx.curr_frame_idx].light_accumulation_attachment.transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
 	}
 

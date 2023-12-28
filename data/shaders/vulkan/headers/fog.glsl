@@ -11,7 +11,7 @@ float mie_scattering(float VoL)
     return ((1.0 - g_sq) /   (4 * PI  * pow((1.0 + g_sq - 2.0 * g * VoL), 1.5f)));
 }
 
-vec3 raymarch_fog(sampler2DArray tex_shadow, int cascade_index, vec3 view_pos_ws, vec3 fragpos_ws, mat4 shadow_view_proj, vec3 L, vec3 sun_color)
+vec3 raymarch_fog_sunlight(sampler2DArray tex_shadow, int cascade_index, vec3 view_pos_ws, vec3 fragpos_ws, mat4 shadow_view_proj, vec3 L, vec3 sun_color)
 {
     const int num_steps = 100;
     vec3 acc = vec3(0);
@@ -36,5 +36,19 @@ vec3 raymarch_fog(sampler2DArray tex_shadow, int cascade_index, vec3 view_pos_ws
 
     return acc / num_steps;
 }
+
+
+vec3 raymarch_fog_omni_spot_light(vec3 eye_pos_ws, vec3 frag_pos_ws)
+{
+    // Ray from camera position to fragment position in WS
+    vec3 V = normalize(frag_pos_ws - eye_pos_ws);
+
+    // Find intersection of Ray with Light volume
+    return vec3(1.0);
+}
+
+
+
+
 
 #endif // FOG_GLSL
