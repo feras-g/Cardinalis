@@ -19,6 +19,11 @@ layout (push_constant) uniform LightVolumePassDataBlock
     int light_volume_type;
 } ps;
 
+layout(set = 0, binding = 0) uniform FrameDataBlock
+{
+    FrameData data;
+} frame;
+
 void main()
 {
     uint index = idx_buffer.data[gl_VertexIndex];

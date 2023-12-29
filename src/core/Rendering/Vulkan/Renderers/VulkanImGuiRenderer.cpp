@@ -1,5 +1,5 @@
 #include "VulkanImGuiRenderer.h"
-#include "core/rendering/vulkan/VulkanDebugUtils.h"
+#include "core/engine/vulkan/objects/vk_debug_marker.hpp"
 #include "core/rendering/vulkan/VulkanRenderInterface.h"
 #include "core/rendering/vulkan/VulkanShader.h"
 #include "core/rendering/vulkan/VulkanTexture.h"

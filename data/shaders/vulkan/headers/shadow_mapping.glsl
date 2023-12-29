@@ -11,13 +11,6 @@ struct CascadesData
 	bool show_debug_view;
 };
 
-const mat4 bias_matrix = mat4( 
-	0.5, 0.0, 0.0, 0.0,
-	0.0, 0.5, 0.0, 0.0,
-	0.0, 0.0, 1.0, 0.0,
-	0.5, 0.5, 0.0, 1.0 
-);
-
 float lookup_shadow(sampler2DArray tex_shadow, vec4 position_light_space, vec2 offset, uint layer)
 {
 	// Perspective divison + scale bias
@@ -52,13 +45,9 @@ float filter_shadow_pcf(sampler2DArray tex_shadow, vec4 position_light_space, ui
 	return acc / 16.0;
 }
 
-/* 
-	Returns the view-projection matrix correponding to the current cascade 
-*/
-mat4 get_cascade_view_proj(in float depth_vs, in CascadesData data, inout int cascade_index)
+int interval_based_selection(in CascadesData data, in float depth_vs)
 {
-	cascade_index = 0;
-
+	int cascade_index = 0;
 	for(int i = 0; i < data.num_cascades - 1; i++)
 	{
 		if(depth_vs < data.distances[i]) 
@@ -66,12 +55,21 @@ mat4 get_cascade_view_proj(in float depth_vs, in CascadesData data, inout int ca
 			cascade_index = i + 1;
 		}
 	}
+	return cascade_index;
+}
 
+/* 
+	Returns the view-projection matrix correponding to the current cascade 
+*/
+mat4 get_cascade_view_proj(in float depth_vs, in CascadesData data, inout int cascade_index)
+{
+	cascade_index = interval_based_selection(data, depth_vs);
 	return data.dir_light_view_proj[cascade_index];
 }
 
 float get_shadow_factor(sampler2DArray tex_shadow, vec4 position_light_space, int cascade_index)
 {
+	// return lookup_shadow(tex_shadow, position_light_space, vec2(0), cascade_index);
 	return filter_shadow_pcf(tex_shadow, position_light_space, cascade_index);
 }
 #endif // SHADOW_MAPPING_GLSL

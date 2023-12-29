@@ -118,7 +118,7 @@ namespace vk
 					.pEnabledFeatures = nullptr,
 				};
 
-				result = vkCreateDevice(physical_device, &device_create_info, nullptr, &m_device);
+				VK_CHECK((result = vkCreateDevice(physical_device, &device_create_info, nullptr, &m_device)));
 
 				if (result == VK_SUCCESS)
 				{
@@ -127,6 +127,7 @@ namespace vk
 					vkGetDeviceQueue(m_device, queue_family_indices[queue_family::transfer], 0, &transfer_queue);
 				}
 				
+				helper_funcs.load_device_function_pointers(m_device);
 			}
 		}
 
@@ -143,7 +144,7 @@ namespace vk
 	#endif // _WIN32
 	#ifdef ENGINE_DEBUG
 			"VK_EXT_debug_utils",
-			"VK_EXT_validation_features"
+			"VK_EXT_validation_features",
 	#endif // ENGINE_DEBUG
 		};
 
@@ -161,7 +162,8 @@ namespace vk
 		{
 			"VK_KHR_maintenance1",
 			"VK_KHR_swapchain",
-			"VK_KHR_dynamic_rendering"
+			"VK_KHR_dynamic_rendering",
+			"VK_EXT_debug_marker"
 		};
 	}
 	void device::helpers::enable_physical_device_features(VkPhysicalDevice physical_device, VkPhysicalDeviceFeatures2& physical_features2)
@@ -238,6 +240,29 @@ namespace vk
 
 		LOG_ERROR("Could not find queue family index for queue family.");
 		return -1;
+	}
+	void device::helpers::load_device_function_pointers(VkDevice device)
+	{
+		fpCmdBeginDebugUtilsLabelEXT = PFN_vkCmdBeginDebugUtilsLabelEXT(vkGetDeviceProcAddr(device, "vkCmdBeginDebugUtilsLabelEXT"));
+		fpCmdEndDebugUtilsLabelEXT = PFN_vkCmdEndDebugUtilsLabelEXT(vkGetDeviceProcAddr(device, "vkCmdEndDebugUtilsLabelEXT"));
+		fpCmdInsertDebugUtilsLabelEXT = PFN_vkCmdInsertDebugUtilsLabelEXT(vkGetDeviceProcAddr(device, "vkCmdInsertDebugUtilsLabelEXT"));
+		fpSetDebugUtilsObjectNameEXT = PFN_vkSetDebugUtilsObjectNameEXT(vkGetDeviceProcAddr(device, "vkSetDebugUtilsObjectNameEXT"));
+	}
+
+	uint32_t device::find_memory_type(uint32_t memory_type_bits, VkMemoryPropertyFlags memory_properties)
+	{
+		VkPhysicalDeviceMemoryProperties device_mem_properties;
+		vkGetPhysicalDeviceMemoryProperties(physical_device, &device_mem_properties);
+
+		for (uint32_t i = 0; i < device_mem_properties.memoryTypeCount; i++)
+		{
+			if ((memory_type_bits & (1 << i) && (device_mem_properties.memoryTypes[i].propertyFlags & memory_properties) == memory_properties))
+			{
+				return i;
+			}
+		}
+
+		return 0;
 	}
 }
 

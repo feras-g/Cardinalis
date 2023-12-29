@@ -9,7 +9,7 @@
 #include "core/rendering/vulkan/vk_frame.hpp"
 #include "core/rendering/vulkan/VulkanRenderInterface.h"
 #include "core/rendering/vulkan/VulkanRendererBase.h"
-#include "core/rendering/vulkan/VulkanDebugUtils.h"
+#include "core/engine/vulkan/objects/vk_debug_marker.hpp"
 
 Application::Application(const char* title, uint32_t width, uint32_t height)
     : b_init_success(false), m_debug_name(title)

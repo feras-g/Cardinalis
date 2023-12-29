@@ -1,8 +1,9 @@
 #include "VulkanTexture.h"
 
 #include "core/engine/Image.h"
-#include "core/rendering/vulkan/VulkanDebugUtils.h"
 #include "core/rendering/vulkan/VkResourceManager.h"
+#include "core/rendering/vulkan/VulkanRenderInterface.h"
+#include "core/engine/vulkan/objects/vk_debug_marker.hpp"
 
 static VkAccessFlags get_src_access_mask(VkImageLayout layout);
 
@@ -127,7 +128,7 @@ void Texture::create_vk_image(VkDevice device, bool isCubemap, VkImageUsageFlags
     {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize = imageMemReq.size,
-        .memoryTypeIndex = EngineUtils::FindMemoryType(ctx.device.physical_device, imageMemReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+        .memoryTypeIndex = ctx.device.find_memory_type(imageMemReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
     };
     
     VK_CHECK(vkAllocateMemory(device, &allocInfo, nullptr, &deviceMemory));
@@ -136,7 +137,7 @@ void Texture::create_vk_image(VkDevice device, bool isCubemap, VkImageUsageFlags
     /* Add to resource manager */
     hash = VkResourceManager::get_instance(device)->add_image(image, deviceMemory);
 
-    set_object_name(VK_OBJECT_TYPE_IMAGE, (uint64_t)image, info.debugName);
+    vk::set_object_name(VK_OBJECT_TYPE_IMAGE, (uint64_t)image, info.debugName);
 }
 
 void Texture::copy_from_buffer(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer)
@@ -217,10 +218,6 @@ void Texture::destroy()
 
 void Texture::generate_mipmaps()
 {
-
-
-
-
     //   VkCommandBuffer cbuf = begin_temp_cmd_buffer();
 
 	///* TODO : Compute shader */

@@ -21,6 +21,8 @@ namespace vk
 		VkQueue graphics_queue = VK_NULL_HANDLE;
 		VkQueue compute_queue = VK_NULL_HANDLE;
 		VkQueue transfer_queue = VK_NULL_HANDLE;
+	public:
+		uint32_t find_memory_type(uint32_t memory_type_bits, VkMemoryPropertyFlags memory_properties);
 	protected:
 		VkDevice m_device = VK_NULL_HANDLE;
 		VkPhysicalDeviceProperties physical_device_properties = {};
@@ -36,7 +38,14 @@ namespace vk
 			void enable_device_extensions(std::vector<const char*>& enabled_device_extensions);
 			void enable_physical_device_features(VkPhysicalDevice physical_device, VkPhysicalDeviceFeatures2& physical_device_features);
 			int get_queue_family_index(VkQueueFlagBits queue_family, std::span<VkQueueFamilyProperties> queue_family_properties);
+			void load_device_function_pointers(VkDevice device);
 		} helper_funcs;
-
 	};
+
+#ifdef ENGINE_DEBUG
+	inline PFN_vkCmdBeginDebugUtilsLabelEXT		fpCmdBeginDebugUtilsLabelEXT;
+	inline PFN_vkCmdEndDebugUtilsLabelEXT		fpCmdEndDebugUtilsLabelEXT;
+	inline PFN_vkCmdInsertDebugUtilsLabelEXT	fpCmdInsertDebugUtilsLabelEXT;
+	inline PFN_vkSetDebugUtilsObjectNameEXT		fpSetDebugUtilsObjectNameEXT;
+#endif // ENGINE_DEBUG
 }

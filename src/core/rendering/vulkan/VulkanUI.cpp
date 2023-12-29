@@ -53,7 +53,10 @@ void VulkanGUI::show_hierarchy(ObjectManager& object_manager)
 		{
 			if (ImGui::Button(object_manager.m_mesh_names[i]))
 			{
-				object_manager.current_selected_mesh_id = i;
+				if (object_manager.m_mesh_instance_data[i].size() > 0)
+				{
+					object_manager.current_selected_mesh_id = i;
+				}
 			}
 		}
 	}
@@ -216,12 +219,16 @@ void VulkanGUI::show_viewport_window(ImTextureID scene_image_id, camera& camera,
 		ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, window_size.x, window_size.y);
 		ImGuizmo::SetOrthographic(false);
 
-		glm::mat4& selected_object_transform = object_manager.m_mesh_instance_data[object_manager.current_selected_mesh_id][0].model;
+		if (object_manager.m_mesh_instance_data[object_manager.current_selected_mesh_id].size() > 0)
+		{
+			glm::mat4& selected_object_transform = object_manager.m_mesh_instance_data[object_manager.current_selected_mesh_id][0].model;
 
-		const glm::f32* view = glm::value_ptr(camera.view);
-		const glm::f32* proj = glm::value_ptr(camera.projection);
+			const glm::f32* view = glm::value_ptr(camera.view);
+			const glm::f32* proj = glm::value_ptr(camera.projection);
 
-		ImGuizmo::Manipulate(view, proj, gizmo_operation, transform_mode, glm::value_ptr(selected_object_transform));
+			ImGuizmo::Manipulate(view, proj, gizmo_operation, transform_mode, glm::value_ptr(selected_object_transform));
+		}
+
 	}
 	ImGui::End();
 }

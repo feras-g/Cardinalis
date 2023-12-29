@@ -26,7 +26,6 @@ void main()
 {
     uint index = ibo.data[gl_VertexIndex];
     Vertex v = vbo.data[index];
-    vec4 positionOS = vec4(v.px, v.py, v.pz, 1.0);
-    mat4 model = instances.data[gl_InstanceIndex].model * primitive_push_constants.model;
-    gl_Position = shadow_cascades.data.dir_light_view_proj[gl_ViewIndex] * model * positionOS;
+    vec4 position_os = vec4(v.px, v.py, v.pz, 1.0);
+    gl_Position = shadow_cascades.data.dir_light_view_proj[gl_ViewIndex] * primitive_push_constants.model * position_os;
 }

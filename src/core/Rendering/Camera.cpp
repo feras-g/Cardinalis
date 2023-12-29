@@ -3,7 +3,7 @@
 #include "imgui.h"
 
 camera::camera()
-	: camera(glm::radians(50.0f), 1.0f, 0.25f, 250.0f)
+	: camera(glm::radians(45.0f), 1.0f, 0.5f, 50.0f)
 {
 
 }

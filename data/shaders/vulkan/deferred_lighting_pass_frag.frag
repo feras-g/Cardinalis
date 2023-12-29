@@ -84,7 +84,7 @@ void main()
 
     out_color = vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
-    vec3 sun_color = lights.dir_light.color.rgb * 25;
+    vec3 sun_color = lights.dir_light.color.rgb * 2;
 
     /*
         ----------------------------------------------------------------------------------------------------

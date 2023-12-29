@@ -28,19 +28,9 @@
 #include <glm/mat4x4.hpp>
 #include <glm/ext.hpp>
 
-#ifdef ENGINE_DEBUG
-inline PFN_vkCmdBeginDebugUtilsLabelEXT		fpCmdBeginDebugUtilsLabelEXT;
-inline PFN_vkCmdEndDebugUtilsLabelEXT		fpCmdEndDebugUtilsLabelEXT;
-inline PFN_vkCmdInsertDebugUtilsLabelEXT	fpCmdInsertDebugUtilsLabelEXT;
-inline PFN_vkSetDebugUtilsObjectNameEXT		fpSetDebugUtilsObjectNameEXT;
-#endif // ENGINE_DEBUG
-inline PFN_vkCmdBeginRenderingKHR			fpCmdBeginRenderingKHR;
-inline PFN_vkCmdEndRenderingKHR				fpCmdEndRenderingKHR;
 //inline PFN_vkCmdSetPolygonModeEXT			fpCmdSetPolygonModeEXT;
 
 class Window;
-
-
 
 class RenderInterface
 {
@@ -214,11 +204,10 @@ static Pipeline::Flags operator|(Pipeline::Flags a, Pipeline::Flags b)
 // Create a storage buffer containing non-interleaved vertex and index data
 // Return the created buffer's size 
 // May modify sizes to comply to SSBO alignment
-size_t create_vertex_index_buffer(vk::buffer& result, const void* vtxData, size_t& vtxBufferSizeInBytes, const void* idxData, size_t& idxBufferSizeInBytes);
+template<typename T>
+size_t create_vertex_index_buffer(vk::buffer& result, std::span<T> vtxData, size_t& vtxBufferSizeInBytes, std::span<T> idxData, size_t& idxBufferSizeInBytes);
 
 VkPipelineShaderStageCreateInfo PipelineShaderStageCreateInfo(VkShaderModule shaderModule, VkShaderStageFlagBits shaderStage, const char* entryPoint);
-VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptor_set, uint32_t binding, const VkDescriptorBufferInfo& desc_info, VkDescriptorType desc_type);
-VkWriteDescriptorSet ImageWriteDescriptorSet(VkDescriptorSet& descriptorSet, uint32_t bindingIndex, const VkDescriptorImageInfo& imageInfo, VkDescriptorType type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, uint32_t array_offset = 0, uint32_t descriptor_count = 1);
 
 void create_sampler(VkDevice device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode, VkSampler& out_Sampler);
 void BeginRenderpass(VkCommandBuffer cmdBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer, VkRect2D renderArea, const VkClearValue* clearValues, uint32_t clearValueCount);
@@ -229,7 +218,3 @@ void set_polygon_mode(VkCommandBuffer cmdBuffer, VkPolygonMode mode);
 
 VkPipelineLayout create_pipeline_layout(VkDevice device, std::span<VkDescriptorSetLayout> descSetLayout, std::span<VkPushConstantRange> push_constant_ranges = {});
 VkPipelineLayout create_pipeline_layout(VkDevice device, VkDescriptorSetLayout descSetLayout, std::span<VkPushConstantRange> push_constant_ranges );
-
-VkDescriptorSetLayout create_descriptor_set_layout(std::span<VkDescriptorSetLayoutBinding> layout_bindings, VkDescriptorSetLayoutBindingFlagsCreateInfoEXT bindings_flags = {});
-
-VkDescriptorSet create_descriptor_set(VkDescriptorPool pool, VkDescriptorSetLayout layout);

@@ -1,7 +1,7 @@
 #include "vk_buffer.h"
 #include "core/engine/Image.h"
 #include "core/rendering/vulkan/VulkanRenderInterface.h"
-#include "core/rendering/vulkan/VulkanDebugUtils.h"
+#include "core/engine/vulkan/objects/vk_debug_marker.hpp"
 #include "core/rendering/vulkan/VkResourceManager.h"
 
 namespace vk
@@ -100,7 +100,7 @@ namespace vk
 		VkMemoryAllocateInfo allocInfo = {};
 		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 		allocInfo.allocationSize = memRequirements.size;
-		allocInfo.memoryTypeIndex = EngineUtils::FindMemoryType(ctx.device.physical_device, memRequirements.memoryTypeBits, memProperties);
+		allocInfo.memoryTypeIndex = ctx.device.find_memory_type(memRequirements.memoryTypeBits, memProperties);
 		VK_CHECK(vkAllocateMemory(ctx.device, &allocInfo, nullptr, &m_vk_device_memory));
 
 		VK_CHECK(vkBindBufferMemory(ctx.device, m_vk_buffer, m_vk_device_memory, 0));

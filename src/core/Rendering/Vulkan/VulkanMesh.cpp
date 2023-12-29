@@ -38,14 +38,47 @@ void VulkanMesh::create_from_file(const std::string& filename)
 	}
 }
 
+static inline size_t round_to(size_t value, size_t alignment)
+{
+	size_t val = (value + alignment);
+	return val - (val % alignment);
+}
+
+template<typename VERTEX_TYPE, typename INDEX_TYPE>
+static vk::buffer create_vertex_index_buffer(std::span<VERTEX_TYPE> vtx_data, size_t& out_vtx_buffer_size_bytes, std::span<INDEX_TYPE> idx_data, size_t& out_idx_buffer_size_bytes)
+{
+	/* Compute a good alignment */
+	out_vtx_buffer_size_bytes = round_to(vtx_data.size() * sizeof(VERTEX_TYPE), ctx.device.limits.minStorageBufferOffsetAlignment);
+	out_idx_buffer_size_bytes = round_to(idx_data.size() * sizeof(INDEX_TYPE), ctx.device.limits.minStorageBufferOffsetAlignment);
+
+	size_t total_size_bytes = out_vtx_buffer_size_bytes + out_idx_buffer_size_bytes;
+
+	// Staging buffer
+	vk::buffer stagingBuffer;
+	stagingBuffer.init(vk::buffer::type::STAGING, total_size_bytes, "Vertex/Index Staging Buffer");
+	stagingBuffer.create();
+
+	// Copy vertex + index data to staging buffer
+	void* pData = stagingBuffer.map(ctx.device, 0, total_size_bytes);
+	memcpy(pData, vtx_data.data(), out_vtx_buffer_size_bytes);
+	memcpy((uint8_t*)pData + out_vtx_buffer_size_bytes, idx_data.data(), out_idx_buffer_size_bytes);
+	stagingBuffer.unmap(ctx.device);
+
+	// Create storage buffer containing non-interleaved vertex + index data 
+	vk::buffer result;
+	result.init(vk::buffer::type::STORAGE, total_size_bytes, "Vertex/Index SSBO");
+	result.create();
+	copy_from_buffer(stagingBuffer, result, total_size_bytes);
+
+	return result;
+}
+
 void VulkanMesh::create_from_data(std::span<VertexData> vertices, std::span<unsigned int> indices)
 {
 	m_num_vertices = vertices.size();
 	m_num_indices = indices.size();
-	m_index_buf_size_bytes  = EngineUtils::round_to(indices.size() * sizeof(unsigned int), ctx.device.limits.minStorageBufferOffsetAlignment);
-	m_vertex_buf_size_bytes = EngineUtils::round_to(vertices.size() * sizeof(VertexData), ctx.device.limits.minStorageBufferOffsetAlignment);
-	
-	create_vertex_index_buffer(m_vertex_index_buffer, vertices.data(), m_vertex_buf_size_bytes, indices.data(), m_index_buf_size_bytes);
+
+	m_vertex_index_buffer = create_vertex_index_buffer<VertexData, unsigned int>(vertices, m_vertex_buf_size_bytes, indices, m_index_buf_size_bytes);
 }
 
 void VulkanMesh::destroy()
@@ -430,7 +463,7 @@ void VulkanMesh::create_from_file_gltf(const std::string& filename)
 
 		create_from_data(geometry_data.vertices, geometry_data.indices);
 
-		LOG_INFO("Loaded {} : {} Materials, {} Textures, Meshes : {} Point Lights: {}", filename, data->materials_count, data->textures_count, data->meshes_count);
+		//LOG_INFO("Loaded {} : {} Materials, {} Textures, Meshes : {} Point Lights: {}", filename, data->materials_count, data->textures_count, data->meshes_count);
 
 		cgltf_free(data);
 	}

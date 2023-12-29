@@ -63,7 +63,7 @@ struct ShadowRenderer : public IRenderer
 		descriptor_set_layout.add_combined_image_sampler_binding(1, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "Shadow Cascades Texture Array");
 		descriptor_set_layout.create("Shadow Cascade Descriptor Set Layout");
 
-		VkSampler& sampler_clamp_linear = VulkanRendererCommon::get_instance().s_SamplerClampLinear;
+		VkSampler& sampler_clamp_linear = VulkanRendererCommon::get_instance().s_SamplerClampNearest;
 
 		for (int frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 		{
@@ -91,8 +91,7 @@ struct ShadowRenderer : public IRenderer
 
 	void render(VkCommandBuffer cmd_buffer, std::span<size_t> mesh_list, camera& camera, const VulkanRendererCommon::FrameData frame_data, glm::vec4 directional_light_dir)
 	{
-		//updateCascades(camera, frame_data, directional_light_dir);
-
+		VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Cascaded Shadow Pass");
 		compute_cascade_splits(camera.znear, camera.zfar, lambda);
 		compute_cascade_projection(camera, directional_light_dir);
 

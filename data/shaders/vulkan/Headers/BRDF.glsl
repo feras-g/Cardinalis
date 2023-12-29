@@ -100,7 +100,7 @@ vec3 brdf_blinn_phong(BRDFData data, float shininess)
 
 vec3 brdf_cook_torrance(BRDFData data, vec3 light_color)
 {
-    float NoV = abs(dot(data.normal_ws, data.viewdir_ws)) + 1e-5;
+    float NoV = clamp(dot(data.normal_ws, data.viewdir_ws), 1e-5, 1.0);
     float NoL = clamp(dot(data.normal_ws, data.lightdir_ws), 1e-5, 1.0);
     float NoH = clamp(dot(data.normal_ws, data.halfvec_ws), 1e-5, 1.0);
     float LoH = clamp(dot(data.lightdir_ws, data.halfvec_ws), 1e-5, 1.0);

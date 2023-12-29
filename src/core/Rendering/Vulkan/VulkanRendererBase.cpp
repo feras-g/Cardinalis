@@ -38,7 +38,7 @@ void VulkanRendererCommon::create_descriptor_sets()
 		m_framedata_desc_set[frame_idx].create(pool, "Framedata descriptor set");
 		
 		VkDescriptorBufferInfo info = { m_ubo_framedata[frame_idx],  0, sizeof(VulkanRendererCommon::FrameData) };
-		VkWriteDescriptorSet write = BufferWriteDescriptorSet(m_framedata_desc_set[frame_idx].vk_set, 0, info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+		VkWriteDescriptorSet write = vk::write_descriptor_set_buffer(m_framedata_desc_set[frame_idx].vk_set, 0, info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 		vkUpdateDescriptorSets(ctx.device, 1, &write, 0, nullptr);
 	}
 }

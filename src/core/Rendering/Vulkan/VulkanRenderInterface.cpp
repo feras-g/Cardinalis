@@ -295,45 +295,6 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const vk::swapchain* 
 	return CreateColorDepthFramebuffers(renderPass, swapchain->color_attachments.data(), swapchain->depth_attachments.data(), out_Framebuffers, useDepth);
 }
 
-[[nodiscard]] VkDescriptorSetLayout create_descriptor_set_layout(std::span<VkDescriptorSetLayoutBinding> layout_bindings, VkDescriptorSetLayoutBindingFlagsCreateInfoEXT bindings_flags)
-{
-	bindings_flags.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT;
-
-	VkDescriptorSetLayoutCreateInfo layout_info =
-	{
-		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-		.pNext = &bindings_flags,
-		.flags = 0,
-		.bindingCount	= (uint32_t)layout_bindings.size(),
-		.pBindings		= layout_bindings.data()
-	};
-
-	VkDescriptorSetLayout out;
-	VK_CHECK(vkCreateDescriptorSetLayout(ctx.device, &layout_info, nullptr, &out));
-
-	/* Add to resource manager */
-	VkResourceManager::get_instance(ctx.device)->add_descriptor_set_layout(out);
-
-	return out;
-}
-
-[[nodiscard]] VkDescriptorSet create_descriptor_set(VkDescriptorPool pool, VkDescriptorSetLayout layout)
-{
-	VkDescriptorSet out;
-
-	// Allocate memory
-	VkDescriptorSetAllocateInfo allocInfo =
-	{
-		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-		.descriptorPool		= pool,
-		.descriptorSetCount = 1,
-		.pSetLayouts		= &layout,
-	};
-
-	VK_CHECK(vkAllocateDescriptorSets(ctx.device, &allocInfo, &out));
-	return out;
-}
-
 bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colorAttachments, const Texture2D* depthAttachments, VkFramebuffer* out_Framebuffers, bool useDepth)
 {
 	VkFramebufferCreateInfo fbInfo =
@@ -627,63 +588,9 @@ void Pipeline::bind(VkCommandBuffer cmd_buffer) const
 	vkCmdBindPipeline(cmd_buffer, bind_point, pipeline);
 }
 
-size_t create_vertex_index_buffer(vk::buffer& result, const void* vtxData, size_t& vtxBufferSizeInBytes, const void* idxData, size_t& idxBufferSizeInBytes)
-{
-	/* Compute a good alignment */
-	size_t total_size_bytes = vtxBufferSizeInBytes + idxBufferSizeInBytes;
 
-	// Staging buffer
-	vk::buffer stagingBuffer;
-	stagingBuffer.init(vk::buffer::type::STAGING, total_size_bytes, "Vertex/Index Staging Buffer");
-	stagingBuffer.create();
-	// Copy vertex + index data to staging buffer
-	
-	void* pData = stagingBuffer.map(ctx.device, 0, total_size_bytes);
-	memcpy(pData, vtxData, vtxBufferSizeInBytes);
-	memcpy((unsigned char*)pData + vtxBufferSizeInBytes, idxData, idxBufferSizeInBytes);
-	stagingBuffer.unmap(ctx.device);
 
-	// Create storage buffer containing non-interleaved vertex + index data 
-	result.init(vk::buffer::type::STORAGE, total_size_bytes, "Vertex/Index SSBO");
-	result.create();
-	copy_from_buffer(stagingBuffer, result, total_size_bytes);
 
-	return total_size_bytes;
-}
-
-VkWriteDescriptorSet BufferWriteDescriptorSet(VkDescriptorSet descriptor_set, uint32_t binding, const VkDescriptorBufferInfo& desc_info, VkDescriptorType desc_type)
-{
-	return VkWriteDescriptorSet
-	{
-		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-		.pNext = nullptr,
-		.dstSet = descriptor_set,
-		.dstBinding = binding,
-		.dstArrayElement = 0,
-		.descriptorCount = 1,
-		.descriptorType = desc_type,
-		.pImageInfo = nullptr,
-		.pBufferInfo = &desc_info,
-		.pTexelBufferView = nullptr,
-	};
-}
-
-VkWriteDescriptorSet ImageWriteDescriptorSet(VkDescriptorSet& descriptorSet, uint32_t bindingIndex, const VkDescriptorImageInfo& imageInfo, VkDescriptorType type, uint32_t array_offset, uint32_t descriptor_count)
-{
-	return VkWriteDescriptorSet
-	{
-		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-		.pNext = nullptr,
-		.dstSet = descriptorSet,
-		.dstBinding = bindingIndex,
-		.dstArrayElement = array_offset,
-		.descriptorCount = descriptor_count,
-		.descriptorType = type,
-		.pImageInfo = &imageInfo,
-		.pBufferInfo = nullptr,
-		.pTexelBufferView = nullptr,
-	};
-}
 
 VkPipelineShaderStageCreateInfo PipelineShaderStageCreateInfo(VkShaderModule shaderModule, VkShaderStageFlagBits shaderStage, const char* entryPoint)
 {
