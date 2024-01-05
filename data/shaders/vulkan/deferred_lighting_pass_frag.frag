@@ -2,7 +2,6 @@
 
 #extension GL_EXT_control_flow_attributes : enable
 
-
 #include "headers/utils.glsl"
 #include "headers/tonemapping.glsl"
 #include "headers/data.glsl"
@@ -10,7 +9,7 @@
 #include "headers/lights.glsl"
 #include "headers/ibl_utils.glsl"
 #include "headers/shadow_mapping.glsl"
-#include "headers/fog.glsl"
+#include "headers/volumetric_fog.glsl"
 
 layout(location = 0) out vec4 out_color;
 layout(location = 0) flat in int light_instance_index;
@@ -21,7 +20,7 @@ layout(set = 0, binding = 0) uniform FrameDataBlock
 } frame;
 
 layout(set = 1, binding = 0) uniform sampler2D gbuffer_base_color;
-layout(set = 1, binding = 1) uniform sampler2D gbuffer_normal_ws;
+layout(set = 1, binding = 1) uniform sampler2D gbuffer_normal_vs;
 layout(set = 1, binding = 2) uniform sampler2D gbuffer_metalness_roughness;
 layout(set = 1, binding = 3) uniform sampler2D gbuffer_depth;
 
@@ -46,7 +45,7 @@ layout(set = 4, binding = 1) uniform sampler2DArray tex_shadow_maps;
 
 layout (push_constant) uniform LightVolumePassDataBlock
 {
-    mat4 vp;
+    layout(offset = 64)
     float inv_screen_size;
     int light_volume_type;
 } ps;
@@ -55,7 +54,6 @@ layout (push_constant) uniform LightVolumePassDataBlock
 #define LIGHT_VOLUME_POINT 2
 #define LIGHT_VOLUME_SPOT 3
 
-
 float atten_test(float dist, float radius)
 {
     float att = clamp(1.0 - dist/radius, 0.0, 1.0);
@@ -63,20 +61,27 @@ float atten_test(float dist, float radius)
 	return att;
 }
 
+vec3 decode_normal(vec2 enc)
+{
+    vec3 n;
+    n.xy = enc * 2 - 1;
+    n.z = sqrt(1 - dot(n.xy, n.xy));
+    return n;
+}
+
 void main()
 {
-    vec2 fragcoord = gl_FragCoord.xy * ps.inv_screen_size; 
-    float depth = texture(gbuffer_depth, fragcoord).r;
-    vec3 position_ws = ws_pos_from_depth(fragcoord, depth, frame.data.inv_view_proj);
-    vec3 position_vs = (frame.data.view * vec4(position_ws, 1.0f)).xyz;
-    
+    vec2 fragcoord = gl_FragCoord.xy * ps.inv_screen_size;
+
     BRDFData brdf_data;
     brdf_data.albedo = texture(gbuffer_base_color, fragcoord).rgb;
     brdf_data.metalness_roughness = texture(gbuffer_metalness_roughness, fragcoord).rg;
-    brdf_data.normal_ws.xy = texture(gbuffer_normal_ws, fragcoord).xy;
-    brdf_data.normal_ws.z = sqrt(1.0f - (brdf_data.normal_ws.x * brdf_data.normal_ws.x) - (brdf_data.normal_ws.y * brdf_data.normal_ws.y));
+    brdf_data.normal_ws = vec3(inverse(frame.data.view) * vec4(decode_normal(texture(gbuffer_normal_vs, fragcoord).xy), 0));
+    float depth = texture(gbuffer_depth, fragcoord).r;
+    vec3 position_ws =  (vec4( ws_pos_from_depth(fragcoord, depth, frame.data.inv_view_proj), 1)).xyz;
+    vec3 position_vs = (frame.data.view * vec4(position_ws, 1.0f)).xyz;
 
-    brdf_data.viewdir_ws = normalize(frame.data.eye_pos_ws.xyz - position_ws);
+    brdf_data.viewdir_ws = normalize(frame.data.eye_pos_ws.xyz-position_ws);
     brdf_data.lightdir_ws = normalize(-lights.dir_light.dir.xyz);
     brdf_data.halfvec_ws = normalize(brdf_data.lightdir_ws + brdf_data.viewdir_ws);
     float metallic  = brdf_data.metalness_roughness.x;
@@ -84,7 +89,7 @@ void main()
 
     out_color = vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
-    vec3 sun_color = lights.dir_light.color.rgb * 2;
+    vec3 sun_color = lights.dir_light.color.rgb ;
 
     /*
         ----------------------------------------------------------------------------------------------------
@@ -123,16 +128,7 @@ void main()
             Direct Lighting
             ----------------------------------------------------------------------------------------------------
         */
-        out_color.rgb += brdf_cook_torrance(brdf_data, sun_color) * shadow_factor;
-
-        /*
-            ----------------------------------------------------------------------------------------------------
-            Volumetric fog
-            ----------------------------------------------------------------------------------------------------
-        */ 
-        vec3 fog = raymarch_fog_sunlight(tex_shadow_maps, cascade_index, frame.data.eye_pos_ws.xyz, position_ws, shadow_view_proj, brdf_data.lightdir_ws, sun_color);
-        out_color.rgb += fog;
-
+        out_color.rgb += brdf_cook_torrance(brdf_data, sun_color * 8) * shadow_factor;
 
         /*
             ----------------------------------------------------------------------------------------------------
@@ -156,20 +152,17 @@ void main()
     }
     else if (ps.light_volume_type == LIGHT_VOLUME_POINT)
     {
-        float radius = lights.point_lights[light_instance_index].radius;
+        float radius = lights.point_lights[light_instance_index].radius ;
         vec3 light_pos = lights.point_lights[light_instance_index].position.xyz;
+        vec3 light_color = lights.point_lights[light_instance_index].color;
         vec3 L = light_pos - position_ws;
         float dist = length(L);
         L = normalize(L);
         float atten = atten_test(dist, radius);
         brdf_data.lightdir_ws = L;
         brdf_data.halfvec_ws = normalize(brdf_data.lightdir_ws + brdf_data.viewdir_ws);
-
-        // vec3 fog = raymarch_fog_omni_spot_light(frame.data.eye_pos_ws, position_ws);
-        // out_color.rgb += fog  * atten;
-
-        out_color.rgb += brdf_cook_torrance(brdf_data,  lights.point_lights[light_instance_index].color) * atten;
+        out_color.rgb += brdf_cook_torrance(brdf_data,  light_color) * atten;
     }
 
-    out_color = vec4(out_color.rgb, 1.0);
+    out_color = vec4(  out_color.rgb, 1.0);
 }
