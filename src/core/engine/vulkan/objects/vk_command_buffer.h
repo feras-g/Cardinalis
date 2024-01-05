@@ -12,7 +12,7 @@ namespace vk
 		operator VkCommandBuffer() const { return m_cmd_buffer; }
 		operator VkCommandBuffer&() { return m_cmd_buffer; }
 
-		VkCommandBuffer* const ptr(){ return &m_cmd_buffer; }
+		const VkCommandBuffer* ptr() const { return &m_cmd_buffer; }
 		VkResult init(vk::device device, uint32_t queue_family_index);
 		VkResult create(vk::device device);
 		VkResult begin() const;

@@ -372,28 +372,16 @@ struct DeferredRenderer : public IRenderer
 
 			if (ImGui::Begin("GBuffer View"))
 			{
-				//if (ImGui::ImageButton(ui_texture_ids[ctx.curr_frame_idx].base_color, thumb_img_size))
-				//{
-				//	curr_main_image = ui_texture_ids[ctx.curr_frame_idx].base_color;
-				//}
-				//
-				//if (ImGui::ImageButton(ui_texture_ids[ctx.curr_frame_idx].normal, thumb_img_size))
-				//{
-				//	curr_main_image = ui_texture_ids[ctx.curr_frame_idx].normal;
-				//}
-				//if (ImGui::ImageButton(ui_texture_ids[ctx.curr_frame_idx].metalness_roughness, thumb_img_size))
-				//{
-				//	curr_main_image = ui_texture_ids[ctx.curr_frame_idx].metalness_roughness;
-				//}
-				//if (ImGui::ImageButton(ui_texture_ids[ctx.curr_frame_idx].depth, { thumb_img_size.x, thumb_img_size.y }))
-				//{
-				//	curr_main_image = ui_texture_ids[ctx.curr_frame_idx].depth;
-				//}
+				ImGui::Image(ui_texture_ids[ctx.curr_frame_idx].base_color, thumb_img_size);
+				ImGui::SameLine();
+				ImGui::Image(ui_texture_ids[ctx.curr_frame_idx].normal, thumb_img_size);
+				ImGui::SameLine();
+				ImGui::Image(ui_texture_ids[ctx.curr_frame_idx].metalness_roughness, thumb_img_size);
+				ImGui::SameLine();
+				ImGui::Image(ui_texture_ids[ctx.curr_frame_idx].light_accumulation, { thumb_img_size.x, thumb_img_size.y });
+				ImGui::SameLine();
+				ImGui::Image(ui_texture_ids[ctx.curr_frame_idx].depth, { thumb_img_size.x, thumb_img_size.y });
 
-				if (ImGui::ImageButton(ui_texture_ids[ctx.curr_frame_idx].light_accumulation, { thumb_img_size.x, thumb_img_size.y }))
-				{
-					curr_main_image = ui_texture_ids[ctx.curr_frame_idx].light_accumulation;
-				}
 			}
 			ImGui::End();
 

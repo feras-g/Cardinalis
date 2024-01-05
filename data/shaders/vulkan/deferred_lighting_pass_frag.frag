@@ -11,7 +11,7 @@
 #include "headers/shadow_mapping.glsl"
 #include "headers/volumetric_fog.glsl"
 
-layout(location = 0) out vec4 out_color;
+layout(location = 0) out vec4 out_color; // renders to light accumulation buffer
 layout(location = 0) flat in int light_instance_index;
 
 layout(set = 0, binding = 0) uniform FrameDataBlock

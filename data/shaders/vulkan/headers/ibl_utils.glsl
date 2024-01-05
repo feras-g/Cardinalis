@@ -1,3 +1,6 @@
+#ifndef IBL_UTILS
+#define IBL_UTILS
+
 /* 
     Convert texture coordinates to pixel coordinates.
 
@@ -154,3 +157,4 @@ float G_Smith(float NoV, float NoL, float roughness)
 {
     return GGX_Schlick(NoL, roughness) * GGX_Schlick(NoV, roughness);
 }
+#endif

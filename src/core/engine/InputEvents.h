@@ -37,6 +37,8 @@ static int keyToWindows(Key key)
 		case Key::RIGHT: { return 0x27; }
 		case Key::SPACE: { return 0x20; }
 		case Key::LSHIFT: { return 0x10; }
+		default:
+			return ' ';
 	}
 
 	return 0;

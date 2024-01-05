@@ -99,9 +99,6 @@ bool CreateColorDepthRenderPass(const RenderPassInitInfo& rpi, VkRenderPass* out
 bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const vk::swapchain* swapchain, VkFramebuffer* out_Framebuffers, bool useDepth);
 bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colorAttachments, const Texture2D* depthAttachments, VkFramebuffer* out_Framebuffers, bool useDepth);
 
-VkDescriptorPool create_descriptor_pool(VkDescriptorPoolCreateFlags flags, uint32_t num_ssbo, uint32_t num_ubo, uint32_t num_combined_img_smp, uint32_t num_dynamic_ubo, uint32_t num_storage_image, uint32_t max_sets = NUM_FRAMES);
-VkDescriptorPool create_descriptor_pool(std::span<VkDescriptorPoolSize> pool_sizes, uint32_t max_sets);
-
 struct Pipeline
 {
 	enum Flags

@@ -30,6 +30,27 @@ namespace vk
 		//descriptor_set.update();
 	}
 
+
+	[[nodiscard]] static VkDescriptorPool create_descriptor_pool(std::span<VkDescriptorPoolSize> pool_sizes, uint32_t max_sets)
+	{
+		VkDescriptorPool out;
+		VkDescriptorPoolCreateInfo poolInfo =
+		{
+			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+			.flags = 0,
+			.maxSets = max_sets,
+			.poolSizeCount = (uint32_t)(pool_sizes.size()),
+			.pPoolSizes = pool_sizes.data()
+		};
+
+		VK_CHECK(vkCreateDescriptorPool(ctx.device, &poolInfo, nullptr, &out));
+
+		/* Add to resource manager */
+		VkResourceManager::get_instance(ctx.device)->add_descriptor_pool(out);
+
+		return out;
+	}
+
 	[[nodiscard]] static VkDescriptorSetLayout create_descriptor_set_layout(std::span<VkDescriptorSetLayoutBinding> layout_bindings, VkDescriptorSetLayoutBindingFlagsCreateInfoEXT bindings_flags)
 	{
 		bindings_flags.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT;
@@ -72,28 +93,44 @@ namespace vk
 	{
 		operator VkDescriptorSetLayout() { return vk_set_layout; }
 
-
-		inline void add_uniform_buffer_binding(uint32_t binding, VkShaderStageFlags shaderStage, std::string_view name)
+		enum class descriptor_type : uint8_t
 		{
-			bindings.emplace_back(VkDescriptorSetLayoutBinding{ binding, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, shaderStage });
+			uniform_buffer,
+			storage_buffer,
+			combined_image_sampler,
+			storage_image,
+			count
+		};
+
+		void add_uniform_buffer_binding(uint32_t index, VkShaderStageFlags shader_stage, std::string_view name)
+		{
+			add_binding(index, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,shader_stage, name);
+			descriptor_pool_sizes[uint8_t(descriptor_type::uniform_buffer)].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptor_pool_sizes[uint8_t(descriptor_type::uniform_buffer)].descriptorCount++;
 		}
 
-		inline void add_storage_buffer_binding(uint32_t binding, VkShaderStageFlags shaderStage, std::string_view name)
+		void add_storage_buffer_binding(uint32_t index, VkShaderStageFlags shader_stage, std::string_view name)
 		{
-			bindings.emplace_back(VkDescriptorSetLayoutBinding{ binding, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, shaderStage });
+			add_binding(index, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, shader_stage, name);
+			descriptor_pool_sizes[uint8_t(descriptor_type::storage_buffer)].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+			descriptor_pool_sizes[uint8_t(descriptor_type::storage_buffer)].descriptorCount++;
 		}
 
-		inline void add_combined_image_sampler_binding(uint32_t binding, VkShaderStageFlags shaderStage, uint32_t count, std::string_view name)
+		void add_combined_image_sampler_binding(uint32_t index, VkShaderStageFlags shader_stage, uint32_t count, std::string_view name)
 		{
-			bindings.emplace_back(VkDescriptorSetLayoutBinding{ binding, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, count, shaderStage, VK_NULL_HANDLE });
+			add_binding(index, count, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, shader_stage, name);
+			descriptor_pool_sizes[uint8_t(descriptor_type::combined_image_sampler)].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			descriptor_pool_sizes[uint8_t(descriptor_type::combined_image_sampler)].descriptorCount += count;
 		}
 
-		inline void add_storage_image_binding(uint32_t binding, std::string_view name)
+		void add_storage_image_binding(uint32_t index, std::string_view name)
 		{
-			bindings.emplace_back(VkDescriptorSetLayoutBinding{ binding, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT });
+			add_binding(index, 1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT, name);
+			descriptor_pool_sizes[uint8_t(descriptor_type::storage_image)].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+			descriptor_pool_sizes[uint8_t(descriptor_type::storage_image)].descriptorCount++;
 		}
 
-		inline void create(std::string_view name = "")
+		void create(std::string_view name = "")
 		{
 			binding_flags_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
 			binding_flags_info.bindingCount = (uint32_t)binding_flags.size();
@@ -105,15 +142,21 @@ namespace vk
 		}
 
 		VkDescriptorSetLayout vk_set_layout;
-		std::unordered_map<std::string, size_t> binding_name_to_index;
+		std::unordered_map<std::string, VkDescriptorSetLayoutBinding&> binding_map;
 		VkDescriptorSetLayoutBindingFlagsCreateInfo binding_flags_info;
 		std::vector<VkDescriptorBindingFlags> binding_flags;
 		std::vector<VkDescriptorSetLayoutBinding> bindings;
+		std::array<VkDescriptorPoolSize, uint8_t(descriptor_type::count)> descriptor_pool_sizes;
 
 		bool is_created = false;
+
+	private:
+		void add_binding(uint32_t index, uint32_t count, VkDescriptorType descriptor_type, VkShaderStageFlags shader_stage, std::string_view name)
+		{
+			bindings.emplace_back(VkDescriptorSetLayoutBinding{ index, descriptor_type, count, shader_stage });
+			binding_map.insert({ name.data(), bindings.back() });
+		}
 	};
-
-
 
 	[[nodiscard]] static VkWriteDescriptorSet write_descriptor_set_buffer(VkDescriptorSet descriptor_set, uint32_t binding, const VkDescriptorBufferInfo& desc_info, VkDescriptorType desc_type)
 	{
@@ -148,9 +191,6 @@ namespace vk
 		};
 	}
 
-
-
-
 	struct descriptor_set
 	{
 		/* Overload conversion operators */
@@ -162,9 +202,25 @@ namespace vk
 			layout = in_layout;
 		}
 
-		void create(VkDescriptorPool pool, std::string_view name)
+		void create(std::string_view name)
 		{
-			vk_set = create_descriptor_set(pool, layout.vk_set_layout);
+			std::vector<VkDescriptorPoolSize> descriptor_pool_sizes;
+			for (VkDescriptorPoolSize size : layout.descriptor_pool_sizes)
+			{
+				if (size.descriptorCount > 0)
+				{
+					descriptor_pool_sizes.push_back(size);
+				}
+			}
+			vk_descriptor_pool = create_descriptor_pool(descriptor_pool_sizes, 1);
+			vk_set = create_descriptor_set(vk_descriptor_pool, layout.vk_set_layout);
+			set_object_name(VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t)vk_set, name.data());
+		}
+
+		void create(VkDescriptorPool descriptor_pool, std::string_view name)
+		{
+			vk_descriptor_pool = descriptor_pool;
+			vk_set = create_descriptor_set(vk_descriptor_pool, layout.vk_set_layout);
 			set_object_name(VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t)vk_set, name.data());
 		}
 
@@ -226,8 +282,7 @@ namespace vk
 
 		VkDescriptorSet vk_set;
 		descriptor_set_layout layout;
+		VkDescriptorPool vk_descriptor_pool;
 	};
 
 }
-
-

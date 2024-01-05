@@ -79,7 +79,6 @@ void Texture2D::create_from_data(
 	VkImageUsageFlags	imageUsage,
 	VkImageLayout		layout)
 {
-
 	create_from_data(image->get_data(), image->data_size_bytes, imageUsage, layout);
 }
 

@@ -22,12 +22,6 @@ void VulkanRendererCommon::init()
 
 void VulkanRendererCommon::create_descriptor_sets()
 {
-	std::vector<VkDescriptorPoolSize> pool_sizes
-	{
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1}
-	};
-
-	VkDescriptorPool pool = create_descriptor_pool(pool_sizes, NUM_FRAMES);
 	m_framedata_desc_set_layout.add_uniform_buffer_binding(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, "Framedata UBO");
 	m_framedata_desc_set_layout.create("Framedata layout");
 
@@ -35,7 +29,7 @@ void VulkanRendererCommon::create_descriptor_sets()
 	for (size_t frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 	{
 		m_framedata_desc_set[frame_idx].assign_layout(m_framedata_desc_set_layout);
-		m_framedata_desc_set[frame_idx].create(pool, "Framedata descriptor set");
+		m_framedata_desc_set[frame_idx].create("Framedata descriptor set");
 		
 		VkDescriptorBufferInfo info = { m_ubo_framedata[frame_idx],  0, sizeof(VulkanRendererCommon::FrameData) };
 		VkWriteDescriptorSet write = vk::write_descriptor_set_buffer(m_framedata_desc_set[frame_idx].vk_set, 0, info, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);

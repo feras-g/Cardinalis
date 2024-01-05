@@ -30,17 +30,10 @@ struct CubemapRenderer
 		ubo_cube_matrix_data.create();
 		ubo_cube_matrix_data.upload(ctx.device, &cube_matrix_data, 0, sizeof(CubeMatrixData));
 
-		VkDescriptorPoolSize pool_sizes[2]
-		{
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1},
-			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1},
-		};
-		descriptor_pool = create_descriptor_pool(pool_sizes, 1);
-
 		cubemap_descriptor_set.layout.add_uniform_buffer_binding(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, "Cube Matrix Data binding");
 		cubemap_descriptor_set.layout.add_combined_image_sampler_binding(1, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "Spherical Env Map binding");
 		cubemap_descriptor_set.layout.create("");
-		cubemap_descriptor_set.create(descriptor_pool, "");
+		cubemap_descriptor_set.create("Cubemap Descriptor Set");
 
 		cubemap_descriptor_set.write_descriptor_uniform_buffer(0, ubo_cube_matrix_data, 0, VK_WHOLE_SIZE);
 		cubemap_descriptor_set.write_descriptor_combined_image_sampler(1, spherical_env_map.view, sampler);

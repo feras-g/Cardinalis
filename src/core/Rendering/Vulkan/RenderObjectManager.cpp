@@ -4,7 +4,9 @@
 #include "VulkanRendererBase.h"
 #include "core/engine/Image.h"
 #include "core/rendering/vulkan/Renderers/IRenderer.h"
+#include "core/engine/vulkan/objects/vk_descriptor_set.hpp"
 
+using namespace vk;
 
 uint32_t ObjectManager::add_material(const Material& material)
 {
@@ -76,7 +78,7 @@ size_t ObjectManager::add_mesh(const VulkanMesh& mesh, std::string_view mesh_nam
 
 	vk::descriptor_set descriptor_set;
 	descriptor_set.assign_layout(mesh_descriptor_set_layout);
-	descriptor_set.create(m_descriptor_pool, "");
+	descriptor_set.create("Mesh Descriptor Set");
 	descriptor_set.write_descriptor_storage_buffer(0, mesh.m_vertex_index_buffer, 0, mesh.m_vertex_buf_size_bytes);
 	descriptor_set.write_descriptor_storage_buffer(1, mesh.m_vertex_index_buffer, mesh.m_vertex_buf_size_bytes, mesh.m_index_buf_size_bytes);
 	descriptor_set.write_descriptor_storage_buffer(2, m_mesh_instance_data_ssbo[mesh_idx], 0, max_instance_count * sizeof(GPUInstanceData));
@@ -119,7 +121,16 @@ void ObjectManager::init()
 	/*
 		Mesh descriptor set layout
 	*/
-	m_descriptor_pool = create_descriptor_pool(VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT_EXT, max_instance_count, 0, 0, max_bindless_textures, max_mesh_count);
+
+
+	std::vector<VkDescriptorPoolSize> pool_sizes
+	{
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, max_instance_count},
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, max_instance_count},
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, max_instance_count},
+		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, max_instance_count},
+
+	};
 
 	mesh_descriptor_set_layout.add_storage_buffer_binding(0, VK_SHADER_STAGE_VERTEX_BIT, "Vertex Buffer");
 	mesh_descriptor_set_layout.add_storage_buffer_binding(1, VK_SHADER_STAGE_VERTEX_BIT, "Index Buffer");
@@ -127,7 +138,7 @@ void ObjectManager::init()
 	mesh_descriptor_set_layout.add_storage_buffer_binding(3, VK_SHADER_STAGE_FRAGMENT_BIT, "Material Buffer");
 	mesh_descriptor_set_layout.create("Instanced Mesh Descriptor Layout");
 
-	create_textures_descriptor_set(m_descriptor_pool);
+	create_textures_descriptor_set();
 }
 
 
@@ -159,7 +170,7 @@ void ObjectManager::create_materials_ssbo()
 	add_material(s_default_material);
 }
 
-void ObjectManager::create_textures_descriptor_set(VkDescriptorPool pool)
+void ObjectManager::create_textures_descriptor_set()
 {
 	texture_descriptor_array_binding = 0;
 	m_bindless_layout.add_combined_image_sampler_binding(texture_descriptor_array_binding, VK_SHADER_STAGE_FRAGMENT_BIT, max_bindless_textures, "Bindless Textures");
@@ -170,7 +181,7 @@ void ObjectManager::create_textures_descriptor_set(VkDescriptorPool pool)
 	m_bindless_layout.create("Bindless Textures Descriptor Layout");
 
 	m_descriptor_set_bindless_textures.assign_layout(m_bindless_layout);
-	m_descriptor_set_bindless_textures.create(m_descriptor_pool, "Bindless Textures Descriptor Set");
+	m_descriptor_set_bindless_textures.create("Bindless Textures Descriptor Set");
 
 }
 

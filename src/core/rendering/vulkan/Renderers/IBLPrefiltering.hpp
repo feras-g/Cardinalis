@@ -39,20 +39,13 @@ struct IBLRenderer
 
 	void init_pipeline(Texture2D& spherical_env_map)
 	{
-		VkDescriptorPoolSize pool_sizes[2]
-		{
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1},
-			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1},
-		};
-		descriptor_pool = create_descriptor_pool(pool_sizes, 1);
-
 		shader.create("fullscreen_quad_vert.vert.spv", "importance_sample_diffuse_frag.frag.spv");
 
 		/* Init descriptor set for prefiltered maps rendering */
 		descriptor_set.layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "Spherical env map");
 		descriptor_set.layout.add_uniform_buffer_binding(1, VK_SHADER_STAGE_FRAGMENT_BIT, "Diffuse Env Map Prefiltering parameters");
 		descriptor_set.layout.create("Diffuse Env Map Prefiltering Shader Params Layout");
-		descriptor_set.create(descriptor_pool, "Diffuse Env Map Prefiltering");
+		descriptor_set.create("Diffuse Env Map Prefiltering");
 		descriptor_set.write_descriptor_combined_image_sampler(0, spherical_env_map.view, sampler_clamp_nearest);
 		descriptor_set.write_descriptor_uniform_buffer(1, ubo_shader_params, 0, VK_WHOLE_SIZE);
 
@@ -132,15 +125,9 @@ struct IBLRenderer
 		spherical_env_map_ui_id = static_cast<ImTextureID>(ImGui_ImplVulkan_AddTexture(sampler_clamp_nearest, spherical_env_map.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
 
 		/* Create descriptor set for the env map */
-		VkDescriptorPoolSize pool_sizes[1]
-		{
-			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 64},
-		};
-		descriptor_pool = create_descriptor_pool(pool_sizes, 1);
-
 		spherical_env_map_descriptor_set.layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "");
 		spherical_env_map_descriptor_set.layout.create("");
-		spherical_env_map_descriptor_set.create(descriptor_pool, "Spherical Env map descriptor set");
+		spherical_env_map_descriptor_set.create("Spherical Env map descriptor set");
 
 		spherical_env_map_descriptor_set.write_descriptor_combined_image_sampler(0, spherical_env_map.view, sampler_clamp_nearest);
 	}
@@ -175,7 +162,6 @@ struct IBLRenderer
 		VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
 		pipeline.bind(cmd_buffer);
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 0, 1, &descriptor_set.vk_set, 0, nullptr);
-
 
 		/* Diffuse */
 		if (shader_params.mode == MODE_PREFILTER_DIFFUSE)

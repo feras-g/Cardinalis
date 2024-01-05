@@ -2,7 +2,6 @@
 
 projects = 
 {
-	"SampleApp",
 	"SampleProject"
 }
 
@@ -68,8 +67,37 @@ for i, name in ipairs(projects) do
 		filter "configurations:Debug"
 			runtime "Debug"
 			symbols "on"
-			buildoptions {"/Od"}
+			buildoptions {"/Od" }
 			defines { "ENGINE_DEBUG", "ENABLE_VALIDATION_LAYERS"}
+			disablewarnings { 
+				"4061", -- enumerator 'identifier' in switch of enum 'enumeration' is not explicitly handled by a case label
+				"4200", -- nonstandard extension used : zero-sized array in struct/union
+				"4201", -- nonstandard extension used : nameless struct/union
+				"4265", -- 'type': class has virtual functions, but its non-trivial destructor is not virtual; instances of this class may not be destructed correctly
+				"4266", -- 'function' : no override available for virtual member function from base 'type'; function is hidden
+				"4371", -- 'classname': layout of class may have changed from a previous version of the compiler due to better packing of member 'member'
+				"4514", -- 'function' : unreferenced inline function has been removed
+				"4582", -- 'type': constructor is not implicitly called
+				"4583", -- 'type': destructor is not implicitly called
+				"4623", -- 'derived class' : default constructor was implicitly defined as deleted because a base class default constructor is inaccessible or deleted
+				"4625", -- 'derived class' : copy constructor was implicitly defined as deleted because a base class copy constructor is inaccessible or deleted
+				"4626", -- 'derived class' : assignment operator was implicitly defined as deleted because a base class assignment operator is inaccessible or deleted
+				"4710", -- 'function' : function not inlined
+				"4711", -- function 'function' selected for inline expansion
+				"4820", -- 'bytes' bytes padding added after construct 'member_name'
+				"5026", -- 'type': move constructor was implicitly defined as deleted
+				"5027", -- 'type': move assignment operator was implicitly defined as deleted
+				"5045", -- Compiler will insert Spectre mitigation for memory load if /Qspectre switch specified
+				"5053", -- support for 'explicit(<expr>)' in C++17 and earlier is a vendor extension
+				"5204", -- 'type-name': class has virtual functions, but its trivial destructor is not virtual; instances of objects derived from this class may not be destructed correctly
+				"5220", -- 'member': a non-static data member with a volatile qualified type no longer implies that compiler generated copy / move constructors and copy / move assignment operators are not trivial
+				"4464", -- relative include path contains '..'
+				"4191", -- '<function-style-cast>': unsafe conversion
+				"4365", -- '=': conversion from 'unsigned int' to 'int', signed/unsigned mismatch
+				"4365", -- '__GNUC__' is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
+					
+				
+			}
 		
 		filter "configurations:Release"
 			runtime "Release"

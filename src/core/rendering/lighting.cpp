@@ -29,23 +29,33 @@ void light_manager::create_descriptor_set()
 		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2},
 	};
 
-	descriptor_pool = create_descriptor_pool(pool_sizes, NUM_FRAMES);
 
-	descriptor_set.layout.add_storage_buffer_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, "DirectLightingDataBlock");
-	descriptor_set.layout.create("Light Manager Layout");
-	descriptor_set.create(descriptor_pool, "Light Manager");
-	descriptor_set.write_descriptor_storage_buffer(0, ssbo, 0, VK_WHOLE_SIZE);
+	descriptor_set_layout.add_storage_buffer_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, "DirectLightingDataBlock");
+	descriptor_set_layout.create("Light Manager Layout");
+
+	for (int i = 0; i < NUM_FRAMES; i++)
+	{
+		descriptor_set[i].assign_layout(descriptor_set_layout);
+		descriptor_set[i].create("Light Manager");
+		descriptor_set[i].write_descriptor_storage_buffer(0, ssbo[i], 0, VK_WHOLE_SIZE);
+	}
 }
 
 void light_manager::create_ssbo()
 {
-	ssbo.init(vk::buffer::type::STORAGE, max_point_lights * sizeof(point_light) + sizeof(directional_light), "SSBO Lighting");
-	ssbo.create();
+	for (int i = 0; i < NUM_FRAMES; i++)
+	{
+		ssbo[i].init(vk::buffer::type::STORAGE, max_point_lights * sizeof(point_light) + sizeof(directional_light), "SSBO Lighting");
+		ssbo[i].create();
+	}
 }
 void light_manager::write_ssbo()
 {
-	ssbo.upload(ctx.device, &this->dir_light, 0, sizeof(directional_light));
-	ssbo.upload(ctx.device, point_lights.data(), sizeof(directional_light), point_lights.size() * sizeof(point_light));
+	for (int i = 0; i < NUM_FRAMES; i++)
+	{
+		ssbo[i].upload(ctx.device, &this->dir_light, 0, sizeof(directional_light));
+		ssbo[i].upload(ctx.device, point_lights.data(), sizeof(directional_light), point_lights.size() * sizeof(point_light));
+	}
 }
 
 void light_manager::create_light_volumes()
@@ -72,7 +82,7 @@ void light_manager::create_light_volumes()
 void light_manager::update_dir_light(directional_light dir_light)
 {
 	this->dir_light = dir_light;
-	ssbo.upload(ctx.device, &this->dir_light, 0, sizeof(directional_light));
+	ssbo[ctx.curr_frame_idx].upload(ctx.device, &this->dir_light, 0, sizeof(directional_light));
 }
 
 void light_manager::add_point_light(point_light p)
@@ -99,23 +109,26 @@ void light_manager::set_directional_light(directional_light d)
 
 void light_manager::add_test_point_lights()
 {
-	const int x = 32;
-	const int y = 32;
-
-	for (int i = -x/2; i < x/2; i++)
+	for (int i = 0; i < NUM_FRAMES; i++)
 	{
-		for (int j = -y/2; j < y/2; j++)
+		const int x = 32;
+		const int y = 32;
+
+		for (int i = -x / 2; i < x / 2; i++)
 		{
-			point_light p;
-			p.color = glm::linearRand(glm::vec3(0.1f), glm::vec3(1.0f));
-			p.radius = 1.0f;
-			p.position = glm::vec3(i * 2, 0.0, j);
+			for (int j = -y / 2; j < y / 2; j++)
+			{
+				point_light p;
+				p.color = glm::linearRand(glm::vec3(0.1f), glm::vec3(1.0f));
+				p.radius = 1.0f;
+				p.position = glm::vec3(i * 2, 0.0, j);
 
-			add_point_light(p);
+				add_point_light(p);
+			}
 		}
-	}
 
-	ssbo.upload(ctx.device, point_lights.data(), sizeof(directional_light), point_lights.size() * sizeof(point_light));
+		ssbo[i].upload(ctx.device, point_lights.data(), sizeof(directional_light), point_lights.size() * sizeof(point_light));
+	}
 }
 
 void light_manager::show_ui()

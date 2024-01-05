@@ -9,6 +9,8 @@ struct Material
 	int texture_metalness_roughness_idx = -1;
 	int texture_emissive_map_idx = -1;
     glm::vec4 base_color = { 0.27f,  0.27f,  0.27f, 1.0f };
+    glm::vec3 emissive_factor = { 0.0f, 0.0f, 0.0f };
+    float pad = 0;
     glm::vec2 metalness_roughness = { 0.0f, 0.5f };
 };
 

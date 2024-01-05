@@ -12,6 +12,8 @@
 #include "rendering/vulkan/Renderers/ForwardRenderer.hpp"
 #include "rendering/vulkan/Renderers/SkyboxRenderer.hpp"
 #include "rendering/vulkan/Renderers/ShadowRenderer.hpp"
+#include "rendering/vulkan/Renderers/VolumetricLightRenderer.hpp"
+
 #include "rendering/lighting.h"
 
 static light_manager lights;
@@ -21,7 +23,7 @@ static DeferredRenderer deferred_renderer;
 static SkyboxRenderer skybox_renderer;
 static IBLRenderer ibl_renderer;
 static ShadowRenderer shadow_renderer;
-
+static VolumetricLightRenderer volumetric_light_renderer;
 static std::vector<size_t> drawable_list;
 
 SampleProject::SampleProject(const char* title, uint32_t width, uint32_t height)
@@ -46,6 +48,7 @@ void SampleProject::init()
 	m_camera.update_aspect_ratio(1.0f);
 	skybox_renderer.init(cubemap_renderer.cubemap_attachment);
 	create_scene();
+	volumetric_light_renderer.init();
 	lights.write_ssbo();
 }
 
@@ -63,6 +66,7 @@ void SampleProject::compose_gui()
 	ibl_renderer.show_ui();
 	shadow_renderer.show_ui();
 	lights.show_ui();
+	volumetric_light_renderer.show_ui();
 	m_gui.end();
 }
 
@@ -134,6 +138,7 @@ void SampleProject::render()
 
 	shadow_renderer.render(cmd_buffer, drawable_list, m_camera, VulkanRendererCommon::get_instance().m_framedata[ctx.curr_frame_idx], lights.dir_light.dir);
 	deferred_renderer.render(cmd_buffer, drawable_list);
+	volumetric_light_renderer.render(cmd_buffer);
 	skybox_renderer.render(cmd_buffer);
 	m_gui.render(cmd_buffer);
 }
@@ -153,7 +158,6 @@ void SampleProject::create_scene()
 
 	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.1, 0.1f, 0.1f } }));
 	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_2, "mesh_2", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {   1.0f, 1.0f, 1.0f  } }));
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_test_roughness, "mesh_test_roughness", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f } }));
 
 	//VulkanMesh mesh_sponza, mesh_ivy, mesh_curtains;
 	//mesh_sponza.create_from_file("scenes/intel_sponza/main/scene.gltf");
@@ -164,18 +168,18 @@ void SampleProject::create_scene()
 	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_ivy, "mesh_ivy", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
 	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_curtains, "mesh_curtains", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
 
+	//VulkanMesh tree;
+	//tree.create_from_file("scenes/tree/scene.gltf");
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(tree, "Tree", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }));
+
 
 	//VulkanMesh plane;
 	//plane.create_from_file("basic/unit_plane.glb");
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(plane, "Floor", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  250, 250, 250 } }));
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(plane, "Floor", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  25, 25, 25 } }));
 
 	//VulkanMesh sponza;
 	//sponza.create_from_file("scenes/sponza/scene.gltf");
 	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(sponza, "Sponza", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }, true));
-
-	VulkanMesh forest;
-	forest.create_from_file("scenes/forest/scene.gltf");
-	drawable_list.push_back(ObjectManager::get_instance().add_mesh(forest, "Forest", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }, true));
 
 	//VulkanMesh bistro;
 	//bistro.create_from_file("scenes/bistro_lit/scene.gltf");
@@ -187,15 +191,20 @@ void SampleProject::create_scene()
 
 	//VulkanMesh temple;
 	//temple.create_from_file("scenes/temple/gltf/scene.gltf");
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(temple, "Temple", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }));
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(temple, "Temple", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.1,0.1,0.1 } }));
 
-	//VulkanMesh teapot;
-	//teapot.create_from_file("scenes/shield/scene.gltf");
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(teapot, "Shield", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.1f, 0.1f, 0.1f } }));
+	VulkanMesh test_khr_lights_punctual;
+	test_khr_lights_punctual.create_from_file("test/khr_lights_punctual/scene.gltf");
+	drawable_list.push_back(ObjectManager::get_instance().add_mesh(test_khr_lights_punctual, "test_khr_lights_punctual", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }));
 
-	//VulkanMesh test_khr_lights_punctual;
-	//test_khr_lights_punctual.create_from_file("test/khr_lights_punctual/scene.gltf");
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(test_khr_lights_punctual, "test_khr_lights_punctual", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }));
+	//VulkanMesh test_metallic_roughness;
+	//test_metallic_roughness.create_from_file("test/metallic_roughness_test/scene.gltf");
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(test_metallic_roughness, "mesh_test_roughness", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f } }));
+
+	//VulkanMesh test_normal_tangent;
+	//test_normal_tangent.create_from_file("test/normal_tangent_test/scene.gltf");
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(test_normal_tangent, "mesh_test_normal_tangent", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f } }));
+
 }
 
 void SampleProject::update_instances_ssbo()

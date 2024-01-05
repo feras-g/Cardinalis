@@ -240,7 +240,7 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 		cgltf_texture* tex_emissive = gltf_mat->emissive_texture.texture;
 		if (tex_emissive)
 		{
-			material.texture_emissive_map_idx = load_tex(TextureType::EMISSIVE_MAP, tex_emissive, VulkanRendererCommon::get_instance().tex_emissive_format, true);
+			material.texture_emissive_map_idx = load_tex(TextureType::EMISSIVE_MAP, tex_emissive, VulkanRendererCommon::get_instance().tex_emissive_format, false);
 		}
 
 		if (gltf_mat->has_pbr_metallic_roughness)
@@ -260,8 +260,11 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 			/* Factors */
 			{
 				float* v = gltf_mat->pbr_metallic_roughness.base_color_factor;
+				float* v_emissive = gltf_mat->emissive_factor;
+
 				material.base_color = glm::vec4(v[0], v[1], v[2], v[3]);
 				material.metalness_roughness = { gltf_mat->pbr_metallic_roughness.metallic_factor, gltf_mat->pbr_metallic_roughness.roughness_factor };
+				material.emissive_factor = glm::vec3(v_emissive[0], v_emissive[1], v_emissive[2]);
 			}
 		}
 

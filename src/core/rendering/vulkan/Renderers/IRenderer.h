@@ -7,6 +7,7 @@
 #include "core/rendering/vulkan/VulkanShader.h"
 #include "core/rendering/draw_metrics.h"
 #include "core/engine/vulkan/objects/vk_debug_marker.hpp"
+#include "core/rendering/vulkan/VulkanTexture.h"
 
 #include "core/engine/vulkan/objects/vk_renderpass.h"
 

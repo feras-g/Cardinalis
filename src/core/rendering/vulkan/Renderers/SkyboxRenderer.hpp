@@ -14,15 +14,10 @@ struct SkyboxRenderer : public IRenderer
 	{
 		/* Create descriptor set containing the cubemap */
 		VkSampler sampler_clamp_linear = VulkanRendererCommon::get_instance().s_SamplerClampLinear;
-		VkDescriptorPoolSize pool_sizes[1]
-		{
-			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1},
-		};
-		descriptor_pool = create_descriptor_pool(pool_sizes, 1);
 
 		env_map_descriptor_set.layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "Skybox Cubemap");
 		env_map_descriptor_set.layout.create("Skybox Cubemap Desc set layout");
-		env_map_descriptor_set.create(descriptor_pool, "Skybox");
+		env_map_descriptor_set.create("Skybox");
 		env_map_descriptor_set.write_descriptor_combined_image_sampler(0, cubemap.view, sampler_clamp_linear);
 
 

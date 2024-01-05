@@ -35,8 +35,9 @@ struct light_manager
 	void show_ui();
 
 	VkDescriptorPool descriptor_pool;
-	static inline vk::descriptor_set descriptor_set;
-	vk::buffer ssbo;
+	static inline std::array<vk::descriptor_set, NUM_FRAMES> descriptor_set;
+	static inline std::array<vk::buffer, NUM_FRAMES> ssbo;
+	static inline vk::descriptor_set_layout descriptor_set_layout;
 
 	static inline directional_light dir_light;
 	static inline std::vector<point_light> point_lights;

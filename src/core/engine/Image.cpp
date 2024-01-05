@@ -70,7 +70,7 @@ void Image::load_from_file(std::string_view filename)
     }
     else
     {
-        is_float = true;
+        is_float = false;
         uchar_data = stbi_load(filename.data(), &w, &h, &n, 4);
         assert(uchar_data);
     }

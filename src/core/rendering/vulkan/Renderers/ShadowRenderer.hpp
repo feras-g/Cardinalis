@@ -53,12 +53,6 @@ struct ShadowRenderer : public IRenderer
 		shader.create("cascaded_shadow_transform_vert.vert.spv", "output_fragment_depth_frag.frag.spv");
 
 		// Descriptor Set
-		VkDescriptorPoolSize pool_sizes[]
-		{
-			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1},
-		};
-		descriptor_pool = create_descriptor_pool(pool_sizes, NUM_FRAMES);
-
 		descriptor_set_layout.add_storage_buffer_binding(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, "Shadow Cascade SSBO");
 		descriptor_set_layout.add_combined_image_sampler_binding(1, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "Shadow Cascades Texture Array");
 		descriptor_set_layout.create("Shadow Cascade Descriptor Set Layout");
@@ -68,7 +62,7 @@ struct ShadowRenderer : public IRenderer
 		for (int frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 		{
 			descriptor_set[frame_idx].assign_layout(descriptor_set_layout);
-			descriptor_set[frame_idx].create(descriptor_pool, "Shadow Renderer Descriptor Set");
+			descriptor_set[frame_idx].create("Shadow Renderer Descriptor Set");
 			descriptor_set[frame_idx].write_descriptor_storage_buffer(0, ssbo_cascades_data[frame_idx], 0, VK_WHOLE_SIZE);
 			descriptor_set[frame_idx].write_descriptor_combined_image_sampler(1, shadow_cascades_depth[frame_idx].view, sampler_clamp_linear);
 		}
@@ -106,6 +100,7 @@ struct ShadowRenderer : public IRenderer
 
 		shadow_cascades_depth[ctx.curr_frame_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
 		renderpass[ctx.curr_frame_idx].begin(cmd_buffer, { k_depth_size, k_depth_size }, view_mask);
+
 		object_manager.draw_mesh_list(cmd_buffer, mesh_list, pipeline.layout, bound_descriptor_sets, draw_metrics);
 		renderpass[ctx.curr_frame_idx].end(cmd_buffer);
 		shadow_cascades_depth[ctx.curr_frame_idx].transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);

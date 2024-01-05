@@ -3,6 +3,7 @@
 #include "core/rendering/vulkan/VulkanRenderInterface.h"
 #include "core/rendering/vulkan/VulkanShader.h"
 #include "core/rendering/vulkan/VulkanTexture.h"
+#include "core/engine/vulkan/objects/vk_descriptor_set.hpp"
 
 #include "glm/mat4x4.hpp"
 #include "glm/gtc/matrix_transform.hpp"
@@ -10,6 +11,8 @@
 #include "vulkan/vulkan.hpp"
 
 #define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+
+using namespace vk;
 
 void VulkanImGuiRenderer::init()
 {

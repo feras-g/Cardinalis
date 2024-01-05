@@ -62,10 +62,6 @@ float specular_G(float NoV, float NoL, float roughness)
 	return G_v * G_l;
 }
 
-
-
-
-
 /*
 *   Diffuse reflectance represents light that is refracted into the surface, scattered, partially absorbed, and re-emitted.
 *

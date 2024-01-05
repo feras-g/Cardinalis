@@ -4,7 +4,7 @@
 #include "headers/data.glsl"
 
 layout(location = 0) out vec4 position_ws;
-layout(location = 1) out vec4 normal_ws;
+layout(location = 1) out vec4 normal_vs;
 layout(location = 2) out vec2 uv;
 layout(location = 3) out vec3 vertex_to_eye_ws;
 
@@ -36,7 +36,7 @@ void main()
     vec4 position_cs = frame.data.view_proj * position_ws;
     mat4 normal_mat = transpose(inverse(  model  ));
 
-    normal_ws = normal_mat * vec4(v.nx, v.ny, v.nz, 0.0);
+    normal_vs = frame.data.view * model * vec4(v.nx, v.ny, v.nz, 0.0);
 
     vec2 depth_cs = position_cs.zw;
 

@@ -19,15 +19,9 @@ struct ForwardRenderer : public IRenderer
 		ssbo_shader_toggles.create();
 		update_shader_toggles();
 
-		std::array<VkDescriptorPoolSize, 1> pool_sizes
-		{
-			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1},
-		};
-		descriptor_pool = create_descriptor_pool(pool_sizes, NUM_FRAMES);
-
 		descriptor_set.layout.add_storage_buffer_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, "ForwardRenderer Shader Params");
 		descriptor_set.layout.create("ForwardRenderer Shader Params Layout");
-		descriptor_set.create(descriptor_pool, "ForwardRenderer");
+		descriptor_set.create("ForwardRenderer");
 
 		descriptor_set.write_descriptor_storage_buffer(0, ssbo_shader_toggles, 0, VK_WHOLE_SIZE);
 

@@ -14,9 +14,7 @@ layout(set = 2, binding = 2) readonly buffer InstanceDataBlock
 
 layout (push_constant) uniform LightVolumePassDataBlock
 {
-    mat4 vp;
-    float inv_screen_size;
-    int light_volume_type;
+    mat4 view_proj;
 } ps;
 
 layout(set = 0, binding = 0) uniform FrameDataBlock
@@ -29,5 +27,5 @@ void main()
     uint index = idx_buffer.data[gl_VertexIndex];
     Vertex v = vtx_buffer.data[index];
     light_instance_index = gl_InstanceIndex;
-    gl_Position = ps.vp * instances.data[gl_InstanceIndex].model * vec4(v.px, v.py, v.pz, 1.0);
+    gl_Position = ps.view_proj * instances.data[gl_InstanceIndex].model * vec4(v.px, v.py, v.pz, 1.0);
 }

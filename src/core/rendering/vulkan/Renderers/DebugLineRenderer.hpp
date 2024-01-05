@@ -27,17 +27,11 @@ struct DebugLineRenderer : public IRenderer
 		indirect_cmd_buffer.create();
 		copy_from_buffer(staging, indirect_cmd_buffer, sizeof(VkDrawIndirectCommand));
 
-		std::array<VkDescriptorPoolSize, 1> pool_sizes
-		{
-			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2},
-		};
-		descriptor_pool = create_descriptor_pool(pool_sizes, NUM_FRAMES);
-
 		debug_line_descriptor_set.layout.add_storage_buffer_binding(0, VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, "DebugLineRenderer Vertex Buffer Binding");
 		debug_line_descriptor_set.layout.add_storage_buffer_binding(1, VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, "DebugLineRenderer Indirect Command Binding");
 
 		debug_line_descriptor_set.layout.create("DebugLineRenderer Descriptor Layout");
-		debug_line_descriptor_set.create(descriptor_pool, "DebugLineRenderer Descriptor Set");
+		debug_line_descriptor_set.create("DebugLineRenderer Descriptor Set");
 
 		debug_line_descriptor_set.write_descriptor_storage_buffer(0, vertex_buffer, 0, VK_WHOLE_SIZE);
 		debug_line_descriptor_set.write_descriptor_storage_buffer(1, indirect_cmd_buffer, 0, VK_WHOLE_SIZE);

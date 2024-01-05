@@ -127,7 +127,7 @@ protected:
 	void create_materials_ssbo();
 
 	/* Creates the SSBO storing all texture descriptors */
-	void create_textures_descriptor_set(VkDescriptorPool pool);
+	void create_textures_descriptor_set();
 private:
 	ObjectManager() = default;
 };

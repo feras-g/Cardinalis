@@ -36,10 +36,12 @@ public:
 		glm::mat4 view_proj_inv;
 		glm::vec4 camera_pos_ws;
 		float time; /* Time in seconds */
-	} m_framedata[NUM_FRAMES];
-	vk::buffer m_ubo_framedata[NUM_FRAMES];
+	};
+
+	std::array<FrameData, NUM_FRAMES> m_framedata;
+	std::array<vk::buffer, NUM_FRAMES> m_ubo_framedata;
 	vk::descriptor_set_layout m_framedata_desc_set_layout;
-	vk::descriptor_set m_framedata_desc_set[NUM_FRAMES];
+	std::array<vk::descriptor_set, NUM_FRAMES> m_framedata_desc_set;
 
 	void init();
 	void create_descriptor_sets();
