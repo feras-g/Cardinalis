@@ -61,7 +61,7 @@ struct Texture
 
 	void create_view(VkDevice device, const ImageViewInitInfo& info);
 	void copy_from_buffer(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer);
-	void upload_data(VkDevice device, void* data);
+	void upload_data(VkDevice device, void* data, int data_size_bytes);
 	void transition(VkCommandBuffer cmdBuffer, VkImageLayout new_layout, VkAccessFlags dst_access_mask, VkImageSubresourceRange* subresourceRange = nullptr);
 	void transition_immediate(VkImageLayout new_layout, VkAccessFlags dst_access_mask, VkImageSubresourceRange* subresourceRange = nullptr);
 
@@ -96,6 +96,7 @@ struct Texture2D : public Texture
 
 	void create_from_data(
 		void*				data,
+		int                 data_size_bytes,
 		VkImageUsageFlags	imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT,
 		VkImageLayout		layout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 

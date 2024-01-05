@@ -10,11 +10,6 @@
 #include <span>
 #include <unordered_set>
 
-//#include <assimp/scene.h>
-//#include <assimp/postprocess.h>
-//#include <assimp/cimport.h>
-//#include <assimp/version.h>
-
 #define CGLTF_IMPLEMENTATION
 #include "cgltf.h"
 
@@ -189,7 +184,8 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 	}
 	else
 	{
-		std::function load_tex = [](TextureType tex_type, cgltf_texture* tex, VkFormat format, bool calc_mip) -> int
+
+		std::function load_tex = [&](TextureType tex_type, cgltf_texture* tex, VkFormat format, bool calc_mip) -> int
 		{
 			const char* uri = tex->image->uri;
 			std::string name = uri ? base_path + uri : base_path + tex->image->name;
@@ -204,32 +200,35 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 				return texture_id;
 			}
 
+			Image im;
+
 			if (uri)
 			{
-				Image im = load_image_from_file(base_path + uri);
-				Texture2D texture;
-				texture.init(format, im.w, im.h, 1, calc_mip, name);
-				texture.create_from_data(&im);
-				texture.create_view(ctx.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, texture.info.mipLevels });
-
-				if (tex_type == TextureType::NORMAL_MAP || tex_type == TextureType::METALLIC_ROUGHNESS_MAP)
-				{
-					texture.sampler = VulkanRendererCommon::get_instance().s_SamplerRepeatLinear;
-				}
-				else
-				{
-					texture.sampler = VulkanRendererCommon::get_instance().s_SamplerRepeatLinear;
-				}
-				texture.info.debugName = name.c_str();
-
-				return ObjectManager::get_instance().add_texture(texture);
+				im.load_from_file(base_path + uri);
 			}
 			else
 			{
-				/* Load from buffer */
-				assert(false);
-				return 0;
+				const uint8_t* buffer_view = cgltf_buffer_view_data(tex->image->buffer_view);
+				size_t buffer_view_size = tex->image->buffer_view->size;
+				im.load_from_buffer(buffer_view, buffer_view_size);
 			}
+
+			Texture2D texture;
+			texture.init(format, im.w, im.h, 1, calc_mip, name);
+			texture.create_from_data(&im);
+			texture.create_view(ctx.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, texture.info.mipLevels });
+
+			if (tex_type == TextureType::NORMAL_MAP || tex_type == TextureType::METALLIC_ROUGHNESS_MAP)
+			{
+				texture.sampler = VulkanRendererCommon::get_instance().s_SamplerRepeatLinear;
+			}
+			else
+			{
+				texture.sampler = VulkanRendererCommon::get_instance().s_SamplerRepeatLinear;
+			}
+			texture.info.debugName = name.c_str();
+
+			return ObjectManager::get_instance().add_texture(texture);
 		};
 
 		cgltf_texture* tex_normal = gltf_mat->normal_texture.texture;
@@ -385,40 +384,40 @@ static void process_node(cgltf_node* p_node, Node* parent, VulkanMesh& model)
 
 static void load_textures(cgltf_texture* textures, size_t texture_count)
 {
-	std::function load_tex = [](cgltf_texture* tex, VkFormat format, bool calc_mip) -> int
-		{
-			const char* uri = tex->image->uri;
-			std::string name = uri ? base_path + uri : base_path + tex->image->name;
+	//std::function load_tex = [](cgltf_texture* tex, VkFormat format, bool calc_mip) -> int
+	//	{
+	//		const char* uri = tex->image->uri;
+	//		std::string name = uri ? base_path + uri : base_path + tex->image->name;
 
-			const ObjectManager& object_manager = ObjectManager::get_instance();
+	//		const ObjectManager& object_manager = ObjectManager::get_instance();
 
-			/* Load from file path */
-			int texture_id = ObjectManager::get_instance().get_texture_id(name.c_str());
+	//		/* Load from file path */
+	//		int texture_id = ObjectManager::get_instance().get_texture_id(name.c_str());
 
-			if (texture_id != -1)
-			{
-				return texture_id;
-			}
+	//		if (texture_id != -1)
+	//		{
+	//			return texture_id;
+	//		}
 
-			if (uri)
-			{
-				Image im = load_image_from_file(base_path + uri);
-				Texture2D texture;
-				texture.init(format, im.w, im.h, 1, false, name);
-				texture.create_from_data(&im);
-				texture.create_view(ctx.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, texture.info.mipLevels });
-				texture.sampler = VulkanRendererCommon::get_instance().s_SamplerRepeatLinear;
-				texture.info.debugName = name.c_str();
+	//		if (uri)
+	//		{
+	//			Image im = load_image_from_file(base_path + uri);
+	//			Texture2D texture;
+	//			texture.init(format, im.w, im.h, 1, false, name);
+	//			texture.create_from_data(&im);
+	//			texture.create_view(ctx.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, texture.info.mipLevels });
+	//			texture.sampler = VulkanRendererCommon::get_instance().s_SamplerRepeatLinear;
+	//			texture.info.debugName = name.c_str();
 
-				return ObjectManager::get_instance().add_texture(texture);
-			}
-			else
-			{
-				/* Load from buffer */
-				assert(false);
-				return 0;
-			}
-		};
+	//			return ObjectManager::get_instance().add_texture(texture);
+	//		}
+	//		else
+	//		{
+	//			/* Load from buffer */
+	//			assert(false);
+	//			return 0;
+	//		}
+	//	};
 
 	//for (size_t i = 0; i < texture_count; i++)
 	//{

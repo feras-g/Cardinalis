@@ -41,17 +41,20 @@ void Texture2D::create_from_file(
     bool                use_mipmaps
 )
 {
-    Image image_data = load_image_from_file(filename);
+    Image image;
+    image.load_from_file(filename);
+
     if (!initialized)
     {
-        init(format, image_data.w, image_data.h, 1, use_mipmaps, filename);
+        init(format, image.w, image.h, 1, use_mipmaps, filename);
     }
-    create_from_data(&image_data, imageUsage, layout);
+    create_from_data(image.get_data(), image.data_size_bytes, imageUsage, layout);
     create_view(ctx.device, ImageViewTexture2D);
 }
 
 void Texture2D::create_from_data(
     void*               data,
+    int                 data_size_bytes,
     VkImageUsageFlags	imageUsage,
     VkImageLayout		layout)
 {
@@ -60,7 +63,7 @@ void Texture2D::create_from_data(
     
     transition_immediate(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_TRANSFER_WRITE_BIT);
 
-    upload_data(ctx.device, data);
+    upload_data(ctx.device, data, data_size_bytes);
 
 	transition_immediate(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
 
@@ -76,7 +79,8 @@ void Texture2D::create_from_data(
 	VkImageUsageFlags	imageUsage,
 	VkImageLayout		layout)
 {
-	create_from_data(image->get_data(), imageUsage, layout);
+
+	create_from_data(image->get_data(), image->data_size_bytes, imageUsage, layout);
 }
 
 void Texture2D::create(VkDevice device, VkImageUsageFlags imageUsage)
@@ -165,19 +169,25 @@ void Texture::copy_from_buffer(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer)
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageRegion);
 }
 
-void Texture::upload_data(VkDevice device, void* data)
+void Texture::upload_data(VkDevice device, void* data, int data_size_bytes)
 {
     uint32_t bpp = GetBytesPerPixelFromFormat(info.imageFormat);
-    VkDeviceSize layerSizeInBytes = info.width * info.height * bpp;
-    VkDeviceSize imageSizeInBytes = layerSizeInBytes * info.layerCount;
+    VkDeviceSize layer_size_bytes = info.width * info.height * bpp;
+    VkDeviceSize image_size_bytes = layer_size_bytes * info.layerCount;
+
+    if (data_size_bytes != -1)
+    {
+        image_size_bytes = std::min((int)image_size_bytes, data_size_bytes);
+    }
+
     // Create temp CPU-GPU visible buffer holding image data 
-    vk::buffer stagingBuffer;
-	stagingBuffer.init(vk::buffer::type::STAGING, imageSizeInBytes, "Image Staging Buffer");
-    stagingBuffer.create();
-	stagingBuffer.upload(ctx.device, data, 0, imageSizeInBytes);
+    vk::buffer staging_buffer;
+	staging_buffer.init(vk::buffer::type::STAGING, image_size_bytes, "Image Staging Buffer");
+    staging_buffer.create();
+	staging_buffer.upload(ctx.device, data, 0, image_size_bytes);
 
     VkCommandBuffer cmd_buffer = begin_temp_cmd_buffer();
-    copy_from_buffer(cmd_buffer, stagingBuffer);
+    copy_from_buffer(cmd_buffer, staging_buffer);
     end_temp_cmd_buffer(cmd_buffer);
 }
 
