@@ -1,10 +1,10 @@
 ### Features
-Deferred Rendering <br/>
+Deferred Shading with Light Volumes <br/>
 Normal Mapping <br/>
-Shadow Mapping <br/>
 Cascaded Shadow Mapping <br/>
-Image Based Lighting : Diffuse IBL <br/>
-Microfacet BRDF : GGX+Smith <br/>
+Image Based Lighting : Diffuse + Specular (Split Sum Approximation) <br/>
+Physically Based Direct Lighting <br/>
+Volumetric Fog (Directional Light)
 
 ### Gallery
 *Bistro scene with Physically Based Direct Lighting, Image Based Lighting and Cascaded Shadow Mapping*
