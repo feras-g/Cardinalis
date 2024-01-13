@@ -175,7 +175,7 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 	
 	Material material;
 
-#if 0
+#if 1
 	primitive.material_id = ObjectManager::get_instance().default_material_id;
 #else
 	if (nullptr == gltf_mat)
@@ -283,7 +283,8 @@ static void load_primitive(cgltf_node* node, cgltf_primitive* primitive, Node* e
 	Primitive p = {};
 	p.first_vertex = (uint32_t)geometry.indices.size();
 	p.vertex_count = (uint32_t)primitive->indices->count;
-	
+	p.name = "test";
+
 	glm::mat4 mesh_local_mat;
 	cgltf_node_transform_world(node, glm::value_ptr(mesh_local_mat));
 	p.model = mesh_local_mat;
@@ -350,11 +351,11 @@ static void process_node(cgltf_node* p_node, Node* parent, VulkanMesh& model)
 
 			if (p_node->has_scale)
 			{
-				p.radius = glm::length(glm::vec3(p_node->scale[0], p_node->scale[2], p_node->scale[2]));
+				p.radius = 3.0f;
 			}
 			else
 			{
-				p.radius = 1.0f;
+				p.radius = 3.0f;
 			}
 
 			light_manager::add_point_light(p);

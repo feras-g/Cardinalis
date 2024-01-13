@@ -35,6 +35,7 @@ struct Primitive
 	uint32_t vertex_count;
 	glm::mat4 model = glm::identity<glm::mat4>();
 	int material_id = 0;
+	const char* name;
 };
 
 struct GeometryData

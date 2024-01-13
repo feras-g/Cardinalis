@@ -3,6 +3,15 @@
 
 #include "shadow_mapping.glsl"
 #include "math_constants.glsl"
+#include "lights.glsl"
+
+
+struct ScatteringParameters
+{
+	float g_mie;				/* Float value between 0 and 1 controlling how much light will scatter in the forward direction. (Henyey-Greenstein phase function) */
+	float amount;				/* Float value controlling how much volumetric light is visible. */
+	int num_raymarch_steps;
+};
 
 // From GPU Pro 5, Volumetric Light Effects in Killzone: Shadow Fall, 3.4 Dithered Ray Marching
 // Bayer matrix
@@ -15,17 +24,24 @@ const mat4 dither_pattern =
         0.9375f, 0.4375f, 0.8125f, 0.3125f
     );
 
-float mie_scattering(float VoL)
+
+/*
+    g: Controls how much light will scatter in the forward direction. Value between 0 and 1
+*/
+float mie_scattering(float VoL, float g)
 {
-    float g = 0.1;
     float g_sq = g*g;
     return ((1.0 - g_sq) /   (4 * PI  * pow((1.0 + g_sq - 2.0 * g * VoL), 1.5f)));
 }
 
 vec3 raymarch_fog_sunlight(sampler2DArray tex_shadow, int cascade_index, vec3 cam_pos_ws, vec3 fragpos_ws, mat4 shadow_view_proj, vec3 L, vec3 sun_color)
 {
+    // TODO : Move to UBO
     const int num_steps = 25;
-    vec3 acc = vec3(0);
+    const float scattering_amount = 2;
+    const float g_mie_scattering = 0.7;
+    
+    vec3 scattering_factor = vec3(0);
 
     vec3 V = cam_pos_ws - fragpos_ws;
     const float step_size = length(V) / float(num_steps);
@@ -37,65 +53,91 @@ vec3 raymarch_fog_sunlight(sampler2DArray tex_shadow, int cascade_index, vec3 ca
         vec4 curr_pos_light_space = shadow_view_proj * vec4(curr_pos_ws, 1);
         float vis = lookup_shadow(tex_shadow, curr_pos_light_space, vec2(0), cascade_index);
 
-        /* only accumulate fog for fragments that are not in shadow */
+        /* Only accumulate fog for fragments that are not in shadow */
         if(vis >= 1)
         {
-            acc += mie_scattering(dot(V, -L)) * sun_color;
+            scattering_factor += mie_scattering(dot(V, -L), g_mie_scattering) * scattering_amount * sun_color;
         }
 
         curr_pos_ws += step_size * V;
     }
 
-    return acc / num_steps;
+    return scattering_factor / num_steps;
 }
 
-
-vec3 raymarch_fog_omni_spot_light(vec3 eye_pos_ws, vec3 frag_pos_ws, vec3 sphere_center, vec3 light_color, float sphere_radius)
+float remap01(float low, float high, float val)
 {
-    // Ray from camera position to fragment position in WS
-    vec3 V = normalize(frag_pos_ws - eye_pos_ws);
-    vec3 L = normalize(eye_pos_ws - sphere_center);
+    return (val - low) / (high - low);
+}
 
-    // Find intersection of Ray with Light volume
-    float a = dot(V, V);
-    float b = 2.0 * dot(L, V);
-    float c = dot(L, L) - (sphere_radius*sphere_radius);
+float linearize_depth(float d,float zNear,float zFar)
+{
+    return zNear * zFar / (zFar + d * (zNear - zFar));
+}
 
-    float delta = (b*b);
+vec3 raymarch_fog_omni_spot_light(vec3 ws_cam_pos, vec3 ws_frag_pos, vec3 sphere_center, vec3 light_color, float sphere_radius, float depth, vec3 cam_forward)
+{
+    vec3 center = sphere_center;
+    float radius = sphere_radius * 10;
+
+    vec3 ray_orig = ws_cam_pos;
+    vec3 ray_dir = ws_frag_pos - ray_orig;
+    float ray_length = length(ray_dir);
+    ray_dir = normalize(ray_dir);
+    vec3 light_to_cam = normalize(ws_cam_pos - center);
+
+
+	float b = dot(ray_dir, light_to_cam);
+	float c = dot(light_to_cam, light_to_cam) - (radius * radius);
+
+	float d = sqrt((b*b) - c);
+	float start = -b - d;
+	float end = -b + d;
+
+    float t = dot(light_to_cam, ray_dir); // point on the ray that is the closest to the sphere center
+
+    vec3 pt = ray_orig + t * ray_dir;
+
+    // find distance from t1 to t
+    // x^2 + y^2 = R^2  <=> x = +/- sqrt(R^2 - y^2)
+    float y = length(center - pt);
 
     vec3 acc = vec3(0.0);
 
-    if(delta > 0)
+    float linear_depth = linearize_depth(depth, 0.5, 50);
+    float projected_depth = linear_depth / dot(cam_forward, ray_dir);
+    // end = min(end, projected_depth);
+
+    // if(y < radius)
     {
-        float start = -b - a;
-        float end   = -b + a;
-        float ray_length = end - start;
+        float x = sqrt(radius*radius - y*y);
+
+        float t1 = t - x;
+        float t2 = t + x;
+
+        vec3 pt1 = ray_orig + start * ray_dir;
+        vec3 pt2 = ray_orig + end * ray_dir;
 
         // raymarch inside sphere
-        vec3 ray_start = eye_pos_ws + start * V;
-        vec3 ray_end   = eye_pos_ws + end * V;
-        vec3 ray_dir = normalize(ray_end - ray_start);
-        
-        const int num_steps = 100;
+        vec3 ray_start = pt1;
+        vec3 ray_end   = pt2;
+        float ray_length = length(pt2 - pt1);
+
+        const int num_steps = 25;
         float step_size = ray_length / float(num_steps);
-        
+
         for(int i = 0; i < num_steps; i++)
         {
             vec3 light_dir = sphere_center - ray_start;
-            float att =  clamp(1.0 - length(light_dir), 0.0, 1.0); att *= att;
-
+            float atten = atten_sphere_volume(length(light_dir), sphere_radius);
             light_dir = normalize(light_dir);
-            acc += mie_scattering(dot(V, -light_dir)) * light_color * att;
+            acc += mie_scattering(dot(ray_dir, -light_to_cam), 0.9) * light_color * atten;
             ray_start += step_size * ray_dir;
         }
 
         return acc / num_steps;
     }
-    else
-    {
-        return vec3(1,1,1);
-    }
-    
+
     return acc;
 }
 

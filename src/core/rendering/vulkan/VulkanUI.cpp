@@ -19,8 +19,6 @@ void VulkanGUI::begin()
 {
 	ImGui::NewFrame();
 	ImGui::StyleColorsDark();
-	ImGui::GetStyle().WindowRounding = 5.0f;
-	ImGui::GetStyle().FrameRounding = 5.0f;
 
 	ImGui::DockSpaceOverViewport(0, ImGuiDockNodeFlags_PassthruCentralNode);
 }
@@ -45,19 +43,32 @@ void VulkanGUI::show_toolbar()
 
 }
 
+glm::mat4* selected_object_transform = nullptr;
+
 void VulkanGUI::show_hierarchy(ObjectManager& object_manager)
 {
 	if (ImGui::Begin("Inspector"))
 	{
 		for (size_t i = 0; i < object_manager.m_meshes.size(); i++)
 		{
-			if (ImGui::Button(object_manager.m_mesh_names[i]))
+			if (ImGui::CollapsingHeader(object_manager.m_mesh_names[i]))	// Root
 			{
-				if (object_manager.m_mesh_instance_data[i].size() > 0)
+				VulkanMesh& mesh = object_manager.m_meshes[i];
+
+				selected_object_transform = &mesh.model;
+
+				for (size_t prim_idx = 0; prim_idx < mesh.geometry_data.primitives.size(); prim_idx++)
 				{
-					object_manager.current_selected_mesh_id = i;
+					Primitive& prim = mesh.geometry_data.primitives[prim_idx];
+
+					if (ImGui::Button(prim.name))
+					{
+						selected_object_transform = &prim.model;
+					}
 				}
+
 			}
+
 		}
 	}
 	ImGui::End();
@@ -142,7 +153,6 @@ bool VulkanGUI::is_scene_viewport_active() const
 	return b_is_scene_viewport_active;
 }
 
-
 void VulkanGUI::show_viewport_window(ImTextureID scene_image_id, camera& camera, ObjectManager& object_manager)
 {
 	static ImGuizmo::OPERATION gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
@@ -221,12 +231,13 @@ void VulkanGUI::show_viewport_window(ImTextureID scene_image_id, camera& camera,
 
 		if (object_manager.m_mesh_instance_data[object_manager.current_selected_mesh_id].size() > 0)
 		{
-			glm::mat4& selected_object_transform = object_manager.m_mesh_instance_data[object_manager.current_selected_mesh_id][0].model;
-
 			const glm::f32* view = glm::value_ptr(camera.view);
 			const glm::f32* proj = glm::value_ptr(camera.projection);
 
-			ImGuizmo::Manipulate(view, proj, gizmo_operation, transform_mode, glm::value_ptr(selected_object_transform));
+			if (selected_object_transform != nullptr)
+			{
+				ImGuizmo::Manipulate(view, proj, gizmo_operation, transform_mode, glm::value_ptr(*selected_object_transform));
+			}
 		}
 
 	}

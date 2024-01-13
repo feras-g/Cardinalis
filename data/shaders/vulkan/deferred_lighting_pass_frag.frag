@@ -54,13 +54,6 @@ layout (push_constant) uniform LightVolumePassDataBlock
 #define LIGHT_VOLUME_POINT 2
 #define LIGHT_VOLUME_SPOT 3
 
-float atten_test(float dist, float radius)
-{
-    float att = clamp(1.0 - dist/radius, 0.0, 1.0);
-    att *= att;
-	return att;
-}
-
 vec3 decode_normal(vec2 enc)
 {
     vec3 n;
@@ -78,7 +71,7 @@ void main()
     brdf_data.metalness_roughness = texture(gbuffer_metalness_roughness, fragcoord).rg;
     brdf_data.normal_ws = vec3(inverse(frame.data.view) * vec4(decode_normal(texture(gbuffer_normal_vs, fragcoord).xy), 0));
     float depth = texture(gbuffer_depth, fragcoord).r;
-    vec3 position_ws =  (vec4( ws_pos_from_depth(fragcoord, depth, frame.data.inv_view_proj), 1)).xyz;
+    vec3 position_ws = vec4( ws_pos_from_depth(fragcoord, depth, frame.data.inv_view_proj), 1).xyz;
     vec3 position_vs = (frame.data.view * vec4(position_ws, 1.0f)).xyz;
 
     brdf_data.viewdir_ws = normalize(frame.data.eye_pos_ws.xyz-position_ws);
@@ -89,7 +82,7 @@ void main()
 
     out_color = vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
-    vec3 sun_color = lights.dir_light.color.rgb ;
+    vec3 sun_color = lights.dir_light.color.rgb;
 
     /*
         ----------------------------------------------------------------------------------------------------
@@ -128,8 +121,11 @@ void main()
             Direct Lighting
             ----------------------------------------------------------------------------------------------------
         */
-        out_color.rgb += brdf_cook_torrance(brdf_data, sun_color * 8) * shadow_factor;
+        out_color.rgb += brdf_cook_torrance(brdf_data, sun_color) * shadow_factor;
 
+        vec3 fog = raymarch_fog_sunlight(tex_shadow_maps, cascade_index, frame.data.eye_pos_ws.xyz, position_ws, shadow_view_proj, brdf_data.lightdir_ws, sun_color);
+        out_color.rgb += fog;
+        
         /*
             ----------------------------------------------------------------------------------------------------
             Image Based Lighting
@@ -138,7 +134,7 @@ void main()
         /* Diffuse */
         vec3 diffuse_reflectance = brdf_data.albedo * (1.0 - metallic);
         vec2 diffuse_sample_uv = SampleSphericalMap_ZXY(brdf_data.normal_ws);
-        out_color.rgb += diffuse_reflectance * texture(prefiltered_env_map_diffuse, diffuse_sample_uv).rgb;
+        // out_color.rgb += diffuse_reflectance * texture(prefiltered_env_map_diffuse, diffuse_sample_uv).rgb;
         
         /* Specular */
         vec3 R = reflect(-brdf_data.viewdir_ws, brdf_data.normal_ws);
@@ -148,21 +144,25 @@ void main()
         vec2 brdf = texture(ibl_brdf_integration_map, vec2(NoV, 1-roughness)).xy;
         vec3 F0 = mix(vec3(0.04), brdf_data.albedo, metallic);
         vec3 T2 = (F0 * brdf.x + brdf.y);
-        out_color.rgb += T1 * T2;
+        // out_color.rgb += T1 * T2;
     }
-    else if (ps.light_volume_type == LIGHT_VOLUME_POINT)
-    {
-        float radius = lights.point_lights[light_instance_index].radius ;
-        vec3 light_pos = lights.point_lights[light_instance_index].position.xyz;
-        vec3 light_color = lights.point_lights[light_instance_index].color;
-        vec3 L = light_pos - position_ws;
-        float dist = length(L);
-        L = normalize(L);
-        float atten = atten_test(dist, radius);
-        brdf_data.lightdir_ws = L;
-        brdf_data.halfvec_ws = normalize(brdf_data.lightdir_ws + brdf_data.viewdir_ws);
-        out_color.rgb += brdf_cook_torrance(brdf_data,  light_color) * atten;
-    }
+    // else if (ps.light_volume_type == LIGHT_VOLUME_POINT)
+    // {
+    //     float radius = lights.point_lights[light_instance_index].radius;
+    //     vec3 light_pos = lights.point_lights[light_instance_index].position.xyz;
+    //     vec3 light_color = lights.point_lights[light_instance_index].color;
+    //     vec3 L = light_pos - position_ws;
+    //     float dist = length(L);
+    //     L = normalize(L);
+    //     float atten = atten_sphere_volume(dist, radius);
+    //     brdf_data.lightdir_ws = L;
+    //     brdf_data.halfvec_ws = normalize(brdf_data.lightdir_ws + brdf_data.viewdir_ws);
+
+    //     vec3 cam_forward = normalize(vec3(frame.data.view[0].w, frame.data.view[1].w, frame.data.view[2].w));
+
+    //     out_color.rgb += raymarch_fog_omni_spot_light(frame.data.eye_pos_ws.xyz, position_ws, light_pos, light_color, radius, depth, cam_forward);
+    //     out_color.rgb += brdf_cook_torrance(brdf_data,  light_color * 5) * atten;
+    // }
 
     out_color = vec4(  out_color.rgb, 1.0);
 }

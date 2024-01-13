@@ -1,3 +1,6 @@
+#ifndef LIGHTS_GLSL // LIGHTS_GLSL
+#define LIGHTS_GLSL
+
 struct PointLight
 {
 	vec3 position;
@@ -64,3 +67,12 @@ float attenuation_gltf(float d, float r)
     /* https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_lights_punctual/README.md#range-property */
     return max( 0, min( 1.0 - pow( d / r, 4), 1 ) ) / (d*d);
 }
+
+float atten_sphere_volume(float dist, float radius)
+{
+    float att = clamp(1.0 - dist/radius, 0.0, 1.0);
+    att *= att;
+	return att;
+}
+
+#endif // LIGHTS_GLSL

@@ -34,6 +34,6 @@ void main()
 
     PointLight point_light = data.point_lights[light_instance_index];
 
-    vec3 fog = raymarch_fog_omni_spot_light(frame.data.eye_pos_ws.xyz, fragpos_ws, point_light.position, point_light.color, point_light.radius);
+    // vec3 fog = raymarch_fog_omni_spot_light(frame.data.eye_pos_ws.xyz, fragpos_ws, point_light.position, point_light.color, point_light.radius);
     out_color.rgb += vec3(1,0,0);
 }

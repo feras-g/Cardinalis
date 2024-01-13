@@ -69,7 +69,7 @@ mat4 get_cascade_view_proj(in float depth_vs, in CascadesData data, inout int ca
 
 float get_shadow_factor(sampler2DArray tex_shadow, vec4 position_light_space, int cascade_index)
 {
-	// return lookup_shadow(tex_shadow, position_light_space, vec2(0), cascade_index);
+	//return lookup_shadow(tex_shadow, position_light_space, vec2(0), cascade_index);
 	return filter_shadow_pcf(tex_shadow, position_light_space, cascade_index);
 }
 #endif // SHADOW_MAPPING_GLSL

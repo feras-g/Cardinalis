@@ -41,8 +41,8 @@ struct VolumetricLightRenderer : IRenderer
 			volumetric_sunlight_descriptor_set[i].write_descriptor_combined_image_sampler(1, DeferredRenderer::gbuffer[i].depth_attachment.view, VulkanRendererCommon::get_instance().s_SamplerClampNearest);
 		}
 
-		volumetric_sunlight_pipeline.layout.add_push_constant_range("Light Volume View Proj", { .stageFlags = VK_SHADER_STAGE_VERTEX_BIT, .offset = 0, .size = sizeof(glm::mat4) });
-		volumetric_sunlight_pipeline.layout.add_push_constant_range("Inv Screen Size", { .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .offset = sizeof(glm::mat4), .size = sizeof(float) });
+		volumetric_sunlight_pipeline.layout.add_push_constant_range("Sunlight Push Constants Vertex", { .stageFlags = VK_SHADER_STAGE_VERTEX_BIT, .offset = 0, .size = sizeof(ps_vertex) });
+		volumetric_sunlight_pipeline.layout.add_push_constant_range("Sunlight Push Constants Fragment", { .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .offset = sizeof(ps_vertex), .size = sizeof(sunlight_ps_fragment)});
 
 		volumetric_sunlight_pipeline.layout.create(descriptor_set_layouts);
 		volumetric_sunlight_shader.create("render_light_volume_vert.vert.spv", "volumetric_sunlight_frag.frag.spv");
@@ -107,9 +107,12 @@ struct VolumetricLightRenderer : IRenderer
 		};
 
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, volumetric_sunlight_pipeline.layout, 0, (uint32_t)bound_descriptor_sets.size(), bound_descriptor_sets.data(), 0, nullptr);
-		const glm::mat4 id = glm::identity<glm::mat4>();
-		volumetric_sunlight_pipeline.layout.cmd_push_constants(cmd_buffer, "Light Volume View Proj", &id);
-		volumetric_sunlight_pipeline.layout.cmd_push_constants(cmd_buffer, "Inv Screen Size", &DeferredRenderer::inv_render_size);
+
+		ps_vertex.light_volume_view_proj = mat_identity;
+		volumetric_sunlight_pipeline.layout.cmd_push_constants(cmd_buffer, "Sunlight Push Constants Vertex", &ps_vertex);
+
+		sunlight_ps_fragment.inv_deferred_render_size = DeferredRenderer::inv_render_size;
+		volumetric_sunlight_pipeline.layout.cmd_push_constants(cmd_buffer, "Sunlight Push Constants Fragment", &sunlight_ps_fragment);
 		vkCmdDraw(cmd_buffer, mesh_fs_quad.m_num_vertices, 1, 0, 0);
 	}
 
@@ -146,31 +149,53 @@ struct VolumetricLightRenderer : IRenderer
 		renderpass[frame_index].begin(cmd_buffer, render_size);
 
 		render_volumetric_sunlight(cmd_buffer, frame_index);
-		render_volumetric_point_lights(cmd_buffer, frame_index);
+		//render_volumetric_point_lights(cmd_buffer, frame_index);
 
 		renderpass[frame_index].end(cmd_buffer);
 		volumetric_lighting_attachment[frame_index].transition(cmd_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
 	}
 
-	virtual void show_ui() 
+	/* Combine fog with main scene color */
+	void composite_fog()
+	{
+
+	}
+
+	virtual void show_ui()
 	{
 		if (ImGui::Begin("Volumetric Light Renderer"))
 		{
 			ImGui::Image(ui_texture_ids[ctx.curr_frame_idx], { render_size.x, render_size.y });
+
+			ImGui::SeparatorText("Volumetric Sunlight Parameters");
+			ImGui::SliderInt("Num Raymarch Steps", &sunlight_ps_fragment.scattering_params.num_raymarch_steps, 0, 200);
+			ImGui::SliderFloat("Mie Scattering 'g'", &sunlight_ps_fragment.scattering_params.g_mie, 0.0f, 1.0f);
+			ImGui::SliderFloat("Scattering Amount", &sunlight_ps_fragment.scattering_params.amount, 0.0f, 100.0f);
 		}
 		ImGui::End();
 	}
 
 	virtual bool reload_pipeline() { return true; }
 
-	struct VolumetricSunlightData
+	struct ScatteringParameters
 	{
-		directional_light dir_light;
-		float inv_screen_size;
-	} volumetric_sunlight_data;
+		float g_mie  = 0.5f;				/* Float value between 0 and 1 controlling how much light will scatter in the forward direction. (Henyey-Greenstein phase function) */
+		float amount = 1.0f;				/* Float value controlling how much volumetric light is visible. */
+		int num_raymarch_steps = 25;
+	};
+
+	struct PushConstantsVertexShader
+	{
+		glm::mat4 light_volume_view_proj;
+	} ps_vertex;
+
+	struct Sunlight_PushConstantsFragmentShader
+	{
+		float inv_deferred_render_size;
+		ScatteringParameters scattering_params;
+	} sunlight_ps_fragment;
 
 	glm::vec2 render_size;
-
 
 	vk::descriptor_set_layout volumetric_descriptor_set_layout;
 
@@ -184,7 +209,7 @@ struct VolumetricLightRenderer : IRenderer
 	std::array<vk::renderpass_dynamic, NUM_FRAMES> renderpass;
 	VertexFragmentShader shader_volumetric_omnilight;
 
-
+	static constexpr glm::mat4 mat_identity = glm::identity<glm::mat4>();
 	VertexFragmentShader volumetric_point_light_shader;
 	Pipeline volumetric_point_light_pipeline;
 	std::array<vk::descriptor_set, NUM_FRAMES> volumetric_point_light_descriptor_set;
