@@ -42,7 +42,7 @@ void SampleProject::init()
 	forward_renderer.p_debug_line_renderer = &debug_line_renderer;
 	forward_renderer.init();
 
-	ibl_renderer.init("DF360_005_Reloaded_4k_sRGB.hdr");
+	ibl_renderer.init("pisa.hdr");
 	skybox_renderer.init();
 	deferred_renderer.init();
 	m_camera.update_aspect_ratio(1.0f);
@@ -151,63 +151,13 @@ void SampleProject::update_gpu_buffers()
 
 void SampleProject::create_scene()
 {
-	//VulkanMesh mesh_1, mesh_2, mesh_test_roughness; 
-	//mesh_test_roughness.create_from_file("test/metallic_roughness_test/scene.gltf");
-
-	//mesh_1.create_from_file("scenes/shield/scene.gltf");
-
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_1, "mesh_1", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.1, 0.1f, 0.1f } }));
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_2, "mesh_2", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {   1.0f, 1.0f, 1.0f  } }));
-
-	//VulkanMesh mesh_sponza, mesh_ivy, mesh_curtains;
-	//mesh_sponza.create_from_file("scenes/intel_sponza/main/scene.gltf");
-	//mesh_ivy.create_from_file("scenes/intel_sponza/ivy/scene.gltf");
-	//mesh_curtains.create_from_file("scenes/intel_sponza/curtains/scene.gltf");
-
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_sponza, "mesh_sponza", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_ivy, "mesh_ivy", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(mesh_curtains, "mesh_curtains", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f  } }));
-
-	//VulkanMesh tree;
-	//tree.create_from_file("scenes/tree/scene.gltf");
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(tree, "Tree", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }));
-
-
 	VulkanMesh plane;
 	plane.create_from_file("basic/unit_plane.glb");
 	drawable_list.push_back(ObjectManager::get_instance().add_mesh(plane, "Floor", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  25, 25, 25 } }));
 
-	//VulkanMesh sponza;
-	//sponza.create_from_file("scenes/sponza/scene.gltf");
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(sponza, "Sponza", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }, true));
-
-	VulkanMesh bistro;
-	bistro.create_from_file("scenes/bistro_lit/test/BistroExterior.gltf");
-	drawable_list.push_back(ObjectManager::get_instance().add_mesh(bistro, "Bistro", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }));
-
-	//VulkanMesh powerplant;
-	//powerplant.create_from_file("scenes/powerplant/scene.gltf");
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(powerplant, "Powerplant", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }));
-
-	//VulkanMesh temple;
-	//temple.create_from_file("scenes/temple/gltf/scene.gltf");
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(temple, "Temple", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  0.1,0.1,0.1 } }));
-
-	//VulkanMesh test_khr_lights_punctual;
-	//test_khr_lights_punctual.create_from_file("test/khr_lights_punctual/scene.gltf");
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(test_khr_lights_punctual, "test_khr_lights_punctual", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }));
-
-	VulkanMesh test_metallic_roughness;
-	test_metallic_roughness.create_from_file("test/metallic_roughness_test/scene.gltf");
-	drawable_list.push_back(ObjectManager::get_instance().add_mesh(test_metallic_roughness, "mesh_test_roughness", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f } }));
-
-	//VulkanMesh test_normal_tangent;
-	//test_normal_tangent.create_from_file("test/normal_tangent_test/scene.gltf");
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(test_normal_tangent, "mesh_test_normal_tangent", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1.0f, 1.0f, 1.0f } }));
-
-	//VulkanMesh helmet;
-	//helmet.create_from_file("scenes/helmet/scene.gltf");
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(helmet, "Helmet", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }));
+	VulkanMesh sponza;
+	sponza.create_from_file("scenes/sponza/scene.gltf");
+	drawable_list.push_back(ObjectManager::get_instance().add_mesh(sponza, "Sponza", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }, true));
 }
 
 void SampleProject::update_instances_ssbo()

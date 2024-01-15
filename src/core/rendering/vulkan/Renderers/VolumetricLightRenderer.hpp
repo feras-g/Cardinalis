@@ -42,7 +42,7 @@ struct VolumetricLightRenderer : IRenderer
 		}
 
 		volumetric_sunlight_pipeline.layout.add_push_constant_range("Sunlight Push Constants Vertex", { .stageFlags = VK_SHADER_STAGE_VERTEX_BIT, .offset = 0, .size = sizeof(ps_vertex) });
-		volumetric_sunlight_pipeline.layout.add_push_constant_range("Sunlight Push Constants Fragment", { .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .offset = sizeof(ps_vertex), .size = sizeof(sunlight_ps_fragment)});
+		volumetric_sunlight_pipeline.layout.add_push_constant_range("Sunlight Push Constants Fragment", { .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .offset = sizeof(ps_vertex), .size = sizeof(ps_fragment)});
 
 		volumetric_sunlight_pipeline.layout.create(descriptor_set_layouts);
 		volumetric_sunlight_shader.create("render_light_volume_vert.vert.spv", "volumetric_sunlight_frag.frag.spv");
@@ -80,7 +80,9 @@ struct VolumetricLightRenderer : IRenderer
 
 	virtual void create_renderpass()
 	{
-		render_size = glm::vec2(DeferredRenderer::render_size * 0.5f);
+		// We render the volumetric light to a fraction of the full resolution
+		ps_fragment.downsample_factor = 2;
+		render_size = glm::vec2(DeferredRenderer::render_size / ps_fragment.downsample_factor);
 
 		for (int i = 0; i < NUM_FRAMES; i++)
 		{
@@ -111,8 +113,8 @@ struct VolumetricLightRenderer : IRenderer
 		ps_vertex.light_volume_view_proj = mat_identity;
 		volumetric_sunlight_pipeline.layout.cmd_push_constants(cmd_buffer, "Sunlight Push Constants Vertex", &ps_vertex);
 
-		sunlight_ps_fragment.inv_deferred_render_size = DeferredRenderer::inv_render_size;
-		volumetric_sunlight_pipeline.layout.cmd_push_constants(cmd_buffer, "Sunlight Push Constants Fragment", &sunlight_ps_fragment);
+		ps_fragment.inv_deferred_render_size = DeferredRenderer::inv_render_size;
+		volumetric_sunlight_pipeline.layout.cmd_push_constants(cmd_buffer, "Sunlight Push Constants Fragment", &ps_fragment);
 		vkCmdDraw(cmd_buffer, mesh_fs_quad.m_num_vertices, 1, 0, 0);
 	}
 
@@ -168,9 +170,9 @@ struct VolumetricLightRenderer : IRenderer
 			ImGui::Image(ui_texture_ids[ctx.curr_frame_idx], { render_size.x, render_size.y });
 
 			ImGui::SeparatorText("Volumetric Sunlight Parameters");
-			ImGui::SliderInt("Num Raymarch Steps", &sunlight_ps_fragment.scattering_params.num_raymarch_steps, 0, 200);
-			ImGui::SliderFloat("Mie Scattering 'g'", &sunlight_ps_fragment.scattering_params.g_mie, 0.0f, 1.0f);
-			ImGui::SliderFloat("Scattering Amount", &sunlight_ps_fragment.scattering_params.amount, 0.0f, 100.0f);
+			ImGui::SliderInt("Num Raymarch Steps", &ps_fragment.scattering_params.num_raymarch_steps, 0, 200);
+			ImGui::SliderFloat("Mie Scattering 'g'", &ps_fragment.scattering_params.g_mie, 0.0f, 1.0f);
+			ImGui::SliderFloat("Scattering Amount", &ps_fragment.scattering_params.amount, 0.0f, 100.0f);
 		}
 		ImGui::End();
 	}
@@ -191,9 +193,10 @@ struct VolumetricLightRenderer : IRenderer
 
 	struct Sunlight_PushConstantsFragmentShader
 	{
+		float downsample_factor;
 		float inv_deferred_render_size;
 		ScatteringParameters scattering_params;
-	} sunlight_ps_fragment;
+	} ps_fragment;
 
 	glm::vec2 render_size;
 
