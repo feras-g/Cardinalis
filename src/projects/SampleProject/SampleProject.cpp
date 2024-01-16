@@ -42,13 +42,16 @@ void SampleProject::init()
 	forward_renderer.p_debug_line_renderer = &debug_line_renderer;
 	forward_renderer.init();
 
+	volumetric_light_renderer.create_renderpass();
+	volumetric_light_renderer.is_initialized = true;
 	ibl_renderer.init("pisa.hdr");
-	skybox_renderer.init();
 	deferred_renderer.init();
+	volumetric_light_renderer.create_pipeline();
+
+	skybox_renderer.init();
 	m_camera.update_aspect_ratio(1.0f);
 	skybox_renderer.init(cubemap_renderer.cubemap_attachment);
 	create_scene();
-	volumetric_light_renderer.init();
 	lights.write_ssbo();
 }
 
@@ -58,7 +61,7 @@ void SampleProject::compose_gui()
 	m_gui.begin();
 	m_gui.show_toolbar();
 	m_gui.show_hierarchy(object_manager);
-	m_gui.show_draw_metrics();
+	//m_gui.show_draw_metrics();
 	m_gui.show_shader_library();
 	m_gui.show_viewport_window(deferred_renderer.ui_texture_ids[ctx.curr_frame_idx].light_accumulation, m_camera, object_manager);
 	m_camera.show_ui();
@@ -137,8 +140,13 @@ void SampleProject::render()
 	update_gpu_buffers();
 
 	shadow_renderer.render(cmd_buffer, drawable_list, m_camera, VulkanRendererCommon::get_instance().m_framedata[ctx.curr_frame_idx], lights.dir_light.dir);
-	deferred_renderer.render(cmd_buffer, drawable_list);
-	volumetric_light_renderer.render(cmd_buffer);
+
+	deferred_renderer.render_geometry_pass(cmd_buffer, drawable_list);
+
+	volumetric_light_renderer.render(cmd_buffer);	// Volumetric renderer needs depth buffer written by geometry pass
+
+	deferred_renderer.render_lighting_pass(cmd_buffer);
+
 	skybox_renderer.render(cmd_buffer);
 	m_gui.render(cmd_buffer);
 }
@@ -151,9 +159,9 @@ void SampleProject::update_gpu_buffers()
 
 void SampleProject::create_scene()
 {
-	VulkanMesh plane;
-	plane.create_from_file("basic/unit_plane.glb");
-	drawable_list.push_back(ObjectManager::get_instance().add_mesh(plane, "Floor", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  25, 25, 25 } }));
+	//VulkanMesh plane;
+	//plane.create_from_file("basic/unit_plane.glb");
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(plane, "Floor", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  25, 25, 25 } }));
 
 	VulkanMesh sponza;
 	sponza.create_from_file("scenes/sponza/scene.gltf");
