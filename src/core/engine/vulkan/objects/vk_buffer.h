@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vulkan/vulkan.hpp"
+#include "core/engine/vulkan/vk_common.h"
 
 namespace vk
 {
@@ -33,6 +34,8 @@ namespace vk
 		const char* m_debug_name;
 		size_t m_size_bytes = 0;
 		void* data = nullptr;
+
+		bool is_mapped = false;
 	};
 }
 

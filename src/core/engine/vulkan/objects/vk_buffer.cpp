@@ -30,21 +30,34 @@ namespace vk
 	{
 		assert(m_vk_device_memory);
 		void* p_data = nullptr;
-		vkMapMemory(device, m_vk_device_memory, offset, size, 0, &p_data);
+
+		if (size > 0)
+		{
+			vkMapMemory(device, m_vk_device_memory, offset, size, 0, &p_data);
+			is_mapped = true;
+		}
+
 		return p_data;
 	}
 
 	void vk::buffer::unmap(VkDevice device)
 	{
 		assert(m_vk_device_memory);
-		vkUnmapMemory(device, m_vk_device_memory);
+		if (is_mapped)
+		{
+			vkUnmapMemory(device, m_vk_device_memory);
+			is_mapped = false;
+		}
 	}
 
 	void vk::buffer::upload(VkDevice device, const void* data, size_t offset, size_t size)
 	{
 		void* p_data = map(device, offset, size);
-		memcpy(p_data, data, size);
-		unmap(device);
+		if (nullptr != p_data)
+		{
+			memcpy(p_data, data, size);
+			unmap(device);
+		}
 	}
 
 	void vk::buffer::create_vk_buffer(size_t size)

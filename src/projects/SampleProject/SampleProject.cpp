@@ -165,10 +165,10 @@ void SampleProject::update_instances_ssbo()
 	/* Update CPU scene data */
 	static ObjectManager& object_manager = ObjectManager::get_instance();
 
-	for (size_t i = 0; i < object_manager.m_meshes.size(); i++)
-	{
-		object_manager.update_instances_ssbo(object_manager.m_mesh_names[i]);
-	}
+	//for (size_t i = 0; i < object_manager.m_meshes.size(); i++)
+	//{
+	//	object_manager.update_instances_ssbo(object_manager.m_mesh_names[i]);
+	//}
 }
 
 void SampleProject::exit()

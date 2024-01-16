@@ -66,6 +66,7 @@ struct IBLRenderer
 
 		VkPipelineLayout empty_layout = {};
 		VkPipelineLayoutCreateInfo empty_info = {};
+		empty_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		vkCreatePipelineLayout(ctx.device, &empty_info, nullptr, &empty_layout);
 		shader_brdf_integration.create("fullscreen_quad_vert.vert.spv", "integrate_brdf_frag.frag.spv");
 		pipeline_brdf_integration.create_graphics(shader_brdf_integration, std::span<VkFormat>(&brdf_integration_map_format, 1), VK_FORMAT_UNDEFINED, Pipeline::Flags::NONE, empty_layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);

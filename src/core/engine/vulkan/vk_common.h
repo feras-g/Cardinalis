@@ -42,3 +42,9 @@ inline const char* vk_object_to_string(VkPhysicalDeviceType input_value)
 #endif
 
 static constexpr uint32_t vk_api_version = VK_MAKE_VERSION(1, 3, 1);
+
+static inline size_t round_to(size_t value, size_t alignment)
+{
+	size_t val = (value + alignment);
+	return val - (val % alignment);
+}

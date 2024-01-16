@@ -31,13 +31,6 @@ uint32_t ObjectManager::add_material(const Material& material)
 
 int ObjectManager::add_texture(const Texture2D& texture)
 {
-	auto ite = m_texture_id_from_name.find(texture.info.debugName);
-
-	if (ite != m_texture_id_from_name.end())
-	{
-		return ite->second;
-	}
-
 	int texture_idx = (int)m_textures.size();
 	m_textures.push_back(texture);
 	m_texture_id_from_name.insert({ texture.info.debugName, texture_idx });
@@ -81,8 +74,8 @@ size_t ObjectManager::add_mesh(const VulkanMesh& mesh, std::string_view mesh_nam
 	descriptor_set.create("Mesh Descriptor Set");
 	descriptor_set.write_descriptor_storage_buffer(0, mesh.m_vertex_index_buffer, 0, mesh.m_vertex_buf_size_bytes);
 	descriptor_set.write_descriptor_storage_buffer(1, mesh.m_vertex_index_buffer, mesh.m_vertex_buf_size_bytes, mesh.m_index_buf_size_bytes);
-	descriptor_set.write_descriptor_storage_buffer(2, m_mesh_instance_data_ssbo[mesh_idx], 0, max_instance_count * sizeof(GPUInstanceData));
-	descriptor_set.write_descriptor_storage_buffer(3, m_materials_ssbo, mesh.geometry_data.primitives[0].material_id * sizeof(Material), sizeof(Material));
+	descriptor_set.write_descriptor_storage_buffer(2, m_mesh_instance_data_ssbo[mesh_idx], 0, VK_WHOLE_SIZE);
+	descriptor_set.write_descriptor_storage_buffer(3, m_materials_ssbo, mesh_idx * sizeof(Material), sizeof(Material));
 
 	m_descriptor_sets.push_back(descriptor_set);
 

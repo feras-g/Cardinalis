@@ -20,15 +20,22 @@ void Texture2D::init(VkFormat format, glm::vec2 extent, uint32_t layers, bool ca
     init(format, uint32_t(extent.x), uint32_t(extent.y), layers, calc_mip, debug_name);
 }
 
-void Texture2D::init(VkFormat format, uint32_t width, uint32_t height, uint32_t layers, bool calc_mip, std::string_view debug_name)
+void Texture2D::init(VkFormat format, uint32_t width, uint32_t height, uint32_t layers, bool enable_mipmap, std::string_view debug_name)
 {
     info.imageFormat = format;
 	info.width  = width;
 	info.height = height;
-	info.mipLevels = calc_mip ? calc_mip_levels(width, height) : 1;
     info.layerCount = layers;
+    info.mipLevels = 1;
 	info.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     info.debugName = debug_name.data();
+
+    if (enable_mipmap)
+    {
+        info.mipLevels = calc_mip_levels(width, height);
+        info.mipImageLayouts.resize(info.mipLevels);
+        std::fill(info.mipImageLayouts.begin(), info.mipImageLayouts.end(), VK_IMAGE_LAYOUT_UNDEFINED);
+    }
 
     initialized = true;
 }
@@ -65,11 +72,13 @@ void Texture2D::create_from_data(
 
     upload_data(ctx.device, data, data_size_bytes);
 
-	transition_immediate(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
-
     if (info.mipLevels > 1)
     {
         generate_mipmaps();
+    }
+    else
+    {
+        transition_immediate(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
     }
 
 }
@@ -242,16 +251,25 @@ void Texture::generate_mipmaps()
         /* Transition source mip-level */
         uint32_t src_mip_level = mip_level - 1;
         uint32_t dst_mip_level = mip_level;
+
         VkImageSubresourceRange src_subresouce_range =
         {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .baseMipLevel = mip_level - 1,
+            .baseMipLevel = src_mip_level,
             .levelCount = 1,
             .baseArrayLayer = 0,
             .layerCount = 1,
         };
 
-        transition(cmd_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_MEMORY_READ_BIT, &src_subresouce_range);
+        VkImageSubresourceRange dst_subresouce_range =
+        {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = dst_mip_level,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        };
+
 
         /* Blit from mip level N to N-1 */
         VkImageBlit blit =
@@ -283,6 +301,9 @@ void Texture::generate_mipmaps()
                 { mip_width > 1 ? mip_width / 2 : 1, mip_height > 1 ? mip_height / 2 : 1, 1 }
             }
         };
+
+        transition(cmd_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_MEMORY_READ_BIT, &src_subresouce_range);
+
         vkCmdBlitImage(cmd_buffer,
             this->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,  /* source */
             this->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,  /* destination */
@@ -313,15 +334,31 @@ void Texture::generate_mipmaps()
 // Helper to transition images and remember the current layout
 void Texture::transition(VkCommandBuffer cmdBuffer, VkImageLayout new_layout, VkAccessFlags dst_access_mask, VkImageSubresourceRange* subresourceRange)
 {
-	//if (new_layout == info.imageLayout)
-	//	return;
+    VkImageLayout old_layout;
+
+    bool transition_specific_mip = false;
+
+    if (nullptr != subresourceRange)
+    {
+        transition_specific_mip = true;
+        old_layout = info.mipImageLayouts[subresourceRange->baseMipLevel];
+    }
+    else
+    {
+        old_layout = info.imageLayout;
+    }
+
+    if (new_layout == old_layout)
+    {
+	    return;
+    }
     
     VkImageMemoryBarrier barrier =
     {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-		.srcAccessMask = get_src_access_mask(info.imageLayout),
+		.srcAccessMask = get_src_access_mask(old_layout),
 		.dstAccessMask = dst_access_mask,
-        .oldLayout = info.imageLayout,
+        .oldLayout = old_layout,
         .newLayout = new_layout,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -356,8 +393,21 @@ void Texture::transition(VkCommandBuffer cmdBuffer, VkImageLayout new_layout, Vk
 
     vkCmdPipelineBarrier(cmdBuffer, srcStageMask, dstStageMask, 0, 0, NULL, 0, NULL, 1u, &barrier);
 
-    info.imageLayout = new_layout;
-
+    if (transition_specific_mip)
+    {
+        for (uint32_t i = 0; i < subresourceRange->levelCount; i++)
+        {
+            info.mipImageLayouts[subresourceRange->baseMipLevel + i] = new_layout;
+        }
+    }
+    else
+    {
+        info.imageLayout = new_layout;
+        for (size_t i = 0; i < info.mipImageLayouts.size(); i++)
+        {
+            info.mipImageLayouts[i] = new_layout;
+        }
+    }
 }
 
 /* The image layout transition is executed immediately */
