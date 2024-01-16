@@ -7,7 +7,11 @@ Physically Based Direct Lighting (Microfacet model, Cook-Torrance) <br/>
 Volumetric Fog (Sunlight)
 
 ### Gallery
-#### Bistro scene renderer with : deferred shading, physically based direct lighting, image based lighting, cascaded shadow mapping, volumetric fog (sunlight, point lights)
+#### Bistro scene 
+* Deferred shading,
+* Physically based direct lighting, image based lighting
+* Cascaded shadow mapping, volumetric fog (sunlight, point lights)
+
 <img src="screenshots/bistro_volumetric_point_directional.png" width="1024">
 
 #### Sunlight Volumetric Lighting with previsualization
