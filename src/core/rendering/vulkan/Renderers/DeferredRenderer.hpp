@@ -118,6 +118,7 @@ struct DeferredRenderer : public IRenderer
 
 		geometry_pass_pipeline.create_graphics(shader_geometry_pass, attachment_formats, depth_format, flags, geometry_pass_pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
 	}
+
 	void create_lighting_renderpass()
 	{
 		for (int i = 0; i < NUM_FRAMES; i++)
@@ -127,71 +128,7 @@ struct DeferredRenderer : public IRenderer
 		}
 	}
 
-	void create_pipeline_lighting_pass()
-	{
-		VkFormat attachment_formats[]
-		{
-			light_accumulation_format
-		};
-
-		VkSampler& sampler_clamp_nearest = VulkanRendererCommon::get_instance().s_SamplerClampNearest;
-		VkSampler& sampler_repeat_linear = VulkanRendererCommon::get_instance().s_SamplerRepeatLinear;
-		VkSampler& sampler_clamp_linear = VulkanRendererCommon::get_instance().s_SamplerClampLinear;
-		VkSampler& sampler_repeat_nearest = VulkanRendererCommon::get_instance().s_SamplerRepeatNearest;
-
-		sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "GBuffer Base Color");
-		sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(1, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "GBuffer Normal");
-		sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(2, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "GBuffer Metalness Roughness");
-		sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(3, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "GBuffer Depth");
-
-		/* Add images for image-based lighting */
-		if (IBLRenderer::is_initialized)
-		{
-			// Only use a nearest sampler to sample these image, linear introduces artifacts probably due to averaging texels
-			sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(4, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "Pre-filtered Env Map Diffuse");
-			sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(5, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "Pre-filtered Env Map Specular");
-			sampled_images_descriptor_set_layout.add_combined_image_sampler_binding(6, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "BRDF Integration Map");
-		}
-
-		sampled_images_descriptor_set_layout.create("GBuffer Descriptor Layout");
-
-		for (int i = 0; i < NUM_FRAMES; i++)
-		{
-			sampled_images_descriptor_set[i].assign_layout(sampled_images_descriptor_set_layout);
-			sampled_images_descriptor_set[i].create("GBuffer Descriptor Set");
-			sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(0, gbuffer[i].base_color_attachment.view, sampler_clamp_nearest);
-			sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(1, gbuffer[i].normal_attachment.view, sampler_clamp_nearest);
-			sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(2, gbuffer[i].metalness_roughness_attachment.view, sampler_clamp_nearest);
-			sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(3, gbuffer[i].depth_attachment.view, sampler_clamp_nearest);
-
-			if (IBLRenderer::is_initialized)
-			{
-				// Only use a nearest sampler to sample these image, linear introduces artifacts probably due to averaging texels
-				sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(4, IBLRenderer::prefiltered_diffuse_env_map.view, sampler_repeat_nearest);
-				sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(5, IBLRenderer::prefiltered_specular_env_map.view, sampler_repeat_nearest);
-				sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(6, IBLRenderer::brdf_integration_map.view, sampler_repeat_nearest);
-			}
-		}
-
-		VkDescriptorSetLayout descriptor_set_layouts[] =
-		{
-			VulkanRendererCommon::get_instance().m_framedata_desc_set_layout,
-			sampled_images_descriptor_set_layout,
-			ObjectManager::get_instance().mesh_descriptor_set_layout,
-			light_manager::descriptor_set_layout,
-			ShadowRenderer::descriptor_set_layout,
-		};
-
-
-		light_volume_additional_data.inv_screen_size = 1.0 / render_size;
-
-		lighting_pass_pipeline.layout.add_push_constant_range("Light Volume Pass View Proj", { .stageFlags = VK_SHADER_STAGE_VERTEX_BIT, .offset = 0, .size = sizeof(glm::mat4) });
-		lighting_pass_pipeline.layout.add_push_constant_range("Light Volume Pass Additional Data", { .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .offset = sizeof(glm::mat4), .size = sizeof(light_volume_additional_data)});
-
-		lighting_pass_pipeline.layout.create(descriptor_set_layouts);
-		shader_lighting_pass.create("render_light_volume_vert.vert.spv", "deferred_lighting_pass_frag.frag.spv");
-		lighting_pass_pipeline.create_graphics(shader_lighting_pass, attachment_formats, {}, Pipeline::Flags::ENABLE_ALPHA_BLENDING, lighting_pass_pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE, 0, VK_POLYGON_MODE_FILL);
-	}
+	void create_pipeline_lighting_pass();
 
 	/* Render pass writing geometry information to G-Buffers */
 	void render_geometry_pass(VkCommandBuffer cmd_buffer, std::span<size_t> mesh_list)
@@ -261,7 +198,7 @@ struct DeferredRenderer : public IRenderer
 		glm::vec2 render_size = { gbuffer[ctx.curr_frame_idx].light_accumulation_attachment.info.width, gbuffer[ctx.curr_frame_idx].light_accumulation_attachment.info.height };
 
 		// Invert when drawing to swapchain
-		set_viewport_scissor(cmd_buffer, render_size.x, render_size.y, true);
+		set_viewport_scissor(cmd_buffer, (uint32_t)render_size.x, (uint32_t)render_size.y, true);
 
 		VkDescriptorSet bound_descriptor_sets[]
 		{
@@ -290,7 +227,7 @@ struct DeferredRenderer : public IRenderer
 			lighting_pass_pipeline.layout.cmd_push_constants(cmd_buffer, "Light Volume Pass View Proj", &identity);
 			lighting_pass_pipeline.layout.cmd_push_constants(cmd_buffer, "Light Volume Pass Additional Data", &light_volume_additional_data);
 			
-			vkCmdDraw(cmd_buffer, mesh_fs_quad.m_num_vertices, 1, 0, 0);
+			vkCmdDraw(cmd_buffer, (uint32_t)mesh_fs_quad.m_num_vertices, 1, 0, 0);
 		}
 
 		// Draw point light volumes
@@ -303,7 +240,7 @@ struct DeferredRenderer : public IRenderer
 			uint32_t instance_count = (uint32_t)object_manager.m_mesh_instance_data[light_manager::point_light_volume_mesh_id].size();
 			lighting_pass_pipeline.layout.cmd_push_constants(cmd_buffer, "Light Volume Pass View Proj", &view_proj);
 			lighting_pass_pipeline.layout.cmd_push_constants(cmd_buffer, "Light Volume Pass Additional Data", &light_volume_additional_data);
-			vkCmdDraw(cmd_buffer, mesh_sphere.m_num_vertices, instance_count, 0, 0);
+			vkCmdDraw(cmd_buffer, (uint32_t)mesh_sphere.m_num_vertices, instance_count, 0, 0);
 		}
 		renderpass_lighting[ctx.curr_frame_idx].end(cmd_buffer);
 
@@ -322,8 +259,6 @@ struct DeferredRenderer : public IRenderer
 
 		render_geometry_pass(cmd_buffer, mesh_list);
 		render_lighting_pass(cmd_buffer);
-
-		render_ok = true;
 	}
 
 	void update_shader_toggles()
@@ -363,52 +298,47 @@ struct DeferredRenderer : public IRenderer
 
 	void show_ui(camera camera)
 	{
-		if (render_ok)
+		const ImVec2 main_img_size = { render_size, render_size };
+		const ImVec2 thumb_img_size = { 256, 256 };
+
+		static ImTextureID curr_main_image = ui_texture_ids[ctx.curr_frame_idx].light_accumulation;
+
+		if (ImGui::Begin("GBuffer View"))
 		{
-			const ImVec2 main_img_size  = { render_size, render_size };
-			const ImVec2 thumb_img_size = { 256, 256 };
+			ImGui::Image(ui_texture_ids[ctx.curr_frame_idx].base_color, thumb_img_size);
+			ImGui::SameLine();
+			ImGui::Image(ui_texture_ids[ctx.curr_frame_idx].normal, thumb_img_size);
+			ImGui::SameLine();
+			ImGui::Image(ui_texture_ids[ctx.curr_frame_idx].metalness_roughness, thumb_img_size);
+			ImGui::SameLine();
+			ImGui::Image(ui_texture_ids[ctx.curr_frame_idx].light_accumulation, { thumb_img_size.x, thumb_img_size.y });
+			ImGui::SameLine();
+			ImGui::Image(ui_texture_ids[ctx.curr_frame_idx].depth, { thumb_img_size.x, thumb_img_size.y });
 
-			static ImTextureID curr_main_image = ui_texture_ids[ctx.curr_frame_idx].light_accumulation;
-
-			if (ImGui::Begin("GBuffer View"))
-			{
-				ImGui::Image(ui_texture_ids[ctx.curr_frame_idx].base_color, thumb_img_size);
-				ImGui::SameLine();
-				ImGui::Image(ui_texture_ids[ctx.curr_frame_idx].normal, thumb_img_size);
-				ImGui::SameLine();
-				ImGui::Image(ui_texture_ids[ctx.curr_frame_idx].metalness_roughness, thumb_img_size);
-				ImGui::SameLine();
-				ImGui::Image(ui_texture_ids[ctx.curr_frame_idx].light_accumulation, { thumb_img_size.x, thumb_img_size.y });
-				ImGui::SameLine();
-				ImGui::Image(ui_texture_ids[ctx.curr_frame_idx].depth, { thumb_img_size.x, thumb_img_size.y });
-
-			}
-			ImGui::End();
-
-			if (ImGui::Begin("Deferred Renderer Toolbar"))
-			{
-				static bool reload_success = true;
-				if (ImGui::Button("Reload Shaders"))
-				{
-					reload_success = reload_pipeline();
-				}
-
-				if(reload_success)
-				{
-					ImGui::TextColored(ImVec4(0, 1, 0, 1), "Pipeline reload success");
-				}
-				else
-				{
-					ImGui::TextColored(ImVec4(1, 0, 0, 1), "Pipeline reload fail.");
-				}
-			}
-
-			cubemap_renderer.show_ui();
-
-			
-
-			ImGui::End();
 		}
+		ImGui::End();
+
+		if (ImGui::Begin("Deferred Renderer Toolbar"))
+		{
+			static bool reload_success = true;
+			if (ImGui::Button("Reload Shaders"))
+			{
+				reload_success = reload_pipeline();
+			}
+
+			if (reload_success)
+			{
+				ImGui::TextColored(ImVec4(0, 1, 0, 1), "Pipeline reload success");
+			}
+			else
+			{
+				ImGui::TextColored(ImVec4(1, 0, 0, 1), "Pipeline reload fail.");
+			}
+		}
+
+		cubemap_renderer.show_ui();
+
+		ImGui::End();
 	}
 
 	bool reload_pipeline() override

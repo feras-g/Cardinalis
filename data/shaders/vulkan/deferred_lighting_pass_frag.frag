@@ -28,6 +28,7 @@ layout(set = 1, binding = 3) uniform sampler2D gbuffer_depth;
 layout(set = 1, binding = 4) uniform sampler2D prefiltered_env_map_diffuse;
 layout(set = 1, binding = 5) uniform sampler2D prefiltered_env_map_specular;
 layout(set = 1, binding = 6) uniform sampler2D ibl_brdf_integration_map;
+layout(set = 1, binding = 7) uniform sampler2D volumetric_lighting;
 
 /* Direct Lighting */
 layout(set = 3, binding = 0) readonly buffer DirectLightingDataBlock
@@ -123,7 +124,10 @@ void main()
         */
         out_color.rgb += brdf_cook_torrance(brdf_data, sun_color) * shadow_factor;
 
-        vec3 fog = raymarch_fog_sunlight(tex_shadow_maps, cascade_index, frame.data.eye_pos_ws.xyz, position_ws, shadow_view_proj, brdf_data.lightdir_ws, sun_color);
+        // vec3 fog = raymarch_fog_sunlight(tex_shadow_maps, cascade_index, frame.data.eye_pos_ws.xyz, position_ws, shadow_view_proj, brdf_data.lightdir_ws, sun_color, frame.data.time);
+
+        vec3 fog = texture(volumetric_lighting, fragcoord).rgb;
+
         out_color.rgb += fog;
         
         /*
@@ -134,7 +138,7 @@ void main()
         /* Diffuse */
         vec3 diffuse_reflectance = brdf_data.albedo * (1.0 - metallic);
         vec2 diffuse_sample_uv = SampleSphericalMap_ZXY(brdf_data.normal_ws);
-        // out_color.rgb += diffuse_reflectance * texture(prefiltered_env_map_diffuse, diffuse_sample_uv).rgb;
+        out_color.rgb += diffuse_reflectance * texture(prefiltered_env_map_diffuse, diffuse_sample_uv).rgb;
         
         /* Specular */
         vec3 R = reflect(-brdf_data.viewdir_ws, brdf_data.normal_ws);
@@ -144,25 +148,25 @@ void main()
         vec2 brdf = texture(ibl_brdf_integration_map, vec2(NoV, 1-roughness)).xy;
         vec3 F0 = mix(vec3(0.04), brdf_data.albedo, metallic);
         vec3 T2 = (F0 * brdf.x + brdf.y);
-        // out_color.rgb += T1 * T2;
+        out_color.rgb += T1 * T2;
     }
-    // else if (ps.light_volume_type == LIGHT_VOLUME_POINT)
-    // {
-    //     float radius = lights.point_lights[light_instance_index].radius;
-    //     vec3 light_pos = lights.point_lights[light_instance_index].position.xyz;
-    //     vec3 light_color = lights.point_lights[light_instance_index].color;
-    //     vec3 L = light_pos - position_ws;
-    //     float dist = length(L);
-    //     L = normalize(L);
-    //     float atten = atten_sphere_volume(dist, radius);
-    //     brdf_data.lightdir_ws = L;
-    //     brdf_data.halfvec_ws = normalize(brdf_data.lightdir_ws + brdf_data.viewdir_ws);
+    else if (ps.light_volume_type == LIGHT_VOLUME_POINT)
+    {
+        float radius = lights.point_lights[light_instance_index].radius;
+        vec3 light_pos = lights.point_lights[light_instance_index].position.xyz;
+        vec3 light_color = lights.point_lights[light_instance_index].color;
+        vec3 L = light_pos - position_ws;
+        float dist = length(L);
+        L = normalize(L);
+        float atten = atten_sphere_volume(dist, radius);
+        brdf_data.lightdir_ws = L;
+        brdf_data.halfvec_ws = normalize(brdf_data.lightdir_ws + brdf_data.viewdir_ws);
 
-    //     vec3 cam_forward = normalize(vec3(frame.data.view[0].w, frame.data.view[1].w, frame.data.view[2].w));
+        vec3 cam_forward = normalize(vec3(frame.data.view[0].w, frame.data.view[1].w, frame.data.view[2].w));
 
-    //     out_color.rgb += raymarch_fog_omni_spot_light(frame.data.eye_pos_ws.xyz, position_ws, light_pos, light_color, radius, depth, cam_forward);
-    //     out_color.rgb += brdf_cook_torrance(brdf_data,  light_color * 5) * atten;
-    // }
+        out_color.rgb += raymarch_fog_omni_spot_light(frame.data.eye_pos_ws.xyz, position_ws, light_pos, light_color, radius, depth, cam_forward);
+        out_color.rgb += brdf_cook_torrance(brdf_data,  light_color * 5) * atten;
+    }
 
     out_color = vec4(  out_color.rgb, 1.0);
 }

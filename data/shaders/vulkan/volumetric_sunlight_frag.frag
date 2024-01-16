@@ -22,6 +22,7 @@ layout(push_constant) uniform PushConstantBlock
 {
     layout(offset=64)
     //Sunlight_PushConstantsFragment
+    float downsample_factor;
     float inv_deferred_render_size;
     ScatteringParameters scattering_params; 
 } ps;
@@ -68,9 +69,12 @@ void main()
 {
     out_color = vec4(0,0,0,1);
 
-    vec2 fragcoord = gl_FragCoord.xy * vec2(ps.inv_deferred_render_size);
-    float depth = texture(z_buffer, fragcoord).r;
-    vec3 fragpos_ws = ws_pos_from_depth(fragcoord, depth, frame.data.inv_view_proj);
+    /* 
+        Get the UV coordinates to sample the z-buffer from, taking into account that gl_FragCoord must be scaled in case of a mismatch between the current render size and the deferred_render_size (due to rendering to a lower resolution)
+    */
+    vec2 uv = (gl_FragCoord.xy * ps.downsample_factor) * vec2(ps.inv_deferred_render_size);
+    float depth = texture(z_buffer, uv).r;
+    vec3 fragpos_ws = ws_pos_from_depth(uv, depth, frame.data.inv_view_proj);
     vec3 fragpos_vs = vec3(frame.data.view * vec4(fragpos_ws, 1));
 
     int cascade_index = 0;

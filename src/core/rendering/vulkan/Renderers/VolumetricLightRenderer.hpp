@@ -11,6 +11,7 @@ struct VolumetricLightRenderer : IRenderer
 	{
 		create_pipeline();
 		create_renderpass();
+		is_initialized = true;
 	}
 
 	virtual void create_pipeline()
@@ -115,7 +116,7 @@ struct VolumetricLightRenderer : IRenderer
 
 		ps_fragment.inv_deferred_render_size = DeferredRenderer::inv_render_size;
 		volumetric_sunlight_pipeline.layout.cmd_push_constants(cmd_buffer, "Sunlight Push Constants Fragment", &ps_fragment);
-		vkCmdDraw(cmd_buffer, mesh_fs_quad.m_num_vertices, 1, 0, 0);
+		vkCmdDraw(cmd_buffer, (uint32_t)mesh_fs_quad.m_num_vertices, 1, 0, 0);
 	}
 
 	void render_volumetric_point_lights(VkCommandBuffer cmd_buffer, uint32_t frame_index)
@@ -137,7 +138,7 @@ struct VolumetricLightRenderer : IRenderer
 		volumetric_point_light_pipeline.layout.cmd_push_constants(cmd_buffer, "Inv Screen Size", &DeferredRenderer::inv_render_size);
 
 		uint32_t instance_count = (uint32_t)ObjectManager::get_instance().m_mesh_instance_data[light_manager::point_light_volume_mesh_id].size();
-		vkCmdDraw(cmd_buffer, mesh_sphere.m_num_vertices, instance_count, 0, 0);
+		vkCmdDraw(cmd_buffer, (uint32_t)mesh_sphere.m_num_vertices, instance_count, 0, 0);
 	}
 
 	virtual void render(VkCommandBuffer cmd_buffer)
@@ -146,7 +147,7 @@ struct VolumetricLightRenderer : IRenderer
 		volumetric_sunlight_pipeline.bind(cmd_buffer);
 		uint32_t frame_index = ctx.curr_frame_idx;
 
-		set_viewport_scissor(cmd_buffer, render_size.x, render_size.y, true);
+		set_viewport_scissor(cmd_buffer, (uint32_t)render_size.x, (uint32_t)render_size.y, true);
 		volumetric_lighting_attachment[frame_index].transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 		renderpass[frame_index].begin(cmd_buffer, render_size);
 
@@ -202,8 +203,9 @@ struct VolumetricLightRenderer : IRenderer
 
 	vk::descriptor_set_layout volumetric_descriptor_set_layout;
 
+	static inline bool is_initialized = false;
 
-	std::array<Texture2D, NUM_FRAMES> volumetric_lighting_attachment;
+	static inline std::array<Texture2D, NUM_FRAMES> volumetric_lighting_attachment;
 	VertexFragmentShader volumetric_sunlight_shader;
 	Pipeline volumetric_sunlight_pipeline;
 	std::array<vk::descriptor_set, NUM_FRAMES> volumetric_sunlight_descriptor_set;

@@ -60,7 +60,7 @@ struct SkyboxRenderer : public IRenderer
 		glm::vec2 render_size = { DeferredRenderer::gbuffer[0].light_accumulation_attachment.info.width, DeferredRenderer::gbuffer[0].light_accumulation_attachment.info.height };
 
 		vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-		set_viewport_scissor(cmd_buffer, render_size.x, render_size.y, true);
+		set_viewport_scissor(cmd_buffer, (uint32_t)render_size.x, (uint32_t)render_size.y, true);
 
 		VkDescriptorSet descriptor_sets[]
 		{

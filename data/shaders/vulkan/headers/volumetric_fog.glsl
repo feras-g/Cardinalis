@@ -34,7 +34,7 @@ float mie_scattering(float VoL, float g)
     return ((1.0 - g_sq) /   (4 * PI  * pow((1.0 + g_sq - 2.0 * g * VoL), 1.5f)));
 }
 
-vec3 raymarch_fog_sunlight(sampler2DArray tex_shadow, int cascade_index, vec3 cam_pos_ws, vec3 fragpos_ws, mat4 shadow_view_proj, vec3 L, vec3 sun_color)
+vec3 raymarch_fog_sunlight(sampler2DArray tex_shadow, int cascade_index, vec3 cam_pos_ws, vec3 fragpos_ws, mat4 shadow_view_proj, vec3 L, vec3 sun_color, float time)
 {
     // TODO : Move to UBO
     const int num_steps = 25;
@@ -48,6 +48,7 @@ vec3 raymarch_fog_sunlight(sampler2DArray tex_shadow, int cascade_index, vec3 ca
     V = normalize(V);
     vec3 curr_pos_ws = fragpos_ws;
     curr_pos_ws += step_size * dither_pattern[int(gl_FragCoord.x) % 4][int(gl_FragCoord.y) % 4];
+
     for(int i = 0; i < num_steps; i++)
     {
         vec4 curr_pos_light_space = shadow_view_proj * vec4(curr_pos_ws, 1);
@@ -56,7 +57,7 @@ vec3 raymarch_fog_sunlight(sampler2DArray tex_shadow, int cascade_index, vec3 ca
         /* Only accumulate fog for fragments that are not in shadow */
         if(vis >= 1)
         {
-            scattering_factor += mie_scattering(dot(V, -L), g_mie_scattering) * scattering_amount * sun_color;
+            scattering_factor += mie_scattering(dot(V, -L), g_mie_scattering) *sun_color;
         }
 
         curr_pos_ws += step_size * V;

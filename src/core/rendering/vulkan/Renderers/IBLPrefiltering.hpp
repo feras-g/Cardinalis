@@ -201,7 +201,7 @@ struct IBLRenderer
 		for (int mip = 0; mip < k_specular_mip_levels; mip++)
 		{
 			pipeline.layout.cmd_push_constants(cmd_buffer, "Specular Mip Level", &mip);
-			set_viewport_scissor(cmd_buffer, specular_mip_sizes[mip].x, specular_mip_sizes[mip].y, true);
+			set_viewport_scissor(cmd_buffer, (uint32_t)specular_mip_sizes[mip].x, (uint32_t)specular_mip_sizes[mip].y, true);
 			render_pass.reset();
 			render_pass.add_color_attachment(specular_mip_views[mip]);
 			render_pass.begin(cmd_buffer, specular_mip_sizes[mip]);

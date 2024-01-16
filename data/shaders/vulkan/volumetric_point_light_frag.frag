@@ -23,12 +23,12 @@ layout(set = 1, binding = 1) uniform sampler2D z_buffer;
 layout(push_constant) uniform PushConstantBlock
 {
     layout(offset = 64)
-    float inv_screen_size;
+    float inv_deferred_render_size;
 } ps;
 
 void main()
 {
-    vec2 fragcoord = gl_FragCoord.xy * vec2(ps.inv_screen_size);
+    vec2 fragcoord = gl_FragCoord.xy * vec2(ps.inv_deferred_render_size);
     float depth = texture(z_buffer, fragcoord).r;
     vec3 fragpos_ws = ws_pos_from_depth(fragcoord, depth, frame.data.inv_view_proj);
 

@@ -8,6 +8,9 @@
 #include "core/rendering/draw_metrics.h"
 #include "core/engine/vulkan/objects/vk_debug_marker.hpp"
 #include "core/rendering/vulkan/VulkanTexture.h"
+#include "core/rendering/vulkan/VulkanRenderInterface.h"
+#include "core/rendering/vulkan/VulkanRendererBase.h"
+#include "core/rendering/vulkan/RenderObjectManager.h"
 
 #include "core/engine/vulkan/objects/vk_renderpass.h"
 
