@@ -1,5 +1,5 @@
 ### About
-Cardinalis is a Vulkan renderer I work on during my spare time, written in C++, this is my platform to implement rendering techniques I saw or read about, prototype and try all kinds of optimizations, the main goal always being to have fun learning and experimenting.
+Cardinalis is a Vulkan renderer I work on during my spare time, written in C++. <br/> This is my platform to implement rendering techniques I saw in games, presentations, articles and prototype and try all kinds of optimizations. The end goal always being to have fun learning and experimenting.
 
 ### Features
 Deferred Shading with Light Volumes <br/>
