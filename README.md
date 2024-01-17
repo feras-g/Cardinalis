@@ -1,3 +1,6 @@
+### About
+Cardinalis is a Vulkan renderer I work on during my spare time, written in C++, this is my platform to implement rendering techniques I saw or read about, prototype and try all kinds of optimizations, the main goal always being to have fun learning and experimenting.
+
 ### Features
 Deferred Shading with Light Volumes <br/>
 Normal Mapping <br/>
@@ -8,7 +11,7 @@ Volumetric Fog (Sunlight)
 
 ### Gallery
 #### Bistro scene 
-* Deferred shading,
+* Deferred shading with light volumes
 * Physically based direct lighting, image based lighting
 * Cascaded shadow mapping, volumetric fog (sunlight, point lights)
 
