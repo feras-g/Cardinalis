@@ -12,11 +12,12 @@ Volumetric Fog (Sunlight)
 * Physically based direct lighting, image based lighting
 * Cascaded shadow mapping, volumetric fog (sunlight, point lights)
 
+<img src="screenshots/bistro_fog.png" width="1024">
 <img src="screenshots/bistro_volumetric_point_directional.png" width="1024">
 
-#### Sunlight Volumetric Lighting with previsualization
-<img src="screenshots/ui_fog_dithering.png" width="1024">
-<img src="screenshots/directional_fog_specular_ibl_half.png" width="1024">
+#### Volumetric Sunlight in Sponza
+![Sponza Volumetric Fog](screenshots/sponza_fog.png "Sponza Volumetric Fog") 
+![Fog buffer](screenshots/sponza_fog_only.png "Fog buffer")
 
 
 ### References
