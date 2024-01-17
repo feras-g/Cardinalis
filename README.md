@@ -7,7 +7,7 @@ Normal Mapping <br/>
 Cascaded Shadow Mapping <br/>
 Image Based Lighting : Diffuse + Specular (Split Sum Approximation) <br/>
 Physically Based Direct Lighting (Microfacet model, Cook-Torrance) <br/>
-Volumetric Fog (Sunlight)
+Volumetric Fog (Directional, Point lights)
 
 ### Gallery
 #### Bistro scene 
