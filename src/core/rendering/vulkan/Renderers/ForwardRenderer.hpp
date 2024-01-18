@@ -89,8 +89,8 @@ struct ForwardRenderer : public IRenderer
 				const Primitive& p = mesh.geometry_data.primitives[prim_idx];
 				draw_metrics.increment_vertex_count(p.vertex_count * instance_count);
 
-				pipeline.layout.cmd_push_constants(cmd_buffer, "Material", &object_manager.m_materials[p.material_id]);
-				pipeline.layout.cmd_push_constants(cmd_buffer, "Primitive Model Matrix", &p.model);
+				pipeline.cmd_push_constants(cmd_buffer, "Material", &object_manager.m_materials[p.material_id]);
+				pipeline.cmd_push_constants(cmd_buffer, "Primitive Model Matrix", &p.model);
 
 				vkCmdDraw(cmd_buffer, p.vertex_count, instance_count, p.first_vertex, 0);
 				draw_metrics.increment_drawcall_count(1);

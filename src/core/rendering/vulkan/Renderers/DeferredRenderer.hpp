@@ -166,8 +166,8 @@ struct DeferredRenderer : public IRenderer
 			{
 				const Primitive& p = mesh.geometry_data.primitives[prim_idx];
 
-				geometry_pass_pipeline.layout.cmd_push_constants(cmd_buffer, "Material", &object_manager.m_materials[p.material_id]);
-				geometry_pass_pipeline.layout.cmd_push_constants(cmd_buffer, "Primitive Model Matrix", &p.model);
+				geometry_pass_pipeline.cmd_push_constants(cmd_buffer, "Material", &object_manager.m_materials[p.material_id]);
+				geometry_pass_pipeline.cmd_push_constants(cmd_buffer, "Primitive Model Matrix", &p.model);
 
 				vkCmdDraw(cmd_buffer, p.vertex_count, instance_count, p.first_vertex, 0);
 			}
@@ -224,8 +224,8 @@ struct DeferredRenderer : public IRenderer
 
 			const VulkanMesh& mesh_fs_quad = object_manager.m_meshes[light_manager::directional_light_volume_mesh_id];
 
-			lighting_pass_pipeline.layout.cmd_push_constants(cmd_buffer, "Light Volume Pass View Proj", &identity);
-			lighting_pass_pipeline.layout.cmd_push_constants(cmd_buffer, "Light Volume Pass Additional Data", &light_volume_additional_data);
+			lighting_pass_pipeline.cmd_push_constants(cmd_buffer, "Light Volume Pass View Proj", &identity);
+			lighting_pass_pipeline.cmd_push_constants(cmd_buffer, "Light Volume Pass Additional Data", &light_volume_additional_data);
 			
 			vkCmdDraw(cmd_buffer, (uint32_t)mesh_fs_quad.m_num_vertices, 1, 0, 0);
 		}
@@ -238,8 +238,8 @@ struct DeferredRenderer : public IRenderer
 			vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lighting_pass_pipeline.layout, 2, 1, &ObjectManager::get_instance().m_descriptor_sets[light_manager::point_light_volume_mesh_id].vk_set, 0, nullptr);
 			const VulkanMesh& mesh_sphere = object_manager.m_meshes[light_manager::point_light_volume_mesh_id];
 			uint32_t instance_count = (uint32_t)object_manager.m_mesh_instance_data[light_manager::point_light_volume_mesh_id].size();
-			lighting_pass_pipeline.layout.cmd_push_constants(cmd_buffer, "Light Volume Pass View Proj", &view_proj);
-			lighting_pass_pipeline.layout.cmd_push_constants(cmd_buffer, "Light Volume Pass Additional Data", &light_volume_additional_data);
+			lighting_pass_pipeline.cmd_push_constants(cmd_buffer, "Light Volume Pass View Proj", &view_proj);
+			lighting_pass_pipeline.cmd_push_constants(cmd_buffer, "Light Volume Pass Additional Data", &light_volume_additional_data);
 			vkCmdDraw(cmd_buffer, (uint32_t)mesh_sphere.m_num_vertices, instance_count, 0, 0);
 		}
 		renderpass_lighting[ctx.curr_frame_idx].end(cmd_buffer);

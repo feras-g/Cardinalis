@@ -184,7 +184,7 @@ struct IBLRenderer
 	void prefilter_diffuse(VkCommandBuffer cmd_buffer)
 	{
 		int placeholder_val = 0;
-		pipeline.layout.cmd_push_constants(cmd_buffer, "Specular Mip Level", &placeholder_val);
+		pipeline.cmd_push_constants(cmd_buffer, "Specular Mip Level", &placeholder_val);
 		set_viewport_scissor(cmd_buffer, spherical_env_map.info.width, spherical_env_map.info.height, true);
 		prefiltered_diffuse_env_map.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 		render_pass.reset();
@@ -200,7 +200,7 @@ struct IBLRenderer
 		prefiltered_specular_env_map.transition(cmd_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 		for (int mip = 0; mip < k_specular_mip_levels; mip++)
 		{
-			pipeline.layout.cmd_push_constants(cmd_buffer, "Specular Mip Level", &mip);
+			pipeline.cmd_push_constants(cmd_buffer, "Specular Mip Level", &mip);
 			set_viewport_scissor(cmd_buffer, (uint32_t)specular_mip_sizes[mip].x, (uint32_t)specular_mip_sizes[mip].y, true);
 			render_pass.reset();
 			render_pass.add_color_attachment(specular_mip_views[mip]);

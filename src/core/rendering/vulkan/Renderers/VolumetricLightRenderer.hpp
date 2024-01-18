@@ -112,10 +112,10 @@ struct VolumetricLightRenderer : IRenderer
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, volumetric_sunlight_pipeline.layout, 0, (uint32_t)bound_descriptor_sets.size(), bound_descriptor_sets.data(), 0, nullptr);
 
 		ps_vertex.light_volume_view_proj = mat_identity;
-		volumetric_sunlight_pipeline.layout.cmd_push_constants(cmd_buffer, "Sunlight Push Constants Vertex", &ps_vertex);
+		volumetric_sunlight_pipeline.cmd_push_constants(cmd_buffer, "Sunlight Push Constants Vertex", &ps_vertex);
 
 		ps_fragment.inv_deferred_render_size = DeferredRenderer::inv_render_size;
-		volumetric_sunlight_pipeline.layout.cmd_push_constants(cmd_buffer, "Sunlight Push Constants Fragment", &ps_fragment);
+		volumetric_sunlight_pipeline.cmd_push_constants(cmd_buffer, "Sunlight Push Constants Fragment", &ps_fragment);
 		vkCmdDraw(cmd_buffer, (uint32_t)mesh_fs_quad.m_num_vertices, 1, 0, 0);
 	}
 
@@ -134,8 +134,8 @@ struct VolumetricLightRenderer : IRenderer
 
 		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, volumetric_point_light_pipeline.layout, 0, (uint32_t)bound_descriptor_sets.size(), bound_descriptor_sets.data(), 0, nullptr);
 		const glm::mat4 view_proj = VulkanRendererCommon::get_instance().m_framedata[ctx.curr_frame_idx].view_proj;
-		volumetric_point_light_pipeline.layout.cmd_push_constants(cmd_buffer, "Light Volume View Proj", &view_proj);
-		volumetric_point_light_pipeline.layout.cmd_push_constants(cmd_buffer, "Inv Screen Size", &DeferredRenderer::inv_render_size);
+		volumetric_point_light_pipeline.cmd_push_constants(cmd_buffer, "Light Volume View Proj", &view_proj);
+		volumetric_point_light_pipeline.cmd_push_constants(cmd_buffer, "Inv Screen Size", &DeferredRenderer::inv_render_size);
 
 		uint32_t instance_count = (uint32_t)ObjectManager::get_instance().m_mesh_instance_data[light_manager::point_light_volume_mesh_id].size();
 		vkCmdDraw(cmd_buffer, (uint32_t)mesh_sphere.m_num_vertices, instance_count, 0, 0);

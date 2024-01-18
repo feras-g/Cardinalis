@@ -1,0 +1,43 @@
+#version 460
+
+const int k_thread_group_size = 256;
+const int k_max_num_weights = 11;
+
+layout(push_constant) uniform BlurParametersPSBlock
+{
+	float inv_image_size;
+	int radius;
+	float weights[k_max_num_weights];
+};
+
+layout(rgba8, set = 0, binding = 0) uniform restrict readonly image2D  source_img;
+layout(rgba8, set = 0, binding = 1) uniform restrict writeonly image2D dest_img;
+
+
+void horizontal_blur_pass()
+{
+	vec4 final_color = vec4(0,0,0,1);
+	ivec2 pixel_coord = ivec2(gl_GlobalInvocationID.xy);
+
+	for(int offset = -radius; offset <= radius; offset++)
+	{
+		ivec2 offset_pixel_coord = pixel_coord + ivec2(offset * inv_image_size);
+		final_color += imageLoad(source_img, offset_pixel_coord) * weights[abs(radius)];
+	}
+	imageStore(dest_img, pixel_coord, final_color);
+}
+
+void vertical_blur_pass()
+{
+
+}
+
+layout(local_size_x = k_thread_group_size, local_size_y = 1, local_size_z = 1) in;
+void main()
+{
+	if(gl_GlobalInvocationID.x > radius && gl_GlobalInvocationID.x <= imageSize(source_img).y - radius)
+	{	
+		horizontal_blur_pass();
+	}
+}
+

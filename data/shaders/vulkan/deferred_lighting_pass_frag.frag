@@ -122,9 +122,7 @@ void main()
             Direct Lighting
             ----------------------------------------------------------------------------------------------------
         */
-        out_color.rgb += brdf_cook_torrance(brdf_data, sun_color) * shadow_factor;
-
-        // vec3 fog = raymarch_fog_sunlight(tex_shadow_maps, cascade_index, frame.data.eye_pos_ws.xyz, position_ws, shadow_view_proj, brdf_data.lightdir_ws, sun_color, frame.data.time);
+        out_color.rgb += brdf_cook_torrance(brdf_data, sun_color * 10) * shadow_factor;
 
         vec3 fog = texture(volumetric_lighting, fragcoord).rgb;
 
@@ -164,7 +162,7 @@ void main()
 
         vec3 cam_forward = normalize(vec3(frame.data.view[0].w, frame.data.view[1].w, frame.data.view[2].w));
 
-        out_color.rgb += raymarch_fog_omni_spot_light(frame.data.eye_pos_ws.xyz, position_ws, light_pos, light_color, radius, depth, cam_forward);
+        //out_color.rgb += raymarch_fog_omni_spot_light(frame.data.eye_pos_ws.xyz, position_ws, light_pos, light_color, radius, depth, cam_forward);
         out_color.rgb += brdf_cook_torrance(brdf_data,  light_color * 5) * atten;
     }
 

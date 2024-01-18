@@ -159,13 +159,17 @@ void SampleProject::update_gpu_buffers()
 
 void SampleProject::create_scene()
 {
-	//VulkanMesh plane;
-	//plane.create_from_file("basic/unit_plane.glb");
-	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(plane, "Floor", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  25, 25, 25 } }));
+	VulkanMesh plane;
+	plane.create_from_file("basic/unit_plane.glb");
+	drawable_list.push_back(ObjectManager::get_instance().add_mesh(plane, "Floor", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  25, 25, 25 } }));
 
 	VulkanMesh sponza;
 	sponza.create_from_file("scenes/sponza/scene.gltf");
 	drawable_list.push_back(ObjectManager::get_instance().add_mesh(sponza, "Sponza", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }, true));
+
+	//VulkanMesh BistroExterior;
+	//BistroExterior.create_from_file("scenes/bistro_lit/test/BistroExterior.gltf");
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(BistroExterior, "BistroExterior", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }, true));
 }
 
 void SampleProject::update_instances_ssbo()

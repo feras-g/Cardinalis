@@ -109,6 +109,19 @@ struct Pipeline
 		DISABLE_VTX_INPUT_STATE = 1 << 3
 	};
 
+	void cmd_push_constants(VkCommandBuffer cmd_buffer, std::string_view push_constant_range_name, const void* p_values)
+	{
+		if (layout.ranges.contains(push_constant_range_name.data()))
+		{
+			VkPushConstantRange& range = layout.ranges.at(push_constant_range_name.data());
+			vkCmdPushConstants(cmd_buffer, layout.vk_pipeline_layout, range.stageFlags, range.offset, range.size, p_values);
+		}
+		else
+		{
+			assert(false);
+		}
+	}
+
 	struct Layout
 	{
 		operator VkPipelineLayout() { return vk_pipeline_layout; }
@@ -117,19 +130,6 @@ struct Pipeline
 		{
 			ranges[name] = range;
 			push_constant_ranges.push_back(range);
-		}
-
-		void cmd_push_constants(VkCommandBuffer cmd_buffer, std::string_view push_constant_range_name, const void* p_values)
-		{
-			if (ranges.contains(push_constant_range_name.data()))
-			{
-				VkPushConstantRange& range = ranges.at(push_constant_range_name.data());
-				vkCmdPushConstants(cmd_buffer, vk_pipeline_layout, range.stageFlags, range.offset, range.size, p_values);
-			}
-			else
-			{
-				assert(false);
-			}
 		}
 
 		void create(std::span<VkDescriptorSetLayout> set_layouts)

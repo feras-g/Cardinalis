@@ -76,7 +76,7 @@ struct SkyboxRenderer : public IRenderer
 		for (int prim_idx = 0; prim_idx < object_manager.m_meshes[id_mesh_skybox].geometry_data.primitives.size(); prim_idx++)
 		{
 			const Primitive& p = object_manager.m_meshes[id_mesh_skybox].geometry_data.primitives[prim_idx];
-			pipeline.layout.cmd_push_constants(cmd_buffer, "Primitive Model Matrix", &p.model);
+			pipeline.cmd_push_constants(cmd_buffer, "Primitive Model Matrix", &p.model);
 
 			vkCmdDraw(cmd_buffer, p.vertex_count, 1, p.first_vertex, 0);
 		}
