@@ -34,6 +34,7 @@ struct MaterialHash
         hash_combine(h, m.texture_metalness_roughness_idx);
         hash_combine(h, m.texture_emissive_map_idx);
         hash_combine(h, m.base_color);
+        hash_combine(h, m.emissive_factor);
         hash_combine(h, m.metalness_roughness);
         return h;
     }

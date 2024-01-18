@@ -77,12 +77,15 @@ void VulkanMesh::destroy()
 	m_vertex_index_buffer.destroy();
 }
 
-static void load_vertices(Primitive p, cgltf_primitive* primitive, GeometryData& geometry)
+static void load_vertices(Primitive& p, cgltf_primitive* primitive, GeometryData& geometry)
 {
 	std::vector<glm::vec3> positionsBuffer;
 	std::vector<glm::vec3> normalsBuffer;
 	std::vector<glm::vec2> texCoordBuffer;
 	std::vector<glm::vec3> tangentBuffer;
+
+	// Center of primitive
+	p.world_center = glm::vec3(0);
 
 	// Build raw buffers containing each attributes components
 	for (int attribIdx = 0; attribIdx < primitive->attributes_count; ++attribIdx)
@@ -98,6 +101,8 @@ static void load_vertices(Primitive p, cgltf_primitive* primitive, GeometryData&
 				glm::vec3 pos;
 				cgltf_accessor_read_float(attribute->data, i, &pos.x, 3);
 				positionsBuffer.push_back(pos);
+
+				p.world_center += pos;
 			}
 
 			// Also get bounding box for this primitive
@@ -149,6 +154,9 @@ static void load_vertices(Primitive p, cgltf_primitive* primitive, GeometryData&
 		}
 	}
 
+	p.world_center /= positionsBuffer.size();
+	p.world_center = glm::vec3(p.model * glm::vec4(p.world_center, 1));
+	p.model_world_center = glm::translate(glm::identity<glm::mat4>(), p.world_center);
 	// Build vertices
 	for (int i = 0; i < positionsBuffer.size(); ++i)
 	{
@@ -172,7 +180,7 @@ static int load_tex(TextureType tex_type, cgltf_texture* tex, VkFormat format, b
 
 	ObjectManager& object_manager = ObjectManager::get_instance();
 
-	/* Load from file path */
+	/* Load image */
 	int texture_id = object_manager.get_texture_id(name);
 
 	if (texture_id != -1)
@@ -180,32 +188,25 @@ static int load_tex(TextureType tex_type, cgltf_texture* tex, VkFormat format, b
 		return texture_id;
 	}
 
-	Image im;
+	Image image;
 
 	if (uri)
 	{
-		im.load_from_file(base_path + uri);
+		image.load_from_file(base_path + uri);
 	}
 	else
 	{
 		const uint8_t* buffer_view = cgltf_buffer_view_data(tex->image->buffer_view);
 		size_t buffer_view_size = tex->image->buffer_view->size;
-		im.load_from_buffer(buffer_view, buffer_view_size);
+		image.load_from_buffer(buffer_view, buffer_view_size);
 	}
 
+	/* Create texture */
 	Texture2D texture;
-	texture.init(format, im.w, im.h, 1, calc_mip, name);
-	texture.create_from_data(&im);
+	texture.init(format, image.w, image.h, 1, calc_mip, name);
+	texture.create_from_data(&image);
 	texture.create_view(ctx.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, texture.info.mipLevels });
-
-	if (tex_type == TextureType::NORMAL_MAP || tex_type == TextureType::METALLIC_ROUGHNESS_MAP)
-	{
-		texture.sampler = VulkanRendererCommon::get_instance().s_SamplerRepeatLinear;
-	}
-	else
-	{
-		texture.sampler = VulkanRendererCommon::get_instance().s_SamplerRepeatLinear;
-	}
+	texture.sampler = VulkanRendererCommon::get_instance().s_SamplerRepeatLinear;
 
 	return object_manager.add_texture(texture);
 }
@@ -269,7 +270,9 @@ static void load_material(cgltf_primitive* gltf_primitive, Primitive& primitive)
 			assert(false);
 		}
 
-		primitive.material_id = ObjectManager::get_instance().add_material(material);
+		std::string material_name = gltf_mat->name ? gltf_mat->name : "";
+
+		primitive.material_id = ObjectManager::get_instance().add_material(material, material_name);
 	}
 #endif
 }
@@ -279,12 +282,21 @@ static void load_primitive(cgltf_node* node, cgltf_primitive* primitive, Node* e
 	Primitive p = {};
 	p.first_vertex = (uint32_t)geometry.indices.size();
 	p.vertex_count = (uint32_t)primitive->indices->count;
-	p.name = "test";
+	
+	if (node->name)
+	{
+		p.name = node->name;
+	}
+	else
+	{
+		std::string unnamed_primitive = "Unnamed Primitive #" + std::to_string(geometry.primitives.size());
+		p.name = unnamed_primitive;
+	}
 
 	glm::mat4 mesh_local_mat;
 	cgltf_node_transform_world(node, glm::value_ptr(mesh_local_mat));
 	p.model = mesh_local_mat;
-
+	
 	/* Load indices */
 	for (uint32_t idx = 0; idx < p.vertex_count; idx++)
 	{
@@ -294,6 +306,7 @@ static void load_primitive(cgltf_node* node, cgltf_primitive* primitive, Node* e
 
 	load_vertices(p, primitive, geometry);
 	load_material(primitive, p);
+
 	geometry.primitives.push_back(p);
 }
 

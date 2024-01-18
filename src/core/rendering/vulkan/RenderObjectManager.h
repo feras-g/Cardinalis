@@ -35,8 +35,10 @@ class ObjectManager
 {
 public:
 	/* Add material to array and return its index */
-	uint32_t add_material(const Material& material);
+	uint32_t add_material(const Material& material, std::string material_name);
 	std::vector<Material> m_materials;
+	std::vector<std::string> m_material_names;
+
 	std::unordered_map<size_t, int> m_material_id_from_hash;
 
 	vk::buffer m_materials_ssbo;
@@ -64,7 +66,7 @@ public:
 
 	std::unordered_map < std::string, size_t > m_mesh_id_from_name;
 	std::vector<VulkanMesh>   m_meshes;
-	std::vector<const char*>   m_mesh_names;
+	std::vector<std::string>   m_mesh_names;
 
 	VkDescriptorPool m_descriptor_pool;
 

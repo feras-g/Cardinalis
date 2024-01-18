@@ -8,7 +8,7 @@
 
 using namespace vk;
 
-uint32_t ObjectManager::add_material(const Material& material)
+uint32_t ObjectManager::add_material(const Material& material, std::string material_name)
 {
 	size_t hash = MaterialHash{}(material);
 
@@ -21,6 +21,16 @@ uint32_t ObjectManager::add_material(const Material& material)
 
 	uint32_t material_idx = (uint32_t)m_materials.size();
 	m_materials.push_back(material);
+
+	if (material_name.empty())
+	{
+		std::string unnamed_mat = "Unnamed Material #" + std::to_string(material_idx);
+		m_material_names.push_back(unnamed_mat);
+	}
+	else
+	{
+		m_material_names.push_back(material_name);
+	}
 
 	m_material_id_from_hash.insert({ hash, material_idx });
 
@@ -160,7 +170,7 @@ void ObjectManager::create_materials_ssbo()
 	m_materials_ssbo.create();
 
 	// Add default material
-	add_material(s_default_material);
+	add_material(s_default_material, "Default Material");
 }
 
 void ObjectManager::create_textures_descriptor_set()

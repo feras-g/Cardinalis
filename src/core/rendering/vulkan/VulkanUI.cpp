@@ -43,32 +43,57 @@ void VulkanGUI::show_toolbar()
 
 }
 
-glm::mat4* selected_object_transform = nullptr;
+static Primitive* selected_primitive = nullptr;
+static VulkanMesh* selected_mesh = nullptr;
 
 void VulkanGUI::show_hierarchy(ObjectManager& object_manager)
 {
+	ImGui::ShowDemoWindow();
 	if (ImGui::Begin("Inspector"))
 	{
 		for (size_t i = 0; i < object_manager.m_meshes.size(); i++)
 		{
-			if (ImGui::CollapsingHeader(object_manager.m_mesh_names[i]))	// Root
+			if (ImGui::TreeNode(object_manager.m_mesh_names[i].c_str()))
 			{
 				VulkanMesh& mesh = object_manager.m_meshes[i];
-
-				selected_object_transform = &mesh.model;
-
+				//selected_object_transform = &mesh.model;
 				for (size_t prim_idx = 0; prim_idx < mesh.geometry_data.primitives.size(); prim_idx++)
 				{
 					Primitive& prim = mesh.geometry_data.primitives[prim_idx];
 
-					if (ImGui::Button(prim.name))
+					if (ImGui::TreeNode((void*)(intptr_t)prim_idx, prim.name.c_str(), prim_idx))
 					{
-						selected_object_transform = &prim.model;
+						selected_mesh = &mesh;
+						selected_primitive = &prim;
+
+						// WIP
+						ImGui::Text("Material : %s (id %i)", object_manager.m_material_names[prim.material_id].c_str(), prim.material_id);
+						ImGui::Text("World Center : %f %f %f", prim.world_center.x, prim.world_center.y, prim.world_center.z);
+
+
+						for (int i = 0; i < 4; i++)
+						{
+							ImGui::Text("%f %f %f %f", selected_primitive->model_world_center[i].x, selected_primitive->model_world_center[i].y, selected_primitive->model_world_center[i].z, selected_primitive->model_world_center[i].w);
+						}
+						ImGui::Text("");
+						for (int i = 0; i < 4; i++)
+						{
+							ImGui::Text("%f %f %f %f", selected_primitive->model[i].x, selected_primitive->model[i].y, selected_primitive->model[i].z, selected_primitive->model[i].w);
+						}
+						ImGui::Text("");
+						for (int i = 0; i < 4; i++)
+						{
+							ImGui::Text("%f %f %f %f", selected_primitive->offset[i].x, selected_primitive->offset[i].y, selected_primitive->offset[i].z, selected_primitive->offset[i].w);
+						}
+
+
+
+
+						ImGui::TreePop();
 					}
 				}
-
+				ImGui::TreePop();
 			}
-
 		}
 	}
 	ImGui::End();
@@ -229,14 +254,27 @@ void VulkanGUI::show_viewport_window(ImTextureID scene_image_id, camera& camera,
 		ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, window_size.x, window_size.y);
 		ImGuizmo::SetOrthographic(false);
 
-		if (object_manager.m_mesh_instance_data[object_manager.current_selected_mesh_id].size() > 0)
+		glm::mat4 gizmo_center = glm::identity<glm::mat4>();
+
+		//if (object_manager.m_mesh_instance_data[object_manager.current_selected_mesh_id].size() > 0)
 		{
 			const glm::f32* view = glm::value_ptr(camera.view);
 			const glm::f32* proj = glm::value_ptr(camera.projection);
 
-			if (selected_object_transform != nullptr)
+			if (selected_primitive != nullptr)
 			{
-				ImGuizmo::Manipulate(view, proj, gizmo_operation, transform_mode, glm::value_ptr(*selected_object_transform));
+				glm::mat4 orig = selected_primitive->model_world_center;
+
+				if (ImGuizmo::Manipulate(view, proj, gizmo_operation, transform_mode, glm::value_ptr(selected_primitive->model_world_center)))
+				{
+					selected_primitive->offset += selected_primitive->model_world_center - orig;
+				}
+
+				selected_primitive->model[3].x += selected_primitive->offset[3].x;
+				selected_primitive->model[3].y += selected_primitive->offset[3].y;
+				selected_primitive->model[3].z += selected_primitive->offset[3].z;
+
+				selected_primitive->offset = glm::mat4(0);
 			}
 		}
 
