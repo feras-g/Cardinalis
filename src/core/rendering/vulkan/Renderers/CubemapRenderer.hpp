@@ -15,7 +15,7 @@ struct CubemapRenderer
 		cubemap_attachment.create_vk_image(ctx.device, true, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 		cubemap_attachment.create_view(ctx.device, ImageViewTextureCubemap);
 
-		VkSampler& sampler = VulkanRendererCommon::get_instance().s_SamplerClampNearest; 
+		VkSampler& sampler = VulkanRendererCommon::get_instance().smp_clamp_nearest; 
 
 		for (int layer = 0; layer < 6; layer++)
 		{

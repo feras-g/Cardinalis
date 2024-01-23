@@ -51,10 +51,10 @@ public:
 	
 	~VulkanRendererCommon();
 
-	VkSampler s_SamplerRepeatLinear;
-	VkSampler s_SamplerClampLinear;
-	VkSampler s_SamplerClampNearest;
-	VkSampler s_SamplerRepeatNearest;
+	VkSampler smp_repeat_linear;
+	VkSampler smp_clamp_linear;
+	VkSampler smp_clamp_nearest;
+	VkSampler smp_repeat_nearest;
 
 	uint32_t render_width;
 	uint32_t render_height;

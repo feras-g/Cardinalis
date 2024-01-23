@@ -11,10 +11,10 @@ void DeferredRenderer::create_pipeline_lighting_pass()
 		light_accumulation_format
 	};
 
-	VkSampler& sampler_clamp_nearest = VulkanRendererCommon::get_instance().s_SamplerClampNearest;
-	VkSampler& sampler_repeat_linear = VulkanRendererCommon::get_instance().s_SamplerRepeatLinear;
-	VkSampler& sampler_clamp_linear = VulkanRendererCommon::get_instance().s_SamplerClampLinear;
-	VkSampler& sampler_repeat_nearest = VulkanRendererCommon::get_instance().s_SamplerRepeatNearest;
+	VkSampler& sampler_clamp_nearest = VulkanRendererCommon::get_instance().smp_clamp_nearest;
+	VkSampler& sampler_repeat_linear = VulkanRendererCommon::get_instance().smp_repeat_linear;
+	VkSampler& sampler_clamp_linear = VulkanRendererCommon::get_instance().smp_clamp_linear;
+	VkSampler& sampler_repeat_nearest = VulkanRendererCommon::get_instance().smp_repeat_nearest;
 
 	/*
 		Create descriptor set bindings

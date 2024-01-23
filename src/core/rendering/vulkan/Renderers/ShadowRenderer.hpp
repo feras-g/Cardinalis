@@ -42,7 +42,7 @@ struct ShadowRenderer : public IRenderer
 			for (int layer = 0; layer < k_num_cascades; layer++)
 			{
 				shadow_cascades_depth[frame_idx].create_texture_2d_layer_view(shadow_cascades_view[frame_idx][layer], shadow_cascades_depth[frame_idx], ctx.device, layer);
-				shadow_cascades_view_ui_id[frame_idx][layer] = ImGui_ImplVulkan_AddTexture(VulkanRendererCommon::get_instance().s_SamplerClampNearest, shadow_cascades_view[frame_idx][layer], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				shadow_cascades_view_ui_id[frame_idx][layer] = ImGui_ImplVulkan_AddTexture(VulkanRendererCommon::get_instance().smp_clamp_nearest, shadow_cascades_view[frame_idx][layer], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			}
 		}
 	}
@@ -57,7 +57,7 @@ struct ShadowRenderer : public IRenderer
 		descriptor_set_layout.add_combined_image_sampler_binding(1, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "Shadow Cascades Texture Array");
 		descriptor_set_layout.create("Shadow Cascade Descriptor Set Layout");
 
-		VkSampler& sampler_clamp_linear = VulkanRendererCommon::get_instance().s_SamplerClampNearest;
+		VkSampler& sampler_clamp_linear = VulkanRendererCommon::get_instance().smp_clamp_nearest;
 
 		for (int frame_idx = 0; frame_idx < NUM_FRAMES; frame_idx++)
 		{

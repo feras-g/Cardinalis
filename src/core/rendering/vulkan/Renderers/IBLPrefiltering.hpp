@@ -21,10 +21,10 @@ struct IBLRenderer
 	/* Pre-filtered diffuse environment map */
 	void init(const char* env_map_filename)
 	{
-		sampler_clamp_linear = VulkanRendererCommon::get_instance().s_SamplerClampLinear;
-		sampler_clamp_nearest = VulkanRendererCommon::get_instance().s_SamplerClampNearest;
-		sampler_repeat_nearest = VulkanRendererCommon::get_instance().s_SamplerRepeatNearest;
-		sampler_repeat_linear = VulkanRendererCommon::get_instance().s_SamplerRepeatLinear;
+		sampler_clamp_linear = VulkanRendererCommon::get_instance().smp_clamp_linear;
+		sampler_clamp_nearest = VulkanRendererCommon::get_instance().smp_clamp_nearest;
+		sampler_repeat_nearest = VulkanRendererCommon::get_instance().smp_repeat_nearest;
+		sampler_repeat_linear = VulkanRendererCommon::get_instance().smp_repeat_linear;
 
 		create_env_map(env_map_filename);
 		init_assets(false);

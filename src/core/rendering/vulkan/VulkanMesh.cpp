@@ -206,7 +206,7 @@ static int load_tex(TextureType tex_type, cgltf_texture* tex, VkFormat format, b
 	texture.init(format, image.w, image.h, 1, calc_mip, name);
 	texture.create_from_data(&image);
 	texture.create_view(ctx.device, { VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, 0, texture.info.mipLevels });
-	texture.sampler = VulkanRendererCommon::get_instance().s_SamplerRepeatLinear;
+	texture.sampler = VulkanRendererCommon::get_instance().smp_repeat_linear;
 
 	return object_manager.add_texture(texture);
 }

@@ -278,7 +278,7 @@ struct DeferredRenderer : public IRenderer
 
 	void init_ui()
 	{
-		VkSampler& sampler_clamp_linear = VulkanRendererCommon::get_instance().s_SamplerClampLinear;
+		VkSampler& sampler_clamp_linear = VulkanRendererCommon::get_instance().smp_clamp_linear;
 
 		for (int i = 0; i < NUM_FRAMES; i++)
 		{
