@@ -321,7 +321,7 @@ bool CreateColorDepthFramebuffers(VkRenderPass renderPass, const Texture2D* colo
 	return true;
 }
 
-void Pipeline::create_graphics(const VertexFragmentShader& shader, std::span<VkFormat> color_formats, VkFormat depth_format, Flags flags, VkPipelineLayout pipeline_layout, VkPrimitiveTopology topology,
+void Pipeline::create_graphics(VertexFragmentShader& shader, std::span<VkFormat> color_formats, VkFormat depth_format, Flags flags, VkPipelineLayout pipeline_layout, VkPrimitiveTopology topology,
 	VkCullModeFlags cull_mode, VkFrontFace front_face, uint32_t view_mask, VkPolygonMode polygonMode)
 {
 	for (VkFormat format : color_formats)
@@ -348,10 +348,11 @@ void Pipeline::create_graphics(const VertexFragmentShader& shader, std::span<VkF
 	create_graphics(shader, (uint32_t)color_formats.size(), pipeline_flags, nullptr, pipeline_layout, topology, cull_mode, front_face, &dynamic_pipeline_create_info, polygonMode);
 }
 
-void Pipeline::create_graphics(const VertexFragmentShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPrimitiveTopology topology,
+void Pipeline::create_graphics(VertexFragmentShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPrimitiveTopology topology,
 	VkCullModeFlags cullMode, VkFrontFace frontFace, VkPipelineRenderingCreateInfoKHR* dynamic_pipeline_create, VkPolygonMode polygonMode)
 {
 	is_graphics = true;
+
 
 	if (topology == VK_PRIMITIVE_TOPOLOGY_POINT_LIST)
 	{
@@ -445,17 +446,16 @@ void Pipeline::create_graphics(const VertexFragmentShader& shader, uint32_t numC
 	};
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////
-
 	/* Save shader */
-	pipeline_shader = shader;
+	h_vertex_fragment_shader = &shader;
 
-	pipeline_create_info =
+	graphics_pipeline_create_info =
 	{
 		.sType=VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
 		.pNext= dynamic_pipeline_create,
 		.flags=0,
-		.stageCount=(uint32_t)pipeline_shader.stages.size(),
-		.pStages= pipeline_shader.stages.data(),
+		.stageCount=(uint32_t)h_vertex_fragment_shader->stages.size(),
+		.pStages= h_vertex_fragment_shader->stages.data(),
 		.pVertexInputState= !!(flags & DISABLE_VTX_INPUT_STATE) ? VK_NULL_HANDLE  : &vertexInputState,
 		.pInputAssemblyState=&inputAssemblyState,
 		.pTessellationState=nullptr,
@@ -472,22 +472,24 @@ void Pipeline::create_graphics(const VertexFragmentShader& shader, uint32_t numC
 		.basePipelineIndex=0
 	};
 
-	VK_CHECK(vkCreateGraphicsPipelines(ctx.device, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &pipeline));
+	VK_CHECK(vkCreateGraphicsPipelines(ctx.device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, nullptr, &pipeline));
 
 	/* Add to resource manager */
 	VkResourceManager::get_instance(ctx.device)->add_pipeline(pipeline);
 }
 
-void Pipeline::create_compute(const Shader& shader)
+void Pipeline::create_compute(ComputeShader& shader)
 {
 	assert(layout);
 
-	VkComputePipelineCreateInfo compute_ppl_info = {};
-	compute_ppl_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-	compute_ppl_info.stage = shader.stages[0];
-	compute_ppl_info.layout = layout;
+	is_graphics = false;
+	h_compute_shader = &shader;
 
-	VK_CHECK(vkCreateComputePipelines(ctx.device, VK_NULL_HANDLE, 1, &compute_ppl_info, nullptr, &pipeline));
+	compute_pipeline_create_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+	compute_pipeline_create_info.stage = shader.stages[0];
+	compute_pipeline_create_info.layout = layout;
+
+	VK_CHECK(vkCreateComputePipelines(ctx.device, VK_NULL_HANDLE, 1, &compute_pipeline_create_info, nullptr, &pipeline));
 
 	/* Add to resource manager */
 	VkResourceManager::get_instance(ctx.device)->add_pipeline(pipeline);
@@ -498,12 +500,27 @@ bool Pipeline::reload_pipeline()
 	VkPipeline ppl;
 	VkResult result;
 
-	if (!pipeline_shader.recreate_modules())
+	if (is_graphics)
 	{
-		return false;
+		if (!h_vertex_fragment_shader->recreate_modules())
+		{
+			return false;
+		}
+
+		result = vkCreateGraphicsPipelines(ctx.device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, nullptr, &ppl);
+
+	}
+	else // Compute pipeline
+	{
+		if (!h_compute_shader->recreate_module())
+		{
+			return false;
+		}
+
+		compute_pipeline_create_info.stage = h_compute_shader->stages[0];
+		result = vkCreateComputePipelines(ctx.device, VK_NULL_HANDLE, 1, &compute_pipeline_create_info, nullptr, &ppl);
 	}
 
-	result = vkCreateGraphicsPipelines(ctx.device, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &ppl);
 	if (result == VK_SUCCESS)
 	{
 		pipeline = ppl;
@@ -522,23 +539,6 @@ void Pipeline::bind(VkCommandBuffer cmd_buffer) const
 	vkCmdBindPipeline(cmd_buffer, bind_point, pipeline);
 }
 
-
-
-
-
-VkPipelineShaderStageCreateInfo PipelineShaderStageCreateInfo(VkShaderModule shaderModule, VkShaderStageFlagBits shaderStage, const char* entryPoint)
-{
-	return VkPipelineShaderStageCreateInfo
-	{
-		.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-		.pNext = nullptr,
-		.flags = 0,
-		.stage = shaderStage,
-		.module = shaderModule,
-		.pName = entryPoint,
-		.pSpecializationInfo = nullptr
-	};
-}
 
 void create_sampler(VkDevice device, VkFilter min, VkFilter mag, VkSamplerAddressMode addressMode, VkSampler& out_Sampler)
 {

@@ -155,12 +155,12 @@ struct Pipeline
 
 	operator VkPipeline() { return pipeline; }
 
-	void create_graphics(const VertexFragmentShader& shader, std::span<VkFormat> color_formats, VkFormat depth_format, Flags flags, VkPipelineLayout pipeline_layout,
+	void create_graphics(VertexFragmentShader& shader, std::span<VkFormat> color_formats, VkFormat depth_format, Flags flags, VkPipelineLayout pipeline_layout,
 		VkPrimitiveTopology topology, VkCullModeFlags cull_mode, VkFrontFace front_face, uint32_t view_mask = 0, VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL);
-	void create_graphics(const VertexFragmentShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPrimitiveTopology topology,
+	void create_graphics(VertexFragmentShader& shader, uint32_t numColorAttachments, Flags flags, VkRenderPass renderPass, VkPipelineLayout pipelineLayout, VkPrimitiveTopology topology,
 		VkCullModeFlags cullMode, VkFrontFace frontFace, VkPipelineRenderingCreateInfoKHR* dynamic_pipeline_create,
 		VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL);
-	void create_compute(const Shader& shader);
+	void create_compute(ComputeShader& shader);
 	bool reload_pipeline();
 
 	void bind(VkCommandBuffer cmd_buffer) const;
@@ -168,9 +168,13 @@ struct Pipeline
 	bool is_graphics = false;
 
 	/* Saved pipeline info */
-	VkGraphicsPipelineCreateInfo pipeline_create_info = {};
+	VkGraphicsPipelineCreateInfo graphics_pipeline_create_info = {};
+	VkComputePipelineCreateInfo compute_pipeline_create_info = {};
+
 	VkPipelineRenderingCreateInfoKHR dynamic_pipeline_create_info = {};
-	VertexFragmentShader pipeline_shader;
+	VertexFragmentShader* h_vertex_fragment_shader = nullptr;
+	ComputeShader* h_compute_shader = nullptr;
+
 	std::vector<VkFormat> color_attachment_formats;
 	VkFormat depth_attachment_format;
 	Flags pipeline_flags;
@@ -204,7 +208,7 @@ static Pipeline::Flags operator|(Pipeline::Flags a, Pipeline::Flags b)
 template<typename T>
 size_t create_vertex_index_buffer(vk::buffer& result, std::span<T> vtxData, size_t& vtxBufferSizeInBytes, std::span<T> idxData, size_t& idxBufferSizeInBytes);
 
-VkPipelineShaderStageCreateInfo PipelineShaderStageCreateInfo(VkShaderModule shaderModule, VkShaderStageFlagBits shaderStage, const char* entryPoint);
+VkPipelineShaderStageCreateInfo pipeline_shader_stage_create_info(VkShaderModule shaderModule, VkShaderStageFlagBits shaderStage, const char* entryPoint);
 
 void create_sampler(VkDevice device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode, VkSampler& out_Sampler);
 void BeginRenderpass(VkCommandBuffer cmdBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer, VkRect2D renderArea, const VkClearValue* clearValues, uint32_t clearValueCount);

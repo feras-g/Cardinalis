@@ -26,14 +26,16 @@ struct VertexFragmentShader : Shader
 	size_t hash_fragment_module;
 	void destroy();
 
-	std::string vertex_shader_spirv_filename; 
-	std::string fragment_shader_spirv_filename;
+	std::string vertex_shader_filename; 
+	std::string fragment_shader_filename;
 };
 
 struct ComputeShader : Shader
 {
-	void create(const char* compute_shader_path);
+	void create(const std::string& compute_shader_spirv_path);
 	size_t hash_compute_module;
 	void destroy();
-	bool recompile();
+	bool compile();
+	bool recreate_module();
+	std::string compute_shader_filename;
 };

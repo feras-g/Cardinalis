@@ -63,7 +63,7 @@ void DeferredRenderer::create_pipeline_lighting_pass()
 
 		if (VolumetricLightRenderer::is_initialized)
 		{
-			sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(7, VolumetricLightRenderer::volumetric_lighting_attachment[i].view, sampler_repeat_linear);
+			sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(7, VolumetricLightRenderer::gaussian_blur_renderer.destination.view, sampler_repeat_linear);
 		}
 	}
 

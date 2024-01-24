@@ -43,10 +43,17 @@ void SampleProject::init()
 	forward_renderer.init();
 
 	volumetric_light_renderer.create_renderpass();
+
+	// WIP
+	volumetric_light_renderer.gaussian_blur_renderer.init();
+	volumetric_light_renderer.gaussian_blur_renderer.set_source(volumetric_light_renderer.volumetric_lighting_attachment[0]);
+	// WIP
+
 	volumetric_light_renderer.is_initialized = true;
 	ibl_renderer.init("pisa.hdr");
 	deferred_renderer.init();
 	volumetric_light_renderer.create_pipeline();
+
 
 	skybox_renderer.init();
 	m_camera.update_aspect_ratio(1.0f);

@@ -275,6 +275,20 @@ namespace vk
 			vkUpdateDescriptorSets(ctx.device, 1u, &write, 0, nullptr);
 		}
 
+		void write_descriptor_storage_image(uint32_t binding, VkImageView view, uint32_t array_offset = 0, uint32_t descriptor_count = 1)
+		{
+			VkDescriptorImageInfo image_descriptor_info
+			{
+				.sampler = VK_NULL_HANDLE,
+				.imageView = view,
+				.imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+			};
+
+			VkWriteDescriptorSet write = write_descriptor_set_image(vk_set, binding, image_descriptor_info, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, array_offset, descriptor_count);
+
+			vkUpdateDescriptorSets(ctx.device, 1u, &write, 0, nullptr);
+		}
+
 		void update(std::span<VkWriteDescriptorSet> descriptor_writes)
 		{
 			vkUpdateDescriptorSets(ctx.device, (uint32_t)descriptor_writes.size(), descriptor_writes.data(), 0, nullptr);
