@@ -1,43 +1,62 @@
 #version 460
 
-const int k_thread_group_size = 256;
+const int k_thread_group_size = 32;
 const int k_max_num_weights = 11;
 
 layout(push_constant) uniform BlurParametersPSBlock
 {
-	float inv_image_size;
-	int radius;
+	ivec3 thread_group_size;
 	float weights[k_max_num_weights];
+	int radius;
+	int pass; // 0: horizontal blur , 1: vertical blur
 };
 
-layout(rgba8, set = 0, binding = 0) uniform restrict readonly image2D  source_img;
-layout(rgba8, set = 0, binding = 1) uniform restrict writeonly image2D dest_img;
+layout(rgba8, set = 0, binding = 0) uniform restrict readonly  image2D  source_img;
+layout(rgba8, set = 0, binding = 1) uniform restrict image2D intermediate_img;
+layout(rgba8, set = 0, binding = 2) uniform restrict image2D result_img;
+layout(set = 0, binding = 3) uniform sampler2D scene_depth_img;
 
+/*
+	Blurs pixel at pixel_coord by performing a convolution in a specific direction
+*/
 
-void horizontal_blur_pass()
+void horizontal_blur(in ivec2 pixel_coord)
 {
 	vec4 final_color = vec4(0,0,0,1);
-	ivec2 pixel_coord = ivec2(gl_GlobalInvocationID.xy);
-
 	for(int offset = -radius; offset <= radius; offset++)
 	{
-		ivec2 offset_pixel_coord = pixel_coord + ivec2(offset * inv_image_size);
-		final_color += imageLoad(source_img, offset_pixel_coord) * weights[abs(radius)];
+		ivec2 offset_pixel_coord = pixel_coord + ivec2(offset, 0);
+		final_color += imageLoad(source_img, offset_pixel_coord) * weights[abs(offset)];
 	}
-	imageStore(dest_img, pixel_coord, final_color);
+	imageStore(intermediate_img, pixel_coord, final_color);
 }
 
-void vertical_blur_pass()
+void vertical_blur(in ivec2 pixel_coord)
 {
-
+	vec4 final_color = vec4(0,0,0,1);
+	for(int offset = -radius; offset <= radius; offset++)
+	{
+		ivec2 offset_pixel_coord = pixel_coord + ivec2(0, offset);
+		final_color += imageLoad(intermediate_img, offset_pixel_coord) * weights[abs(offset)];
+	}
+	
+	imageStore(result_img, pixel_coord, final_color);
 }
 
-layout(local_size_x = k_thread_group_size, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 void main()
 {
 	if(gl_GlobalInvocationID.x > radius && gl_GlobalInvocationID.x <= imageSize(source_img).y - radius)
 	{	
-		horizontal_blur_pass();
+		ivec2 pixel_coord = ivec2(gl_GlobalInvocationID.xy);
+		if(pass == 0)
+		{
+			horizontal_blur(pixel_coord);
+		}
+		else
+		{
+			vertical_blur(pixel_coord);
+		}
 	}
 }
 
