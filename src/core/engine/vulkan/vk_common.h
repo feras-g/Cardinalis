@@ -39,6 +39,8 @@ inline const char* vk_object_to_string(VkPhysicalDeviceType input_value)
 	return string_VkPhysicalDeviceType(input_value);
 }
 
+#else
+#define VK_CHECK(x) assert(x == VK_SUCCESS);
 #endif
 
 static constexpr uint32_t vk_api_version = VK_MAKE_VERSION(1, 3, 1);

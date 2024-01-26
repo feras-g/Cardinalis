@@ -139,11 +139,11 @@ namespace vk
 		enabled_instance_extensions =
 		{
 			"VK_KHR_surface",
+			"VK_EXT_debug_utils",
 	#ifdef _WIN32
 			"VK_KHR_win32_surface",
 	#endif // _WIN32
-	#ifdef ENGINE_DEBUG
-			"VK_EXT_debug_utils",
+	#ifdef ENGINE_DEBUG /* ENGINE_DEBUG */
 			"VK_EXT_validation_features",
 	#endif // ENGINE_DEBUG
 		};
@@ -162,8 +162,7 @@ namespace vk
 		{
 			"VK_KHR_maintenance1",
 			"VK_KHR_swapchain",
-			"VK_KHR_dynamic_rendering",
-			"VK_EXT_debug_marker"
+			"VK_KHR_dynamic_rendering"
 		};
 	}
 	void device::helpers::enable_physical_device_features(VkPhysicalDevice physical_device, VkPhysicalDeviceFeatures2& physical_features2)

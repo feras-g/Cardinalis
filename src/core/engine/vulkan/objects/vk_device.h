@@ -42,10 +42,8 @@ namespace vk
 		} helper_funcs;
 	};
 
-#ifdef ENGINE_DEBUG
 	inline PFN_vkCmdBeginDebugUtilsLabelEXT		fpCmdBeginDebugUtilsLabelEXT;
 	inline PFN_vkCmdEndDebugUtilsLabelEXT		fpCmdEndDebugUtilsLabelEXT;
 	inline PFN_vkCmdInsertDebugUtilsLabelEXT	fpCmdInsertDebugUtilsLabelEXT;
 	inline PFN_vkSetDebugUtilsObjectNameEXT		fpSetDebugUtilsObjectNameEXT;
-#endif // ENGINE_DEBUG
 }
