@@ -1,5 +1,5 @@
 # About
-Cardinalis is a Vulkan renderer written in C++. <br/>
+Cardinalis is a Vulkan renderer written in C++ currently supporting Windows. <br/>
 
 # Features
 ## Renderer
