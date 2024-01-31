@@ -112,7 +112,7 @@ struct DeferredRenderer : public IRenderer
 		geometry_pass_pipeline.layout.add_push_constant_range("Material", { .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .offset = sizeof(glm::mat4), .size = sizeof(Material) });
 
 		geometry_pass_pipeline.layout.create(descriptor_set_layouts);
-		shader_geometry_pass.create("instanced_mesh_vert.vert.spv", "deferred_geometry_pass_frag.frag.spv");
+		shader_geometry_pass.create("Deferred Shading - Geometry Pass", "instanced_mesh_vert.vert.spv", "deferred_geometry_pass_frag.frag.spv");
 
 		Pipeline::Flags flags = Pipeline::Flags::ENABLE_DEPTH_STATE;
 

@@ -39,7 +39,7 @@ struct IBLRenderer
 
 	void init_pipeline(Texture2D& spherical_env_map)
 	{
-		shader.create("fullscreen_quad_vert.vert.spv", "importance_sample_diffuse_frag.frag.spv");
+		shader.create("IBL Diffuse/Specular prefiltering", "fullscreen_quad_vert.vert.spv", "importance_sample_diffuse_frag.frag.spv");
 
 		/* Init descriptor set for prefiltered maps rendering */
 		descriptor_set.layout.add_combined_image_sampler_binding(0, VK_SHADER_STAGE_FRAGMENT_BIT, 1, "Spherical env map");
@@ -68,7 +68,7 @@ struct IBLRenderer
 		VkPipelineLayoutCreateInfo empty_info = {};
 		empty_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		vkCreatePipelineLayout(ctx.device, &empty_info, nullptr, &empty_layout);
-		shader_brdf_integration.create("fullscreen_quad_vert.vert.spv", "integrate_brdf_frag.frag.spv");
+		shader_brdf_integration.create("IBL BRDF integration", "fullscreen_quad_vert.vert.spv", "integrate_brdf_frag.frag.spv");
 		pipeline_brdf_integration.create_graphics(shader_brdf_integration, std::span<VkFormat>(&brdf_integration_map_format, 1), VK_FORMAT_UNDEFINED, Pipeline::Flags::NONE, empty_layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
 	}
 

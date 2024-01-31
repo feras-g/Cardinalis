@@ -40,7 +40,7 @@ struct SkyboxRenderer : public IRenderer
 
 	void create_pipeline() override
 	{
-		shader.create("skybox_vert.vert.spv", "single_cubemap_input_attachment_frag.frag.spv");
+		shader.create("Skybox Rendering", "skybox_vert.vert.spv", "single_cubemap_input_attachment_frag.frag.spv");
 
 		VkDescriptorSetLayout layouts[]
 		{

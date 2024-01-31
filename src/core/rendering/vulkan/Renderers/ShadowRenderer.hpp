@@ -50,7 +50,7 @@ struct ShadowRenderer : public IRenderer
 	void create_pipeline() override
 	{
 		// Shader
-		shader.create("cascaded_shadow_transform_vert.vert.spv", "output_fragment_depth_frag.frag.spv");
+		shader.create("Cascaded Shadow Map Generation", "cascaded_shadow_transform_vert.vert.spv", "output_fragment_depth_frag.frag.spv");
 
 		// Descriptor Set
 		descriptor_set_layout.add_storage_buffer_binding(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, "Shadow Cascade SSBO");

@@ -63,7 +63,7 @@ void DeferredRenderer::create_pipeline_lighting_pass()
 
 		if (VolumetricLightRenderer::is_initialized)
 		{
-			sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(7, VolumetricLightRenderer::gaussian_blur_renderer.destination.view, sampler_repeat_linear);
+			sampled_images_descriptor_set[i].write_descriptor_combined_image_sampler(7, VolumetricLightRenderer::gaussian_blur_renderer.destination[i].view, sampler_repeat_linear);
 		}
 	}
 
@@ -83,6 +83,6 @@ void DeferredRenderer::create_pipeline_lighting_pass()
 	lighting_pass_pipeline.layout.add_push_constant_range("Light Volume Pass Additional Data", { .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .offset = sizeof(glm::mat4), .size = sizeof(light_volume_additional_data) });
 
 	lighting_pass_pipeline.layout.create(descriptor_set_layouts);
-	shader_lighting_pass.create("render_light_volume_vert.vert.spv", "deferred_lighting_pass_frag.frag.spv");
+	shader_lighting_pass.create("Deferred Shading - Lighting Pass", "render_light_volume_vert.vert.spv", "deferred_lighting_pass_frag.frag.spv");
 	lighting_pass_pipeline.create_graphics(shader_lighting_pass, attachment_formats, {}, Pipeline::Flags::ENABLE_ALPHA_BLENDING, lighting_pass_pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE, 0, VK_POLYGON_MODE_FILL);
 }

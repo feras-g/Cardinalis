@@ -285,9 +285,9 @@ void VulkanGUI::show_shader_library()
 {
 	if (ImGui::Begin("Shaders"))
 	{
-		for (const std::string& shader : Shader::shader_library.names)
+		for (const std::pair<std::string, size_t>& pair : ShaderLib::names)
 		{
-			ImGui::Text("%s", shader.c_str()); ImGui::SameLine();
+			ImGui::Text("%s", pair.first.c_str()); ImGui::SameLine();
 			if (ImGui::Button("Recompile"))
 			{
 

@@ -56,7 +56,7 @@ struct VolumetricLightRenderer : IRenderer
 		volumetric_sunlight_pipeline.layout.add_push_constant_range("Sunlight Push Constants Fragment", { .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .offset = sizeof(ps_vertex), .size = sizeof(ps_fragment)});
 
 		volumetric_sunlight_pipeline.layout.create(descriptor_set_layouts);
-		volumetric_sunlight_shader.create("render_light_volume_vert.vert.spv", "volumetric_sunlight_frag.frag.spv");
+		volumetric_sunlight_shader.create("Volumetric Sunlight", "render_light_volume_vert.vert.spv", "volumetric_sunlight_frag.frag.spv");
 
 		VkFormat color_formats[]{ color_format };
 		volumetric_sunlight_pipeline.create_graphics(volumetric_sunlight_shader, color_formats, {}, Pipeline::Flags::ENABLE_ALPHA_BLENDING, volumetric_sunlight_pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE, 0, VK_POLYGON_MODE_FILL);
@@ -83,7 +83,7 @@ struct VolumetricLightRenderer : IRenderer
 		volumetric_point_light_pipeline.layout.add_push_constant_range("Inv Screen Size", { .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .offset = sizeof(glm::mat4), .size = sizeof(float) });
 
 		volumetric_point_light_pipeline.layout.create(descriptor_set_layouts);
-		volumetric_point_light_shader.create("render_light_volume_vert.vert.spv", "volumetric_point_light_frag.frag.spv");
+		volumetric_point_light_shader.create("Volumetric Pointlight", "render_light_volume_vert.vert.spv", "volumetric_point_light_frag.frag.spv");
 
 		VkFormat color_formats[]{ color_format };
 		volumetric_point_light_pipeline.create_graphics(volumetric_point_light_shader, color_formats, {}, Pipeline::Flags::ENABLE_ALPHA_BLENDING, volumetric_point_light_pipeline.layout, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE, 0, VK_POLYGON_MODE_FILL);

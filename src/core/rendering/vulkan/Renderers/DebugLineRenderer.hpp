@@ -36,7 +36,7 @@ struct DebugLineRenderer : public IRenderer
 		debug_line_descriptor_set.write_descriptor_storage_buffer(0, vertex_buffer, 0, VK_WHOLE_SIZE);
 		debug_line_descriptor_set.write_descriptor_storage_buffer(1, indirect_cmd_buffer, 0, VK_WHOLE_SIZE);
 
-		render_shader.create("debug_line_rendering_vert.vert.spv", "debug_line_rendering_frag.frag.spv");
+		render_shader.create("Debug Lines", "debug_line_rendering_vert.vert.spv", "debug_line_rendering_frag.frag.spv");
 
 		VkDescriptorSetLayout graphics_pipeline_layouts[] =
 		{

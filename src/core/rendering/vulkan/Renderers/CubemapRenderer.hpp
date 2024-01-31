@@ -9,7 +9,7 @@ struct CubemapRenderer
 	void init(Texture2D& spherical_env_map)
 	{
 		/* Resources */
-		write_cubemap_shader.create("write_cubemap_vert.vert.spv", "write_cubemap_frag.frag.spv");
+		write_cubemap_shader.create("Spherical Map to Cubemap", "write_cubemap_vert.vert.spv", "write_cubemap_frag.frag.spv");
 		layer_size = std::min(spherical_env_map.info.width, spherical_env_map.info.height);
 		cubemap_attachment.init(spherical_env_map.info.imageFormat, layer_size, layer_size, 6, false, "Cubemap Texture");
 		cubemap_attachment.create_vk_image(ctx.device, true, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);

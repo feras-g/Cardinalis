@@ -25,7 +25,7 @@ struct ForwardRenderer : public IRenderer
 
 		descriptor_set.write_descriptor_storage_buffer(0, ssbo_shader_toggles, 0, VK_WHOLE_SIZE);
 
-		shader.create("instanced_mesh_vert.vert.spv", "forward_frag.frag.spv");
+		shader.create("Forward Shading", "instanced_mesh_vert.vert.spv", "forward_frag.frag.spv");
 
 		std::vector<VkDescriptorSetLayout> layouts = 
 		{ 
