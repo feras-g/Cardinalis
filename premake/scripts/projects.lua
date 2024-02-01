@@ -2,7 +2,8 @@
 
 projects = 
 {
-	"SampleProject"
+	"SampleProject",
+	"ComputeShaderToy"
 }
 
 -- Generate projects 
@@ -29,6 +30,7 @@ for i, name in ipairs(projects) do
 		files 
 		{ 
 			project_dir .. "main.cpp",
+			src_dir .. "projects/" .. "ProjectCommon.h"
 		}
 
 		
@@ -68,7 +70,7 @@ for i, name in ipairs(projects) do
 			runtime "Debug"
 			symbols "on"
 			buildoptions {"/Od" }
-			defines { "ENGINE_DEBUG", "ENABLE_VALIDATION_LAYERS"}
+			defines { "ENGINE_DEBUG" }
 			disablewarnings { 
 				"4061", -- enumerator 'identifier' in switch of enum 'enumeration' is not explicitly handled by a case label
 				"4200", -- nonstandard extension used : zero-sized array in struct/union

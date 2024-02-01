@@ -18,15 +18,14 @@ float lookup_shadow(sampler2DArray tex_shadow, vec4 position_light_space, vec2 o
 	vec2 uv = shadow_coord.xy * 0.5 + 0.5;
 	uv.y = 1 - uv.y;
 
-	float shadow = 1.0f;
 	const float bias = 0.005;
 	float shadow_map_depth = texture(tex_shadow, vec3(uv + offset, layer)).r;
 
 	if (shadow_map_depth + bias < position_light_space.z) 
 	{
-		shadow = 0.0;
+		return 0.0;
 	}
-	return shadow;
+	return 1.0f;
 }
 
 // https://developer.nvidia.com/gpugems/gpugems/part-ii-lighting-and-shadows/chapter-11-shadow-map-antialiasing
