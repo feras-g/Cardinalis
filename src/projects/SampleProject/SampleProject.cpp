@@ -46,7 +46,10 @@ void SampleProject::init()
 
 	// WIP
 	volumetric_light_renderer.gaussian_blur_renderer.init();
-	volumetric_light_renderer.gaussian_blur_renderer.set_source(volumetric_light_renderer.volumetric_lighting_attachment[0]);
+	for (int i = 0; i < NUM_FRAMES; i++)
+	{
+		volumetric_light_renderer.gaussian_blur_renderer.set_source(volumetric_light_renderer.volumetric_lighting_attachment[i]);
+	}
 	// WIP
 
 	volumetric_light_renderer.is_initialized = true;
@@ -97,39 +100,36 @@ void SampleProject::update(float t, float dt)
 	/* Update camera */
 	if (m_window->is_in_focus())
 	{
-		//if (m_gui.is_inactive())
+		if (m_event_manager->key_event.is_key_pressed_async(Key::Z))
 		{
-			if (m_event_manager->key_event.is_key_pressed_async(Key::Z))
-			{
-				m_camera.translate(m_camera.forward * m_delta_time);
-			}
+			m_camera.translate(m_camera.forward * m_delta_time);
+		}
 
-			if (m_event_manager->key_event.is_key_pressed_async(Key::S))
-			{
-				m_camera.translate(-m_camera.forward * m_delta_time);
-			}
+		if (m_event_manager->key_event.is_key_pressed_async(Key::S))
+		{
+			m_camera.translate(-m_camera.forward * m_delta_time);
+		}
 
-			if (m_event_manager->key_event.is_key_pressed_async(Key::Q))
-			{
-				m_camera.right = glm::normalize(glm::cross(m_camera.forward, m_camera.up));
-				m_camera.translate(-m_camera.right * m_delta_time);
-			}
+		if (m_event_manager->key_event.is_key_pressed_async(Key::Q))
+		{
+			m_camera.right = glm::normalize(glm::cross(m_camera.forward, m_camera.up));
+			m_camera.translate(-m_camera.right * m_delta_time);
+		}
 
-			if (m_event_manager->key_event.is_key_pressed_async(Key::D))
-			{
-				m_camera.right = glm::normalize(glm::cross(m_camera.forward, m_camera.up));
-				m_camera.translate(m_camera.right * m_delta_time);
-			}
+		if (m_event_manager->key_event.is_key_pressed_async(Key::D))
+		{
+			m_camera.right = glm::normalize(glm::cross(m_camera.forward, m_camera.up));
+			m_camera.translate(m_camera.right * m_delta_time);
+		}
 
-			if (m_event_manager->key_event.is_key_pressed_async(Key::SPACE))
-			{
-				m_camera.translate(m_camera.up * m_delta_time);
-			}
+		if (m_event_manager->key_event.is_key_pressed_async(Key::SPACE))
+		{
+			m_camera.translate(m_camera.up * m_delta_time);
+		}
 
-			if (m_event_manager->key_event.is_key_pressed_async(Key::LSHIFT))
-			{
-				m_camera.translate(-m_camera.up * m_delta_time);
-			}
+		if (m_event_manager->key_event.is_key_pressed_async(Key::LSHIFT))
+		{
+			m_camera.translate(-m_camera.up * m_delta_time);
 		}
 	}
 
@@ -140,11 +140,11 @@ void SampleProject::render()
 {
 	VkCommandBuffer& cmd_buffer = ctx.get_current_frame().cmd_buffer;
 	DrawMetricsManager::reset();
+	update_gpu_buffers();
 
 	set_polygon_mode(cmd_buffer, IRenderer::global_polygon_mode);
 
 	ctx.swapchain->clear_color(cmd_buffer);
-	update_gpu_buffers();
 
 	shadow_renderer.render(cmd_buffer, drawable_list, m_camera, VulkanRendererCommon::get_instance().m_framedata[ctx.curr_frame_idx], lights.dir_light.dir);
 
@@ -170,9 +170,13 @@ void SampleProject::create_scene()
 	plane.create_from_file("basic/unit_plane.glb");
 	drawable_list.push_back(ObjectManager::get_instance().add_mesh(plane, "Floor", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  25, 25, 25 } }));
 
-	VulkanMesh sponza;
-	sponza.create_from_file("scenes/sponza/scene.gltf");
-	drawable_list.push_back(ObjectManager::get_instance().add_mesh(sponza, "Sponza", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }, true));
+	//VulkanMesh sponza;
+	//sponza.create_from_file("scenes/sponza/scene.gltf");
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(sponza, "Sponza", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }, true));
+
+	VulkanMesh test;
+	test.create_from_file("scenes/frog/scene.gltf");
+	drawable_list.push_back(ObjectManager::get_instance().add_mesh(test, "test", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }));
 
 	//VulkanMesh BistroExterior;
 	//BistroExterior.create_from_file("scenes/bistro_lit/test/BistroExterior.gltf");
