@@ -12,14 +12,11 @@ public:
 	ComputeShaderToy(const char* title, uint32_t width, uint32_t height);
 
 	virtual void init() override;
-	virtual void create_scene();
 	virtual void compose_gui() override;
 	virtual void render() override;
 	/* t : time in seconds */
 	virtual void update(float t, float dt) override;
 	virtual void update_gpu_buffers() override;
-	virtual void update_instances_ssbo();
-	virtual void update_frame_ubo();
 	virtual void exit() override;
 
 	virtual void on_window_resize() override;
