@@ -12,43 +12,48 @@ struct TwoPassGaussianBlur
 	{
 		shader.create("two_pass_gaussian_blur_comp.comp.spv");
 
-		descriptor_set.layout.add_storage_image_binding(0, "Source Image");
-		descriptor_set.layout.add_storage_image_binding(1, "Intermediate Image");
-		descriptor_set.layout.add_storage_image_binding(2, "Result Image");
-		descriptor_set.layout.add_combined_image_sampler_binding(3, VK_SHADER_STAGE_COMPUTE_BIT, 1, "Scene Depth Texture");
+		descriptor_set_layout.add_storage_image_binding(0, "Source Image");
+		descriptor_set_layout.add_storage_image_binding(1, "Intermediate Image");
+		descriptor_set_layout.add_storage_image_binding(2, "Result Image");
+		descriptor_set_layout.add_combined_image_sampler_binding(3, VK_SHADER_STAGE_COMPUTE_BIT, 1, "Scene Depth Texture");
+		descriptor_set_layout.create("");
 
-		descriptor_set.layout.create("");
-		descriptor_set.create("TwoPassGaussianBlur PostFX Descriptor Set");
+		for (int i = 0; i < NUM_FRAMES; i++)
+		{
+			descriptor_set[i].assign_layout(descriptor_set_layout);
+			descriptor_set[i].create("TwoPassGaussianBlur PostFX Descriptor Set");
 
-		pipeline.layout.add_push_constant_range(k_ps_range_name, { .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT, .offset = 0, .size = sizeof(blur_params) });
-
-		VkDescriptorSetLayout descriptor_set_layouts[] = { descriptor_set.layout };
-		pipeline.layout.create(descriptor_set_layouts);
-
-		pipeline.create_compute(shader);
+			pipeline[i].layout.add_push_constant_range(k_ps_range_name, { .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT, .offset = 0, .size = sizeof(blur_params) });
+			VkDescriptorSetLayout descriptor_set_layouts[] = { descriptor_set[i].layout };
+			pipeline[i].layout.create(descriptor_set_layouts);
+			pipeline[i].create_compute(shader);
+		}
 	}
 
 	void set_source(const Texture2D& source)
 	{
 		render_size = { source.info.width, source.info.height };
 
-		// Intermediate and Destination images with same properties as source
-		intermediate.init(source.info.imageFormat, { source.info.width, source.info.height }, source.info.layerCount, false, "PostFX Blur Intermediate (Horizontal Pass)");
-		intermediate.create(ctx.device, VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-		intermediate.transition_immediate(VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
+		for (int i = 0; i < NUM_FRAMES; i++)
+		{
+			// Intermediate and Destination images with same properties as source
+			intermediate[i].init(source.info.imageFormat, { source.info.width, source.info.height }, source.info.layerCount, false, "PostFX Blur Intermediate (Horizontal Pass)");
+			intermediate[i].create(ctx.device, VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+			intermediate[i].transition_immediate(VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
 
-		destination.init(source.info.imageFormat, { source.info.width, source.info.height }, source.info.layerCount, false, "PostFX Blur Destination");
-		destination.create(ctx.device, VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT); // VK_IMAGE_USAGE_SAMPLED_BIT because displayed in UI
-		destination.transition_immediate(VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
+			destination[i].init(source.info.imageFormat, { source.info.width, source.info.height }, source.info.layerCount, false, "PostFX Blur Destination");
+			destination[i].create(ctx.device, VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT); // VK_IMAGE_USAGE_SAMPLED_BIT because displayed in UI
+			destination[i].transition_immediate(VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
 
-		// Create UI image
-		ui_texture_id_intermediate = ImGui_ImplVulkan_AddTexture(VulkanRendererCommon::get_instance().smp_clamp_nearest, intermediate.view, VK_IMAGE_LAYOUT_GENERAL);
-		ui_texture_id_destination  = ImGui_ImplVulkan_AddTexture(VulkanRendererCommon::get_instance().smp_clamp_nearest, destination.view, VK_IMAGE_LAYOUT_GENERAL);
+			// Create UI image
+			ui_texture_id_intermediate[i] = ImGui_ImplVulkan_AddTexture(VulkanRendererCommon::get_instance().smp_clamp_nearest, intermediate[i].view, VK_IMAGE_LAYOUT_GENERAL);
+			ui_texture_id_destination[i] = ImGui_ImplVulkan_AddTexture(VulkanRendererCommon::get_instance().smp_clamp_nearest, destination[i].view, VK_IMAGE_LAYOUT_GENERAL);
 
-		descriptor_set.write_descriptor_storage_image(0, source.view);
-		descriptor_set.write_descriptor_storage_image(1, intermediate.view);
-		descriptor_set.write_descriptor_storage_image(2, destination.view);
-		descriptor_set.write_descriptor_combined_image_sampler(3, DeferredRenderer::gbuffer[0].depth_attachment.view, VulkanRendererCommon::get_instance().smp_clamp_nearest);
+			descriptor_set[i].write_descriptor_storage_image(0, source.view);
+			descriptor_set[i].write_descriptor_storage_image(1, intermediate[i].view);
+			descriptor_set[i].write_descriptor_storage_image(2, destination[i].view);
+			descriptor_set[i].write_descriptor_combined_image_sampler(3, DeferredRenderer::gbuffer[0].depth_attachment.view, VulkanRendererCommon::get_instance().smp_clamp_nearest);
+		}
 
 		blur_params =
 		{
@@ -65,19 +70,19 @@ struct TwoPassGaussianBlur
 
 		//const int num_workgroups = int(std::max(render_size.x, render_size.y) / k_thread_group_size);
 		
-		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.layout, 0, 1, &descriptor_set.vk_set, 0, nullptr);
-		pipeline.bind(cmd_buffer);
+		vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline[ctx.curr_frame_idx].layout, 0, 1, &descriptor_set[ctx.curr_frame_idx].vk_set, 0, nullptr);
+		pipeline[ctx.curr_frame_idx].bind(cmd_buffer);
 
 		// Horizontal blur
 		blur_params.pass = 0;
-		pipeline.cmd_push_constants(cmd_buffer, k_ps_range_name, &blur_params);
+		pipeline[ctx.curr_frame_idx].cmd_push_constants(cmd_buffer, k_ps_range_name, &blur_params);
 		vkCmdDispatch(cmd_buffer, num_workgroups.x, num_workgroups.y, num_workgroups.z);
 		
-		vkCmdPipelineBarrier(cmd_buffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 0, nullptr);
+		//vkCmdPipelineBarrier(cmd_buffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 0, nullptr);
 
 		// Vertical blur
 		blur_params.pass = 1;
-		pipeline.cmd_push_constants(cmd_buffer, k_ps_range_name, &blur_params);
+		pipeline[ctx.curr_frame_idx].cmd_push_constants(cmd_buffer, k_ps_range_name, &blur_params);
 		vkCmdDispatch(cmd_buffer, num_workgroups.x, num_workgroups.y, num_workgroups.z);
 	}
 
@@ -85,7 +90,7 @@ struct TwoPassGaussianBlur
 	{
 		if (true == shader.compile())
 		{
-			if (true == pipeline.reload_pipeline())
+			if (true == pipeline[ctx.curr_frame_idx].reload_pipeline())
 			{
 				return true;
 			}
@@ -98,9 +103,9 @@ struct TwoPassGaussianBlur
 	{
 		ImGui::Begin("PostFX Blur");
 
-		ImGui::Image(ui_texture_id_intermediate, { 1024, 1024 });
+		ImGui::Image(ui_texture_id_intermediate[ctx.curr_frame_idx], { 1024, 1024 });
 		ImGui::SameLine();
-		ImGui::Image(ui_texture_id_destination, { 1024, 1024 });
+		ImGui::Image(ui_texture_id_destination[ctx.curr_frame_idx], { 1024, 1024 });
 
 		static bool shader_reload_success = true;
 		if(ImGui::Button("Reload"))
@@ -134,15 +139,16 @@ struct TwoPassGaussianBlur
 
 	glm::vec2 render_size;
 
-	Texture2D intermediate;
-	Texture2D destination;
+	std::array<Texture2D, NUM_FRAMES> intermediate;
+	std::array<Texture2D, NUM_FRAMES> destination;
 
 	glm::ivec3 num_workgroups{ 32, 32, 1 };
 
-	Pipeline pipeline;
+	std::array<Pipeline, NUM_FRAMES> pipeline;
 	ComputeShader shader;
-	vk::descriptor_set descriptor_set;
 
-	ImTextureID ui_texture_id_intermediate;
-	ImTextureID ui_texture_id_destination;
+	vk::descriptor_set_layout descriptor_set_layout;
+	std::array<vk::descriptor_set, NUM_FRAMES> descriptor_set;
+	std::array<ImTextureID, NUM_FRAMES> ui_texture_id_intermediate;
+	std::array<ImTextureID, NUM_FRAMES> ui_texture_id_destination;
 };
