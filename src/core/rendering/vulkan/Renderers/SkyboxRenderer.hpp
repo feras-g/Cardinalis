@@ -57,7 +57,7 @@ struct SkyboxRenderer : public IRenderer
 	void render(VkCommandBuffer cmd_buffer) override
 	{
 		VULKAN_RENDER_DEBUG_MARKER(cmd_buffer, "Skybox Pass");
-		glm::vec2 render_size = { DeferredRenderer::gbuffer[0].light_accumulation_attachment.info.width, DeferredRenderer::gbuffer[0].light_accumulation_attachment.info.height };
+		glm::vec2 render_size = { DeferredRenderer::gbuffer.light_accumulation_attachment[0].info.width, DeferredRenderer::gbuffer.light_accumulation_attachment[0].info.height };
 
 		vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 		set_viewport_scissor(cmd_buffer, (uint32_t)render_size.x, (uint32_t)render_size.y, true);
@@ -93,13 +93,13 @@ struct SkyboxRenderer : public IRenderer
 
 	void create_renderpass() override
 	{
-		color_format = DeferredRenderer::gbuffer[0].light_accumulation_attachment.info.imageFormat;
-		depth_format = DeferredRenderer::gbuffer[0].depth_attachment.info.imageFormat;
+		color_format = DeferredRenderer::gbuffer.light_accumulation_attachment[0].info.imageFormat;
+		depth_format = DeferredRenderer::gbuffer.depth_attachment[0].info.imageFormat;
 		for (int i = 0; i < NUM_FRAMES; i++)
 		{
 			renderpass[i].reset();
-			renderpass[i].add_color_attachment(DeferredRenderer::gbuffer[i].light_accumulation_attachment.view, VK_ATTACHMENT_LOAD_OP_LOAD);
-			renderpass[i].add_depth_attachment(DeferredRenderer::gbuffer[i].depth_attachment.view, VK_ATTACHMENT_LOAD_OP_LOAD);
+			renderpass[i].add_color_attachment(DeferredRenderer::gbuffer.light_accumulation_attachment[i].view, VK_ATTACHMENT_LOAD_OP_LOAD);
+			renderpass[i].add_depth_attachment(DeferredRenderer::gbuffer.depth_attachment[i].view, VK_ATTACHMENT_LOAD_OP_LOAD);
 		}
 	}
 

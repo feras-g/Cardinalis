@@ -52,7 +52,7 @@ struct TwoPassGaussianBlur
 			descriptor_set[i].write_descriptor_storage_image(0, source.view);
 			descriptor_set[i].write_descriptor_storage_image(1, intermediate[i].view);
 			descriptor_set[i].write_descriptor_storage_image(2, destination[i].view);
-			descriptor_set[i].write_descriptor_combined_image_sampler(3, DeferredRenderer::gbuffer[0].depth_attachment.view, VulkanRendererCommon::get_instance().smp_clamp_nearest);
+			descriptor_set[i].write_descriptor_combined_image_sampler(3, DeferredRenderer::gbuffer.depth_attachment[0].view, VulkanRendererCommon::get_instance().smp_clamp_nearest);
 		}
 
 		blur_params =

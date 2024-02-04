@@ -73,7 +73,7 @@ void SampleProject::compose_gui()
 	m_gui.show_hierarchy(object_manager);
 	//m_gui.show_draw_metrics();
 	m_gui.show_shader_library();
-	m_gui.show_viewport_window(deferred_renderer.ui_texture_ids[ctx.curr_frame_idx].light_accumulation, m_camera, object_manager);
+	m_gui.show_viewport_window(deferred_renderer.ui_texture_ids.light_accumulation[ctx.curr_frame_idx], m_camera, object_manager);
 	m_camera.show_ui();
 	deferred_renderer.show_ui(m_camera);
 	ibl_renderer.show_ui();
@@ -148,11 +148,11 @@ void SampleProject::render()
 
 	shadow_renderer.render(cmd_buffer, drawable_list, m_camera, VulkanRendererCommon::get_instance().m_framedata[ctx.curr_frame_idx], lights.dir_light.dir);
 
-	deferred_renderer.render_geometry_pass(cmd_buffer, drawable_list);
+	deferred_renderer.geometry_pass.render(cmd_buffer, drawable_list);
 
 	volumetric_light_renderer.render(cmd_buffer);	// Volumetric renderer needs depth buffer written by geometry pass
 
-	deferred_renderer.render_lighting_pass(cmd_buffer);
+	deferred_renderer.lighting_pass.render(cmd_buffer);
 
 	skybox_renderer.render(cmd_buffer);
 	m_gui.render(cmd_buffer);
@@ -174,9 +174,9 @@ void SampleProject::create_scene()
 	//sponza.create_from_file("scenes/sponza/scene.gltf");
 	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(sponza, "Sponza", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }, true));
 
-	VulkanMesh test;
-	test.create_from_file("scenes/frog/scene.gltf");
-	drawable_list.push_back(ObjectManager::get_instance().add_mesh(test, "test", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }));
+	//VulkanMesh test;
+	//test.create_from_file("scenes/warthog/scene.gltf");
+	//drawable_list.push_back(ObjectManager::get_instance().add_mesh(test, "test", { .position = { 0,0,0 }, .rotation = {0,0,0}, .scale = {  1, 1, 1 } }));
 
 	//VulkanMesh BistroExterior;
 	//BistroExterior.create_from_file("scenes/bistro_lit/test/BistroExterior.gltf");

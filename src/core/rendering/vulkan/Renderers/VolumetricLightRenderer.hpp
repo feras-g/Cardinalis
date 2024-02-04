@@ -49,7 +49,7 @@ struct VolumetricLightRenderer : IRenderer
 			volumetric_sunlight_descriptor_set[i].assign_layout(volumetric_descriptor_set_layout);
 			volumetric_sunlight_descriptor_set[i].create("");
 			volumetric_sunlight_descriptor_set[i].write_descriptor_storage_buffer(0, light_manager::ssbo[i], 0, sizeof(directional_light));
-			volumetric_sunlight_descriptor_set[i].write_descriptor_combined_image_sampler(1, DeferredRenderer::gbuffer[i].depth_attachment.view, VulkanRendererCommon::get_instance().smp_clamp_nearest);
+			volumetric_sunlight_descriptor_set[i].write_descriptor_combined_image_sampler(1, DeferredRenderer::gbuffer.depth_attachment[i].view, VulkanRendererCommon::get_instance().smp_clamp_nearest);
 		}
 
 		volumetric_sunlight_pipeline.layout.add_push_constant_range("Sunlight Push Constants Vertex", { .stageFlags = VK_SHADER_STAGE_VERTEX_BIT, .offset = 0, .size = sizeof(ps_vertex) });
@@ -76,7 +76,7 @@ struct VolumetricLightRenderer : IRenderer
 			volumetric_point_light_descriptor_set[i].assign_layout(volumetric_descriptor_set_layout);
 			volumetric_point_light_descriptor_set[i].create("");
 			volumetric_point_light_descriptor_set[i].write_descriptor_storage_buffer(0, light_manager::ssbo[i], sizeof(directional_light), VK_WHOLE_SIZE);
-			volumetric_point_light_descriptor_set[i].write_descriptor_combined_image_sampler(1, DeferredRenderer::gbuffer[i].depth_attachment.view, VulkanRendererCommon::get_instance().smp_clamp_nearest);
+			volumetric_point_light_descriptor_set[i].write_descriptor_combined_image_sampler(1, DeferredRenderer::gbuffer.depth_attachment[i].view, VulkanRendererCommon::get_instance().smp_clamp_nearest);
 		}
 
 		volumetric_point_light_pipeline.layout.add_push_constant_range("Light Volume View Proj", { .stageFlags = VK_SHADER_STAGE_VERTEX_BIT, .offset = 0, .size = sizeof(glm::mat4) });
